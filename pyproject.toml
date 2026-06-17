@@ -1,0 +1,70 @@
+# Python SDK for the Bird email platform (ADR-0045).
+# Distribution name is `messagebird-sdk` on PyPI; the import package is `bird`.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "messagebird-sdk"
+description = "The official Python SDK for the Bird email platform."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Bird" }]
+dynamic = ["version"]
+requires-python = ">=3.10"
+keywords = ["bird", "email", "webhooks", "sdk", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Email",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/messagebird/bird-sdk-python#readme"
+Repository = "https://github.com/messagebird/bird-sdk-python.git"
+Issues = "https://github.com/messagebird/bird-sdk-python/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "respx>=0.21",
+    "ruff>=0.6",
+    "pyright>=1.1",
+    "pyyaml>=6",
+]
+
+[tool.hatch.version]
+path = "src/bird/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bird"]
+
+# Curate the sdist: ship the package, README, and LICENSE — not the internal agent
+# docs (AGENTS.md / CLAUDE.md), tests, or the generator script.
+[tool.hatch.build.targets.sdist]
+include = ["/src/bird", "/README.md", "/LICENSE"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["src/bird/_generated.py"]  # generated; never hand-edited
+
+[tool.pyright]
+include = ["src", "tests", "examples"]
+ignore = ["src/bird/_generated.py"]  # generated; not held to the hand-written type bar
+pythonVersion = "3.10"
