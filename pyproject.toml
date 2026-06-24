@@ -45,6 +45,13 @@ dev = [
     "ruff>=0.6",
     "pyright>=1.1",
     "pyyaml>=6",
+    # Web frameworks used only by the homepage integration examples under
+    # examples/python/ — dev-only so they type-check (pyright) but never ship
+    # in the wheel (runtime deps stay httpx + pydantic).
+    "django>=4.2",
+    "flask>=3.0",
+    "fastapi>=0.111",
+    "starlette>=0.37",
 ]
 
 [tool.hatch.version]

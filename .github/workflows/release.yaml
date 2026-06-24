@@ -1,0 +1,74 @@
+# Publishes messagebird-sdk to PyPI when a vX.Y.Z tag is pushed to this mirror.
+#
+# Source of truth: clients/sdk-python/.mirror/ in the Bird monorepo — do NOT edit
+# on the mirror; changes are synced from the monorepo by
+# scripts/dev/sdk-release.sh.
+#
+# Auth is PyPI trusted publishing (OIDC) — there is no PYPI_TOKEN. It requires a
+# trusted publisher configured on pypi.org for messagebird-sdk pointing at this
+# repository and this workflow file (release.yaml). A second trusted publisher on
+# test.pypi.org enables the dry-run path below.
+#
+# workflow_dispatch runs a dry-run that publishes to TestPyPI so the pipeline can
+# be exercised end-to-end (real OIDC, real upload) without touching prod PyPI.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Publish to TestPyPI instead of PyPI"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write # create the GitHub Release
+  id-token: write # OIDC for PyPI trusted publishing
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v8.2.0
+      - run: uv build
+      - run: uvx twine check dist/*
+
+      - name: Publish to TestPyPI (dry-run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+      # skip-existing so re-running after a later step failed (smoke, GitHub
+      # Release) doesn't error on files already uploaded to the index.
+      - name: Publish to PyPI
+        if: github.event_name == 'push' || !inputs.dry_run
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+      # Only on a tag push, where GITHUB_REF_NAME is the vX.Y.Z just published.
+      - name: Smoke test (install from PyPI)
+        if: github.event_name == 'push'
+        run: ./scripts/smoke.sh "${GITHUB_REF_NAME#v}"
+
+      - name: GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Skip if the release already exists, so a re-run doesn't 422.
+        # --notes-from-tag reuses the annotated tag's message (this version's
+        # CHANGELOG section, set by scripts/dev/sdk-release.sh).
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --notes-from-tag --verify-tag
