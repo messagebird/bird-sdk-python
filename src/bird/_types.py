@@ -85,9 +85,20 @@ class EmailSendParams(_EmailSendRequired, total=False):
     metadata: Mapping[str, Any]
     track_opens: bool
     track_clicks: bool
-    ip_pool: str
+    ip_pool_id: str
     category: str
     attachments: Sequence[Attachment]
+
+
+class _EmailSendBatchRequired(TypedDict):
+    messages: Sequence[EmailSendParams]
+
+
+class EmailSendBatchParams(_EmailSendBatchRequired, total=False):
+    """Params for ``client.email.send_batch``. ``messages`` is required — a sequence
+    of per-message params (each shaped like ``EmailSendParams``); 1–100 messages,
+    all validated before any are queued. An ``email_defaults`` from-address fills an
+    unset ``from_`` on each message, exactly as it does for ``send``."""
 
 
 class EmailListParams(TypedDict, total=False):

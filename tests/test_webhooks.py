@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from bird import Bird, WebhookEvent, WebhookVerificationError
+from bird import Bird, GenericWebhookEvent, WebhookEvent, WebhookVerificationError
 
 SECRET = "whsec_" + base64.b64encode(b"0123456789abcdef").decode()
 
@@ -63,3 +63,15 @@ def test_unwrap_valid_signature_invalid_body_raises_verification_error() -> None
     payload = b"not json at all"
     with pytest.raises(WebhookVerificationError):
         client().webhooks.unwrap(payload, _headers(payload))
+
+
+def test_unwrap_unknown_event_type_returns_generic_envelope() -> None:
+    # A future event type this SDK version doesn't know must NOT raise — the open
+    # enum means it deserializes into a generic envelope under event.root, so an
+    # older client keeps verifying webhooks from a newer server.
+    payload = b'{"type":"email.brand_new_event","timestamp":"2026-06-01T17:00:12Z","data":{"foo":"bar"}}'
+    event = client().webhooks.unwrap(payload, _headers(payload))
+    assert isinstance(event, WebhookEvent)
+    assert isinstance(event.root, GenericWebhookEvent)
+    assert event.root.type == "email.brand_new_event"
+    assert event.root.data == {"foo": "bar"}

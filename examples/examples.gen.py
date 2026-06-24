@@ -72,6 +72,27 @@ async def _ex_6() -> None:
 
 
 async def _ex_7() -> None:
+    batch = client.email.send_batch(
+        messages=[
+            {
+                "from_": {"email": "onboarding@messagebird.dev", "name": "Bird"},
+                "to": ["delivered@messagebird.dev"],
+                "subject": "Hello from Bird",
+                "html": "<p>My first Bird email.</p>",
+            },
+            {
+                "from_": {"email": "onboarding@messagebird.dev", "name": "Bird"},
+                "to": ["someone-else@messagebird.dev"],
+                "subject": "Hello again from Bird",
+                "text": "My second Bird email.",
+            },
+        ],
+    )
+    for item in batch.data:
+        print(item.id, item.status)
+
+
+async def _ex_8() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":

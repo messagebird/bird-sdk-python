@@ -41,6 +41,63 @@ def test_send_aliases_from_omits_unset_and_auto_idempotency() -> None:
     assert sent.headers.get("idempotency-key")  # POST gets an auto idempotency key
 
 
+def _batch_item(message_id: str = ID1) -> dict:
+    return {"id": message_id, "status": "accepted", "category": "transactional"}
+
+
+@respx.mock
+def test_send_batch_serializes_each_message_and_returns_data() -> None:
+    route = respx.post(f"{BASE}/v1/email/batches").mock(
+        return_value=httpx.Response(202, json={"data": [_batch_item(ID1), _batch_item(ID2)]})
+    )
+    batch = client().email.send_batch(
+        messages=[
+            {"from_": "a@b.com", "to": ["c@d.com"], "subject": "Hi", "html": "<p>x</p>"},
+            {"from_": "a@b.com", "to": ["e@f.com"], "subject": "Hi 2", "text": "y"},
+        ]
+    )
+    assert [item.id for item in batch.data] == [ID1, ID2]
+    sent = route.calls.last.request
+    body = json.loads(sent.content)
+    assert isinstance(body, list) and len(body) == 2
+    assert body[0]["from"] == "a@b.com"  # from_ -> "from" alias, per item
+    assert "track_opens" not in body[0]  # unset -> omitted
+    assert sent.headers.get("idempotency-key")  # POST gets an auto idempotency key
+
+
+@respx.mock
+def test_send_batch_applies_email_defaults() -> None:
+    route = respx.post(f"{BASE}/v1/email/batches").mock(
+        return_value=httpx.Response(202, json={"data": [_batch_item()]})
+    )
+    bird = Bird(api_key="bk_eu1_s", email_defaults={"from_": "default@acme.com"})
+    bird.email.send_batch(messages=[{"to": ["c@d.com"], "subject": "Hi", "text": "x"}])
+    body = json.loads(route.calls.last.request.content)
+    assert body[0]["from"] == "default@acme.com"  # default fills unset from_ per item
+
+
+def test_send_batch_invalid_message_raises_bird_error() -> None:
+    with pytest.raises(BirdError):
+        client().email.send_batch(
+            messages=[{"from_": "ab", "to": ["c@d.com"], "subject": "Hi", "text": "x"}]  # from_ < min_length
+        )
+
+
+@respx.mock
+async def test_async_send_batch_returns_data() -> None:
+    respx.post(f"{BASE}/v1/email/batches").mock(
+        return_value=httpx.Response(202, json={"data": [_batch_item(ID1), _batch_item(ID2)]})
+    )
+    async with AsyncBird(api_key="bk_eu1_secret") as bird:
+        batch = await bird.email.send_batch(
+            messages=[
+                {"from_": "a@b.com", "to": ["c@d.com"], "subject": "Hi", "text": "x"},
+                {"from_": "a@b.com", "to": ["e@f.com"], "subject": "Hi 2", "text": "y"},
+            ]
+        )
+    assert [item.id for item in batch.data] == [ID1, ID2]
+
+
 @respx.mock
 def test_get_returns_model() -> None:
     respx.get(f"{BASE}/v1/email/messages/{ID1}").mock(return_value=httpx.Response(200, json=_message()))

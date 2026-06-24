@@ -2,6 +2,8 @@
 
 The official Python SDK for the [Bird](https://bird.com) email platform.
 
+📚 **Documentation:** https://bird.com/docs/sdks/python
+
 > **Status:** in development. The PyPI distribution name is `messagebird-sdk`; the import package is `bird`.
 
 Requires Python 3.10+.

@@ -9,14 +9,39 @@ import hashlib
 import hmac
 import json
 import time
-from typing import Mapping
+from typing import Any, Mapping, cast
 
 import pydantic
 
+from bird._event_types import WebhookEventType
 from bird._exceptions import WebhookVerificationError, _header
 from bird._generated import WebhookEvent
+from bird._models import BaseModel
 
 _DEFAULT_TOLERANCE = 300  # seconds
+
+# Event types this SDK version recognizes, sourced from the generated open-enum
+# constants. A type outside this set is a future event, not a malformed one.
+_KNOWN_EVENT_TYPES = frozenset(
+    v for k, v in vars(WebhookEventType).items() if not k.startswith("_") and isinstance(v, str)
+)
+
+
+class GenericWebhookEvent(BaseModel):
+    """A verified webhook event whose ``type`` this SDK version doesn't recognize.
+
+    The webhook event vocabulary is an open enum: when the platform ships a new
+    event type, an older SDK returns it — with the raw ``type``, ``timestamp``, and
+    ``data`` — instead of raising, so a deployed integration keeps verifying and
+    processing webhooks. ``unwrap`` still returns a :class:`WebhookEvent`; for an
+    unrecognized type its ``root`` is this generic envelope, so ``event.root.type``
+    and ``event.root.data`` keep working and an unhandled type lands in a switch's
+    default branch.
+    """
+
+    type: str
+    timestamp: str
+    data: Any = None
 
 
 def _verify_and_parse(
@@ -58,10 +83,26 @@ def _verify_and_parse(
     for entry in signatures.split():
         version, _, signature = entry.partition(",")
         if version == "v1" and hmac.compare_digest(signature, expected):
-            # Signature is valid, but a malformed body or unknown shape must still
-            # surface as WebhookVerificationError, not a raw JSON/pydantic error.
+            # Signature is valid, so parse the body. A malformed payload surfaces
+            # as WebhookVerificationError; an event type this SDK version doesn't
+            # know about is returned as a GenericWebhookEvent rather than rejected,
+            # so a new server event can't break an older client.
             try:
-                return WebhookEvent.model_validate(json.loads(raw))
+                obj = json.loads(raw)
+            except ValueError as exc:
+                raise WebhookVerificationError("verified webhook payload is not valid JSON") from exc
+            event_type = obj.get("type") if isinstance(obj, dict) else None
+            if isinstance(event_type, str) and event_type and event_type not in _KNOWN_EVENT_TYPES:
+                # A future event type: wrap the raw envelope as the union's root so
+                # callers read it through the same event.root.type / .data path and
+                # a switch with a default branch keeps working.
+                try:
+                    generic = GenericWebhookEvent.model_validate(obj)
+                except (ValueError, pydantic.ValidationError) as exc:
+                    raise WebhookVerificationError("verified webhook payload is not a valid event") from exc
+                return WebhookEvent.model_construct(root=cast(Any, generic))
+            try:
+                return WebhookEvent.model_validate(obj)
             except (ValueError, pydantic.ValidationError) as exc:
                 raise WebhookVerificationError("verified webhook payload is not a valid event") from exc
     raise WebhookVerificationError("no matching v1 signature")

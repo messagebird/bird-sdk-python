@@ -5,11 +5,25 @@ from __future__ import annotations
 from typing import Any, Mapping, Sequence
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
-from bird._generated import EmailMessage, EmailMessageSendRequest
+from bird._exceptions import BirdError
+from bird._generated import (
+    EmailMessage,
+    EmailMessageBatchRequest,
+    EmailMessageBatchResponse,
+    EmailMessageSendRequest,
+)
 from bird._models import to_wire
 from bird._response import APIResponse
-from bird._types import Attachment, EmailAddressInput, EmailDefaults, RequestOptions
+from bird._types import (
+    Attachment,
+    EmailAddressInput,
+    EmailDefaults,
+    EmailSendParams,
+    RequestOptions,
+)
 from bird.pagination import AsyncPage, SyncPage
+
+_BATCH_PATH = "/v1/email/batches"
 
 _PATH = "/v1/email/messages"
 
@@ -49,7 +63,7 @@ def _send_body(
     metadata: Mapping[str, Any] | None,
     track_opens: bool | None,
     track_clicks: bool | None,
-    ip_pool: str | None,
+    ip_pool_id: str | None,
     category: str | None,
     attachments: Sequence[Attachment] | None,
     defaults: EmailDefaults | None,
@@ -73,10 +87,50 @@ def _send_body(
         "metadata":     metadata     if metadata     is not None else d.get("metadata"),
         "track_opens":  track_opens  if track_opens  is not None else d.get("track_opens"),
         "track_clicks": track_clicks if track_clicks is not None else d.get("track_clicks"),
-        "ip_pool":      ip_pool,
+        "ip_pool_id":      ip_pool_id,
         "category":     category     if category     is not None else d.get("category"),
         "attachments":  attachments,
     })
+
+
+def _batch_body(
+    messages: Sequence[EmailSendParams],
+    defaults: EmailDefaults | None,
+) -> list[dict[str, Any]]:
+    # Each item is built exactly like a single send (address parsing, the from_->"from"
+    # alias, the EmailDefaults merge, exclude_none) via _send_body, which validates the
+    # item through EmailMessageSendRequest. The list's own 1..100 length bound is checked
+    # against the generated RootModel's field constraints so a too-short/long batch fails
+    # client-side as a BirdError, mirroring to_wire — without re-dumping the items (that
+    # would re-apply model defaults and undo exclude_none).
+    items = [
+        _send_body(
+            from_=m.get("from_"),
+            to=m["to"],
+            subject=m["subject"],
+            html=m.get("html"),
+            text=m.get("text"),
+            cc=m.get("cc"),
+            bcc=m.get("bcc"),
+            reply_to=m.get("reply_to"),
+            headers=m.get("headers"),
+            tags=m.get("tags"),
+            metadata=m.get("metadata"),
+            track_opens=m.get("track_opens"),
+            track_clicks=m.get("track_clicks"),
+            ip_pool_id=m.get("ip_pool_id"),
+            category=m.get("category"),
+            attachments=m.get("attachments"),
+            defaults=defaults,
+        )
+        for m in messages
+    ]
+    field = EmailMessageBatchRequest.model_fields["root"]
+    lo = next((m.min_length for m in field.metadata if hasattr(m, "min_length")), None)
+    hi = next((m.max_length for m in field.metadata if hasattr(m, "max_length")), None)
+    if (lo is not None and len(items) < lo) or (hi is not None and len(items) > hi):
+        raise BirdError(f"invalid request: messages: list must have between {lo} and {hi} items, got {len(items)}")
+    return items
 
 
 def _opts(options: RequestOptions | None) -> dict[str, Any]:
@@ -114,7 +168,7 @@ class Email:
         metadata: Mapping[str, Any] | None = None,
         track_opens: bool | None = None,
         track_clicks: bool | None = None,
-        ip_pool: str | None = None,
+        ip_pool_id: str | None = None,
         category: str | None = None,
         attachments: Sequence[Attachment] | None = None,
         options: RequestOptions | None = None,
@@ -173,11 +227,50 @@ class Email:
             from_=from_, to=to, subject=subject, html=html, text=text,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
-            ip_pool=ip_pool, category=category, attachments=attachments,
+            ip_pool_id=ip_pool_id, category=category, attachments=attachments,
             defaults=self._defaults,
         )
         response = self._client.request("POST", _PATH, body=body, **_opts(options))
         return EmailMessage.model_validate(response.json())
+
+    def send_batch(
+        self,
+        *,
+        messages: Sequence[EmailSendParams],
+        options: RequestOptions | None = None,
+    ) -> EmailMessageBatchResponse:
+        """Send a batch of emails in one request and return one result per message.
+
+        ``messages`` is a sequence of per-message params, each shaped exactly like the
+        keyword arguments of :meth:`send` (an ``EmailSendParams`` dict). The batch holds
+        1–100 messages; the server validates every message before queuing any. The
+        client's ``email_defaults`` fill each message's unset fields, and a per-message
+        value always wins — the same merge :meth:`send` applies.
+
+        ```python
+        batch = client.email.send_batch(
+            messages=[
+                {
+                    "from_": {"email": "onboarding@messagebird.dev", "name": "Bird"},
+                    "to": ["delivered@messagebird.dev"],
+                    "subject": "Hello from Bird",
+                    "html": "<p>My first Bird email.</p>",
+                },
+                {
+                    "from_": {"email": "onboarding@messagebird.dev", "name": "Bird"},
+                    "to": ["someone-else@messagebird.dev"],
+                    "subject": "Hello again from Bird",
+                    "text": "My second Bird email.",
+                },
+            ],
+        )
+        for item in batch.data:
+            print(item.id, item.status)
+        ```
+        """
+        body = _batch_body(messages, self._defaults)
+        response = self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
+        return EmailMessageBatchResponse.model_validate(response.json())
 
     def get(self, message_id: str, *, options: RequestOptions | None = None) -> EmailMessage:
         """Fetch a previously sent message by id."""
@@ -252,7 +345,7 @@ class AsyncEmail:
         metadata: Mapping[str, Any] | None = None,
         track_opens: bool | None = None,
         track_clicks: bool | None = None,
-        ip_pool: str | None = None,
+        ip_pool_id: str | None = None,
         category: str | None = None,
         attachments: Sequence[Attachment] | None = None,
         options: RequestOptions | None = None,
@@ -261,11 +354,21 @@ class AsyncEmail:
             from_=from_, to=to, subject=subject, html=html, text=text,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
-            ip_pool=ip_pool, category=category, attachments=attachments,
+            ip_pool_id=ip_pool_id, category=category, attachments=attachments,
             defaults=self._defaults,
         )
         response = await self._client.request("POST", _PATH, body=body, **_opts(options))
         return EmailMessage.model_validate(response.json())
+
+    async def send_batch(
+        self,
+        *,
+        messages: Sequence[EmailSendParams],
+        options: RequestOptions | None = None,
+    ) -> EmailMessageBatchResponse:
+        body = _batch_body(messages, self._defaults)
+        response = await self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
+        return EmailMessageBatchResponse.model_validate(response.json())
 
     async def get(self, message_id: str, *, options: RequestOptions | None = None) -> EmailMessage:
         response = await self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
@@ -308,14 +411,14 @@ class EmailWithRawResponse:
         reply_to: Sequence[EmailAddressInput] | None = None, headers: Mapping[str, str] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None, metadata: Mapping[str, Any] | None = None,
         track_opens: bool | None = None, track_clicks: bool | None = None,
-        ip_pool: str | None = None, category: str | None = None,
+        ip_pool_id: str | None = None, category: str | None = None,
         attachments: Sequence[Attachment] | None = None, options: RequestOptions | None = None,
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
-            ip_pool=ip_pool, category=category, attachments=attachments,
+            ip_pool_id=ip_pool_id, category=category, attachments=attachments,
             defaults=self._defaults,
         )
         return APIResponse(self._client.request("POST", _PATH, body=body, **_opts(options)), EmailMessage)
@@ -338,14 +441,14 @@ class AsyncEmailWithRawResponse:
         reply_to: Sequence[EmailAddressInput] | None = None, headers: Mapping[str, str] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None, metadata: Mapping[str, Any] | None = None,
         track_opens: bool | None = None, track_clicks: bool | None = None,
-        ip_pool: str | None = None, category: str | None = None,
+        ip_pool_id: str | None = None, category: str | None = None,
         attachments: Sequence[Attachment] | None = None, options: RequestOptions | None = None,
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
-            ip_pool=ip_pool, category=category, attachments=attachments,
+            ip_pool_id=ip_pool_id, category=category, attachments=attachments,
             defaults=self._defaults,
         )
         return APIResponse(await self._client.request("POST", _PATH, body=body, **_opts(options)), EmailMessage)

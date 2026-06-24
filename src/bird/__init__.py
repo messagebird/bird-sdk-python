@@ -14,14 +14,17 @@ from bird._types import (
     Attachment,
     EmailDefaults,
     EmailListParams,
+    EmailSendBatchParams,
     EmailSendParams,
     RequestOptions,
 )
 from bird._generated import (
     EmailMessage,
+    EmailMessageBatchResponse,
     WebhookEvent,
-    WebhookEventType,
 )
+from bird._event_types import WebhookEventType
+from bird.resources.webhooks import GenericWebhookEvent
 from bird._exceptions import (
     APIConnectionError,
     APIError,
@@ -44,12 +47,15 @@ __all__ = [
     "EmailDefaults",
     "Attachment",
     "EmailSendParams",
+    "EmailSendBatchParams",
     "EmailListParams",
     "APIResponse",
     "SyncPage",
     "AsyncPage",
     "EmailMessage",
+    "EmailMessageBatchResponse",
     "WebhookEvent",
+    "GenericWebhookEvent",
     "WebhookEventType",
     "BirdError",
     "APIError",

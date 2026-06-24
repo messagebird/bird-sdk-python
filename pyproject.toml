@@ -31,7 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/messagebird/bird-sdk-python#readme"
+Homepage = "https://bird.com"
+Documentation = "https://bird.com/docs/sdks/python"
+"API Reference" = "https://bird.com/docs/api"
 Repository = "https://github.com/messagebird/bird-sdk-python.git"
 Issues = "https://github.com/messagebird/bird-sdk-python/issues"
 

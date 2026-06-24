@@ -7,6 +7,7 @@ from bird import Bird
 def test_surface_conformance() -> None:
     client = Bird(api_key="bk_eu1_surfaceconformance")
     assert callable(client.email.send)
+    assert callable(client.email.send_batch)
     assert callable(client.email.get)
     assert callable(client.email.list)
     assert callable(client.webhooks.unwrap)

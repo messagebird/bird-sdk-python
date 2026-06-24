@@ -140,6 +140,17 @@ class FieldListEnvelope(BaseModel):
     ]
 
 
+class EmailID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
 class EmailAddress(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -337,7 +348,7 @@ class EmailMessage(BaseModel):
     rejected_count: Annotated[
         int,
         Field(
-            description='Number of recipients rejected before delivery. See the per-recipient `rejection_reason` field on `GET /v1/emails/{id}/recipients` for the specific cause (suppression match, transmission failure, generation failure, or policy refusal).\n'
+            description='Number of recipients rejected before delivery. See the per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` for the specific cause (suppression match, transmission failure, generation failure, or policy refusal).\n'
         ),
     ]
     processing_latency_ms: Annotated[
@@ -402,11 +413,7 @@ class EmailMessage(BaseModel):
         ),
     ] = None
     in_reply_to_message_id: Annotated[
-        str | None,
-        Field(
-            description='The message this one is a reply to, if any.',
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
-        ),
+        EmailID | None, Field(description='The message this one is a reply to, if any.')
     ] = None
     delivered_at: Annotated[
         str | None,
@@ -453,14 +460,14 @@ class EmailAttachment(BaseModel):
     content: Annotated[
         Base64Str,
         Field(
-            description='Base64-encoded attachment bytes. Required. Counts against the 20 MB per-send wire cap.\n',
+            description='Base64-encoded attachment bytes. Required. Counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n',
             min_length=1,
         ),
     ]
     path: Annotated[
         str | None,
         Field(
-            description='Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `unsupported_feature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts against the 20 MB per-send wire cap.\n'
+            description='Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `unsupported_feature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n'
         ),
     ] = None
     content_type: Annotated[
@@ -542,7 +549,7 @@ class EmailMessageSendRequest(BaseModel):
     ] = None
     headers: Annotated[
         dict[str, str] | None,
-        Field(description='Custom email headers as key-value pairs.'),
+        Field(description='Custom email headers as key-value pairs.', max_length=25),
     ] = None
     tags: Annotated[
         list[EmailTag] | None,
@@ -564,7 +571,7 @@ class EmailMessageSendRequest(BaseModel):
         bool | None,
         Field(description='Whether to track click events for this message.'),
     ] = True
-    ip_pool: Annotated[
+    ip_pool_id: Annotated[
         str | None,
         Field(
             description="ID of the IP pool to send from (`ipp_` prefix), or `ipp_shared` to route through the shared pool explicitly. Omit to use your organization's default pool. An unknown pool, or a pool with no dedicated IPs available to send from, is rejected with a `422`.\n",
@@ -589,7 +596,7 @@ class EmailMessageSendRequest(BaseModel):
     attachments: Annotated[
         list[EmailAttachment] | None,
         Field(
-            description='File attachments. Total message size (body + inline images + all attachments) capped at 20 MB post-base64. Raw file content should stay under ~15 MB to leave room after encoding. Sends with attachments cannot use `POST /v1/emails/batch`; use the single-send endpoint. See the EmailAttachment schema for the full field contract.\n',
+            description='File attachments. Bird rejects sends whose estimated generated message size exceeds 20 MB. The estimate is the HTML and text body plus all attachments and inline images measured after base64 encoding. Keep total raw attachment content at or below 15 MB for reliable headroom. In batch sends, this per-message cap still applies and the serialized JSON request body for the whole batch has a hard 20 MB cap. See the EmailAttachment schema for the full field contract.\n',
             max_length=20,
         ),
     ] = None
@@ -614,29 +621,130 @@ class EmailMessageSendRequest(BaseModel):
     ] = None
 
 
+class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
+    root: Annotated[
+        list[EmailMessageSendRequest],
+        Field(
+            description='Batch of email message send requests. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.\n',
+            max_length=100,
+            min_length=1,
+        ),
+    ]
+
+
+class Status1(str, Enum):
+    accepted = 'accepted'
+
+
+class EmailMessageBatchItem(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Message ID assigned to this batch item.',
+            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    status: Annotated[
+        Status1, Field(description='Initial status of this message in the batch.')
+    ]
+    category: Annotated[
+        Category, Field(description='Resolved category for this batch item.')
+    ]
+
+
+class EmailMessageBatchResponse(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[EmailMessageBatchItem],
+        Field(description='One entry per message in the batch, in submission order.'),
+    ]
+
+
 class RecipientRole(str, Enum):
     to = 'to'
     cc = 'cc'
     bcc = 'bcc'
 
 
-class WebhookEventType(str, Enum):
-    domain_failed = 'domain.failed'
-    domain_verified = 'domain.verified'
-    email_accepted = 'email.accepted'
-    email_bounced = 'email.bounced'
-    email_clicked = 'email.clicked'
-    email_complained = 'email.complained'
-    email_deferred = 'email.deferred'
-    email_delivered = 'email.delivered'
-    email_list_unsubscribed = 'email.list_unsubscribed'
-    email_opened = 'email.opened'
-    email_out_of_band_bounce = 'email.out_of_band_bounce'
-    email_processed = 'email.processed'
-    email_received = 'email.received'
-    email_rejected = 'email.rejected'
-    email_unsubscribed = 'email.unsubscribed'
-    email_suppression_created = 'email_suppression.created'
+class SMSErrorCode(str, Enum):
+    invalid_destination = 'invalid_destination'
+    unreachable = 'unreachable'
+    blocked_by_carrier = 'blocked_by_carrier'
+    blocked_by_recipient = 'blocked_by_recipient'
+    landline_unreachable = 'landline_unreachable'
+    content_rejected = 'content_rejected'
+    sender_unregistered = 'sender_unregistered'
+    recipient_opted_out = 'recipient_opted_out'
+    provider_unavailable = 'provider_unavailable'
+    unknown = 'unknown'
+
+
+class SMSTag(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='Tag name. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 32 characters.\n',
+            examples=['campaign'],
+            max_length=32,
+            min_length=1,
+            pattern='^[A-Za-z0-9_-]+$',
+        ),
+    ]
+    value: Annotated[
+        str,
+        Field(
+            description='Tag value. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 64 characters.\n',
+            examples=['signup'],
+            max_length=64,
+            min_length=1,
+            pattern='^[A-Za-z0-9_-]+$',
+        ),
+    ]
+
+
+class SMSError(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    code: SMSErrorCode
+    description: Annotated[
+        str,
+        Field(
+            description='Human-readable explanation of the failure.',
+            examples=['Carrier filtered as spam'],
+            min_length=1,
+        ),
+    ]
+    carrier_error_code: Annotated[
+        str | None,
+        Field(
+            description='Raw carrier-supplied error code, when available, for low-level debugging.',
+            examples=['30007'],
+        ),
+    ] = None
+    occurred_at: Annotated[
+        str, Field(description='When the failure occurred.', min_length=1)
+    ]
+
+
+class WebhookEventType(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description='Webhook event type. Open enum — new event types may be added over time, so treat any unrecognized value as a future event rather than an error. The values below are the types known at this version.',
+            min_length=1,
+        ),
+    ]
 
 
 class Type1(str, Enum):
@@ -1188,9 +1296,10 @@ class EventEmailReceivedData(BaseModel):
     inbound_message_id: Annotated[
         str,
         Field(
-            description='ID of the received email (rem_ prefix). Use it with GET /v1/email/inbound-messages/{id} to fetch the body.',
+            description='ID of the received email. Use it with GET /v1/email/inbound-messages/{id} to fetch the body, raw content, and attachments.',
             examples=['rem_01krdgeqcxet5s7t44vh8rt9mg'],
             min_length=1,
+            pattern='^rem_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ]
     workspace_id: Annotated[
@@ -1218,14 +1327,51 @@ class EventEmailReceivedData(BaseModel):
             min_length=1,
         ),
     ]
-    subject: Annotated[
-        str,
+    to: Annotated[
+        list[str],
         Field(
-            description='Subject line as received.',
-            examples=['Welcome to Bird'],
-            min_length=1,
+            description='Recipient addresses the message was sent to.',
+            examples=[['support@acme.com']],
         ),
     ]
+    subject: Annotated[
+        str | None,
+        Field(
+            description='Subject line as received, or null when the message had no subject.',
+            examples=['Welcome to Bird'],
+        ),
+    ]
+    in_reply_to: Annotated[
+        str | None,
+        Field(
+            description='In-Reply-To header — the Message-ID this message replies to, or null when it is not a reply.',
+            examples=['<previous-message@example.com>'],
+        ),
+    ] = None
+    spf_pass: Annotated[
+        bool | None,
+        Field(
+            description='Whether SPF passed for the sender, or null when the result did not carry an SPF verdict.'
+        ),
+    ] = None
+    dkim_pass: Annotated[
+        bool | None,
+        Field(
+            description='Whether DKIM passed for the sender, or null when the result did not carry a DKIM verdict.'
+        ),
+    ] = None
+    dmarc_pass: Annotated[
+        bool | None,
+        Field(
+            description='Whether DMARC passed for the sender, or null when the result did not carry a DMARC verdict.'
+        ),
+    ] = None
+    spam_score: Annotated[
+        float | None,
+        Field(
+            description='Spam score for the message. Always null at present; reserved for a future content-scoring capability.'
+        ),
+    ] = None
 
 
 class Type13(str, Enum):
@@ -1346,6 +1492,299 @@ class EventEmailSuppressionCreated(BaseModel):
     ]
 
 
+class EventSMSBase(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    sms_id: Annotated[
+        str,
+        Field(
+            description='ID of the SMS message.',
+            examples=['sms_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^sms_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='ID of the workspace.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    to: Annotated[
+        str,
+        Field(
+            description='Recipient phone number in E.164 format.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    from_: Annotated[
+        str,
+        Field(
+            alias='from',
+            description='Sender the message was sent from — an E.164 number, an alphanumeric sender ID, or a short code.',
+            examples=['+15557654321'],
+            min_length=1,
+        ),
+    ]
+    tags: Annotated[
+        list[SMSTag] | None,
+        Field(
+            description='Tags provided on the send request, echoed on every event for the message so you can route and correlate without an extra lookup. Null when the message carried no tags.\n'
+        ),
+    ]
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.\n',
+            examples=[{'order_id': 'ord_123'}],
+        ),
+    ]
+
+
+class EventSMSAcceptedData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type17(str, Enum):
+    sms_accepted = 'sms.accepted'
+
+
+class EventSMSAccepted(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.accepted'],
+        Field(description='Event type.', examples=['sms.accepted']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time Bird accepted the request.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSAcceptedData
+
+
+class EventSMSDeliveredData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    carrier: Annotated[
+        str | None,
+        Field(
+            description='Carrier that delivered the message, or null when not known.',
+            examples=['Verizon'],
+        ),
+    ]
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description='Mobile country code and mobile network code of the carrier, or null when not known.',
+            examples=['311480'],
+        ),
+    ]
+
+
+class Type18(str, Enum):
+    sms_delivered = 'sms.delivered'
+
+
+class EventSMSDelivered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.delivered'],
+        Field(description='Event type.', examples=['sms.delivered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the carrier confirmed delivery.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSDeliveredData
+
+
+class EventSMSExpiredData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type19(str, Enum):
+    sms_expired = 'sms.expired'
+
+
+class EventSMSExpired(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.expired'],
+        Field(description='Event type.', examples=['sms.expired']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the message expired.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSExpiredData
+
+
+class EventSMSFailedData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    error: Annotated[
+        SMSError | None, Field(description='Why the message terminally failed.')
+    ]
+
+
+class Type20(str, Enum):
+    sms_failed = 'sms.failed'
+
+
+class EventSMSFailed(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.failed'], Field(description='Event type.', examples=['sms.failed'])
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the failure was recorded.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSFailedData
+
+
+class EventSMSRejectedData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    error: Annotated[
+        SMSError | None,
+        Field(description='Why the message was rejected before reaching the carrier.'),
+    ]
+
+
+class Type21(str, Enum):
+    sms_rejected = 'sms.rejected'
+
+
+class EventSMSRejected(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.rejected'],
+        Field(description='Event type.', examples=['sms.rejected']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the rejection was recorded.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSRejectedData
+
+
+class EventSMSSentData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    carrier: Annotated[
+        str | None,
+        Field(
+            description='Carrier that handled the message, or null when not known.',
+            examples=['Verizon'],
+        ),
+    ]
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description='Mobile country code and mobile network code of the carrier, or null when not known.',
+            examples=['311480'],
+        ),
+    ]
+
+
+class Type22(str, Enum):
+    sms_sent = 'sms.sent'
+
+
+class EventSMSSent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.sent'], Field(description='Event type.', examples=['sms.sent'])
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the message was handed to the carrier.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSSentData
+
+
+class EventSMSUndeliveredData(EventSMSBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    error: Annotated[
+        SMSError | None, Field(description='Why the message was not delivered.')
+    ]
+
+
+class Type23(str, Enum):
+    sms_undelivered = 'sms.undelivered'
+
+
+class EventSMSUndelivered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['sms.undelivered'],
+        Field(description='Event type.', examples=['sms.undelivered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the non-delivery was recorded.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSUndeliveredData
+
+
 class WebhookEvent(
     RootModel[
         EventDomainFailed
@@ -1364,6 +1803,13 @@ class WebhookEvent(
         | EventEmailRejected
         | EventEmailUnsubscribed
         | EventEmailSuppressionCreated
+        | EventSMSAccepted
+        | EventSMSDelivered
+        | EventSMSExpired
+        | EventSMSFailed
+        | EventSMSRejected
+        | EventSMSSent
+        | EventSMSUndelivered
     ]
 ):
     root: Annotated[
@@ -1382,7 +1828,14 @@ class WebhookEvent(
         | EventEmailReceived
         | EventEmailRejected
         | EventEmailUnsubscribed
-        | EventEmailSuppressionCreated,
+        | EventEmailSuppressionCreated
+        | EventSMSAccepted
+        | EventSMSDelivered
+        | EventSMSExpired
+        | EventSMSFailed
+        | EventSMSRejected
+        | EventSMSSent
+        | EventSMSUndelivered,
         Field(
             description="Discriminated union of every webhook event the Bird platform emits.\nEach variant is the full delivery body: `type` names the event, `timestamp` is when the event occurred, and `data` carries the event-specific payload. The `type` property selects the variant — SDKs that consume this schema (openapi-typescript, oapi-codegen) generate a narrowed union keyed on `type`, so customer code can switch on the event id and access the variant-specific payload fields without casting.\nDelivery metadata (the event id and per-attempt signature headers) rides in HTTP headers per Standard Webhooks and is handled by the SDK's webhook verification helper, which returns one of these variants.\n",
             discriminator='type',

@@ -3,5 +3,6 @@
 # generated from backend/openapi/surfaces.yaml.
 KEEP: dict[str, set[str]] = {
     "/v1/email/messages": {"get", "post"},
+    "/v1/email/batches": {"post"},
     "/v1/email/messages/{message_id}": {"get"},
 }
