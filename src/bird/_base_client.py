@@ -27,9 +27,23 @@ from bird._version import __version__
 
 USER_AGENT = f"bird-sdk-python/{__version__} ({platform.python_implementation().lower()}/{platform.python_version()})"
 
+# X-Bird-* client-identity headers (ADR-0067): the API attributes the SDK
+# surface from these, not the User-Agent. Telemetry labels only; computed once.
+# Keys use the canonical wire casing (matching the Go/TS SDKs).
+_CLIENT_HEADERS = {
+    "X-Bird-Surface": "sdk-python",
+    "X-Bird-Version": __version__,
+    "X-Bird-Lang": platform.python_implementation().lower(),
+    "X-Bird-Os": platform.system().lower(),
+    "X-Bird-Arch": platform.machine().lower(),
+}
+
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
-# SDK-owned headers a caller's extra_headers must never override.
-_RESERVED_HEADERS = {"authorization", "user-agent", "x-bird-api-version", "idempotency-key"}
+# SDK-owned headers a caller's extra_headers must never override. Derived from
+# _CLIENT_HEADERS so the two can't drift; matched case-insensitively.
+_RESERVED_HEADERS = {"authorization", "user-agent", "x-bird-api-version", "idempotency-key"} | {
+    key.lower() for key in _CLIENT_HEADERS
+}
 
 # Bound to the concrete client so `with`/`async with` preserve the subclass type
 # (e.g. `with Bird(...) as c` keeps `c` typed as Bird, not SyncAPIClient).
@@ -83,6 +97,7 @@ class BaseClient:
                 headers[key] = value
         headers["Authorization"] = f"Bearer {self.api_key}"
         headers["User-Agent"] = USER_AGENT
+        headers.update(_CLIENT_HEADERS)
         if self.api_version:
             headers["X-Bird-API-Version"] = self.api_version
         if idempotency_key:
