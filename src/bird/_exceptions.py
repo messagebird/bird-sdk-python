@@ -48,6 +48,16 @@ class ErrorDetail:
     message: str
 
 
+@dataclass(frozen=True)
+class ErrorNextAction:
+    """One recovery operation the server suggests (ADR-0073): call it to resolve
+    the error, then retry the original request."""
+
+    operation: str
+    description: str | None = None
+    scope: str | None = None
+
+
 class BirdError(Exception):
     """Base class for every error raised by the SDK."""
 
@@ -101,6 +111,8 @@ class APIStatusError(APIError):
         request_id: str | None = None,
         param: str | None = None,
         vendor_code: str | None = None,
+        remediation: str | None = None,
+        next: list[ErrorNextAction] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -111,6 +123,8 @@ class APIStatusError(APIError):
         self.request_id = request_id
         self.param = param
         self.vendor_code = vendor_code
+        self.remediation = remediation
+        self.next = next or []
 
     def __str__(self) -> str:
         return f"{self.message} (status {self.status_code}, type {self.type}, request_id {self.request_id})"
@@ -196,6 +210,16 @@ def from_response(status_code: int, body: bytes | str, headers: Mapping[str, str
         "request_id": request_id,
         "param": data.get("param"),
         "vendor_code": data.get("vendor_code"),
+        "remediation": data.get("remediation"),
+        "next": [
+            ErrorNextAction(
+                operation=n.get("operation", ""),
+                description=n.get("description"),
+                scope=n.get("scope"),
+            )
+            for n in (data.get("next") or [])  # `or []` handles both an absent key and an explicit null
+            if isinstance(n, dict)
+        ],
     }
 
     if type_ == ErrorType.rate_limit:

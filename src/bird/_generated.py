@@ -25,6 +25,33 @@ class ErrorDetail(BaseModel):
     ]
 
 
+class ErrorNextAction(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    operation: Annotated[
+        str,
+        Field(
+            description='The operationId of a follow-up operation that resolves this error. Call it, then retry the original request.',
+            min_length=1,
+        ),
+    ]
+    description: Annotated[
+        str | None,
+        Field(
+            description='Short human-readable label for the recovery step.',
+            min_length=1,
+        ),
+    ] = None
+    scope: Annotated[
+        str | None,
+        Field(
+            description='The permission scope the recovery operation requires, when it is scoped. Omitted for operations that need no scope.',
+            min_length=1,
+        ),
+    ] = None
+
+
 class Type(str, Enum):
     auth_error = 'auth_error'
     bad_request_error = 'bad_request_error'
@@ -105,6 +132,19 @@ class ErrorBody(BaseModel):
         list[ErrorDetail] | None,
         Field(
             description='Per-field validation errors. Present only on validation_error responses.'
+        ),
+    ] = None
+    remediation: Annotated[
+        str | None,
+        Field(
+            description='A human-readable next step to resolve this error. Present when a recovery is known.',
+            min_length=1,
+        ),
+    ] = None
+    next: Annotated[
+        list[ErrorNextAction] | None,
+        Field(
+            description='Operations that resolve this error, in the order to try them. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.'
         ),
     ] = None
 
@@ -250,6 +290,7 @@ class Category(str, Enum):
 
 
 class Status(str, Enum):
+    scheduled = 'scheduled'
     accepted = 'accepted'
     processed = 'processed'
     deferred = 'deferred'
@@ -258,6 +299,7 @@ class Status(str, Enum):
     bounced = 'bounced'
     complained = 'complained'
     rejected = 'rejected'
+    canceled = 'canceled'
 
 
 class EmailMessage(BaseModel):
@@ -309,7 +351,7 @@ class EmailMessage(BaseModel):
     status: Annotated[
         Status,
         Field(
-            description="Aggregate delivery status derived from recipient states. `accepted` means Bird has the send and is preparing to deliver. `processed` means Bird has processed the message and queued it for delivery to the recipient's mail server.\n"
+            description="Aggregate delivery status derived from recipient states. `scheduled` means the message is queued to send at a future time and has not been dispatched yet. `accepted` means Bird has the send and is preparing to deliver. `processed` means Bird has processed the message and queued it for delivery to the recipient's mail server. `canceled` means a scheduled message was canceled before it was sent.\n"
         ),
     ]
     accepted_count: Annotated[
@@ -419,6 +461,12 @@ class EmailMessage(BaseModel):
         str | None,
         Field(
             description='When all recipients reached a terminal delivered state, or null if not yet fully delivered.'
+        ),
+    ] = None
+    scheduled_at: Annotated[
+        str | None,
+        Field(
+            description='When this message is scheduled to send, for a send created with a future send time. Null for an immediate send. Stays set after the scheduled send fires.'
         ),
     ] = None
 
@@ -959,6 +1007,72 @@ class EventEmailBounced(BaseModel):
     data: EventEmailBouncedData
 
 
+class EventEmailMessageBase(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    email_id: Annotated[
+        str,
+        Field(
+            description='ID of the email send.',
+            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='ID of the workspace.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    tags: Annotated[
+        list[EmailTag] | None,
+        Field(
+            description='Tags provided on the send request, echoed on the event so you can route and correlate without an extra lookup. Null when the send carried no tags.\n'
+        ),
+    ]
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.\n',
+            examples=[{'order_id': 'ord_123'}],
+        ),
+    ]
+
+
+class EventEmailCanceledData(EventEmailMessageBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type5(str, Enum):
+    email_canceled = 'email.canceled'
+
+
+class EventEmailCanceled(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email.canceled'],
+        Field(description='Event type.', examples=['email.canceled']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the scheduled send was canceled.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailCanceledData
+
+
 class EventEmailClickedData(EventEmailBase):
     model_config = ConfigDict(
         extra='allow',
@@ -987,7 +1101,7 @@ class EventEmailClickedData(EventEmailBase):
     ]
 
 
-class Type5(str, Enum):
+class Type6(str, Enum):
     email_clicked = 'email.clicked'
 
 
@@ -1023,7 +1137,7 @@ class EventEmailComplainedData(EventEmailBase):
     ]
 
 
-class Type6(str, Enum):
+class Type7(str, Enum):
     email_complained = 'email.complained'
 
 
@@ -1076,7 +1190,7 @@ class EventEmailDeferredData(EventEmailBase):
     ]
 
 
-class Type7(str, Enum):
+class Type8(str, Enum):
     email_deferred = 'email.deferred'
 
 
@@ -1105,7 +1219,7 @@ class EventEmailDeliveredData(EventEmailBase):
     )
 
 
-class Type8(str, Enum):
+class Type9(str, Enum):
     email_delivered = 'email.delivered'
 
 
@@ -1134,7 +1248,7 @@ class EventEmailListUnsubscribedData(EventEmailBase):
     )
 
 
-class Type9(str, Enum):
+class Type10(str, Enum):
     email_list_unsubscribed = 'email.list_unsubscribed'
 
 
@@ -1177,7 +1291,7 @@ class EventEmailOpenedData(EventEmailBase):
     ]
 
 
-class Type10(str, Enum):
+class Type11(str, Enum):
     email_opened = 'email.opened'
 
 
@@ -1237,7 +1351,7 @@ class EventEmailOutOfBandBounceData(EventEmailBase):
     ]
 
 
-class Type11(str, Enum):
+class Type12(str, Enum):
     email_out_of_band_bounce = 'email.out_of_band_bounce'
 
 
@@ -1266,7 +1380,7 @@ class EventEmailProcessedData(EventEmailBase):
     )
 
 
-class Type12(str, Enum):
+class Type13(str, Enum):
     email_processed = 'email.processed'
 
 
@@ -1374,7 +1488,7 @@ class EventEmailReceivedData(BaseModel):
     ] = None
 
 
-class Type13(str, Enum):
+class Type14(str, Enum):
     email_received = 'email.received'
 
 
@@ -1402,6 +1516,9 @@ class EmailRejectionReason(str, Enum):
     transmission_failed = 'transmission_failed'
     generation_failure = 'generation_failure'
     policy_rejection = 'policy_rejection'
+    domain_unverified = 'domain_unverified'
+    quota_exceeded = 'quota_exceeded'
+    recipient_not_allowed = 'recipient_not_allowed'
 
 
 class EventEmailRejectedData(EventEmailBase):
@@ -1411,7 +1528,7 @@ class EventEmailRejectedData(EventEmailBase):
     rejection_reason: EmailRejectionReason
 
 
-class Type14(str, Enum):
+class Type15(str, Enum):
     email_rejected = 'email.rejected'
 
 
@@ -1434,13 +1551,50 @@ class EventEmailRejected(BaseModel):
     data: EventEmailRejectedData
 
 
+class EventEmailScheduledData(EventEmailMessageBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    scheduled_at: Annotated[
+        str,
+        Field(
+            description='When the message is scheduled to send.',
+            examples=['2026-05-22 09:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type16(str, Enum):
+    email_scheduled = 'email.scheduled'
+
+
+class EventEmailScheduled(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email.scheduled'],
+        Field(description='Event type.', examples=['email.scheduled']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the send was scheduled.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailScheduledData
+
+
 class EventEmailUnsubscribedData(EventEmailBase):
     model_config = ConfigDict(
         extra='allow',
     )
 
 
-class Type15(str, Enum):
+class Type17(str, Enum):
     email_unsubscribed = 'email.unsubscribed'
 
 
@@ -1463,7 +1617,7 @@ class EventEmailUnsubscribed(BaseModel):
     data: EventEmailUnsubscribedData
 
 
-class Type16(str, Enum):
+class Type18(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -1552,7 +1706,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type17(str, Enum):
+class Type19(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -1595,7 +1749,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type18(str, Enum):
+class Type20(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -1624,7 +1778,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type19(str, Enum):
+class Type21(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -1656,7 +1810,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type20(str, Enum):
+class Type22(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -1688,7 +1842,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type21(str, Enum):
+class Type23(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -1731,7 +1885,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type22(str, Enum):
+class Type24(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -1762,7 +1916,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type23(str, Enum):
+class Type25(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 
@@ -1791,6 +1945,7 @@ class WebhookEvent(
         | EventDomainVerified
         | EventEmailAccepted
         | EventEmailBounced
+        | EventEmailCanceled
         | EventEmailClicked
         | EventEmailComplained
         | EventEmailDeferred
@@ -1801,6 +1956,7 @@ class WebhookEvent(
         | EventEmailProcessed
         | EventEmailReceived
         | EventEmailRejected
+        | EventEmailScheduled
         | EventEmailUnsubscribed
         | EventEmailSuppressionCreated
         | EventSMSAccepted
@@ -1817,6 +1973,7 @@ class WebhookEvent(
         | EventDomainVerified
         | EventEmailAccepted
         | EventEmailBounced
+        | EventEmailCanceled
         | EventEmailClicked
         | EventEmailComplained
         | EventEmailDeferred
@@ -1827,6 +1984,7 @@ class WebhookEvent(
         | EventEmailProcessed
         | EventEmailReceived
         | EventEmailRejected
+        | EventEmailScheduled
         | EventEmailUnsubscribed
         | EventEmailSuppressionCreated
         | EventSMSAccepted

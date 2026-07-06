@@ -32,6 +32,7 @@ from bird._exceptions import (
     APITimeoutError,
     BirdError,
     ErrorDetail,
+    ErrorNextAction,
     ErrorType,
     RateLimitError,
     ValidationError,
@@ -66,6 +67,7 @@ __all__ = [
     "APITimeoutError",
     "WebhookVerificationError",
     "ErrorDetail",
+    "ErrorNextAction",
     "ErrorType",
     "__version__",
 ]
