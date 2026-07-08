@@ -21,6 +21,9 @@ from bird._constants import DEFAULT_MAX_RETRIES
 from bird._exceptions import BirdError
 from bird._types import NOT_GIVEN, EmailDefaults, NotGiven
 from bird.resources.email import AsyncEmail, Email
+from bird.resources.email_templates import AsyncEmailTemplates, EmailTemplates
+from bird.resources.sms import AsyncSms, Sms
+from bird.resources.sms_templates import AsyncSMSTemplates, SMSTemplates
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 
 _REGION_PREFIX = re.compile(r"^bk_([a-z]{2}[0-9]+)_")
@@ -139,6 +142,9 @@ class Bird(SyncAPIClient):
         super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "email_defaults", "region")})
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
+        self.email_templates = EmailTemplates(self)
+        self.sms = Sms(self)
+        self.sms_templates = SMSTemplates(self)
         self.webhooks = Webhooks(webhook_secret)
 
     def with_options(
@@ -230,6 +236,9 @@ class AsyncBird(AsyncAPIClient):
         super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "email_defaults", "region")})
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
+        self.email_templates = AsyncEmailTemplates(self)
+        self.sms = AsyncSms(self)
+        self.sms_templates = AsyncSMSTemplates(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
 
     def with_options(

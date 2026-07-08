@@ -67,16 +67,21 @@ class Attachment(_AttachmentRequired, total=False):
 
 class _EmailSendRequired(TypedDict):
     to: Sequence[EmailAddressInput]
-    subject: str
 
 
 class EmailSendParams(_EmailSendRequired, total=False):
-    """Params for ``client.email.send``. ``to`` and ``subject`` are required;
-    ``from_`` is required unless an ``email_defaults`` from-address is set."""
+    """Params for ``client.email.send``. ``to`` is required, and ``from_`` is
+    required unless an ``email_defaults`` from-address is set. A send is either
+    inline (``subject`` plus ``html``/``text``) or by ``template`` — with a
+    template, omit ``subject``/``html``/``text`` and personalize with
+    ``parameters``."""
 
     from_: EmailAddressInput
+    subject: str
     html: str
     text: str
+    template: str
+    parameters: Mapping[str, Any]
     cc: Sequence[EmailAddressInput]
     bcc: Sequence[EmailAddressInput]
     reply_to: Sequence[EmailAddressInput]
@@ -112,6 +117,26 @@ class EmailListParams(TypedDict, total=False):
     category: str
     to: str
     from_: str
+
+
+class _SmsSendRequired(TypedDict):
+    to: str
+
+
+class SmsSendParams(_SmsSendRequired, total=False):
+    """Params for ``client.sms.send``. ``to`` is required. A send is either
+    free-text (``text`` plus ``category``) or by ``template`` — with a template,
+    omit ``text``/``category`` and personalize with ``parameters``. ``template``
+    is the template's id (``smt_`` prefix) or its alias."""
+
+    from_: str
+    text: str
+    category: str
+    template: str
+    locale: str
+    parameters: Mapping[str, Any]
+    tags: Sequence[Mapping[str, str]]
+    metadata: Mapping[str, Any]
 
 
 class NotGiven:

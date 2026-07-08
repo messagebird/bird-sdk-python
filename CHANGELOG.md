@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Add the SMS channel (sync and async): `client.sms.send`, `.send_batch`, `.get`, `.list`.
+- Add SMS templates (read-only): `client.sms_templates.list`, `client.sms_templates.get`.
+- Add email templates: `client.email_templates.create`, `.get`, `.update`, `.delete`, `.publish`, `.list`, plus versions `.list_versions` and `.get_version`.
+- `client.email.send` can send a published template: pass `template` (an `emt_…` ID or name handle) with `parameters` in place of inline `subject`/`html`/`text`.
+
 ## 0.2.2
 
 - Rename the anonymous client-identity headers from `X-Bird-*` to `Bird-*` (the `X-` prefix is deprecated, RFC 6648). Same telemetry, new header names; no other behavior or API-surface change.

@@ -39,14 +39,7 @@ class ErrorNextAction(BaseModel):
     description: Annotated[
         str | None,
         Field(
-            description='Short human-readable label for the recovery step.',
-            min_length=1,
-        ),
-    ] = None
-    scope: Annotated[
-        str | None,
-        Field(
-            description='The permission scope the recovery operation requires, when it is scoped. Omitted for operations that need no scope.',
+            description='A short, human-readable label for the recovery step, suitable for display.',
             min_length=1,
         ),
     ] = None
@@ -213,7 +206,7 @@ class EmailAddress(BaseModel):
     ] = None
 
 
-class EmailTag(BaseModel):
+class Tag(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -421,7 +414,7 @@ class EmailMessage(BaseModel):
         int, Field(description='Total click events across all recipients.')
     ]
     tags: Annotated[
-        list[EmailTag] | None,
+        list[Tag] | None,
         Field(
             description='Structured `{name, value}` filter labels applied to this send. See EmailMessageSendRequest for the tags vs metadata distinction.'
         ),
@@ -490,6 +483,70 @@ class EmailAddressInput1(RootModel[str]):
             title='Email string',
         ),
     ]
+
+
+class EmailTemplateSend1(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='The template to send, by its id.',
+            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    alias: Annotated[
+        str | None,
+        Field(
+            description='The template to send, by its alias handle (for example `welcome-email`).',
+            examples=['welcome-email'],
+            max_length=63,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+        ),
+    ] = None
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Cap: 16 KB serialized.\n",
+            examples=[{'first_name': 'Ada'}],
+        ),
+    ] = None
+
+
+class EmailTemplateSend2(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str | None,
+        Field(
+            description='The template to send, by its id.',
+            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ] = None
+    alias: Annotated[
+        str,
+        Field(
+            description='The template to send, by its alias handle (for example `welcome-email`).',
+            examples=['welcome-email'],
+            max_length=63,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+        ),
+    ]
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Cap: 16 KB serialized.\n",
+            examples=[{'first_name': 'Ada'}],
+        ),
+    ] = None
 
 
 class EmailAttachment(BaseModel):
@@ -571,8 +628,13 @@ class EmailMessageSendRequest(BaseModel):
         ),
     ] = None
     subject: Annotated[
-        str, Field(description='Message subject line.', max_length=998, min_length=1)
-    ]
+        str | None,
+        Field(
+            description='Message subject line. Required for inline sends; omit it when sending a `template` (the template supplies the subject).',
+            max_length=998,
+            min_length=1,
+        ),
+    ] = None
     html: Annotated[
         str | None,
         Field(
@@ -600,7 +662,7 @@ class EmailMessageSendRequest(BaseModel):
         Field(description='Custom email headers as key-value pairs.', max_length=25),
     ] = None
     tags: Annotated[
-        list[EmailTag] | None,
+        list[Tag] | None,
         Field(
             description='Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics rollups by tag, and surface in webhook payloads. Cap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.\n',
             max_length=20,
@@ -610,6 +672,18 @@ class EmailMessageSendRequest(BaseModel):
         dict[str, Any] | None,
         Field(
             description='Arbitrary JSON object **stored, returned on API reads, and echoed in webhook payloads**. Path-queryable in analytics (e.g. filter on `metadata.order_id`) but not surfaced as a first-class dashboard filter dimension. Cap: 2 KB serialized. Use metadata for per-send context like internal IDs, foreign keys, and structured payloads you want round-tripped through events. For low-cardinality filterable labels, use `tags` instead.\n'
+        ),
+    ] = None
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Template variables used to personalize inline content. Tokens in the subject and body (e.g. `{{ first_name }}`) are replaced with these values at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.\n'
+        ),
+    ] = None
+    template: Annotated[
+        EmailTemplateSend1 | EmailTemplateSend2 | None,
+        Field(
+            description='Send a stored template instead of inline content. When set, omit `subject`/`html`/`text` — the template supplies them; personalize with `template.parameters`.\n'
         ),
     ] = None
     track_opens: Annotated[
@@ -674,6 +748,22 @@ class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
         list[EmailMessageSendRequest],
         Field(
             description='Batch of email message send requests. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.\n',
+            examples=[
+                [
+                    {
+                        'from': {'email': 'hello@bird.com', 'name': 'Bird Support'},
+                        'to': [{'email': 'jane@example.com', 'name': 'Jane Doe'}],
+                        'subject': 'Your receipt for order #1234',
+                        'text': 'Thanks for your purchase! Your receipt is attached.',
+                    },
+                    {
+                        'from': {'email': 'hello@bird.com', 'name': 'Bird Support'},
+                        'to': [{'email': 'john@example.com', 'name': 'John Roe'}],
+                        'subject': 'Your receipt for order #1235',
+                        'text': 'Thanks for your purchase! Your receipt is attached.',
+                    },
+                ]
+            ],
             max_length=100,
             min_length=1,
         ),
@@ -721,6 +811,118 @@ class RecipientRole(str, Enum):
     bcc = 'bcc'
 
 
+class SMSMessageStatus(str, Enum):
+    scheduled = 'scheduled'
+    accepted = 'accepted'
+    sent = 'sent'
+    delivered = 'delivered'
+    undelivered = 'undelivered'
+    failed = 'failed'
+    rejected = 'rejected'
+    canceled = 'canceled'
+    expired = 'expired'
+    received = 'received'
+
+
+class SMSMessageCategory(str, Enum):
+    transactional = 'transactional'
+    marketing = 'marketing'
+    authentication = 'authentication'
+    service = 'service'
+
+
+class Encoding(str, Enum):
+    GSM_7BIT = 'GSM_7BIT'
+    UCS2 = 'UCS2'
+
+
+class SMSSegments(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    count: Annotated[
+        int,
+        Field(
+            description='Number of segments the body is split into. Each segment is a billable unit.',
+            ge=1,
+        ),
+    ]
+    encoding: Annotated[
+        Encoding,
+        Field(
+            description='Encoding used for the body. `GSM_7BIT` fits 160 characters in a single segment (153 per part when multi-segment); `UCS2` is used when the body contains any character outside the GSM 03.38 alphabet (emoji, CJK, some accented characters) and fits 70 characters in a single segment (67 per part when multi-segment).\n'
+        ),
+    ]
+    characters: Annotated[
+        int,
+        Field(
+            description='Character count of the body under the selected encoding.', ge=0
+        ),
+    ]
+
+
+class SMSCostBreakdown(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    per_segment: Annotated[
+        str,
+        Field(
+            description='Per-segment price as a decimal string.',
+            examples=['0.0079'],
+            min_length=1,
+        ),
+    ]
+    segments: Annotated[int, Field(description='Number of billable segments.', ge=1)]
+    country_code: Annotated[
+        str,
+        Field(
+            description='ISO 3166-1 alpha-2 destination country the price was resolved for.',
+            examples=['US'],
+            max_length=2,
+            min_length=2,
+        ),
+    ]
+    carrier_surcharge: Annotated[
+        str,
+        Field(
+            description='Carrier surcharge component as a decimal string (for example US 10DLC fees). `0.0000` when none applies.',
+            examples=['0.0000'],
+            min_length=1,
+        ),
+    ]
+
+
+class SMSCost(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    currency_code: Annotated[
+        str | None,
+        Field(
+            description='ISO 4217 currency code for the cost amount. Omitted when the cost is not denominated in a currency (for example a zero-priced internal send).',
+            examples=['USD'],
+            max_length=3,
+            min_length=3,
+            pattern='^[A-Z]{3}$',
+        ),
+    ] = None
+    amount: Annotated[
+        str,
+        Field(
+            description='Total cost as a decimal string — the per-segment rate multiplied by the segment count, plus any surcharges.',
+            examples=['0.0079'],
+            min_length=1,
+        ),
+    ]
+    breakdown: Annotated[
+        SMSCostBreakdown | None,
+        Field(
+            description='Per-component cost breakdown. Returned on single-message reads; omitted from list rows.'
+        ),
+    ] = None
+
+
 class SMSErrorCode(str, Enum):
     invalid_destination = 'invalid_destination'
     unreachable = 'unreachable'
@@ -732,32 +934,6 @@ class SMSErrorCode(str, Enum):
     recipient_opted_out = 'recipient_opted_out'
     provider_unavailable = 'provider_unavailable'
     unknown = 'unknown'
-
-
-class SMSTag(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: Annotated[
-        str,
-        Field(
-            description='Tag name. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 32 characters.\n',
-            examples=['campaign'],
-            max_length=32,
-            min_length=1,
-            pattern='^[A-Za-z0-9_-]+$',
-        ),
-    ]
-    value: Annotated[
-        str,
-        Field(
-            description='Tag value. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 64 characters.\n',
-            examples=['signup'],
-            max_length=64,
-            min_length=1,
-            pattern='^[A-Za-z0-9_-]+$',
-        ),
-    ]
 
 
 class SMSError(BaseModel):
@@ -782,6 +958,1063 @@ class SMSError(BaseModel):
     ] = None
     occurred_at: Annotated[
         str, Field(description='When the failure occurred.', min_length=1)
+    ]
+
+
+class Direction(str, Enum):
+    outbound = 'outbound'
+    inbound = 'inbound'
+
+
+class SMSMessage(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Message ID.',
+            examples=['sms_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^sms_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    direction: Annotated[
+        Direction,
+        Field(
+            description='Whether the message was sent from a Bird sender (`outbound`) or received from a subscriber (`inbound`).'
+        ),
+    ]
+    status: SMSMessageStatus
+    to: Annotated[
+        str,
+        Field(
+            description='Recipient phone number in E.164 format.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    from_: Annotated[
+        str,
+        Field(
+            alias='from',
+            description='Sender the message was sent from — an E.164 number, an alphanumeric sender ID, or a short code.',
+            examples=['+15557654321'],
+            min_length=1,
+        ),
+    ]
+    text: Annotated[
+        str,
+        Field(
+            description='Message body.',
+            examples=['Your verification code is 123456.'],
+            min_length=1,
+        ),
+    ]
+    category: Annotated[
+        SMSMessageCategory | None,
+        Field(
+            description='Content classification supplied on the send. Null for inbound messages.'
+        ),
+    ] = None
+    segments: Annotated[
+        SMSSegments, Field(description='Segment breakdown for the body.')
+    ]
+    cost: Annotated[
+        SMSCost | None,
+        Field(
+            description='Cost of the message. Null until the message has been priced.'
+        ),
+    ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` filter labels applied to this message.'
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Arbitrary JSON metadata stored on the message and echoed in webhook payloads.'
+        ),
+    ] = None
+    validity_period: Annotated[
+        int | None,
+        Field(
+            description='How long, in seconds, Bird keeps trying to deliver before the message transitions to `expired`.'
+        ),
+    ] = None
+    carrier: Annotated[
+        str | None,
+        Field(
+            description='Carrier that handled the message, when known. Populated once a delivery receipt identifies it.',
+            examples=['Verizon'],
+        ),
+    ] = None
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description='Mobile country code and mobile network code of the carrier, when known.',
+            examples=['311480'],
+        ),
+    ] = None
+    last_error: Annotated[
+        SMSError | None,
+        Field(
+            description='Failure detail on a terminally failed or rejected message. Null otherwise.'
+        ),
+    ] = None
+    created_at: Annotated[
+        str,
+        Field(
+            description='When the message was accepted (outbound) or received (inbound).',
+            min_length=1,
+        ),
+    ]
+    sent_at: Annotated[
+        str | None,
+        Field(
+            description='When the message was handed to the carrier. Null until then.'
+        ),
+    ] = None
+    delivered_at: Annotated[
+        str | None, Field(description='When delivery was confirmed. Null until then.')
+    ] = None
+
+
+class SMSMessageList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[list[SMSMessage], Field(description='Page of message objects.')]
+
+
+class SMSTemplateSend1(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='The template to send, by its id.',
+            examples=['smt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    alias: Annotated[
+        str | None,
+        Field(
+            description='The template to send, by its alias handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
+            examples=['bird_otp_verification_ttl'],
+            max_length=63,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9_]*[a-z0-9])?$',
+        ),
+    ] = None
+    locale: Annotated[
+        str | None,
+        Field(
+            description='Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n',
+            examples=['fr'],
+            min_length=2,
+        ),
+    ] = None
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template — see the template's `variables` on the templates endpoint. Every required variable must be supplied, and no undeclared key may be present. Cap: 16 KB serialized.\n",
+            examples=[{'code': '493021', 'ttl': '10'}],
+        ),
+    ] = None
+
+
+class SMSTemplateSend2(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str | None,
+        Field(
+            description='The template to send, by its id.',
+            examples=['smt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ] = None
+    alias: Annotated[
+        str,
+        Field(
+            description='The template to send, by its alias handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
+            examples=['bird_otp_verification_ttl'],
+            max_length=63,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9_]*[a-z0-9])?$',
+        ),
+    ]
+    locale: Annotated[
+        str | None,
+        Field(
+            description='Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n',
+            examples=['fr'],
+            min_length=2,
+        ),
+    ] = None
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template — see the template's `variables` on the templates endpoint. Every required variable must be supplied, and no undeclared key may be present. Cap: 16 KB serialized.\n",
+            examples=[{'code': '493021', 'ttl': '10'}],
+        ),
+    ] = None
+
+
+class SMSMessageSendRequest1(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    to: Annotated[
+        str,
+        Field(
+            description='Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    from_: Annotated[
+        str | None,
+        Field(
+            alias='from',
+            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (up to 11 characters, for example `MyBrand`), or a short code (5–6 digits). When omitted, Bird selects an eligible sender for you.\n',
+            examples=['+15557654321'],
+            min_length=1,
+        ),
+    ] = None
+    text: Annotated[
+        str,
+        Field(
+            description='Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n',
+            examples=['Your verification code is 123456.'],
+            min_length=1,
+        ),
+    ]
+    category: Annotated[
+        SMSMessageCategory | None,
+        Field(
+            description='Content classification. Drives opt-out (STOP) policy, quiet-hours, and per-country compliance. Required on a free-text send; omit it on a template send, where the category is derived from the template.\n'
+        ),
+    ] = None
+    validity_period: Annotated[
+        int | None,
+        Field(
+            description='Preview feature — how long, in seconds (60–172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 unsupported_feature`.\n',
+            ge=60,
+            le=172800,
+        ),
+    ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n',
+            max_length=20,
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n'
+        ),
+    ] = None
+    media_urls: Annotated[
+        list[str] | None,
+        Field(
+            description='Preview feature — multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    messaging_profile_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    scheduled_at: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    template: Annotated[
+        SMSTemplateSend1 | SMSTemplateSend2 | None,
+        Field(
+            description='Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n'
+        ),
+    ] = None
+    broadcast_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — broadcast correlation. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    campaign_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — campaign correlation for analytics. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    audience_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — audience-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    contact_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    topic_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    max_price_per_segment: Annotated[
+        float | None,
+        Field(
+            description='Preview feature — per-segment price ceiling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    personalization: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Preview feature — per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    track_clicks: Annotated[
+        bool | None,
+        Field(
+            description='Preview feature — link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 unsupported_feature`.'
+        ),
+    ] = None
+
+
+class SMSMessageSendRequest2(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    to: Annotated[
+        str,
+        Field(
+            description='Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    from_: Annotated[
+        str | None,
+        Field(
+            alias='from',
+            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (up to 11 characters, for example `MyBrand`), or a short code (5–6 digits). When omitted, Bird selects an eligible sender for you.\n',
+            examples=['+15557654321'],
+            min_length=1,
+        ),
+    ] = None
+    text: Annotated[
+        str | None,
+        Field(
+            description='Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n',
+            examples=['Your verification code is 123456.'],
+            min_length=1,
+        ),
+    ] = None
+    category: Annotated[
+        SMSMessageCategory | None,
+        Field(
+            description='Content classification. Drives opt-out (STOP) policy, quiet-hours, and per-country compliance. Required on a free-text send; omit it on a template send, where the category is derived from the template.\n'
+        ),
+    ] = None
+    validity_period: Annotated[
+        int | None,
+        Field(
+            description='Preview feature — how long, in seconds (60–172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 unsupported_feature`.\n',
+            ge=60,
+            le=172800,
+        ),
+    ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n',
+            max_length=20,
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n'
+        ),
+    ] = None
+    media_urls: Annotated[
+        list[str] | None,
+        Field(
+            description='Preview feature — multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    messaging_profile_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    scheduled_at: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    template: Annotated[
+        SMSTemplateSend1 | SMSTemplateSend2,
+        Field(
+            description='Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n'
+        ),
+    ]
+    broadcast_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — broadcast correlation. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    campaign_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — campaign correlation for analytics. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    audience_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — audience-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    contact_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    topic_id: Annotated[
+        str | None,
+        Field(
+            description='Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    max_price_per_segment: Annotated[
+        float | None,
+        Field(
+            description='Preview feature — per-segment price ceiling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    personalization: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Preview feature — per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+        ),
+    ] = None
+    track_clicks: Annotated[
+        bool | None,
+        Field(
+            description='Preview feature — link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 unsupported_feature`.'
+        ),
+    ] = None
+
+
+class SMSMessageBatchRequest(
+    RootModel[list[SMSMessageSendRequest1 | SMSMessageSendRequest2]]
+):
+    root: Annotated[
+        list[SMSMessageSendRequest1 | SMSMessageSendRequest2],
+        Field(
+            description='Batch of SMS message send requests. All items are validated before any are queued.',
+            max_length=100,
+            min_length=1,
+        ),
+    ]
+
+
+class SMSBatchSummary(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    accepted_count: Annotated[
+        int, Field(description='Number of messages accepted in the batch.', ge=0)
+    ]
+
+
+class SMSMessageBatchResponse(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[SMSMessage],
+        Field(description='One entry per message in the batch, in submission order.'),
+    ]
+    summary: Annotated[
+        SMSBatchSummary, Field(description='Aggregate result for the batch.')
+    ]
+
+
+class TemplateScope(str, Enum):
+    system = 'system'
+    workspace = 'workspace'
+
+
+class TemplateVariable(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    key: Annotated[
+        str,
+        Field(description='The parameters key this slot is filled with.', min_length=1),
+    ]
+    type: Annotated[
+        str,
+        Field(
+            description='The value type this slot accepts. Open enum — treat any unrecognized value as a future type rather than an error. SMS templates use the typed slots (`code`, `amount`, …); email templates use `text`.\n',
+            min_length=1,
+        ),
+    ]
+    required: Annotated[
+        bool,
+        Field(
+            description='Whether the slot must be supplied when sending. Advisory for email templates, where a missing value renders as empty rather than rejecting the send.\n'
+        ),
+    ]
+    constraint: Annotated[
+        str,
+        Field(
+            description='A human-readable description of the accepted values.',
+            min_length=1,
+        ),
+    ]
+
+
+class SMSTemplateVersionID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['smv_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^smv_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class Status2(str, Enum):
+    active = 'active'
+    draft = 'draft'
+    pending = 'pending'
+    approved = 'approved'
+    rejected = 'rejected'
+
+
+class SMSTemplate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Unique identifier for the template.',
+            examples=['smt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description='Human-readable description of what the template is for.',
+            examples=['One-time passcode verification'],
+            min_length=1,
+        ),
+    ]
+    alias: Annotated[
+        str,
+        Field(
+            description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
+            examples=['bird_otp_verification'],
+            min_length=1,
+        ),
+    ]
+    scope: TemplateScope
+    category: Annotated[
+        SMSMessageCategory,
+        Field(
+            description='Content classification applied to messages sent from this template.'
+        ),
+    ]
+    body: Annotated[
+        str,
+        Field(
+            description='The template body in its default language, shown for preview.',
+            examples=['Your verification code is {{ code }}.'],
+            min_length=1,
+        ),
+    ]
+    variables: Annotated[
+        list[TemplateVariable],
+        Field(
+            description='The typed slots this template fills in from the values you supply when sending.'
+        ),
+    ]
+    available_locales: Annotated[
+        list[str],
+        Field(
+            description='The languages this template is available in, as BCP-47 tags.',
+            examples=[['en']],
+        ),
+    ]
+    status: Annotated[
+        Status2,
+        Field(
+            description="The template's lifecycle state. Built-in templates are always `active`."
+        ),
+    ]
+    draft_version_id: Annotated[
+        SMSTemplateVersionID | None,
+        Field(
+            description='The current editable draft version. Always null today — SMS templates are not yet versioned; present for parity with email templates.'
+        ),
+    ]
+    published_version_id: Annotated[
+        SMSTemplateVersionID | None,
+        Field(
+            description='The currently published version, or null if the template has never been published. Always null today — SMS templates are not yet versioned; present for parity with email templates.'
+        ),
+    ] = None
+    revision: Annotated[
+        int | None,
+        Field(
+            description="The draft's revision counter. Always null today — SMS templates are not yet versioned; present for parity with email templates.",
+            ge=0,
+        ),
+    ]
+    created_at: Annotated[
+        str | None,
+        Field(
+            description='When the template was created. Null for built-in templates.'
+        ),
+    ]
+    updated_at: Annotated[
+        str | None,
+        Field(
+            description='When the template was last updated. Null for built-in templates.'
+        ),
+    ]
+
+
+class SMSTemplateList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[SMSTemplate],
+        Field(
+            description='The templates available to your workspace. The catalogue is small and returned in full — this list is not paginated.'
+        ),
+    ]
+
+
+class EmailTemplateCategory(str, Enum):
+    transactional = 'transactional'
+    marketing = 'marketing'
+
+
+class EmailTemplateSource(str, Enum):
+    liquid = 'liquid'
+    handlebars = 'handlebars'
+    html = 'html'
+
+
+class EmailTemplateVersionID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['emv_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emv_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class EmailTemplateSummary(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Template ID.',
+            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='Workspace that owns the template.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description='Human-readable template name, unique within the workspace.',
+            min_length=1,
+        ),
+    ]
+    alias: Annotated[
+        str | None,
+        Field(
+            description="The template's workspace-unique slug handle for send-by-template, or null if unset."
+        ),
+    ] = None
+    description: Annotated[
+        str | None,
+        Field(
+            description="Optional description of the template's purpose. Null when unset."
+        ),
+    ] = None
+    scope: TemplateScope
+    category: EmailTemplateCategory
+    source: EmailTemplateSource
+    draft_version_id: Annotated[
+        str,
+        Field(
+            description='The current editable draft version.',
+            examples=['emv_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emv_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    published_version_id: Annotated[
+        EmailTemplateVersionID | None,
+        Field(
+            description='The currently published version, or null if never published.'
+        ),
+    ] = None
+    created_at: Annotated[
+        str, Field(description='When the template was created.', min_length=1)
+    ]
+    updated_at: Annotated[
+        str, Field(description='When the template was last modified.', min_length=1)
+    ]
+
+
+class EmailTemplateList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[EmailTemplateSummary], Field(description='Page of email templates.')
+    ]
+
+
+class BrandKitID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['bk_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^bk_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class EmailTemplateCreate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='Human-readable template name, unique within the workspace.',
+            examples=['Welcome email'],
+            max_length=255,
+            min_length=1,
+        ),
+    ]
+    alias: Annotated[
+        str | None,
+        Field(
+            description='Optional workspace-unique slug handle for the template — a stable alternative to the template ID when sending by template. Lowercase letters, numbers, and hyphens.\n',
+            examples=['welcome-email'],
+            max_length=63,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+        ),
+    ] = None
+    description: Annotated[
+        str | None,
+        Field(
+            description="Optional description of the template's purpose.",
+            examples=['Sent to new customers after signup.'],
+        ),
+    ] = None
+    category: EmailTemplateCategory
+    source: Annotated[
+        EmailTemplateSource,
+        Field(
+            description='The authoring format the template is written in, fixed at creation. `liquid` currently supports variable substitution only (e.g. `{{ first_name }}`); filters, tags, and control flow are not yet supported — fuller Liquid support is coming soon.\n'
+        ),
+    ]
+    subject: Annotated[
+        str | None,
+        Field(
+            description='The email subject line for the initial draft.',
+            examples=['Welcome to Acme, {{ first_name }}!'],
+        ),
+    ] = None
+    html: Annotated[
+        str | None,
+        Field(
+            description='The HTML body — the source markup for the chosen format.',
+            examples=['<h1>Hi {{ first_name }}</h1>'],
+        ),
+    ] = None
+    text: Annotated[str | None, Field(description='The optional plain-text body.')] = (
+        None
+    )
+    brand_kit_id: Annotated[
+        str | None,
+        Field(
+            description='Optional brand kit to apply to the draft.',
+            examples=['bk_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^bk_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ] = None
+
+
+class EmailTemplate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Template ID.',
+            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='Workspace that owns the template.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description='Human-readable template name, unique within the workspace.',
+            min_length=1,
+        ),
+    ]
+    alias: Annotated[
+        str | None,
+        Field(
+            description="The template's workspace-unique slug handle for send-by-template, or null if unset."
+        ),
+    ] = None
+    description: Annotated[
+        str | None,
+        Field(
+            description="Optional description of the template's purpose. Null when unset."
+        ),
+    ] = None
+    scope: TemplateScope
+    category: EmailTemplateCategory
+    source: EmailTemplateSource
+    variables: Annotated[
+        list[TemplateVariable],
+        Field(
+            description="The variable slots this template's current draft fills in from the values you supply when sending."
+        ),
+    ]
+    draft_version_id: Annotated[
+        str,
+        Field(
+            description='The current editable draft version.',
+            examples=['emv_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emv_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    published_version_id: Annotated[
+        EmailTemplateVersionID | None,
+        Field(
+            description='The currently published version, or null if the template has never been published.'
+        ),
+    ] = None
+    revision: Annotated[
+        int,
+        Field(
+            description="The draft's revision counter. Send it back on the next update to detect concurrent edits.",
+            ge=0,
+        ),
+    ]
+    subject: Annotated[
+        str | None,
+        Field(description="The draft's email subject line. Null when unset."),
+    ] = None
+    html: Annotated[
+        str | None, Field(description="The draft's HTML body. Null when unset.")
+    ] = None
+    text: Annotated[
+        str | None, Field(description="The draft's plain-text body. Null when unset.")
+    ] = None
+    brand_kit_id: Annotated[
+        BrandKitID | None,
+        Field(description='The brand kit applied to the draft, or null if none.'),
+    ] = None
+    created_at: Annotated[
+        str, Field(description='When the template was created.', min_length=1)
+    ]
+    updated_at: Annotated[
+        str, Field(description='When the template was last modified.', min_length=1)
+    ]
+
+
+class EmailTemplateUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    revision: Annotated[
+        int,
+        Field(
+            description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.\n",
+            ge=0,
+        ),
+    ]
+    name: Annotated[
+        str | None,
+        Field(
+            description='New template name. Must stay unique within the workspace.',
+            max_length=255,
+            min_length=1,
+        ),
+    ] = None
+    alias: Annotated[
+        str | None,
+        Field(
+            description='New workspace-unique slug handle for send-by-template. Send null to clear it. Lowercase letters, numbers, and hyphens.\n',
+            max_length=63,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+        ),
+    ] = None
+    description: Annotated[
+        str | None,
+        Field(
+            description="New description of the template's purpose. Send null to clear it."
+        ),
+    ] = None
+    subject: Annotated[
+        str | None,
+        Field(
+            description='New email subject line for the draft. Send null to clear it.'
+        ),
+    ] = None
+    html: Annotated[
+        str | None,
+        Field(
+            description="New HTML body — the source markup for the template's format."
+        ),
+    ] = None
+    text: Annotated[
+        str | None,
+        Field(description='New plain-text body for the draft. Send null to clear it.'),
+    ] = None
+    brand_kit_id: Annotated[
+        str | None,
+        Field(
+            description='Brand kit to apply to the draft.',
+            examples=['bk_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^bk_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ] = None
+
+
+class Status3(str, Enum):
+    draft = 'draft'
+    published = 'published'
+
+
+class EmailTemplateVersion(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Template version ID.',
+            examples=['emv_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emv_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    template_id: Annotated[
+        str,
+        Field(
+            description='The template this version belongs to.',
+            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    version_number: Annotated[
+        int | None,
+        Field(
+            description='Sequential published-version number (1, 2, 3…). Null while the version is a draft.',
+            ge=1,
+        ),
+    ] = None
+    status: Annotated[Status3, Field(description='Lifecycle status of this version.')]
+    revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
+    variables: Annotated[
+        list[TemplateVariable],
+        Field(
+            description="The variable slots this version's content fills in from the values you supply when sending."
+        ),
+    ]
+    created_at: Annotated[
+        str, Field(description='When this version was created.', min_length=1)
+    ]
+    published_at: Annotated[
+        str | None,
+        Field(
+            description='When this version was published, or null if it has not been published.'
+        ),
+    ] = None
+
+
+class EmailTemplateVersionList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[EmailTemplateVersion],
+        Field(description='All versions of the template, newest first.'),
     ]
 
 
@@ -896,7 +2129,7 @@ class EventEmailBase(BaseModel):
         RecipientRole, Field(description='Envelope position of the recipient.')
     ]
     tags: Annotated[
-        list[EmailTag] | None,
+        list[Tag] | None,
         Field(
             description='Tags provided on the send request, echoed on every event for the send so you can route and correlate without an extra lookup. Null when the send carried no tags.\n'
         ),
@@ -1030,7 +2263,7 @@ class EventEmailMessageBase(BaseModel):
         ),
     ]
     tags: Annotated[
-        list[EmailTag] | None,
+        list[Tag] | None,
         Field(
             description='Tags provided on the send request, echoed on the event so you can route and correlate without an extra lookup. Null when the send carried no tags.\n'
         ),
@@ -1686,7 +2919,7 @@ class EventSMSBase(BaseModel):
         ),
     ]
     tags: Annotated[
-        list[SMSTag] | None,
+        list[Tag] | None,
         Field(
             description='Tags provided on the send request, echoed on every event for the message so you can route and correlate without an extra lookup. Null when the message carried no tags.\n'
         ),

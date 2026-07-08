@@ -93,6 +93,67 @@ async def _ex_7() -> None:
 
 
 async def _ex_8() -> None:
+    tpl = client.email_templates.create(
+        name="Welcome",
+        category="transactional",
+        source="handlebars",
+        subject="Welcome, {{ first_name }}!",
+        html="<h1>Hi {{ first_name }}</h1>",
+    )
+    print(tpl.id, tpl.revision)
+
+
+async def _ex_9() -> None:
+    for template in client.email_templates.list(category="transactional"):
+        print(template.id, template.name)
+
+
+async def _ex_10() -> None:
+    version = client.email_templates.publish("emt_abc123")
+    print(version.version_number)
+
+    client.email.send(
+        from_="hello@acme.com",
+        to=["alice@example.com"],
+        template="emt_abc123",
+        parameters={"first_name": "Alice"},
+    )
+
+
+async def _ex_11() -> None:
+    for message in client.sms.list(direction="outbound"):
+        print(message.id, message.status)
+
+
+async def _ex_12() -> None:
+    msg = client.sms.send(
+        to="+15551234567",
+        text="Your verification code is 123456.",
+        category="authentication",
+    )
+    print(msg.id, msg.status)
+
+
+async def _ex_13() -> None:
+    client.sms.send(
+        to="+15551234567",
+        template="bird_otp_verification",
+        parameters={"code": "123456"},
+    )
+
+
+async def _ex_14() -> None:
+    template = client.sms_templates.get("bird_otp_verification")
+    print(template.body, template.variables)
+
+
+async def _ex_15() -> None:
+    templates = client.sms_templates.list(scope="system")
+    for template in templates.data:
+        print(template.id, template.name)
+
+
+async def _ex_16() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
