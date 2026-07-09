@@ -14,7 +14,7 @@ import pytest
 from bird._caller import detect_caller
 
 _CASES = json.loads(
-    (Path(__file__).resolve().parents[2] / "caller-detection-cases.json").read_text()
+    (Path(__file__).resolve().parent / "caller-detection-cases.json").read_text()
 )["cases"]
 
 

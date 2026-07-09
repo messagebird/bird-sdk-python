@@ -3331,7 +3331,484 @@ class EventEmailUnsubscribed(BaseModel):
     data: EventEmailUnsubscribedData
 
 
+class EventEmailMailboxMessageDeliveredData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    message_id: Annotated[
+        str,
+        Field(
+            description='ID of the delivered message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.',
+            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='ID of the mailbox the message was sent from.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    thread_id: Annotated[
+        str,
+        Field(
+            description='ID of the thread the message belongs to.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
 class Type22(str, Enum):
+    email_mailbox_message_delivered = 'email_mailbox.message_delivered'
+
+
+class EventEmailMailboxMessageDelivered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.message_delivered'],
+        Field(description='Event type.', examples=['email_mailbox.message_delivered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxMessageDeliveredData
+
+
+class EventEmailMailboxMessageFailedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    message_id: Annotated[
+        str,
+        Field(
+            description='ID of the failed message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.',
+            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='ID of the mailbox the message was sent from.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    thread_id: Annotated[
+        str,
+        Field(
+            description='ID of the thread the message belongs to.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    reason: Annotated[
+        str,
+        Field(
+            description='Why the send folded to failed.',
+            examples=['all recipients bounced'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type23(str, Enum):
+    email_mailbox_message_failed = 'email_mailbox.message_failed'
+
+
+class EventEmailMailboxMessageFailed(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.message_failed'],
+        Field(description='Event type.', examples=['email_mailbox.message_failed']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxMessageFailedData
+
+
+class Disposition(str, Enum):
+    inbox = 'inbox'
+    blocked = 'blocked'
+    unauthenticated = 'unauthenticated'
+
+
+class EventEmailMailboxMessageReceivedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    message_id: Annotated[
+        str,
+        Field(
+            description='ID of the received message. The same message fires email.received with this ID as inbound_message_id — when you subscribe to both families, dedupe by this ID.',
+            examples=['rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^rem_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='ID of the mailbox that received the message.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    thread_id: Annotated[
+        str,
+        Field(
+            description='ID of the thread the message was filed into.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    route_id: Annotated[
+        str | None,
+        Field(
+            description='ID (ein_…) of the explicit inbound route that matched, or null when the message was delivered by the virtual exact-address route.',
+            examples=[None],
+        ),
+    ] = None
+    from_: Annotated[
+        str,
+        Field(
+            alias='from',
+            description='Envelope-from address.',
+            examples=['alice@example.com'],
+            min_length=1,
+        ),
+    ]
+    to: Annotated[
+        list[str],
+        Field(
+            description='Recipient addresses the message was sent to.',
+            examples=[['support@acme-support.eu.mailbox.bird.com']],
+        ),
+    ]
+    subject: Annotated[
+        str | None,
+        Field(
+            description='Subject line as received, or null when the message had no subject.',
+            examples=['Re: Your quote'],
+        ),
+    ]
+    disposition: Annotated[
+        Disposition,
+        Field(
+            description='Where the message landed after receive policy, rules, and scanning were applied.',
+            examples=['inbox'],
+        ),
+    ]
+    extracted_text: Annotated[
+        str | None,
+        Field(
+            description='Plain-text body with quoted history stripped, capped at 64 KB (see truncated_text). Null when extraction produced nothing. This copy is what the mailbox durably retains.',
+            examples=['Sounds good — can you send the invoice?'],
+        ),
+    ] = None
+    truncated_text: Annotated[
+        bool | None,
+        Field(
+            description='True when extracted_text was truncated to the 64 KB cap; fetch the full text via the thread-member endpoint.'
+        ),
+    ] = False
+    attachment_count: Annotated[
+        int,
+        Field(
+            description='Number of attachments on the message. Metadata is durable; bytes are fetchable while within the 30-day original-source window.',
+            examples=[1],
+            ge=0,
+        ),
+    ]
+    spf_pass: Annotated[
+        bool | None,
+        Field(
+            description='Whether SPF passed for the sender, or null when no verdict was computable.'
+        ),
+    ] = None
+    dkim_pass: Annotated[
+        bool | None,
+        Field(
+            description='Whether DKIM passed for the sender, or null when no verdict was computable.'
+        ),
+    ] = None
+    dmarc_pass: Annotated[
+        bool | None,
+        Field(
+            description='Whether DMARC passed for the sender, or null when no verdict was computable.'
+        ),
+    ] = None
+
+
+class Type24(str, Enum):
+    email_mailbox_message_received = 'email_mailbox.message_received'
+
+
+class EventEmailMailboxMessageReceived(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.message_received'],
+        Field(description='Event type.', examples=['email_mailbox.message_received']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxMessageReceivedData
+
+
+class Type25(str, Enum):
+    email_mailbox_message_received_blocked = 'email_mailbox.message_received_blocked'
+
+
+class EventEmailMailboxMessageReceivedBlocked(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.message_received_blocked'],
+        Field(
+            description='Event type.',
+            examples=['email_mailbox.message_received_blocked'],
+        ),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxMessageReceivedData
+
+
+class Type26(str, Enum):
+    email_mailbox_message_received_unauthenticated = (
+        'email_mailbox.message_received_unauthenticated'
+    )
+
+
+class EventEmailMailboxMessageReceivedUnauthenticated(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.message_received_unauthenticated'],
+        Field(
+            description='Event type.',
+            examples=['email_mailbox.message_received_unauthenticated'],
+        ),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxMessageReceivedData
+
+
+class EventEmailMailboxMessageSentData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    message_id: Annotated[
+        str,
+        Field(
+            description='ID of the sent message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.',
+            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='ID of the mailbox the message was sent from.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    thread_id: Annotated[
+        str,
+        Field(
+            description='ID of the thread the message belongs to.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class Type27(str, Enum):
+    email_mailbox_message_sent = 'email_mailbox.message_sent'
+
+
+class EventEmailMailboxMessageSent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.message_sent'],
+        Field(description='Event type.', examples=['email_mailbox.message_sent']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxMessageSentData
+
+
+class EventEmailMailboxSuspendedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='ID of the suspended mailbox.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    reason: Annotated[
+        str,
+        Field(
+            description='Why the mailbox was suspended.',
+            examples=['abuse review'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type28(str, Enum):
+    email_mailbox_suspended = 'email_mailbox.suspended'
+
+
+class EventEmailMailboxSuspended(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.suspended'],
+        Field(description='Event type.', examples=['email_mailbox.suspended']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxSuspendedData
+
+
+class InitiatedBy(str, Enum):
+    inbound = 'inbound'
+    outbound = 'outbound'
+
+
+class EventEmailMailboxThreadCreatedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    thread_id: Annotated[
+        str,
+        Field(
+            description='ID of the thread.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='ID of the mailbox.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    subject: Annotated[
+        str | None,
+        Field(
+            description='Subject of the first message in the thread, or null when it had none.',
+            examples=['Your quote'],
+        ),
+    ]
+    initiated_by: Annotated[
+        InitiatedBy,
+        Field(description='Which direction created the thread.', examples=['inbound']),
+    ]
+
+
+class Type29(str, Enum):
+    email_mailbox_thread_created = 'email_mailbox.thread_created'
+
+
+class EventEmailMailboxThreadCreated(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['email_mailbox.thread_created'],
+        Field(description='Event type.', examples=['email_mailbox.thread_created']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the event occurred.',
+            examples=['2026-07-08 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventEmailMailboxThreadCreatedData
+
+
+class Type30(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -3420,7 +3897,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type23(str, Enum):
+class Type31(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -3463,7 +3940,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type24(str, Enum):
+class Type32(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -3492,7 +3969,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type25(str, Enum):
+class Type33(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -3524,7 +4001,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type26(str, Enum):
+class Type34(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -3556,7 +4033,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type27(str, Enum):
+class Type35(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -3599,7 +4076,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type28(str, Enum):
+class Type36(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -3630,7 +4107,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type29(str, Enum):
+class Type37(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 
@@ -3672,6 +4149,14 @@ class WebhookEvent(
         | EventEmailRejected
         | EventEmailScheduled
         | EventEmailUnsubscribed
+        | EventEmailMailboxMessageDelivered
+        | EventEmailMailboxMessageFailed
+        | EventEmailMailboxMessageReceived
+        | EventEmailMailboxMessageReceivedBlocked
+        | EventEmailMailboxMessageReceivedUnauthenticated
+        | EventEmailMailboxMessageSent
+        | EventEmailMailboxSuspended
+        | EventEmailMailboxThreadCreated
         | EventEmailSuppressionCreated
         | EventSMSAccepted
         | EventSMSDelivered
@@ -3700,6 +4185,14 @@ class WebhookEvent(
         | EventEmailRejected
         | EventEmailScheduled
         | EventEmailUnsubscribed
+        | EventEmailMailboxMessageDelivered
+        | EventEmailMailboxMessageFailed
+        | EventEmailMailboxMessageReceived
+        | EventEmailMailboxMessageReceivedBlocked
+        | EventEmailMailboxMessageReceivedUnauthenticated
+        | EventEmailMailboxMessageSent
+        | EventEmailMailboxSuspended
+        | EventEmailMailboxThreadCreated
         | EventEmailSuppressionCreated
         | EventSMSAccepted
         | EventSMSDelivered

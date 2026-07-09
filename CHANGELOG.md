@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2
+
+- Version bump only, to keep the SDKs in lockstep with the TypeScript 0.4.2 release; no Python artifact changes this release.
+
+## 0.4.1
+
+- Version bump only, to keep the SDKs in lockstep with the TypeScript 0.4.1 release; no Python artifact changes this release.
+
 ## 0.4.0
 
 - Add the contacts collection (sync and async): `client.contacts.create`, `.get`, `.list`, `.update`, `.delete`, and `.batch` (bulk upsert by email). Requires an API key with the `email_marketing` scope.

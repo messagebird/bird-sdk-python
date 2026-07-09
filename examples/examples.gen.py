@@ -13,41 +13,118 @@ request: Any = None
 
 
 async def _ex_0() -> None:
+    client.audiences.add_contacts(
+        "adn_01krdgeqcxet5s7t44vh8rt9mg", contact_ids=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+    )
+
+
+async def _ex_1() -> None:
+    audience = client.audiences.create(name="Newsletter subscribers")
+    print(audience.id, audience.name)
+
+
+async def _ex_2() -> None:
+    client.audiences.delete("adn_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_3() -> None:
+    audience = client.audiences.get("adn_01krdgeqcxet5s7t44vh8rt9mg")
+    print(audience.name)
+
+
+async def _ex_4() -> None:
+    for audience in client.audiences.list():
+        print(audience.id, audience.name)
+
+
+async def _ex_5() -> None:
+    for member in client.audiences.list_contacts("adn_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(member.contact.email, member.joined_at)
+
+
+async def _ex_6() -> None:
+    client.audiences.remove_contact(
+        "adn_01krdgeqcxet5s7t44vh8rt9mg", "con_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+
+
+async def _ex_7() -> None:
+    client.audiences.remove_contacts(
+        "adn_01krdgeqcxet5s7t44vh8rt9mg", contact_ids=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+    )
+
+
+async def _ex_8() -> None:
+    audience = client.audiences.update("adn_01krdgeqcxet5s7t44vh8rt9mg", name="Renamed")
+    print(audience.name)
+
+
+async def _ex_9() -> None:
     message = client.get("/v1/email/messages/em_01krd...", cast_to=EmailMessage)
     client.post("/v1/some/new/endpoint", body={"key": "value"})
 
 
-async def _ex_1() -> None:
+async def _ex_10() -> None:
     result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
     for item in result.data:
         print(item.email, item.status)
 
 
-async def _ex_2() -> None:
+async def _ex_11() -> None:
     contact = client.contacts.create(email="jane@acme.com", first_name="Jane")
     print(contact.id, contact.email)
 
 
-async def _ex_3() -> None:
+async def _ex_12() -> None:
     client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_4() -> None:
+async def _ex_13() -> None:
     contact = client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
     print(contact.email)
 
 
-async def _ex_5() -> None:
+async def _ex_14() -> None:
     for contact in client.contacts.list(search="acme.com"):
         print(contact.id, contact.email)
 
 
-async def _ex_6() -> None:
+async def _ex_15() -> None:
     contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
     print(contact.first_name)
 
 
-async def _ex_7() -> None:
+async def _ex_16() -> None:
+    prop = client.contact_properties.archive("prp_01krdgeqcxet5s7t44vh8rt9mg")
+    print(prop.archived)
+
+
+async def _ex_17() -> None:
+    prop = client.contact_properties.create(key="plan", type="string")
+    print(prop.id, prop.key)
+
+
+async def _ex_18() -> None:
+    prop = client.contact_properties.get("prp_01krdgeqcxet5s7t44vh8rt9mg")
+    print(prop.key)
+
+
+async def _ex_19() -> None:
+    for prop in client.contact_properties.list():
+        print(prop.id, prop.key)
+
+
+async def _ex_20() -> None:
+    prop = client.contact_properties.unarchive("prp_01krdgeqcxet5s7t44vh8rt9mg")
+    print(prop.archived)
+
+
+async def _ex_21() -> None:
+    prop = client.contact_properties.update("prp_01krdgeqcxet5s7t44vh8rt9mg", fallback_value="free")
+    print(prop.fallback_value)
+
+
+async def _ex_22() -> None:
     try:
         client.email.send(
             from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
@@ -63,25 +140,25 @@ async def _ex_7() -> None:
         print(err.status_code, err.code, err.request_id)
 
 
-async def _ex_8() -> None:
+async def _ex_23() -> None:
     async with AsyncBird() as client:
         async for message in client.email.list(status="delivered"):
             print(message.id)
 
 
-async def _ex_9() -> None:
+async def _ex_24() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
 
 
-async def _ex_10() -> None:
+async def _ex_25() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
     page = client.email.list(status="delivered")  # page.data, page.next_cursor
     print(len(page.data), page.next_cursor)
 
 
-async def _ex_11() -> None:
+async def _ex_26() -> None:
     client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -91,7 +168,7 @@ async def _ex_11() -> None:
     )
 
 
-async def _ex_12() -> None:
+async def _ex_27() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -101,7 +178,7 @@ async def _ex_12() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_13() -> None:
+async def _ex_28() -> None:
     batch = client.email.send_batch(
         messages=[
             {
@@ -122,7 +199,7 @@ async def _ex_13() -> None:
         print(item.id, item.status)
 
 
-async def _ex_14() -> None:
+async def _ex_29() -> None:
     tpl = client.email_templates.create(
         name="welcome-email",
         description="Welcome",
@@ -134,12 +211,12 @@ async def _ex_14() -> None:
     print(tpl.id, tpl.revision)
 
 
-async def _ex_15() -> None:
+async def _ex_30() -> None:
     for template in client.email_templates.list(category="transactional"):
         print(template.id, template.name)
 
 
-async def _ex_16() -> None:
+async def _ex_31() -> None:
     version = client.email_templates.publish("emt_abc123")
     print(version.version_number)
 
@@ -151,12 +228,12 @@ async def _ex_16() -> None:
     )
 
 
-async def _ex_17() -> None:
+async def _ex_32() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_18() -> None:
+async def _ex_33() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -165,7 +242,7 @@ async def _ex_18() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_19() -> None:
+async def _ex_34() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -173,18 +250,18 @@ async def _ex_19() -> None:
     )
 
 
-async def _ex_20() -> None:
+async def _ex_35() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_21() -> None:
+async def _ex_36() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_22() -> None:
+async def _ex_37() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
