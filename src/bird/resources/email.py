@@ -82,11 +82,11 @@ def _send_body(
         "subject":      subject,
         "html":         html,
         "text":         text,
-        # A template send nests its reference (id or alias) and variables under the
+        # A template send nests its reference (id or name) and variables under the
         # template object; an inline send uses the top-level parameters (the two
-        # content modes are exclusive). The `emt_` prefix marks an id, else an alias.
+        # content modes are exclusive). The `emt_` prefix marks an id, else a name.
         "template": (
-            {("id" if template.startswith("emt_") else "alias"): template, "parameters": parameters}
+            {("id" if template.startswith("emt_") else "name"): template, "parameters": parameters}
             if template is not None else None
         ),
         "parameters":   parameters if template is None else None,

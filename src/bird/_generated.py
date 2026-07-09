@@ -173,6 +173,14 @@ class FieldListEnvelope(BaseModel):
     ]
 
 
+class Timestamps(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    created_at: Annotated[str, Field(min_length=1)]
+    updated_at: Annotated[str, Field(min_length=1)]
+
+
 class EmailID(RootModel[str]):
     root: Annotated[
         str,
@@ -204,6 +212,19 @@ class EmailAddress(BaseModel):
             pattern='^[^\\r\\n]+$',
         ),
     ] = None
+
+
+class EmailMessageStatus(str, Enum):
+    scheduled = 'scheduled'
+    accepted = 'accepted'
+    processed = 'processed'
+    deferred = 'deferred'
+    delivered = 'delivered'
+    partial_failure = 'partial_failure'
+    bounced = 'bounced'
+    complained = 'complained'
+    rejected = 'rejected'
+    canceled = 'canceled'
 
 
 class Tag(BaseModel):
@@ -282,19 +303,6 @@ class Category(str, Enum):
     transactional = 'transactional'
 
 
-class Status(str, Enum):
-    scheduled = 'scheduled'
-    accepted = 'accepted'
-    processed = 'processed'
-    deferred = 'deferred'
-    delivered = 'delivered'
-    partial_failure = 'partial_failure'
-    bounced = 'bounced'
-    complained = 'complained'
-    rejected = 'rejected'
-    canceled = 'canceled'
-
-
 class EmailMessage(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -342,7 +350,7 @@ class EmailMessage(BaseModel):
         ),
     ] = None
     status: Annotated[
-        Status,
+        EmailMessageStatus,
         Field(
             description="Aggregate delivery status derived from recipient states. `scheduled` means the message is queued to send at a future time and has not been dispatched yet. `accepted` means Bird has the send and is preparing to deliver. `processed` means Bird has processed the message and queued it for delivery to the recipient's mail server. `canceled` means a scheduled message was canceled before it was sent.\n"
         ),
@@ -498,10 +506,10 @@ class EmailTemplateSend1(BaseModel):
             pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ]
-    alias: Annotated[
+    name: Annotated[
         str | None,
         Field(
-            description='The template to send, by its alias handle (for example `welcome-email`).',
+            description='The template to send, by its name handle (for example `welcome-email`).',
             examples=['welcome-email'],
             max_length=63,
             min_length=1,
@@ -530,10 +538,10 @@ class EmailTemplateSend2(BaseModel):
             pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ] = None
-    alias: Annotated[
+    name: Annotated[
         str,
         Field(
-            description='The template to send, by its alias handle (for example `welcome-email`).',
+            description='The template to send, by its name handle (for example `welcome-email`).',
             examples=['welcome-email'],
             max_length=63,
             min_length=1,
@@ -659,7 +667,10 @@ class EmailMessageSendRequest(BaseModel):
     ] = None
     headers: Annotated[
         dict[str, str] | None,
-        Field(description='Custom email headers as key-value pairs.', max_length=25),
+        Field(
+            description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`: set the message's addressing and subject through the dedicated fields (`from`, `to`, `cc`, `bcc`, `reply_to`, `subject`) rather than here, and headers the platform generates for you — `Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path` — cannot be overridden. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends; on `marketing` sends the platform sets a compliant unsubscribe header for you, so supplying them there is rejected with a `422`. Header values may not contain carriage-return or line-feed characters.\n",
+            max_length=25,
+        ),
     ] = None
     tags: Annotated[
         list[Tag] | None,
@@ -703,9 +714,9 @@ class EmailMessageSendRequest(BaseModel):
     category: Annotated[
         Category | None,
         Field(
-            description='Content classification — independent of which endpoint you use. Controls suppression policy: `marketing` blocks on all suppression reasons (use for marketing content); `transactional` allows delivery through complaint and unsubscribe suppressions (use for receipts, password resets, and similar operational messages). Default: transactional.\n'
+            description='Content classification — independent of which endpoint you use. Controls suppression policy: `marketing` blocks on all suppression reasons (use for marketing content); `transactional` allows delivery through complaint and unsubscribe suppressions (use for receipts, password resets, and similar operational messages). Default: marketing.\n'
         ),
-    ] = 'transactional'
+    ] = 'marketing'
     in_reply_to_message_id: Annotated[
         str | None,
         Field(
@@ -770,7 +781,7 @@ class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
     ]
 
 
-class Status1(str, Enum):
+class Status(str, Enum):
     accepted = 'accepted'
 
 
@@ -788,7 +799,7 @@ class EmailMessageBatchItem(BaseModel):
         ),
     ]
     status: Annotated[
-        Status1, Field(description='Initial status of this message in the batch.')
+        Status, Field(description='Initial status of this message in the batch.')
     ]
     category: Annotated[
         Category, Field(description='Resolved category for this batch item.')
@@ -809,6 +820,499 @@ class RecipientRole(str, Enum):
     to = 'to'
     cc = 'cc'
     bcc = 'bcc'
+
+
+class AudienceID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class ContactID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['con_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^con_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class Contact(Timestamps):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Contact ID.',
+            examples=['con_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^con_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    email: Annotated[
+        str,
+        Field(
+            description="The contact's email address, stored trimmed and lowercased. Unique within the workspace.",
+            max_length=254,
+            min_length=1,
+        ),
+    ]
+    first_name: Annotated[
+        str | None, Field(description="The contact's first name.", max_length=100)
+    ] = None
+    last_name: Annotated[
+        str | None, Field(description="The contact's last name.", max_length=100)
+    ] = None
+    external_id: Annotated[
+        str | None,
+        Field(
+            description='Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.',
+            max_length=254,
+        ),
+    ] = None
+    data: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, or boolean matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized.\n"
+        ),
+    ] = None
+    created_at: str
+    updated_at: str
+
+
+class ContactList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[list[Contact], Field(description='Page of contact objects.')]
+
+
+class ContactCreateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    email: Annotated[
+        str,
+        Field(
+            description="The contact's email address. Trimmed and lowercased before it is stored and checked for uniqueness. Unique within the workspace.",
+            max_length=254,
+            min_length=1,
+        ),
+    ]
+    first_name: Annotated[
+        str | None, Field(description="The contact's first name.", max_length=100)
+    ] = None
+    last_name: Annotated[
+        str | None, Field(description="The contact's last name.", max_length=100)
+    ] = None
+    external_id: Annotated[
+        str | None,
+        Field(
+            description='Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.',
+            max_length=254,
+        ),
+    ] = None
+    data: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Custom property values for this contact. Each key must be a property created via the contact properties API, and each value must be a string, number, or boolean matching the property's declared type (strings up to 500 characters); a null value is ignored. Total size is capped at 2 KB serialized.\n"
+        ),
+    ] = None
+
+
+class DataMode(str, Enum):
+    merge = 'merge'
+    replace_ = 'replace'
+
+
+class ContactUpsertRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    contacts: Annotated[
+        list[ContactCreateRequest],
+        Field(
+            description='Contacts to create or update, matched by email address. Existing contacts are updated with the supplied fields; new ones are created.',
+            max_length=1000,
+            min_length=1,
+        ),
+    ]
+    audience_ids: Annotated[
+        list[AudienceID] | None,
+        Field(
+            description='Audiences every contact in this request is added to. Contacts that are already members are left in place.',
+            max_length=10,
+            min_length=1,
+        ),
+    ] = None
+    data_mode: Annotated[
+        DataMode | None,
+        Field(
+            description="How a supplied `data` object is applied to an existing contact. `merge` (the default) merges the supplied keys onto the contact's stored custom values, and a key with a `null` value deletes that one key. `replace` overwrites the whole stored `data` map with the supplied one. In both modes a contact that omits `data` keeps its stored values unchanged, so an import that touches one attribute never wipes the others.\n"
+        ),
+    ] = 'merge'
+
+
+class ContactUpsertError(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        str,
+        Field(
+            description='Machine-readable error category for this entry, such as `validation_error` or `conflict_error`, in the same vocabulary as the top-level error `type`. New categories may be added over time, so treat unrecognized values as a generic failure.',
+            min_length=1,
+        ),
+    ]
+    message: Annotated[
+        str,
+        Field(
+            description='Human-readable explanation of why this entry failed.',
+            min_length=1,
+        ),
+    ]
+
+
+class Status1(str, Enum):
+    created = 'created'
+    updated = 'updated'
+    failed = 'failed'
+
+
+class ContactUpsertResultItem(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    email: Annotated[
+        str,
+        Field(
+            description='Email address of the contact this entry refers to.',
+            min_length=1,
+        ),
+    ]
+    status: Annotated[
+        Status1,
+        Field(
+            description='What happened to this contact. A failed entry does not affect the other entries in the request.'
+        ),
+    ]
+    contact_id: Annotated[
+        str | None,
+        Field(
+            description='ID of the created or updated contact. Absent when the entry failed.',
+            examples=['con_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^con_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ] = None
+    error: Annotated[
+        ContactUpsertError | None,
+        Field(description='Why this entry failed. Absent for successful entries.'),
+    ] = None
+
+
+class ContactUpsertResult(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[ContactUpsertResultItem],
+        Field(description='One entry per contact in the request, in submission order.'),
+    ]
+
+
+class ContactUpdateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    email: Annotated[
+        str | None,
+        Field(
+            description='New email address for the contact. Trimmed and lowercased before it is stored and checked for uniqueness. Must not be in use by another contact in the workspace.',
+            max_length=254,
+            min_length=1,
+        ),
+    ] = None
+    first_name: Annotated[
+        str | None,
+        Field(
+            description="The contact's first name. Set to null to clear.",
+            max_length=100,
+        ),
+    ] = None
+    last_name: Annotated[
+        str | None,
+        Field(
+            description="The contact's last name. Set to null to clear.", max_length=100
+        ),
+    ] = None
+    external_id: Annotated[
+        str | None,
+        Field(
+            description='Your own identifier for this contact. Unique within the workspace when set. Set to null to clear.',
+            max_length=254,
+        ),
+    ] = None
+    data: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Custom property values to change, merged into the contact's existing data. Keys you supply are set, keys set to null are removed, and keys you omit are left unchanged. Each key must be a property created via the contact properties API, and each value must be a string, number, or boolean matching the property's declared type (strings up to 500 characters). The merged result is capped at 2 KB serialized.\n"
+        ),
+    ] = None
+
+
+class Type1(str, Enum):
+    ContactPropertyTypeString = 'string'
+    ContactPropertyTypeNumber = 'number'
+    ContactPropertyTypeBoolean = 'boolean'
+
+
+class ContactProperty(Timestamps):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Contact property ID.',
+            examples=['prp_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^prp_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    key: Annotated[
+        str,
+        Field(
+            description='The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.',
+            max_length=50,
+            min_length=1,
+            pattern='^[a-z][a-z0-9_]*$',
+        ),
+    ]
+    type: Annotated[
+        Type1,
+        Field(
+            description='The value type every contact must use for this property. Cannot be changed after creation.'
+        ),
+    ]
+    fallback_value: Annotated[
+        Any | None,
+        Field(
+            description='Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null when no fallback is set.',
+            max_length=500,
+        ),
+    ] = None
+    archived: Annotated[
+        bool | None,
+        Field(
+            description='Whether the property is archived. An archived property is rejected in new contact writes and stops rendering in templates, but every value already stored on contacts is preserved. Reactivate it with unarchive.'
+        ),
+    ] = None
+    created_at: str
+    updated_at: str
+
+
+class ContactPropertyList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[ContactProperty], Field(description='Page of contact property objects.')
+    ]
+
+
+class ContactPropertyCreateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    key: Annotated[
+        str,
+        Field(
+            description='The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.',
+            max_length=50,
+            min_length=1,
+            pattern='^[a-z][a-z0-9_]*$',
+        ),
+    ]
+    type: Annotated[
+        Type1,
+        Field(
+            description='The value type every contact must use for this property. Cannot be changed after creation.'
+        ),
+    ]
+    fallback_value: Annotated[
+        Any | None,
+        Field(
+            description='Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null for no fallback.',
+            max_length=500,
+        ),
+    ] = None
+
+
+class ContactPropertyUpdateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    fallback_value: Annotated[
+        Any | None,
+        Field(
+            description='Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters). Set to null to remove the fallback.',
+            max_length=500,
+        ),
+    ] = None
+
+
+class Type3(str, Enum):
+    AudienceTypeStatic = 'static'
+    AudienceTypeDynamic = 'dynamic'
+    AudienceTypeExternal = 'external'
+
+
+class Audience(Timestamps):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Audience ID.',
+            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description='Display name for the audience.', max_length=100, min_length=1
+        ),
+    ]
+    description: Annotated[
+        str | None,
+        Field(
+            description='Longer description of who this audience is.', max_length=500
+        ),
+    ] = None
+    type: Annotated[
+        Type3,
+        Field(
+            description="How the audience's recipients are determined. `static` audiences have an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable — creating an audience with either returns an error.\n"
+        ),
+    ]
+    created_at: str
+    updated_at: str
+
+
+class AudienceList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[list[Audience], Field(description='Page of audience objects.')]
+
+
+class AudienceCreateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='Display name for the audience.', max_length=100, min_length=1
+        ),
+    ]
+    description: Annotated[
+        str | None,
+        Field(
+            description='Longer description of who this audience is.', max_length=500
+        ),
+    ] = None
+    type: Annotated[
+        Type3 | None,
+        Field(
+            description="How the audience's recipients are determined. `static` audiences have an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable — creating an audience with either returns an error.\n"
+        ),
+    ] = 'static'
+
+
+class AudienceUpdateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str | None,
+        Field(
+            description='Display name for the audience.', max_length=100, min_length=1
+        ),
+    ] = None
+    description: Annotated[
+        str | None,
+        Field(
+            description='Longer description of who this audience is. Set to null to clear.',
+            max_length=500,
+        ),
+    ] = None
+
+
+class AudienceMember(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    contact: Contact
+    joined_at: Annotated[
+        str,
+        Field(
+            description='When this contact joined the audience. Members are listed in join order, most recent first.',
+            min_length=1,
+        ),
+    ]
+
+
+class AudienceMemberList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[AudienceMember],
+        Field(
+            description='Page of audience members, each a contact paired with the time it joined the audience.'
+        ),
+    ]
+
+
+class AudienceContactsAddRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    contact_ids: Annotated[
+        list[ContactID],
+        Field(
+            description='Contacts to add to the audience. Adding a contact that is already a member has no effect. If any ID does not exist, the whole request fails and no contacts are added.',
+            max_length=1000,
+            min_length=1,
+        ),
+    ]
+
+
+class AudienceContactsRemoveRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    contact_ids: Annotated[
+        list[ContactID],
+        Field(
+            description='Contacts to remove from the audience. Removing a contact that is not a member has no effect. If any ID does not exist, the whole request fails and no contacts are removed.',
+            max_length=1000,
+            min_length=1,
+        ),
+    ]
 
 
 class SMSMessageStatus(str, Enum):
@@ -1102,17 +1606,17 @@ class SMSTemplateSend1(BaseModel):
             pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ]
-    alias: Annotated[
+    name: Annotated[
         str | None,
         Field(
-            description='The template to send, by its alias handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
+            description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
             examples=['bird_otp_verification_ttl'],
             max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_]*[a-z0-9])?$',
         ),
     ] = None
-    locale: Annotated[
+    language: Annotated[
         str | None,
         Field(
             description='Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n',
@@ -1142,17 +1646,17 @@ class SMSTemplateSend2(BaseModel):
             pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ] = None
-    alias: Annotated[
+    name: Annotated[
         str,
         Field(
-            description='The template to send, by its alias handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
+            description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
             examples=['bird_otp_verification_ttl'],
             max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_]*[a-z0-9])?$',
         ),
     ]
-    locale: Annotated[
+    language: Annotated[
         str | None,
         Field(
             description='Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n',
@@ -1534,16 +2038,16 @@ class SMSTemplate(BaseModel):
     name: Annotated[
         str,
         Field(
-            description='Human-readable description of what the template is for.',
-            examples=['One-time passcode verification'],
+            description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
+            examples=['bird_otp_verification'],
             min_length=1,
         ),
     ]
-    alias: Annotated[
+    description: Annotated[
         str,
         Field(
-            description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
-            examples=['bird_otp_verification'],
+            description='Human-readable description of what the template is for.',
+            examples=['One-time passcode verification'],
             min_length=1,
         ),
     ]
@@ -1568,7 +2072,7 @@ class SMSTemplate(BaseModel):
             description='The typed slots this template fills in from the values you supply when sending.'
         ),
     ]
-    available_locales: Annotated[
+    available_languages: Annotated[
         list[str],
         Field(
             description='The languages this template is available in, as BCP-47 tags.',
@@ -1673,16 +2177,13 @@ class EmailTemplateSummary(BaseModel):
     name: Annotated[
         str,
         Field(
-            description='Human-readable template name, unique within the workspace.',
+            description="The template's workspace-unique slug handle. Pass it (or the id) as the template reference when sending.",
+            examples=['welcome-email'],
+            max_length=63,
             min_length=1,
+            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
         ),
     ]
-    alias: Annotated[
-        str | None,
-        Field(
-            description="The template's workspace-unique slug handle for send-by-template, or null if unset."
-        ),
-    ] = None
     description: Annotated[
         str | None,
         Field(
@@ -1742,22 +2243,13 @@ class EmailTemplateCreate(BaseModel):
     name: Annotated[
         str,
         Field(
-            description='Human-readable template name, unique within the workspace.',
-            examples=['Welcome email'],
-            max_length=255,
-            min_length=1,
-        ),
-    ]
-    alias: Annotated[
-        str | None,
-        Field(
-            description='Optional workspace-unique slug handle for the template — a stable alternative to the template ID when sending by template. Lowercase letters, numbers, and hyphens.\n',
+            description="The template's workspace-unique slug handle — a stable alternative to the template ID when sending by template. Lowercase letters, numbers, and hyphens.\n",
             examples=['welcome-email'],
             max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
         ),
-    ] = None
+    ]
     description: Annotated[
         str | None,
         Field(
@@ -1825,16 +2317,13 @@ class EmailTemplate(BaseModel):
     name: Annotated[
         str,
         Field(
-            description='Human-readable template name, unique within the workspace.',
+            description="The template's workspace-unique slug handle. Pass it (or the id) as the template reference when sending.",
+            examples=['welcome-email'],
+            max_length=63,
             min_length=1,
+            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
         ),
     ]
-    alias: Annotated[
-        str | None,
-        Field(
-            description="The template's workspace-unique slug handle for send-by-template, or null if unset."
-        ),
-    ] = None
     description: Annotated[
         str | None,
         Field(
@@ -1908,15 +2397,7 @@ class EmailTemplateUpdate(BaseModel):
     name: Annotated[
         str | None,
         Field(
-            description='New template name. Must stay unique within the workspace.',
-            max_length=255,
-            min_length=1,
-        ),
-    ] = None
-    alias: Annotated[
-        str | None,
-        Field(
-            description='New workspace-unique slug handle for send-by-template. Send null to clear it. Lowercase letters, numbers, and hyphens.\n',
+            description='New workspace-unique slug handle. Must stay unique within the workspace. Lowercase letters, numbers, and hyphens.\n',
             max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
@@ -2028,7 +2509,7 @@ class WebhookEventType(RootModel[str]):
     ]
 
 
-class Type1(str, Enum):
+class Type5(str, Enum):
     domain_failed = 'domain.failed'
 
 
@@ -2057,7 +2538,7 @@ class EventDomainFailed(BaseModel):
     ]
 
 
-class Type2(str, Enum):
+class Type6(str, Enum):
     domain_verified = 'domain.verified'
 
 
@@ -2149,7 +2630,7 @@ class EventEmailAcceptedData(EventEmailBase):
     )
 
 
-class Type3(str, Enum):
+class Type7(str, Enum):
     email_accepted = 'email.accepted'
 
 
@@ -2217,7 +2698,7 @@ class EventEmailBouncedData(EventEmailBase):
     ]
 
 
-class Type4(str, Enum):
+class Type8(str, Enum):
     email_bounced = 'email.bounced'
 
 
@@ -2283,7 +2764,7 @@ class EventEmailCanceledData(EventEmailMessageBase):
     )
 
 
-class Type5(str, Enum):
+class Type9(str, Enum):
     email_canceled = 'email.canceled'
 
 
@@ -2334,7 +2815,7 @@ class EventEmailClickedData(EventEmailBase):
     ]
 
 
-class Type6(str, Enum):
+class Type10(str, Enum):
     email_clicked = 'email.clicked'
 
 
@@ -2370,7 +2851,7 @@ class EventEmailComplainedData(EventEmailBase):
     ]
 
 
-class Type7(str, Enum):
+class Type11(str, Enum):
     email_complained = 'email.complained'
 
 
@@ -2423,7 +2904,7 @@ class EventEmailDeferredData(EventEmailBase):
     ]
 
 
-class Type8(str, Enum):
+class Type12(str, Enum):
     email_deferred = 'email.deferred'
 
 
@@ -2452,7 +2933,7 @@ class EventEmailDeliveredData(EventEmailBase):
     )
 
 
-class Type9(str, Enum):
+class Type13(str, Enum):
     email_delivered = 'email.delivered'
 
 
@@ -2481,7 +2962,7 @@ class EventEmailListUnsubscribedData(EventEmailBase):
     )
 
 
-class Type10(str, Enum):
+class Type14(str, Enum):
     email_list_unsubscribed = 'email.list_unsubscribed'
 
 
@@ -2524,7 +3005,7 @@ class EventEmailOpenedData(EventEmailBase):
     ]
 
 
-class Type11(str, Enum):
+class Type15(str, Enum):
     email_opened = 'email.opened'
 
 
@@ -2584,7 +3065,7 @@ class EventEmailOutOfBandBounceData(EventEmailBase):
     ]
 
 
-class Type12(str, Enum):
+class Type16(str, Enum):
     email_out_of_band_bounce = 'email.out_of_band_bounce'
 
 
@@ -2613,7 +3094,7 @@ class EventEmailProcessedData(EventEmailBase):
     )
 
 
-class Type13(str, Enum):
+class Type17(str, Enum):
     email_processed = 'email.processed'
 
 
@@ -2721,7 +3202,7 @@ class EventEmailReceivedData(BaseModel):
     ] = None
 
 
-class Type14(str, Enum):
+class Type18(str, Enum):
     email_received = 'email.received'
 
 
@@ -2761,7 +3242,7 @@ class EventEmailRejectedData(EventEmailBase):
     rejection_reason: EmailRejectionReason
 
 
-class Type15(str, Enum):
+class Type19(str, Enum):
     email_rejected = 'email.rejected'
 
 
@@ -2798,7 +3279,7 @@ class EventEmailScheduledData(EventEmailMessageBase):
     ]
 
 
-class Type16(str, Enum):
+class Type20(str, Enum):
     email_scheduled = 'email.scheduled'
 
 
@@ -2827,7 +3308,7 @@ class EventEmailUnsubscribedData(EventEmailBase):
     )
 
 
-class Type17(str, Enum):
+class Type21(str, Enum):
     email_unsubscribed = 'email.unsubscribed'
 
 
@@ -2850,7 +3331,7 @@ class EventEmailUnsubscribed(BaseModel):
     data: EventEmailUnsubscribedData
 
 
-class Type18(str, Enum):
+class Type22(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -2939,7 +3420,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type19(str, Enum):
+class Type23(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -2982,7 +3463,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type20(str, Enum):
+class Type24(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -3011,7 +3492,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type21(str, Enum):
+class Type25(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -3043,7 +3524,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type22(str, Enum):
+class Type26(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -3075,7 +3556,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type23(str, Enum):
+class Type27(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -3118,7 +3599,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type24(str, Enum):
+class Type28(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -3149,7 +3630,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type25(str, Enum):
+class Type29(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 

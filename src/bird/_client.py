@@ -20,6 +20,9 @@ from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._constants import DEFAULT_MAX_RETRIES
 from bird._exceptions import BirdError
 from bird._types import NOT_GIVEN, EmailDefaults, NotGiven
+from bird.resources.audiences import AsyncAudiences, Audiences
+from bird.resources.contact_properties import AsyncContactProperties, ContactProperties
+from bird.resources.contacts import AsyncContacts, Contacts
 from bird.resources.email import AsyncEmail, Email
 from bird.resources.email_templates import AsyncEmailTemplates, EmailTemplates
 from bird.resources.sms import AsyncSms, Sms
@@ -145,6 +148,9 @@ class Bird(SyncAPIClient):
         self.email_templates = EmailTemplates(self)
         self.sms = Sms(self)
         self.sms_templates = SMSTemplates(self)
+        self.contacts = Contacts(self)
+        self.contact_properties = ContactProperties(self)
+        self.audiences = Audiences(self)
         self.webhooks = Webhooks(webhook_secret)
 
     def with_options(
@@ -239,6 +245,9 @@ class AsyncBird(AsyncAPIClient):
         self.email_templates = AsyncEmailTemplates(self)
         self.sms = AsyncSms(self)
         self.sms_templates = AsyncSMSTemplates(self)
+        self.contacts = AsyncContacts(self)
+        self.contact_properties = AsyncContactProperties(self)
+        self.audiences = AsyncAudiences(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
 
     def with_options(

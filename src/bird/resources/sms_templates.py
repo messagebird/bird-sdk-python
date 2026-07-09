@@ -1,5 +1,5 @@
 """Workspace SMS templates: ``client.sms_templates`` — list the templates
-available to the workspace and read one back by its alias or id.
+available to the workspace and read one back by its name or id.
 
 The catalogue holds Bird's built-in templates plus any the workspace authored,
 and is read-only through this SDK.
@@ -24,10 +24,10 @@ def _list_opts(
     options: RequestOptions | None,
     scope: str | None,
     category: str | None,
-    locale: str | None,
+    language: str | None,
 ) -> dict[str, Any]:
     # Fold the filters into extra_query; a caller-supplied extra_query wins on a clash.
-    query = {key: value for key, value in {"scope": scope, "category": category, "locale": locale}.items() if value is not None}
+    query = {key: value for key, value in {"scope": scope, "category": category, "language": language}.items() if value is not None}
     opts = _opts(options)
     if query:
         opts["extra_query"] = {**query, **opts.get("extra_query", {})}
@@ -45,13 +45,13 @@ class SMSTemplates:
         *,
         scope: str | None = None,
         category: str | None = None,
-        locale: str | None = None,
+        language: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSTemplateList:
         """List the SMS templates available to the workspace — Bird's built-in
         templates plus any the workspace authored. The catalogue is small and
         returned in full in ``.data``; this list is not paginated. Filter by
-        ``scope``, ``category``, or ``locale`` (a BCP-47 language tag).
+        ``scope``, ``category``, or ``language`` (a BCP-47 language tag).
 
         ```python
         templates = client.sms_templates.list(scope="system")
@@ -59,11 +59,11 @@ class SMSTemplates:
             print(template.id, template.name)
         ```
         """
-        response = self._client.request("GET", _PATH, **_list_opts(options, scope, category, locale))
+        response = self._client.request("GET", _PATH, **_list_opts(options, scope, category, language))
         return SMSTemplateList.model_validate(response.json())
 
     def get(self, template_ref: str, *, options: RequestOptions | None = None) -> SMSTemplate:
-        """Fetch a single SMS template by its alias or id, including its body and
+        """Fetch a single SMS template by its name or id, including its body and
         the variables it expects.
 
         ```python
@@ -86,16 +86,16 @@ class AsyncSMSTemplates:
         *,
         scope: str | None = None,
         category: str | None = None,
-        locale: str | None = None,
+        language: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSTemplateList:
         """List the SMS templates available to the workspace. Not paginated —
         the full catalogue is returned in ``.data``. Filter by ``scope``,
-        ``category``, or ``locale``."""
-        response = await self._client.request("GET", _PATH, **_list_opts(options, scope, category, locale))
+        ``category``, or ``language``."""
+        response = await self._client.request("GET", _PATH, **_list_opts(options, scope, category, language))
         return SMSTemplateList.model_validate(response.json())
 
     async def get(self, template_ref: str, *, options: RequestOptions | None = None) -> SMSTemplate:
-        """Fetch a single SMS template by its alias or id."""
+        """Fetch a single SMS template by its name or id."""
         response = await self._client.request("GET", f"{_PATH}/{template_ref}", **_opts(options))
         return SMSTemplate.model_validate(response.json())

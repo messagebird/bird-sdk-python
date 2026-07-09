@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Add the contacts collection (sync and async): `client.contacts.create`, `.get`, `.list`, `.update`, `.delete`, and `.batch` (bulk upsert by email). Requires an API key with the `email_marketing` scope.
+- Add the audiences collection (sync and async): `client.audiences.create`, `.get`, `.list`, `.update`, `.delete`, plus membership `.list_contacts`, `.add_contacts`, `.remove_contacts`, `.remove_contact`.
+- Add contact properties: `client.contact_properties.create`, `.get`, `.list`, `.update`, `.archive`, `.unarchive`.
+
 ## 0.3.0
 
 - Add the SMS channel (sync and async): `client.sms.send`, `.send_batch`, `.get`, `.list`.

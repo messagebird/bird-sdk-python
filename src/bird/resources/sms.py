@@ -2,7 +2,7 @@
 template), read a message back, and list the message log.
 
 A send carries either ``text`` (with a ``category``) or a ``template`` (by id or
-alias, with its ``parameters``); the two are mutually exclusive.
+name, with its ``parameters``); the two are mutually exclusive.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _send_body(
     text: str | None = None,
     category: str | None = None,
     template: str | None = None,
-    locale: str | None = None,
+    language: str | None = None,
     parameters: Mapping[str, Any] | None = None,
     tags: Sequence[Mapping[str, str]] | None = None,
     metadata: Mapping[str, Any] | None = None,
@@ -51,10 +51,10 @@ def _send_body(
         "metadata": metadata,
     }
     if template is not None:
-        # An smt_-prefixed value is the id; anything else is the alias handle.
-        tmpl: dict[str, Any] = {"id" if template.startswith("smt_") else "alias": template}
-        if locale is not None:
-            tmpl["locale"] = locale
+        # An smt_-prefixed value is the id; anything else is the name handle.
+        tmpl: dict[str, Any] = {"id" if template.startswith("smt_") else "name": template}
+        if language is not None:
+            tmpl["language"] = language
         if parameters is not None:
             tmpl["parameters"] = parameters
         body["template"] = tmpl
@@ -68,7 +68,7 @@ def _message_body(m: Mapping[str, Any]) -> dict[str, Any]:
         text=m.get("text"),
         category=m.get("category"),
         template=m.get("template"),
-        locale=m.get("locale"),
+        language=m.get("language"),
         parameters=m.get("parameters"),
         tags=m.get("tags"),
         metadata=m.get("metadata"),
@@ -89,14 +89,14 @@ class Sms:
         text: str | None = None,
         category: str | None = None,
         template: str | None = None,
-        locale: str | None = None,
+        language: str | None = None,
         parameters: Mapping[str, Any] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
         """Send one SMS to a single recipient. Supply either ``text`` (with a
-        ``category``) or a stored ``template`` (by id or alias, with ``parameters``).
+        ``category``) or a stored ``template`` (by id or name, with ``parameters``).
         The result is ``accepted``, not yet delivered — read it back with ``get``.
 
         ```python
@@ -118,7 +118,7 @@ class Sms:
         """
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
-            locale=locale, parameters=parameters, tags=tags, metadata=metadata,
+            language=language, parameters=parameters, tags=tags, metadata=metadata,
         )
         response = self._client.request("POST", _PATH, body=body, **_opts(options))
         return SMSMessage.model_validate(response.json())
@@ -184,7 +184,7 @@ class AsyncSms:
         text: str | None = None,
         category: str | None = None,
         template: str | None = None,
-        locale: str | None = None,
+        language: str | None = None,
         parameters: Mapping[str, Any] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -193,7 +193,7 @@ class AsyncSms:
         """Send one SMS to a single recipient (free text or by template)."""
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
-            locale=locale, parameters=parameters, tags=tags, metadata=metadata,
+            language=language, parameters=parameters, tags=tags, metadata=metadata,
         )
         response = await self._client.request("POST", _PATH, body=body, **_opts(options))
         return SMSMessage.model_validate(response.json())

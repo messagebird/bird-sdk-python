@@ -127,16 +127,143 @@ class SmsSendParams(_SmsSendRequired, total=False):
     """Params for ``client.sms.send``. ``to`` is required. A send is either
     free-text (``text`` plus ``category``) or by ``template`` — with a template,
     omit ``text``/``category`` and personalize with ``parameters``. ``template``
-    is the template's id (``smt_`` prefix) or its alias."""
+    is the template's id (``smt_`` prefix) or its name."""
 
     from_: str
     text: str
     category: str
     template: str
-    locale: str
+    language: str
     parameters: Mapping[str, Any]
     tags: Sequence[Mapping[str, str]]
     metadata: Mapping[str, Any]
+
+
+class _ContactCreateRequired(TypedDict):
+    email: str
+
+
+class ContactCreateParams(_ContactCreateRequired, total=False):
+    """Params for ``client.contacts.create``. ``email`` is required."""
+
+    first_name: str
+    last_name: str
+    external_id: str
+    data: Mapping[str, Any]
+
+
+class ContactUpdateParams(TypedDict, total=False):
+    """Params for ``client.contacts.update``. Every key is optional — only the
+    fields you pass change."""
+
+    email: str
+    first_name: str
+    last_name: str
+    external_id: str
+    data: Mapping[str, Any]
+
+
+class ContactListParams(TypedDict, total=False):
+    """Filters for ``client.contacts.list``. Every key is optional."""
+
+    email: str
+    external_id: str
+    search: str
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
+class _ContactBatchRequired(TypedDict):
+    contacts: Sequence[Mapping[str, Any]]
+
+
+class ContactBatchParams(_ContactBatchRequired, total=False):
+    """Params for ``client.contacts.batch``. ``contacts`` is required — a sequence
+    of per-contact params, each shaped like ``ContactCreateParams``."""
+
+    audience_ids: Sequence[str]
+    data_mode: str
+
+
+class _ContactPropertyCreateRequired(TypedDict):
+    key: str
+    type: str
+
+
+class ContactPropertyCreateParams(_ContactPropertyCreateRequired, total=False):
+    """Params for ``client.contact_properties.create``. ``key`` and ``type`` are
+    required; ``type`` is one of ``"string"``, ``"number"``, ``"boolean"``."""
+
+    fallback_value: Any
+
+
+class ContactPropertyUpdateParams(TypedDict, total=False):
+    """Params for ``client.contact_properties.update``. Every key is optional."""
+
+    fallback_value: Any
+
+
+class ContactPropertyListParams(TypedDict, total=False):
+    """Filters for ``client.contact_properties.list``. Every key is optional."""
+
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
+class _AudienceCreateRequired(TypedDict):
+    name: str
+
+
+class AudienceCreateParams(_AudienceCreateRequired, total=False):
+    """Params for ``client.audiences.create``. ``name`` is required; an unset
+    ``type`` defaults to ``"static"`` on the server."""
+
+    description: str
+    type: str
+
+
+class AudienceUpdateParams(TypedDict, total=False):
+    """Params for ``client.audiences.update``. Every key is optional — only the
+    fields you pass change."""
+
+    name: str
+    description: str
+
+
+class AudienceListParams(TypedDict, total=False):
+    """Filters for ``client.audiences.list``. Every key is optional."""
+
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
+class AudienceListContactsParams(TypedDict, total=False):
+    """Filters for ``client.audiences.list_contacts``. Every key is optional."""
+
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
+class _AudienceContactsAddRequired(TypedDict):
+    contact_ids: Sequence[str]
+
+
+class AudienceContactsAddParams(_AudienceContactsAddRequired, total=False):
+    """Params for ``client.audiences.add_contacts``. ``contact_ids`` is
+    required — up to 1,000 existing contact ids."""
+
+
+class _AudienceContactsRemoveRequired(TypedDict):
+    contact_ids: Sequence[str]
+
+
+class AudienceContactsRemoveParams(_AudienceContactsRemoveRequired, total=False):
+    """Params for ``client.audiences.remove_contacts``. ``contact_ids`` is
+    required — up to 1,000 existing contact ids."""
 
 
 class NotGiven:

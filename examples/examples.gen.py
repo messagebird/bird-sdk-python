@@ -18,6 +18,36 @@ async def _ex_0() -> None:
 
 
 async def _ex_1() -> None:
+    result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
+    for item in result.data:
+        print(item.email, item.status)
+
+
+async def _ex_2() -> None:
+    contact = client.contacts.create(email="jane@acme.com", first_name="Jane")
+    print(contact.id, contact.email)
+
+
+async def _ex_3() -> None:
+    client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_4() -> None:
+    contact = client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
+    print(contact.email)
+
+
+async def _ex_5() -> None:
+    for contact in client.contacts.list(search="acme.com"):
+        print(contact.id, contact.email)
+
+
+async def _ex_6() -> None:
+    contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
+    print(contact.first_name)
+
+
+async def _ex_7() -> None:
     try:
         client.email.send(
             from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
@@ -33,25 +63,25 @@ async def _ex_1() -> None:
         print(err.status_code, err.code, err.request_id)
 
 
-async def _ex_2() -> None:
+async def _ex_8() -> None:
     async with AsyncBird() as client:
         async for message in client.email.list(status="delivered"):
             print(message.id)
 
 
-async def _ex_3() -> None:
+async def _ex_9() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
 
 
-async def _ex_4() -> None:
+async def _ex_10() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
     page = client.email.list(status="delivered")  # page.data, page.next_cursor
     print(len(page.data), page.next_cursor)
 
 
-async def _ex_5() -> None:
+async def _ex_11() -> None:
     client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -61,7 +91,7 @@ async def _ex_5() -> None:
     )
 
 
-async def _ex_6() -> None:
+async def _ex_12() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -71,7 +101,7 @@ async def _ex_6() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_7() -> None:
+async def _ex_13() -> None:
     batch = client.email.send_batch(
         messages=[
             {
@@ -92,9 +122,10 @@ async def _ex_7() -> None:
         print(item.id, item.status)
 
 
-async def _ex_8() -> None:
+async def _ex_14() -> None:
     tpl = client.email_templates.create(
-        name="Welcome",
+        name="welcome-email",
+        description="Welcome",
         category="transactional",
         source="handlebars",
         subject="Welcome, {{ first_name }}!",
@@ -103,12 +134,12 @@ async def _ex_8() -> None:
     print(tpl.id, tpl.revision)
 
 
-async def _ex_9() -> None:
+async def _ex_15() -> None:
     for template in client.email_templates.list(category="transactional"):
         print(template.id, template.name)
 
 
-async def _ex_10() -> None:
+async def _ex_16() -> None:
     version = client.email_templates.publish("emt_abc123")
     print(version.version_number)
 
@@ -120,12 +151,12 @@ async def _ex_10() -> None:
     )
 
 
-async def _ex_11() -> None:
+async def _ex_17() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_12() -> None:
+async def _ex_18() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -134,7 +165,7 @@ async def _ex_12() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_13() -> None:
+async def _ex_19() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -142,18 +173,18 @@ async def _ex_13() -> None:
     )
 
 
-async def _ex_14() -> None:
+async def _ex_20() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_15() -> None:
+async def _ex_21() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_16() -> None:
+async def _ex_22() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":

@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from bird._caller import detect_caller
 from bird._constants import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, INITIAL_RETRY_DELAY, MAX_RETRY_DELAY
 from bird._exceptions import APIConnectionError, APITimeoutError, from_response, parse_retry_after
 from bird._types import NOT_GIVEN, NotGiven
@@ -37,6 +38,10 @@ _CLIENT_HEADERS = {
     "Bird-Os": platform.system().lower(),
     "Bird-Arch": platform.machine().lower(),
 }
+# Bird-Caller (the driving agent harness) — omitted when no agent env is present.
+_caller = detect_caller()
+if _caller:
+    _CLIENT_HEADERS["Bird-Caller"] = _caller
 
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # SDK-owned headers a caller's extra_headers must never override. Derived from

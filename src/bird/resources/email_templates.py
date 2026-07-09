@@ -37,7 +37,6 @@ def _list_query(values: dict[str, Any]) -> dict[str, object]:
 def _create_body(
     *,
     name: str,
-    alias: str | None,
     category: str,
     source: str,
     description: str | None,
@@ -48,7 +47,6 @@ def _create_body(
 ) -> dict[str, Any]:
     return to_wire(EmailTemplateCreate, {
         "name":         name,
-        "alias":        alias,
         "category":     category,
         "source":       source,
         "description":  description,
@@ -63,7 +61,6 @@ def _update_body(
     *,
     revision: int,
     name: str | None,
-    alias: str | None,
     description: str | None,
     subject: str | None,
     html: str | None,
@@ -75,7 +72,6 @@ def _update_body(
     return to_wire(EmailTemplateUpdate, {
         "revision":     revision,
         "name":         name,
-        "alias":        alias,
         "description":  description,
         "subject":      subject,
         "html":         html,
@@ -94,7 +90,6 @@ class EmailTemplates:
         self,
         *,
         name: str,
-        alias: str | None = None,
         category: str,
         source: str,
         description: str | None = None,
@@ -111,7 +106,8 @@ class EmailTemplates:
 
         ```python
         tpl = client.email_templates.create(
-            name="Welcome",
+            name="welcome-email",
+            description="Welcome",
             category="transactional",
             source="handlebars",
             subject="Welcome, {{ first_name }}!",
@@ -121,7 +117,7 @@ class EmailTemplates:
         ```
         """
         body = _create_body(
-            name=name, alias=alias, category=category, source=source, description=description,
+            name=name, category=category, source=source, description=description,
             subject=subject, html=html, text=text, brand_kit_id=brand_kit_id,
         )
         response = self._client.request("POST", _PATH, body=body, **_opts(options))
@@ -138,7 +134,6 @@ class EmailTemplates:
         *,
         revision: int,
         name: str | None = None,
-        alias: str | None = None,
         description: str | None = None,
         subject: str | None = None,
         html: str | None = None,
@@ -151,7 +146,7 @@ class EmailTemplates:
         returns a conflict, so concurrent edits are detected.
         """
         body = _update_body(
-            revision=revision, name=name, alias=alias, description=description, subject=subject,
+            revision=revision, name=name, description=description, subject=subject,
             html=html, text=text, brand_kit_id=brand_kit_id,
         )
         response = self._client.request("PATCH", f"{_PATH}/{template_id}", body=body, **_opts(options))
@@ -232,7 +227,6 @@ class AsyncEmailTemplates:
         self,
         *,
         name: str,
-        alias: str | None = None,
         category: str,
         source: str,
         description: str | None = None,
@@ -244,7 +238,7 @@ class AsyncEmailTemplates:
     ) -> EmailTemplate:
         """Create a template and its initial editable draft."""
         body = _create_body(
-            name=name, alias=alias, category=category, source=source, description=description,
+            name=name, category=category, source=source, description=description,
             subject=subject, html=html, text=text, brand_kit_id=brand_kit_id,
         )
         response = await self._client.request("POST", _PATH, body=body, **_opts(options))
@@ -261,7 +255,6 @@ class AsyncEmailTemplates:
         *,
         revision: int,
         name: str | None = None,
-        alias: str | None = None,
         description: str | None = None,
         subject: str | None = None,
         html: str | None = None,
@@ -272,7 +265,7 @@ class AsyncEmailTemplates:
         """Edit a template's metadata and draft content. Only the fields you pass
         change. ``revision`` is the draft revision you last read."""
         body = _update_body(
-            revision=revision, name=name, alias=alias, description=description, subject=subject,
+            revision=revision, name=name, description=description, subject=subject,
             html=html, text=text, brand_kit_id=brand_kit_id,
         )
         response = await self._client.request(
