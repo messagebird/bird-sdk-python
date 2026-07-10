@@ -24,7 +24,6 @@ from bird.resources.audiences import AsyncAudiences, Audiences
 from bird.resources.contact_properties import AsyncContactProperties, ContactProperties
 from bird.resources.contacts import AsyncContacts, Contacts
 from bird.resources.email import AsyncEmail, Email
-from bird.resources.email_templates import AsyncEmailTemplates, EmailTemplates
 from bird.resources.sms import AsyncSms, Sms
 from bird.resources.sms_templates import AsyncSMSTemplates, SMSTemplates
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
@@ -145,7 +144,6 @@ class Bird(SyncAPIClient):
         super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "email_defaults", "region")})
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
-        self.email_templates = EmailTemplates(self)
         self.sms = Sms(self)
         self.sms_templates = SMSTemplates(self)
         self.contacts = Contacts(self)
@@ -242,7 +240,6 @@ class AsyncBird(AsyncAPIClient):
         super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "email_defaults", "region")})
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
-        self.email_templates = AsyncEmailTemplates(self)
         self.sms = AsyncSms(self)
         self.sms_templates = AsyncSMSTemplates(self)
         self.contacts = AsyncContacts(self)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- Remove the email templates collection (`client.email_templates.create`, `.get`, `.update`, `.delete`, `.publish`, `.list`, `.list_versions`, `.get_version`), added in 0.3.0. Template management is no longer part of the public API. Sending a published template with `client.email.send` (pass `template` as an `emt_…` ID or name handle) is unchanged.
+
 ## 0.4.1
 
 - Add `client.email.cancel` (sync and async): cancel a scheduled message before it sends. A message that already started sending, or was already canceled, raises a conflict error.
