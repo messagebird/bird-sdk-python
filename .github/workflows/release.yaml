@@ -37,8 +37,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          python-version: "3.13"
       - run: uv build
       - run: uvx twine check dist/*
 
@@ -57,11 +59,9 @@ jobs:
         with:
           skip-existing: true
 
-      # Only on a tag push, where GITHUB_REF_NAME is the vX.Y.Z just published.
-      - name: Smoke test (install from PyPI)
-        if: github.event_name == 'push'
-        run: ./scripts/smoke.sh "${GITHUB_REF_NAME#v}"
-
+      # The GitHub Release runs BEFORE the smoke test so a post-publish registry
+      # propagation flake in smoke can never drop the release notes for a version
+      # that is already on PyPI.
       - name: GitHub Release
         if: github.event_name == 'push'
         env:
@@ -72,3 +72,8 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" --notes-from-tag --verify-tag
+
+      # Only on a tag push, where GITHUB_REF_NAME is the vX.Y.Z just published.
+      - name: Smoke test (install from PyPI)
+        if: github.event_name == 'push'
+        run: ./scripts/smoke.sh "${GITHUB_REF_NAME#v}"

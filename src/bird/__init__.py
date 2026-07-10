@@ -67,6 +67,7 @@ from bird._exceptions import (
     ErrorNextAction,
     ErrorType,
     RateLimitError,
+    UnmetGate,
     ValidationError,
     WebhookVerificationError,
 )
@@ -133,5 +134,6 @@ __all__ = [
     "ErrorDetail",
     "ErrorNextAction",
     "ErrorType",
+    "UnmetGate",
     "__version__",
 ]

@@ -10,6 +10,7 @@ def test_surface_conformance() -> None:
     assert callable(client.email.send_batch)
     assert callable(client.email.get)
     assert callable(client.email.list)
+    assert callable(client.email.cancel)
     assert callable(client.email_templates.create)
     assert callable(client.email_templates.list)
     assert callable(client.email_templates.get)

@@ -5,6 +5,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/messages": {"get", "post"},
     "/v1/email/batches": {"post"},
     "/v1/email/messages/{message_id}": {"get"},
+    "/v1/email/messages/{message_id}/cancel": {"post"},
     "/v1/email/templates": {"get", "post"},
     "/v1/email/templates/{template_id}": {"delete", "get", "patch"},
     "/v1/email/templates/{template_id}/publish": {"post"},

@@ -45,6 +45,36 @@ class ErrorNextAction(BaseModel):
     ] = None
 
 
+class UnmetGate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    slug: Annotated[
+        str,
+        Field(
+            description='Stable identifier for the verification requirement.',
+            min_length=1,
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description='Human-readable name of the verification requirement.',
+            min_length=1,
+        ),
+    ]
+    status: Annotated[
+        str,
+        Field(
+            description="The requirement's current state — for example, not yet started, in review, or previously revoked.",
+            min_length=1,
+        ),
+    ]
+    remediation_kind: Annotated[
+        str, Field(description='How to resolve this requirement.', min_length=1)
+    ]
+
+
 class Type(str, Enum):
     auth_error = 'auth_error'
     bad_request_error = 'bad_request_error'
@@ -138,6 +168,12 @@ class ErrorBody(BaseModel):
         list[ErrorNextAction] | None,
         Field(
             description='Operations that resolve this error, in the order to try them. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.'
+        ),
+    ] = None
+    unmet_gates: Annotated[
+        list[UnmetGate] | None,
+        Field(
+            description='The verification requirements blocking this action, each with the flow that resolves it. Present only when an action is blocked pending verification.'
         ),
     ] = None
 
@@ -511,9 +547,9 @@ class EmailTemplateSend1(BaseModel):
         Field(
             description='The template to send, by its name handle (for example `welcome-email`).',
             examples=['welcome-email'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ] = None
     parameters: Annotated[
@@ -543,9 +579,9 @@ class EmailTemplateSend2(BaseModel):
         Field(
             description='The template to send, by its name handle (for example `welcome-email`).',
             examples=['welcome-email'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     parameters: Annotated[
@@ -736,7 +772,7 @@ class EmailMessageSendRequest(BaseModel):
     scheduled_at: Annotated[
         str | None,
         Field(
-            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description="Schedule the message to send at a future time instead of immediately. Must be at least 30 seconds and at most 30 days ahead — outside that range the request is rejected with `422`. The message returns with status `accepted` and shows as `scheduled` on reads until it sends; cancel it before then with the message cancel endpoint. Scheduled sends count against your plan's monthly scheduled-email allowance; exceeding it is rejected with a `422`.\n"
         ),
     ] = None
     contact_id: Annotated[
@@ -1070,6 +1106,54 @@ class ContactUpdateRequest(BaseModel):
 
 
 class Type1(str, Enum):
+    AudienceTypeStatic = 'static'
+    AudienceTypeDynamic = 'dynamic'
+    AudienceTypeExternal = 'external'
+
+
+class Audience(Timestamps):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Audience ID.',
+            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description='Display name for the audience.', max_length=100, min_length=1
+        ),
+    ]
+    description: Annotated[
+        str | None,
+        Field(
+            description='Longer description of who this audience is.', max_length=500
+        ),
+    ] = None
+    type: Annotated[
+        Type1,
+        Field(
+            description="How the audience's recipients are determined. `static` audiences have an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable — creating an audience with either returns an error.\n"
+        ),
+    ]
+    created_at: str
+    updated_at: str
+
+
+class AudienceList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[list[Audience], Field(description='Page of audience objects.')]
+
+
+class Type2(str, Enum):
     ContactPropertyTypeString = 'string'
     ContactPropertyTypeNumber = 'number'
     ContactPropertyTypeBoolean = 'boolean'
@@ -1098,7 +1182,7 @@ class ContactProperty(Timestamps):
         ),
     ]
     type: Annotated[
-        Type1,
+        Type2,
         Field(
             description='The value type every contact must use for this property. Cannot be changed after creation.'
         ),
@@ -1143,7 +1227,7 @@ class ContactPropertyCreateRequest(BaseModel):
         ),
     ]
     type: Annotated[
-        Type1,
+        Type2,
         Field(
             description='The value type every contact must use for this property. Cannot be changed after creation.'
         ),
@@ -1170,52 +1254,10 @@ class ContactPropertyUpdateRequest(BaseModel):
     ] = None
 
 
-class Type3(str, Enum):
+class Type4(str, Enum):
     AudienceTypeStatic = 'static'
     AudienceTypeDynamic = 'dynamic'
     AudienceTypeExternal = 'external'
-
-
-class Audience(Timestamps):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    id: Annotated[
-        str,
-        Field(
-            description='Audience ID.',
-            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
-            min_length=1,
-            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
-        ),
-    ]
-    name: Annotated[
-        str,
-        Field(
-            description='Display name for the audience.', max_length=100, min_length=1
-        ),
-    ]
-    description: Annotated[
-        str | None,
-        Field(
-            description='Longer description of who this audience is.', max_length=500
-        ),
-    ] = None
-    type: Annotated[
-        Type3,
-        Field(
-            description="How the audience's recipients are determined. `static` audiences have an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable — creating an audience with either returns an error.\n"
-        ),
-    ]
-    created_at: str
-    updated_at: str
-
-
-class AudienceList(FieldListEnvelope):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    data: Annotated[list[Audience], Field(description='Page of audience objects.')]
 
 
 class AudienceCreateRequest(BaseModel):
@@ -1235,7 +1277,7 @@ class AudienceCreateRequest(BaseModel):
         ),
     ] = None
     type: Annotated[
-        Type3 | None,
+        Type4 | None,
         Field(
             description="How the audience's recipients are determined. `static` audiences have an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable — creating an audience with either returns an error.\n"
         ),
@@ -1437,6 +1479,7 @@ class SMSErrorCode(str, Enum):
     sender_unregistered = 'sender_unregistered'
     recipient_opted_out = 'recipient_opted_out'
     provider_unavailable = 'provider_unavailable'
+    insufficient_balance = 'insufficient_balance'
     unknown = 'unknown'
 
 
@@ -1611,9 +1654,9 @@ class SMSTemplateSend1(BaseModel):
         Field(
             description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
             examples=['bird_otp_verification_ttl'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ] = None
     language: Annotated[
@@ -1651,9 +1694,9 @@ class SMSTemplateSend2(BaseModel):
         Field(
             description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
             examples=['bird_otp_verification_ttl'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     language: Annotated[
@@ -2040,7 +2083,9 @@ class SMSTemplate(BaseModel):
         Field(
             description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
             examples=['bird_otp_verification'],
+            max_length=512,
             min_length=1,
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     description: Annotated[
@@ -2179,9 +2224,9 @@ class EmailTemplateSummary(BaseModel):
         Field(
             description="The template's workspace-unique slug handle. Pass it (or the id) as the template reference when sending.",
             examples=['welcome-email'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     description: Annotated[
@@ -2243,11 +2288,11 @@ class EmailTemplateCreate(BaseModel):
     name: Annotated[
         str,
         Field(
-            description="The template's workspace-unique slug handle — a stable alternative to the template ID when sending by template. Lowercase letters, numbers, and hyphens.\n",
+            description="The template's workspace-unique slug handle — a stable alternative to the template ID when sending by template. Lowercase letters, numbers, hyphens, and underscores.\n",
             examples=['welcome-email'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     description: Annotated[
@@ -2319,9 +2364,9 @@ class EmailTemplate(BaseModel):
         Field(
             description="The template's workspace-unique slug handle. Pass it (or the id) as the template reference when sending.",
             examples=['welcome-email'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     description: Annotated[
@@ -2397,10 +2442,11 @@ class EmailTemplateUpdate(BaseModel):
     name: Annotated[
         str | None,
         Field(
-            description='New workspace-unique slug handle. Must stay unique within the workspace. Lowercase letters, numbers, and hyphens.\n',
-            max_length=63,
+            description='New workspace-unique slug handle. Must stay unique within the workspace. Lowercase letters, numbers, hyphens, and underscores.\n',
+            examples=['welcome-email'],
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9-]*[a-z0-9])?$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ] = None
     description: Annotated[

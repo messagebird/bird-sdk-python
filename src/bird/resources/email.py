@@ -12,6 +12,7 @@ from bird._generated import (
     EmailMessageBatchResponse,
     EmailMessageSendRequest,
 )
+
 from bird._models import to_wire
 from bird._response import APIResponse
 from bird._types import (
@@ -293,6 +294,15 @@ class Email:
         response = self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
         return EmailMessage.model_validate(response.json())
 
+    def cancel(self, message_id: str, *, options: RequestOptions | None = None) -> None:
+        """Cancel a scheduled message before it sends.
+
+        Only a message that is still scheduled can be canceled; one that already
+        started sending — or was previously canceled — raises a conflict error.
+        Canceling does not return consumed scheduled-send quota. Returns no content.
+        """
+        self._client.request("POST", f"{_PATH}/{message_id}/cancel", **_opts(options))
+
     def list(
         self,
         *,
@@ -392,6 +402,10 @@ class AsyncEmail:
     async def get(self, message_id: str, *, options: RequestOptions | None = None) -> EmailMessage:
         response = await self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
         return EmailMessage.model_validate(response.json())
+
+    async def cancel(self, message_id: str, *, options: RequestOptions | None = None) -> None:
+        """Cancel a scheduled message before it sends (see `Email.cancel`)."""
+        await self._client.request("POST", f"{_PATH}/{message_id}/cancel", **_opts(options))
 
     def list(
         self,

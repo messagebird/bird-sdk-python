@@ -28,6 +28,7 @@ WIRE_TO_ATTR = {
     "details": "details",
     "remediation": "remediation",
     "next": "next",
+    "unmet_gates": "unmet_gates",
 }
 
 
