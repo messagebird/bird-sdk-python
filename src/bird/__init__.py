@@ -31,6 +31,7 @@ from bird._types import (
     EmailSendParams,
     RequestOptions,
     SmsSendParams,
+    WhatsappSendParams,
 )
 from bird._generated import (
     Audience,
@@ -49,6 +50,11 @@ from bird._generated import (
     SMSTemplate,
     SMSTemplateList,
     WebhookEvent,
+    WhatsAppEvent,
+    WhatsAppEventList,
+    WhatsAppMessage,
+    WhatsAppTemplate,
+    WhatsAppTemplateList,
 )
 from bird._event_types import WebhookEventType
 from bird.resources.webhooks import GenericWebhookEvent
@@ -110,6 +116,12 @@ __all__ = [
     "SMSMessageBatchResponse",
     "SMSTemplate",
     "SMSTemplateList",
+    "WhatsappSendParams",
+    "WhatsAppMessage",
+    "WhatsAppEvent",
+    "WhatsAppEventList",
+    "WhatsAppTemplate",
+    "WhatsAppTemplateList",
     "WebhookEvent",
     "GenericWebhookEvent",
     "WebhookEventType",

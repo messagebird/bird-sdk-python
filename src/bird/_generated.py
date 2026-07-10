@@ -2175,6 +2175,436 @@ class SMSTemplateList(BaseModel):
     ]
 
 
+class WhatsAppMessageStatus(str, Enum):
+    scheduled = 'scheduled'
+    accepted = 'accepted'
+    sent = 'sent'
+    delivered = 'delivered'
+    failed = 'failed'
+    canceled = 'canceled'
+    received = 'received'
+
+
+class WhatsAppMessageBusiness(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    phone_number: Annotated[
+        str | None,
+        Field(
+            description='E.164 phone number of the WhatsApp business account that sent the message.',
+            examples=['+15557654321'],
+            min_length=1,
+        ),
+    ] = None
+    phone_number_id: Annotated[
+        str | None,
+        Field(
+            description='The WhatsApp phone number identifier. Present only for account-owned numbers.',
+            examples=['397968058767338'],
+            min_length=1,
+        ),
+    ] = None
+
+
+class WhatsAppMessageContact(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    phone_number: Annotated[
+        str | None,
+        Field(
+            description="Contact's phone number in E.164 format, when known.",
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ] = None
+    bsuid: Annotated[
+        str | None,
+        Field(
+            description="Business-scoped user ID (Meta's WhatsApp identifier for this contact within the business account), when available.",
+            examples=['NL.xxxx'],
+            min_length=1,
+        ),
+    ] = None
+
+
+class WhatsAppMessageTemplateComponentParameter(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[str, Field(description='Parameter type.', min_length=1)]
+    text: Annotated[str, Field(description='Parameter value.', min_length=1)]
+
+
+class WhatsAppMessageTemplateComponent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        str,
+        Field(description='Which part of the template this fills in.', min_length=1),
+    ]
+    parameters: Annotated[
+        list[WhatsAppMessageTemplateComponentParameter] | None,
+        Field(description="The values that fill this part's placeholders, in order."),
+    ] = None
+
+
+class WhatsAppMessageTemplate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description="The template's stable handle (for example `bird_otp`).",
+            examples=['bird_otp'],
+            max_length=512,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+        ),
+    ]
+    category: Annotated[
+        str,
+        Field(
+            description='Content classification applied to messages sent from this template.',
+            min_length=1,
+        ),
+    ]
+    language: Annotated[
+        str,
+        Field(
+            description='The language code of the template variant that was sent (for example `en`).',
+            examples=['en'],
+            min_length=1,
+        ),
+    ]
+    components: Annotated[
+        list[WhatsAppMessageTemplateComponent],
+        Field(
+            description="The values that filled the template's placeholders. Empty for an authentication template, whose content is never returned.\n"
+        ),
+    ]
+
+
+class WhatsAppError(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    code: Annotated[
+        str,
+        Field(
+            description='Bird-stable failure reason, uniform whether the failure happened internally or was reported by the WhatsApp network. `insufficient_balance` — the workspace could not afford the send. `price_not_found` — no price was configured for this destination/template combination. `internal_error` — an unexpected Bird-side failure. `undeliverable` — the recipient could not be reached (e.g. not on WhatsApp, number invalid). `service_window_expired` — the 24-hour customer care window has closed and a free-form message cannot be sent; send a template instead. `rate_limited` — the send was throttled.\n',
+            min_length=1,
+        ),
+    ]
+    description: Annotated[
+        str,
+        Field(
+            description='Human-readable explanation of the failure.',
+            examples=['Message could not be delivered.'],
+            min_length=1,
+        ),
+    ]
+    occurred_at: Annotated[
+        str, Field(description='When the failure occurred.', min_length=1)
+    ]
+
+
+class WhatsAppMessage(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Message ID.',
+            examples=['wam_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^wam_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    direction: Annotated[
+        Direction,
+        Field(
+            description='Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).'
+        ),
+    ]
+    business: WhatsAppMessageBusiness
+    contact: WhatsAppMessageContact
+    template: Annotated[
+        WhatsAppMessageTemplate | None,
+        Field(
+            description='The template the message was sent from. For authentication templates the filled-in values are not returned.'
+        ),
+    ] = None
+    status: WhatsAppMessageStatus
+    last_error: Annotated[
+        WhatsAppError | None,
+        Field(
+            description='Failure detail for a message that did not reach the recipient. Null when there is no failure.'
+        ),
+    ] = None
+    created_at: Annotated[
+        str,
+        Field(description='When the message was accepted for delivery.', min_length=1),
+    ]
+    sent_at: Annotated[
+        str | None,
+        Field(
+            description='When the message was handed to the WhatsApp network. Null until then.'
+        ),
+    ] = None
+    delivered_at: Annotated[
+        str | None, Field(description='When delivery was confirmed. Null until then.')
+    ] = None
+    read_at: Annotated[
+        str | None,
+        Field(
+            description='When the message was read by the recipient. Null until then.'
+        ),
+    ] = None
+
+
+class WhatsAppMessageList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[WhatsAppMessage], Field(description='Page of WhatsApp message objects.')
+    ]
+
+
+class SendWhatsAppMessageTemplate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='The template to send, by its name (for example `bird_otp`).',
+            examples=['bird_otp'],
+            max_length=512,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+        ),
+    ]
+    language: Annotated[
+        str | None,
+        Field(
+            description='Language code of the template variant to send (for example `en` or `pt_BR`). May be omitted when the template has a single language.\n',
+            examples=['en'],
+            min_length=1,
+        ),
+    ] = None
+    components: Annotated[
+        list[WhatsAppMessageTemplateComponent] | None,
+        Field(description="The values that fill the template's placeholders."),
+    ] = None
+
+
+class SendWhatsAppMessageRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    to: Annotated[
+        str,
+        Field(
+            description="The message recipient's phone number in E.164 format (for example `+31612345678`).",
+            examples=['+31612345678'],
+            min_length=1,
+        ),
+    ]
+    template: Annotated[
+        SendWhatsAppMessageTemplate | None,
+        Field(
+            description="The template to send. Bird selects the sender number from the template's category, so there is no sender field on this request. Templates are currently the only supported content type, so every send must include one; free-text content will be added in a future release.\n"
+        ),
+    ] = None
+
+
+class WhatsAppEvent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Event ID.',
+            examples=['ev_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ev_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    type: Annotated[
+        str,
+        Field(
+            description="Lifecycle event type. `whatsapp.accepted` — Bird accepted the request. `whatsapp.sent` — handed to the WhatsApp network. `whatsapp.delivered` — delivery confirmed to the recipient's device. `whatsapp.read` — the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed` — terminal permanent failure. Open enum — new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
+            examples=['whatsapp.delivered'],
+            min_length=1,
+        ),
+    ]
+    occurred_at: Annotated[
+        str, Field(description='When this event occurred.', min_length=1)
+    ]
+    error: Annotated[
+        WhatsAppError | None,
+        Field(
+            description='Failure detail. Present on `whatsapp.failed` events; null otherwise.'
+        ),
+    ]
+
+
+class WhatsAppEventList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[WhatsAppEvent],
+        Field(
+            description='Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full — this list is not paginated.'
+        ),
+    ]
+
+
+class WhatsAppTemplateExampleParameter(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        str,
+        Field(description='The kind of value this parameter accepts.', min_length=1),
+    ]
+    text: Annotated[
+        str | None,
+        Field(
+            description='An example value for a text parameter. Present when `type` is `text`.',
+            examples=['123456'],
+            min_length=1,
+        ),
+    ] = None
+
+
+class WhatsAppTemplateButton(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        str,
+        Field(
+            description="The button's behavior type.", examples=['url'], min_length=1
+        ),
+    ]
+    text: Annotated[
+        str,
+        Field(
+            description="The button's label text.", examples=['Copy code'], min_length=1
+        ),
+    ]
+    url: Annotated[
+        str | None,
+        Field(
+            description='The URL the button opens, with any variable placeholder shown inline. Present on link buttons.',
+            examples=[
+                'https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code=otp{{1}}'
+            ],
+            min_length=1,
+        ),
+    ] = None
+    example_parameters: Annotated[
+        list[WhatsAppTemplateExampleParameter] | None,
+        Field(
+            description="Example values for this button's variables, in placeholder order. Present when the button URL has variables."
+        ),
+    ] = None
+
+
+class WhatsAppTemplateComponent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        str,
+        Field(
+            description="The content block's type within the template.",
+            examples=['body'],
+            min_length=1,
+        ),
+    ]
+    text: Annotated[
+        str | None,
+        Field(
+            description="The block's text content, with any variable placeholders shown inline. Present when the block carries text.",
+            examples=['Your verification code is {{1}}.'],
+            min_length=1,
+        ),
+    ] = None
+    example_parameters: Annotated[
+        list[WhatsAppTemplateExampleParameter] | None,
+        Field(
+            description="Example values for this block's variables, in placeholder order — one per `{{n}}`. Use them to see what a filled message looks like. Present when the block has variables."
+        ),
+    ] = None
+    buttons: Annotated[
+        list[WhatsAppTemplateButton] | None,
+        Field(
+            description='The buttons attached to this block. Present when the block carries buttons.'
+        ),
+    ] = None
+
+
+class WhatsAppTemplate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description="The template's stable handle. Pass it as the template reference when sending.",
+            examples=['bird_otp'],
+            max_length=512,
+            min_length=1,
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+        ),
+    ]
+    scope: TemplateScope
+    language: Annotated[
+        str,
+        Field(
+            description='The language code of this template variant (for example `en` or `pt_BR`).',
+            examples=['en'],
+            min_length=1,
+        ),
+    ]
+    category: Annotated[
+        str,
+        Field(
+            description='Content classification applied to messages sent from this template.',
+            min_length=1,
+        ),
+    ]
+    status: Annotated[
+        str, Field(description="The template's review and health status.", min_length=1)
+    ]
+    components: Annotated[
+        list[WhatsAppTemplateComponent],
+        Field(
+            description='The content blocks that make up the template, in display order.'
+        ),
+    ]
+
+
+class WhatsAppTemplateList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[WhatsAppTemplate],
+        Field(description='The templates available to your workspace.'),
+    ]
+
+
 class WebhookEventType(RootModel[str]):
     root: Annotated[
         str,

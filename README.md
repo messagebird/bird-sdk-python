@@ -64,6 +64,31 @@ client = Bird(
 client.email.send(to=["c@x.com"], subject="Receipt", text="…")  # uses noreply@acme.com
 ```
 
+## WhatsApp
+
+Templates are currently the only supported content type, so every send must include one; Bird selects the sender number from the template's category.
+
+```python
+# Send
+message = client.whatsapp.send(
+    to="+31612345678",
+    template="bird_otp",
+    language="en",
+    components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
+)
+
+# Fetch
+message = client.whatsapp.get("wam_01krd…")
+
+# List — iterating the page auto-paginates across cursors
+for message in client.whatsapp.list(status=["delivered"]):
+    print(message.id, message.status)
+
+# List the templates available to the workspace
+for template in client.whatsapp_templates.list().data:
+    print(template.name, template.status)
+```
+
 ## Webhooks
 
 ```python

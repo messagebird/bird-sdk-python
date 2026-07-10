@@ -237,3 +237,30 @@ async def _ex_34() -> None:
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
+
+
+async def _ex_35() -> None:
+    for message in client.whatsapp.list(status=["delivered"]):
+        print(message.id, message.status)
+
+
+async def _ex_36() -> None:
+    events = client.whatsapp.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg")
+    for event in events.data:
+        print(event.type, event.occurred_at)
+
+
+async def _ex_37() -> None:
+    msg = client.whatsapp.send(
+        to="+31612345678",
+        template="bird_otp",
+        language="en",
+        components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
+    )
+    print(msg.id, msg.status)
+
+
+async def _ex_38() -> None:
+    templates = client.whatsapp_templates.list()
+    for template in templates.data:
+        print(template.name, template.status)

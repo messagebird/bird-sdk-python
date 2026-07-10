@@ -139,6 +139,20 @@ class SmsSendParams(_SmsSendRequired, total=False):
     metadata: Mapping[str, Any]
 
 
+class _WhatsappSendRequired(TypedDict):
+    to: str
+
+
+class WhatsappSendParams(_WhatsappSendRequired, total=False):
+    """Params for ``client.whatsapp.send``. ``to`` is required. A send must
+    currently include a ``template`` (the only supported content type);
+    ``language`` and ``components`` personalize it."""
+
+    template: str
+    language: str
+    components: Sequence[Mapping[str, Any]]
+
+
 class _ContactCreateRequired(TypedDict):
     email: str
 

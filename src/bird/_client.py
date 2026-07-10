@@ -27,6 +27,8 @@ from bird.resources.email import AsyncEmail, Email
 from bird.resources.sms import AsyncSms, Sms
 from bird.resources.sms_templates import AsyncSMSTemplates, SMSTemplates
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
+from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
+from bird.resources.whatsapp_templates import AsyncWhatsappTemplates, WhatsappTemplates
 
 _REGION_PREFIX = re.compile(r"^bk_([a-z]{2}[0-9]+)_")
 
@@ -146,6 +148,8 @@ class Bird(SyncAPIClient):
         self.email = Email(self, email_defaults)
         self.sms = Sms(self)
         self.sms_templates = SMSTemplates(self)
+        self.whatsapp = Whatsapp(self)
+        self.whatsapp_templates = WhatsappTemplates(self)
         self.contacts = Contacts(self)
         self.contact_properties = ContactProperties(self)
         self.audiences = Audiences(self)
@@ -242,6 +246,8 @@ class AsyncBird(AsyncAPIClient):
         self.email = AsyncEmail(self, email_defaults)
         self.sms = AsyncSms(self)
         self.sms_templates = AsyncSMSTemplates(self)
+        self.whatsapp = AsyncWhatsapp(self)
+        self.whatsapp_templates = AsyncWhatsappTemplates(self)
         self.contacts = AsyncContacts(self)
         self.contact_properties = AsyncContactProperties(self)
         self.audiences = AsyncAudiences(self)
