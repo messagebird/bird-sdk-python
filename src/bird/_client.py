@@ -26,6 +26,7 @@ from bird.resources.contacts import AsyncContacts, Contacts
 from bird.resources.email import AsyncEmail, Email
 from bird.resources.sms import AsyncSms, Sms
 from bird.resources.sms_templates import AsyncSMSTemplates, SMSTemplates
+from bird.resources.verify import AsyncVerify, Verify
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
 from bird.resources.whatsapp_templates import AsyncWhatsappTemplates, WhatsappTemplates
@@ -150,6 +151,7 @@ class Bird(SyncAPIClient):
         self.sms_templates = SMSTemplates(self)
         self.whatsapp = Whatsapp(self)
         self.whatsapp_templates = WhatsappTemplates(self)
+        self.verify = Verify(self)
         self.contacts = Contacts(self)
         self.contact_properties = ContactProperties(self)
         self.audiences = Audiences(self)
@@ -248,6 +250,7 @@ class AsyncBird(AsyncAPIClient):
         self.sms_templates = AsyncSMSTemplates(self)
         self.whatsapp = AsyncWhatsapp(self)
         self.whatsapp_templates = AsyncWhatsappTemplates(self)
+        self.verify = AsyncVerify(self)
         self.contacts = AsyncContacts(self)
         self.contact_properties = AsyncContactProperties(self)
         self.audiences = AsyncAudiences(self)

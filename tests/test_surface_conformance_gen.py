@@ -22,6 +22,8 @@ def test_surface_conformance() -> None:
     assert callable(client.whatsapp.list)
     assert callable(client.whatsapp.list_events)
     assert callable(client.whatsapp_templates.list)
+    assert callable(client.verify.verifications.create)
+    assert callable(client.verify.verifications.check)
     assert callable(client.webhooks.unwrap)
     assert callable(client.contacts.list)
     assert callable(client.contacts.get)

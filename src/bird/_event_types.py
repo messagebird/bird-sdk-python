@@ -27,8 +27,6 @@ class WebhookEventType:
     EMAIL_MAILBOX_MESSAGE_DELIVERED: Final = "email_mailbox.message_delivered"
     EMAIL_MAILBOX_MESSAGE_FAILED: Final = "email_mailbox.message_failed"
     EMAIL_MAILBOX_MESSAGE_RECEIVED: Final = "email_mailbox.message_received"
-    EMAIL_MAILBOX_MESSAGE_RECEIVED_BLOCKED: Final = "email_mailbox.message_received_blocked"
-    EMAIL_MAILBOX_MESSAGE_RECEIVED_UNAUTHENTICATED: Final = "email_mailbox.message_received_unauthenticated"
     EMAIL_MAILBOX_MESSAGE_SENT: Final = "email_mailbox.message_sent"
     EMAIL_MAILBOX_SUSPENDED: Final = "email_mailbox.suspended"
     EMAIL_MAILBOX_THREAD_CREATED: Final = "email_mailbox.thread_created"

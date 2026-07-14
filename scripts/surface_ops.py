@@ -15,6 +15,8 @@ KEEP: dict[str, set[str]] = {
     "/v1/whatsapp/messages/{message_id}": {"get"},
     "/v1/whatsapp/messages/{message_id}/events": {"get"},
     "/v1/whatsapp/templates": {"get"},
+    "/v1/verify/verifications": {"post"},
+    "/v1/verify/verifications/check": {"post"},
     "/v1/contacts": {"get", "post"},
     "/v1/contacts/{contact_id}": {"delete", "get", "patch"},
     "/v1/contacts/batch": {"post"},

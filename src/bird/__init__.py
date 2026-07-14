@@ -31,6 +31,8 @@ from bird._types import (
     EmailSendParams,
     RequestOptions,
     SmsSendParams,
+    VerificationCheckParams,
+    VerificationCreateParams,
     WhatsappSendParams,
 )
 from bird._generated import (
@@ -49,6 +51,8 @@ from bird._generated import (
     SMSMessageBatchResponse,
     SMSTemplate,
     SMSTemplateList,
+    Verification,
+    VerificationCheckResult,
     WebhookEvent,
     WhatsAppEvent,
     WhatsAppEventList,
@@ -122,6 +126,10 @@ __all__ = [
     "WhatsAppEventList",
     "WhatsAppTemplate",
     "WhatsAppTemplateList",
+    "VerificationCreateParams",
+    "VerificationCheckParams",
+    "Verification",
+    "VerificationCheckResult",
     "WebhookEvent",
     "GenericWebhookEvent",
     "WebhookEventType",

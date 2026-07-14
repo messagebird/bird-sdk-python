@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+
+- Add the Verify product (sync and async): `client.verify.verifications.create` sends a one-time passcode to a recipient and `client.verify.verifications.check` validates the code they submit.
+
 ## 0.6.0
 
 - Add the WhatsApp channel (sync and async): `client.whatsapp.send`, `.get`, `.list`, `.list_events`. Add WhatsApp templates (read-only): `client.whatsapp_templates.list`.

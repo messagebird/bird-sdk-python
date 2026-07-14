@@ -545,9 +545,9 @@ class EmailTemplateSend1(BaseModel):
     name: Annotated[
         str | None,
         Field(
-            description='The template to send, by its name handle (for example `welcome-email`).',
+            description='The template to send, by its name handle — a workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
             examples=['welcome-email'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -577,9 +577,9 @@ class EmailTemplateSend2(BaseModel):
     name: Annotated[
         str,
         Field(
-            description='The template to send, by its name handle (for example `welcome-email`).',
+            description='The template to send, by its name handle — a workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
             examples=['welcome-email'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -1654,7 +1654,7 @@ class SMSTemplateSend1(BaseModel):
         Field(
             description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
             examples=['bird_otp_verification_ttl'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -1694,7 +1694,7 @@ class SMSTemplateSend2(BaseModel):
         Field(
             description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
             examples=['bird_otp_verification_ttl'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -2083,7 +2083,7 @@ class SMSTemplate(BaseModel):
         Field(
             description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
             examples=['bird_otp_verification'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -2175,6 +2175,196 @@ class SMSTemplateList(BaseModel):
     ]
 
 
+class VerificationTo(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    email_address: Annotated[
+        str | None,
+        Field(
+            description="The recipient's email address.",
+            examples=['user@example.com'],
+            min_length=1,
+        ),
+    ] = None
+    phone_number: Annotated[
+        str | None,
+        Field(
+            description="The recipient's phone number in E.164 format.",
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ] = None
+
+
+class VerificationChannel(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description='The channel a passcode is delivered over. Open enum — new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.',
+            min_length=1,
+        ),
+    ]
+
+
+class VerificationChannelEntry(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    channel: Annotated[
+        str,
+        Field(
+            description='The channel a passcode is delivered over. Open enum — new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.',
+            min_length=1,
+        ),
+    ]
+
+
+class Status3(str, Enum):
+    pending = 'pending'
+    verified = 'verified'
+    failed = 'failed'
+    expired = 'expired'
+    canceled = 'canceled'
+    blocked = 'blocked'
+
+
+class Verification(Timestamps):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            examples=['vrf_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^vrf_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    status: Annotated[
+        Status3,
+        Field(
+            description="The verification's current state: pending (awaiting a valid passcode), verified, failed (too many incorrect attempts), or expired (the time window elapsed before a correct passcode)."
+        ),
+    ]
+    reason: Annotated[
+        str | None,
+        Field(
+            description='Why the verification reached its final state, or null while pending or once verified. Open enum — treat any unrecognized value as a future reason.'
+        ),
+    ] = None
+    to: VerificationTo
+    channels: Annotated[
+        list[VerificationChannelEntry],
+        Field(
+            description='The ordered channels this verification uses to deliver the passcode. An email recipient is verified over email; a phone recipient is verified over SMS.',
+            min_length=1,
+        ),
+    ]
+    last_channel: Annotated[
+        str | None,
+        Field(
+            description='The channel the most recent passcode was sent on, or null before the first send. Open enum — new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.'
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='The key/value pairs attached when the verification was created.'
+        ),
+    ] = None
+    expires_at: Annotated[
+        str,
+        Field(
+            description='When the verification expires if no correct passcode is submitted.'
+        ),
+    ]
+    verified_at: Annotated[
+        str | None,
+        Field(
+            description='When the verification was completed, or null if it is not yet verified.'
+        ),
+    ] = None
+    created_at: str
+    updated_at: str
+
+
+class VerificationOptions(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    code_length: Annotated[
+        int | None,
+        Field(
+            description='Passcode length for this verification, overriding the configured length.',
+            ge=4,
+            le=8,
+        ),
+    ] = None
+    channels: Annotated[
+        list[VerificationChannel] | None,
+        Field(
+            description='Reorder or narrow the delivery channels for this request. List channel names in the order to try them; a channel you omit is not used for this request, and a channel not already enabled for the recipient is ignored. Omit the field to use the configured order.'
+        ),
+    ] = None
+
+
+class VerificationCreateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    to: VerificationTo
+    options: VerificationOptions | None = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification.'
+        ),
+    ] = None
+
+
+class VerificationCheckRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    to: VerificationTo
+    code: Annotated[
+        str,
+        Field(
+            description='The passcode the recipient received.',
+            examples=['123456'],
+            max_length=12,
+            min_length=4,
+        ),
+    ]
+
+
+class VerificationCheckResult(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    success: Annotated[
+        bool,
+        Field(
+            description='Whether the submitted passcode verified this verification. true means the passcode was correct and the verification is now complete; false means it was not verified — see reason. A verification that has already reached a final state is no longer checkable and returns 404.'
+        ),
+    ]
+    reason: Annotated[
+        str | None,
+        Field(
+            description='Why the check did not succeed, or null when success is true. incorrect_code means the passcode was wrong and attempts remain; expired means the time window elapsed; attempts_exhausted means too many incorrect attempts. Open enum — treat any unrecognized value as a future reason.'
+        ),
+    ] = None
+    verification: Verification
+    attempts_remaining: Annotated[
+        int | None,
+        Field(
+            description='The number of check attempts left, or null once the verification is complete.',
+            ge=0,
+        ),
+    ] = None
+
+
 class WhatsAppMessageStatus(str, Enum):
     scheduled = 'scheduled'
     accepted = 'accepted'
@@ -2260,7 +2450,7 @@ class WhatsAppMessageTemplate(BaseModel):
         Field(
             description="The template's stable handle (for example `bird_otp`).",
             examples=['bird_otp'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -2365,6 +2555,16 @@ class WhatsAppMessage(BaseModel):
             description='When the message was read by the recipient. Null until then.'
         ),
     ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` filter labels applied to this message.'
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(description='Arbitrary JSON metadata stored on the message.'),
+    ] = None
 
 
 class WhatsAppMessageList(FieldListEnvelope):
@@ -2385,7 +2585,7 @@ class SendWhatsAppMessageTemplate(BaseModel):
         Field(
             description='The template to send, by its name (for example `bird_otp`).',
             examples=['bird_otp'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -2420,6 +2620,19 @@ class SendWhatsAppMessageRequest(BaseModel):
         SendWhatsAppMessageTemplate | None,
         Field(
             description="The template to send. Bird selects the sender number from the template's category, so there is no sender field on this request. Templates are currently the only supported content type, so every send must include one; free-text content will be added in a future release.\n"
+        ),
+    ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n',
+            max_length=20,
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Arbitrary JSON object stored on the message and returned on API reads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n'
         ),
     ] = None
 
@@ -2563,7 +2776,7 @@ class WhatsAppTemplate(BaseModel):
         Field(
             description="The template's stable handle. Pass it as the template reference when sending.",
             examples=['bird_otp'],
-            max_length=512,
+            max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
@@ -2615,6 +2828,45 @@ class WebhookEventType(RootModel[str]):
     ]
 
 
+class EventDomainFailedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    domain_id: Annotated[
+        str,
+        Field(
+            description='The sending domain resource whose verification failed.',
+            examples=['dom_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^dom_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    domain: Annotated[
+        str,
+        Field(
+            description='The sending domain hostname.',
+            examples=['mail.example.com'],
+            min_length=1,
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='The workspace the domain is assigned to.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    failure_reason: Annotated[
+        str | None,
+        Field(
+            description='Why verification failed, when a specific reason is available (for example, the DKIM record was not found at the expected selector).',
+            examples=['DKIM record not found at the expected selector.'],
+        ),
+    ] = None
+
+
 class Type5(str, Enum):
     domain_failed = 'domain.failed'
 
@@ -2635,11 +2887,37 @@ class EventDomainFailed(BaseModel):
             min_length=1,
         ),
     ]
-    data: Annotated[
-        dict[str, Any],
+    data: EventDomainFailedData
+
+
+class EventDomainVerifiedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    domain_id: Annotated[
+        str,
         Field(
-            description='Event payload. The fields for this event are not yet finalized.',
-            max_length=0,
+            description='The sending domain resource that verified.',
+            examples=['dom_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^dom_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    domain: Annotated[
+        str,
+        Field(
+            description='The sending domain hostname.',
+            examples=['mail.example.com'],
+            min_length=1,
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='The workspace the domain is assigned to.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ]
 
@@ -2664,13 +2942,7 @@ class EventDomainVerified(BaseModel):
             min_length=1,
         ),
     ]
-    data: Annotated[
-        dict[str, Any],
-        Field(
-            description='Event payload. The fields for this event are not yet finalized.',
-            max_length=0,
-        ),
-    ]
+    data: EventDomainVerifiedData
 
 
 class EventEmailBase(BaseModel):
@@ -3557,12 +3829,6 @@ class EventEmailMailboxMessageFailed(BaseModel):
     data: EventEmailMailboxMessageFailedData
 
 
-class Disposition(str, Enum):
-    inbox = 'inbox'
-    blocked = 'blocked'
-    unauthenticated = 'unauthenticated'
-
-
 class EventEmailMailboxMessageReceivedData(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -3614,7 +3880,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
         list[str],
         Field(
             description='Recipient addresses the message was sent to.',
-            examples=[['support@acme-support.eu.mailbox.bird.com']],
+            examples=[['support@inbox.ai']],
         ),
     ]
     subject: Annotated[
@@ -3622,13 +3888,6 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
         Field(
             description='Subject line as received, or null when the message had no subject.',
             examples=['Re: Your quote'],
-        ),
-    ]
-    disposition: Annotated[
-        Disposition,
-        Field(
-            description='Where the message landed after receive policy, rules, and scanning were applied.',
-            examples=['inbox'],
         ),
     ]
     extracted_text: Annotated[
@@ -3695,60 +3954,6 @@ class EventEmailMailboxMessageReceived(BaseModel):
     data: EventEmailMailboxMessageReceivedData
 
 
-class Type25(str, Enum):
-    email_mailbox_message_received_blocked = 'email_mailbox.message_received_blocked'
-
-
-class EventEmailMailboxMessageReceivedBlocked(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    type: Annotated[
-        Literal['email_mailbox.message_received_blocked'],
-        Field(
-            description='Event type.',
-            examples=['email_mailbox.message_received_blocked'],
-        ),
-    ]
-    timestamp: Annotated[
-        str,
-        Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
-            min_length=1,
-        ),
-    ]
-    data: EventEmailMailboxMessageReceivedData
-
-
-class Type26(str, Enum):
-    email_mailbox_message_received_unauthenticated = (
-        'email_mailbox.message_received_unauthenticated'
-    )
-
-
-class EventEmailMailboxMessageReceivedUnauthenticated(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    type: Annotated[
-        Literal['email_mailbox.message_received_unauthenticated'],
-        Field(
-            description='Event type.',
-            examples=['email_mailbox.message_received_unauthenticated'],
-        ),
-    ]
-    timestamp: Annotated[
-        str,
-        Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
-            min_length=1,
-        ),
-    ]
-    data: EventEmailMailboxMessageReceivedData
-
-
 class EventEmailMailboxMessageSentData(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -3782,7 +3987,7 @@ class EventEmailMailboxMessageSentData(BaseModel):
     ]
 
 
-class Type27(str, Enum):
+class Type25(str, Enum):
     email_mailbox_message_sent = 'email_mailbox.message_sent'
 
 
@@ -3828,7 +4033,7 @@ class EventEmailMailboxSuspendedData(BaseModel):
     ]
 
 
-class Type28(str, Enum):
+class Type26(str, Enum):
     email_mailbox_suspended = 'email_mailbox.suspended'
 
 
@@ -3891,7 +4096,7 @@ class EventEmailMailboxThreadCreatedData(BaseModel):
     ]
 
 
-class Type29(str, Enum):
+class Type27(str, Enum):
     email_mailbox_thread_created = 'email_mailbox.thread_created'
 
 
@@ -3914,7 +4119,50 @@ class EventEmailMailboxThreadCreated(BaseModel):
     data: EventEmailMailboxThreadCreatedData
 
 
-class Type30(str, Enum):
+class Reason(str, Enum):
+    hard_bounce = 'hard_bounce'
+    complaint = 'complaint'
+    unsubscribe = 'unsubscribe'
+    manual = 'manual'
+
+
+class EventEmailSuppressionCreatedData(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    suppression_id: Annotated[
+        str,
+        Field(
+            description='The suppression entry that was created.',
+            examples=['sup_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^sup_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    email: Annotated[
+        str,
+        Field(
+            description='The recipient address that was added to the suppression list.',
+            examples=['user@example.com'],
+            min_length=1,
+        ),
+    ]
+    reason: Annotated[
+        Reason,
+        Field(description='Why the address was suppressed.', examples=['hard_bounce']),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='The workspace the suppression belongs to.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class Type28(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -3934,13 +4182,7 @@ class EventEmailSuppressionCreated(BaseModel):
             min_length=1,
         ),
     ]
-    data: Annotated[
-        dict[str, Any],
-        Field(
-            description='Event payload. The fields for this event are not yet finalized.',
-            max_length=0,
-        ),
-    ]
+    data: EventEmailSuppressionCreatedData
 
 
 class EventSMSBase(BaseModel):
@@ -4003,7 +4245,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type31(str, Enum):
+class Type29(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -4046,7 +4288,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type32(str, Enum):
+class Type30(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -4075,7 +4317,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type33(str, Enum):
+class Type31(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -4107,7 +4349,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type34(str, Enum):
+class Type32(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -4139,7 +4381,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type35(str, Enum):
+class Type33(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -4182,7 +4424,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type36(str, Enum):
+class Type34(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -4213,7 +4455,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type37(str, Enum):
+class Type35(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 
@@ -4258,8 +4500,6 @@ class WebhookEvent(
         | EventEmailMailboxMessageDelivered
         | EventEmailMailboxMessageFailed
         | EventEmailMailboxMessageReceived
-        | EventEmailMailboxMessageReceivedBlocked
-        | EventEmailMailboxMessageReceivedUnauthenticated
         | EventEmailMailboxMessageSent
         | EventEmailMailboxSuspended
         | EventEmailMailboxThreadCreated
@@ -4294,8 +4534,6 @@ class WebhookEvent(
         | EventEmailMailboxMessageDelivered
         | EventEmailMailboxMessageFailed
         | EventEmailMailboxMessageReceived
-        | EventEmailMailboxMessageReceivedBlocked
-        | EventEmailMailboxMessageReceivedUnauthenticated
         | EventEmailMailboxMessageSent
         | EventEmailMailboxSuspended
         | EventEmailMailboxThreadCreated

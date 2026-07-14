@@ -25,7 +25,7 @@ def _headers(payload: bytes, secret: str = SECRET, msg_id: str = "msg_1", timest
 
 
 def test_unwrap_verifies_and_returns_typed_event() -> None:
-    payload = b'{"type":"domain.failed","timestamp":"2026-06-01T17:00:12Z","data":{}}'
+    payload = b'{"type":"domain.failed","timestamp":"2026-06-01T17:00:12Z","data":{"domain_id":"dom_01krdgeqcxet5s7t44vh8rt9mg","domain":"mail.example.com","workspace_id":"ws_01krdgeqcxet5s7t44vh8rt9mg"}}'
     event = client().webhooks.unwrap(payload, _headers(payload))
     assert isinstance(event, WebhookEvent)
     assert event.root.type == "domain.failed"

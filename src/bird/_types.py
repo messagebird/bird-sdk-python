@@ -153,6 +153,29 @@ class WhatsappSendParams(_WhatsappSendRequired, total=False):
     components: Sequence[Mapping[str, Any]]
 
 
+class VerificationCreateParams(TypedDict, total=False):
+    """Params for ``client.verify.verifications.create``. Provide ``email``,
+    ``phone``, or both; every key is optional."""
+
+    email: str
+    phone: str
+    code_length: int
+    channels: Sequence[str]
+    metadata: Mapping[str, Any]
+
+
+class _VerificationCheckRequired(TypedDict):
+    code: str
+
+
+class VerificationCheckParams(_VerificationCheckRequired, total=False):
+    """Params for ``client.verify.verifications.check``. ``code`` is required;
+    identify the verification with ``email`` and/or ``phone``."""
+
+    email: str
+    phone: str
+
+
 class _ContactCreateRequired(TypedDict):
     email: str
 

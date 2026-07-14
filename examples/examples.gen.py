@@ -233,24 +233,34 @@ async def _ex_33() -> None:
 
 
 async def _ex_34() -> None:
+    result = client.verify.verifications.check("123456", phone="+15551234567")
+    print(result.success)
+
+
+async def _ex_35() -> None:
+    verification = client.verify.verifications.create(phone="+15551234567")
+    print(verification.id, verification.status)
+
+
+async def _ex_36() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_35() -> None:
+async def _ex_37() -> None:
     for message in client.whatsapp.list(status=["delivered"]):
         print(message.id, message.status)
 
 
-async def _ex_36() -> None:
+async def _ex_38() -> None:
     events = client.whatsapp.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_37() -> None:
+async def _ex_39() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -260,7 +270,7 @@ async def _ex_37() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_38() -> None:
+async def _ex_40() -> None:
     templates = client.whatsapp_templates.list()
     for template in templates.data:
         print(template.name, template.status)
