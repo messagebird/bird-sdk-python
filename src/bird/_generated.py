@@ -2497,6 +2497,13 @@ class WhatsAppError(BaseModel):
             min_length=1,
         ),
     ]
+    meta_error_code: Annotated[
+        str | None,
+        Field(
+            description='Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.',
+            examples=['131026'],
+        ),
+    ] = None
     occurred_at: Annotated[
         str, Field(description='When the failure occurred.', min_length=1)
     ]
