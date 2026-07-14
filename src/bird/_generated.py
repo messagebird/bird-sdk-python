@@ -616,7 +616,7 @@ class EmailAttachment(BaseModel):
     path: Annotated[
         str | None,
         Field(
-            description='Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `unsupported_feature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n'
+            description='Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `UnsupportedEmailFeature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n'
         ),
     ] = None
     content_type: Annotated[
@@ -756,7 +756,7 @@ class EmailMessageSendRequest(BaseModel):
     in_reply_to_message_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — threaded replies. Currently unavailable; supplying this field returns `422 unsupported_feature`. When generally available, sets In-Reply-To and References headers automatically.',
+            description='Preview feature — threaded replies. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, sets In-Reply-To and References headers automatically.',
             examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
             min_length=1,
             pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
@@ -778,13 +778,13 @@ class EmailMessageSendRequest(BaseModel):
     contact_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`.'
         ),
     ] = None
     topic_id: Annotated[
         str | None,
         Field(
-            description="Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 unsupported_feature`. When generally available, a non-empty `topic_id` gates delivery on the recipient's opt-in state for that topic — if the recipient is opt_out, the send is silently suppressed and an `email.suppressed` event fires with `reason: topic_opt_out`.\n",
+            description="Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, a non-empty `topic_id` gates delivery on the recipient's opt-in state for that topic — if the recipient is opt_out, the send is silently suppressed and an `email.suppressed` event fires with `reason: topic_opt_out`.\n",
             pattern='^top_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ] = None
@@ -1754,7 +1754,7 @@ class SMSMessageSendRequest1(BaseModel):
     validity_period: Annotated[
         int | None,
         Field(
-            description='Preview feature — how long, in seconds (60–172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 unsupported_feature`.\n',
+            description='Preview feature — how long, in seconds (60–172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n',
             ge=60,
             le=172800,
         ),
@@ -1775,19 +1775,19 @@ class SMSMessageSendRequest1(BaseModel):
     media_urls: Annotated[
         list[str] | None,
         Field(
-            description='Preview feature — multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     messaging_profile_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     scheduled_at: Annotated[
         str | None,
         Field(
-            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     template: Annotated[
@@ -1799,49 +1799,49 @@ class SMSMessageSendRequest1(BaseModel):
     broadcast_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — broadcast correlation. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     campaign_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — campaign correlation for analytics. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     audience_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — audience-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     contact_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     topic_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     max_price_per_segment: Annotated[
         float | None,
         Field(
-            description='Preview feature — per-segment price ceiling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     personalization: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Preview feature — per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     track_clicks: Annotated[
         bool | None,
         Field(
-            description='Preview feature — link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 unsupported_feature`.'
+            description='Preview feature — link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
 
@@ -1884,7 +1884,7 @@ class SMSMessageSendRequest2(BaseModel):
     validity_period: Annotated[
         int | None,
         Field(
-            description='Preview feature — how long, in seconds (60–172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 unsupported_feature`.\n',
+            description='Preview feature — how long, in seconds (60–172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n',
             ge=60,
             le=172800,
         ),
@@ -1905,19 +1905,19 @@ class SMSMessageSendRequest2(BaseModel):
     media_urls: Annotated[
         list[str] | None,
         Field(
-            description='Preview feature — multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     messaging_profile_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     scheduled_at: Annotated[
         str | None,
         Field(
-            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     template: Annotated[
@@ -1929,49 +1929,49 @@ class SMSMessageSendRequest2(BaseModel):
     broadcast_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — broadcast correlation. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     campaign_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — campaign correlation for analytics. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     audience_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — audience-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     contact_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     topic_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     max_price_per_segment: Annotated[
         float | None,
         Field(
-            description='Preview feature — per-segment price ceiling. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     personalization: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Preview feature — per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 unsupported_feature`.'
+            description='Preview feature — per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
     track_clicks: Annotated[
         bool | None,
         Field(
-            description='Preview feature — link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 unsupported_feature`.'
+            description='Preview feature — link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`.'
         ),
     ] = None
 
