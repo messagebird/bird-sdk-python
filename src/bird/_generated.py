@@ -880,6 +880,16 @@ class ContactID(RootModel[str]):
     ]
 
 
+class ContactChannel(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description='A channel a contact can be reached on. Open enum — `email` is present when the contact has an email address; more values (`sms`, `whatsapp`, `voice`) are added as contacts gain identifiers for other channels. Treat any unrecognized value as a future channel rather than an error. Slugs match `ChannelSlug`.\n',
+            min_length=1,
+        ),
+    ]
+
+
 class Contact(Timestamps):
     model_config = ConfigDict(
         extra='allow',
@@ -918,6 +928,12 @@ class Contact(Timestamps):
         dict[str, Any] | None,
         Field(
             description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, or boolean matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized.\n"
+        ),
+    ] = None
+    channels: Annotated[
+        list[ContactChannel] | None,
+        Field(
+            description='Channels this contact can be reached on, derived from the identifiers it has. A contact with an email address includes `email`. More values are added as a contact gains identifiers for other channels.\n'
         ),
     ] = None
     created_at: str
@@ -1303,6 +1319,25 @@ class AudienceUpdateRequest(BaseModel):
     ] = None
 
 
+class AudienceRef(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Audience ID.',
+            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(description="The audience's display name.", max_length=100, min_length=1),
+    ]
+
+
 class AudienceMember(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -1315,6 +1350,12 @@ class AudienceMember(BaseModel):
             min_length=1,
         ),
     ]
+    audiences: Annotated[
+        list[AudienceRef] | None,
+        Field(
+            description='The audiences this contact belongs to, including the one being listed, most-recently-joined first.'
+        ),
+    ] = None
 
 
 class AudienceMemberList(FieldListEnvelope):
