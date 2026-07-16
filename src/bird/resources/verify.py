@@ -101,8 +101,9 @@ class Verifications:
         options: RequestOptions | None = None,
     ) -> VerificationCheckResult:
         """Check a passcode a recipient submitted, identifying the verification by
-        the same recipient. A wrong, expired, or already-used code returns
-        ``success=False`` with a ``reason`` — it is not an error.
+        the same recipient. A wrong or expired code returns ``success=False`` with
+        a ``reason`` — it is not an error; a verification already resolved is no
+        longer checkable and returns a 404 error.
 
         ```python
         result = client.verify.verifications.check("123456", phone="+15551234567")
