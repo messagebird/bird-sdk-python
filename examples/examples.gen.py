@@ -65,63 +65,63 @@ async def _ex_9() -> None:
 
 
 async def _ex_10() -> None:
+    prop = client.contact_properties.archive("prp_01krdgeqcxet5s7t44vh8rt9mg")
+    print(prop.archived)
+
+
+async def _ex_11() -> None:
+    prop = client.contact_properties.create(key="plan", type="string")
+    print(prop.id, prop.key)
+
+
+async def _ex_12() -> None:
+    prop = client.contact_properties.get("prp_01krdgeqcxet5s7t44vh8rt9mg")
+    print(prop.key)
+
+
+async def _ex_13() -> None:
+    for prop in client.contact_properties.list():
+        print(prop.id, prop.key)
+
+
+async def _ex_14() -> None:
+    prop = client.contact_properties.unarchive("prp_01krdgeqcxet5s7t44vh8rt9mg")
+    print(prop.archived)
+
+
+async def _ex_15() -> None:
+    prop = client.contact_properties.update("prp_01krdgeqcxet5s7t44vh8rt9mg", fallback_value="free")
+    print(prop.fallback_value)
+
+
+async def _ex_16() -> None:
     result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
     for item in result.data:
         print(item.email, item.status)
 
 
-async def _ex_11() -> None:
+async def _ex_17() -> None:
     contact = client.contacts.create(email="jane@acme.com", first_name="Jane")
     print(contact.id, contact.email)
 
 
-async def _ex_12() -> None:
+async def _ex_18() -> None:
     client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_13() -> None:
+async def _ex_19() -> None:
     contact = client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
     print(contact.email)
 
 
-async def _ex_14() -> None:
+async def _ex_20() -> None:
     for contact in client.contacts.list(search="acme.com"):
         print(contact.id, contact.email)
 
 
-async def _ex_15() -> None:
+async def _ex_21() -> None:
     contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
     print(contact.first_name)
-
-
-async def _ex_16() -> None:
-    prop = client.contact_properties.archive("prp_01krdgeqcxet5s7t44vh8rt9mg")
-    print(prop.archived)
-
-
-async def _ex_17() -> None:
-    prop = client.contact_properties.create(key="plan", type="string")
-    print(prop.id, prop.key)
-
-
-async def _ex_18() -> None:
-    prop = client.contact_properties.get("prp_01krdgeqcxet5s7t44vh8rt9mg")
-    print(prop.key)
-
-
-async def _ex_19() -> None:
-    for prop in client.contact_properties.list():
-        print(prop.id, prop.key)
-
-
-async def _ex_20() -> None:
-    prop = client.contact_properties.unarchive("prp_01krdgeqcxet5s7t44vh8rt9mg")
-    print(prop.archived)
-
-
-async def _ex_21() -> None:
-    prop = client.contact_properties.update("prp_01krdgeqcxet5s7t44vh8rt9mg", fallback_value="free")
-    print(prop.fallback_value)
 
 
 async def _ex_22() -> None:

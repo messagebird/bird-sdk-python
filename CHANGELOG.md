@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1
+
+- Docs: align the SDK example markers on the `audiences`, `contacts`, and `contact_properties` resources with their operation keys so the API reference renders their Python code samples. Marker comments only — no change to the published API or runtime.
+
 ## 0.8.0
 
 - Add the sending domains collection (sync and async): `client.domains.create`, `.get`, `.list`, `.update`, `.delete`, and `.verify`. Register a sending domain, publish the DNS records it returns, then verify until it is usable as a sender. Requires an API key with the `domains` scope.
