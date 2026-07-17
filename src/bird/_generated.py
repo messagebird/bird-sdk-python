@@ -209,6 +209,19 @@ class FieldListEnvelope(BaseModel):
     ]
 
 
+class FieldListEnvelopeWithTotal(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    total: Annotated[
+        int | None,
+        Field(
+            description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise null.",
+            ge=0,
+        ),
+    ] = None
+
+
 class Timestamps(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -2866,6 +2879,399 @@ class WhatsAppTemplateList(BaseModel):
     ]
 
 
+class DomainSettings(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    click_tracking: Annotated[
+        bool | None,
+        Field(
+            description='Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n'
+        ),
+    ] = False
+    open_tracking: Annotated[
+        bool | None,
+        Field(
+            description='Insert a tracking pixel in HTML email to record opens. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n'
+        ),
+    ] = False
+
+
+class Mode(str, Enum):
+    txt = 'txt'
+    delegated = 'delegated'
+
+
+class DomainDKIM(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    mode: Annotated[
+        Mode,
+        Field(
+            description='How the DKIM public key is published in your DNS. `txt` — you publish the key as a TXT record. `delegated` — you publish a single CNAME and Bird hosts and rotates the key.\n'
+        ),
+    ]
+    selector: Annotated[
+        str,
+        Field(
+            description='DKIM selector used to sign mail from this domain.',
+            examples=['bird1'],
+            min_length=1,
+        ),
+    ]
+    key_size: Annotated[
+        int, Field(description='RSA key size in bits.', examples=[2048])
+    ]
+
+
+class Status4(str, Enum):
+    pending = 'pending'
+    failed = 'failed'
+    temporary_failure = 'temporary_failure'
+
+
+class DomainCapabilityPending(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    domain: Annotated[
+        str,
+        Field(
+            description='Hostname the capability will use once the staged change verifies.',
+            examples=['rp.mail.acme.com'],
+            min_length=1,
+        ),
+    ]
+    status: Annotated[
+        Status4,
+        Field(
+            description='Verification status of the staged change. `pending` — waiting for the DNS records to be detected. `failed` — the records resolved with wrong values; correct them or submit a different change. `temporary_failure` — DNS lookup failed transiently and will be retried.\n',
+            examples=['pending'],
+        ),
+    ]
+
+
+class Status5(str, Enum):
+    pending = 'pending'
+    verified = 'verified'
+    warning = 'warning'
+    failed = 'failed'
+    temporary_failure = 'temporary_failure'
+    not_configured = 'not_configured'
+
+
+class DomainCapability(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status: Annotated[
+        Status5,
+        Field(
+            description="Capability verification status.\n- `pending` — verification has not run, or is currently running. - `verified` — all DNS records for this capability resolved with the\n  expected values.\n- `warning` — a record for this capability verified before and a recent\n  check no longer matches, but it is still within the grace period.\n  Sending is not yet affected; fix it before the grace period ends.\n- `failed` — DNS records resolved but at least one value is wrong.\n  Update your DNS to recover.\n- `temporary_failure` — DNS lookup failed transiently. Verification is\n  queued for retry; don't change DNS records yet.\n- `not_configured` — the capability is not set up on this domain\n  (e.g. no tracking domain configured).\n",
+            examples=['verified'],
+        ),
+    ]
+    domain: Annotated[
+        str | None,
+        Field(
+            description='Hostname this capability is configured with — the return-path domain, the tracking domain, or the domain where the DMARC policy was found. Null when not applicable or not configured.\n'
+        ),
+    ] = None
+    pending: DomainCapabilityPending | None = None
+    reason: Annotated[
+        str | None,
+        Field(
+            description='Machine-readable reason code for a failed capability status. Only set when `status` is `failed`. Use this to display a specific message to users rather than a generic failure message.\n- `tracking_domain_in_use` — the link tracking subdomain is already claimed\n  by another organization.\n'
+        ),
+    ] = None
+
+
+class DomainCapabilities(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    sending: DomainCapability
+    return_path: DomainCapability
+    dmarc: DomainCapability
+    tracking: DomainCapability
+    inbound: DomainCapability | None = None
+
+
+class Type5(str, Enum):
+    TXT = 'TXT'
+    CNAME = 'CNAME'
+    MX = 'MX'
+
+
+class Purpose(str, Enum):
+    dkim = 'dkim'
+    return_path = 'return_path'
+    tracking = 'tracking'
+    inbound_mx = 'inbound_mx'
+    dmarc = 'dmarc'
+
+
+class State(str, Enum):
+    active = 'active'
+    pending = 'pending'
+    deprecated = 'deprecated'
+
+
+class Status6(str, Enum):
+    pending = 'pending'
+    verified = 'verified'
+    warning = 'warning'
+    failed = 'failed'
+
+
+class DNSRecord(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Type5
+    name: Annotated[
+        str,
+        Field(
+            description='The record name — the part you enter in your DNS provider\'s "Name" or "Host" field, relative to the DNS zone the record belongs in (your registered domain). For a sending domain `mail.acme.com` the DKIM record name is `bird1._domainkey.mail`, entered in the `acme.com` zone. `@` for records at the zone apex.\n',
+            min_length=1,
+        ),
+    ]
+    host: Annotated[
+        str,
+        Field(
+            description='The fully qualified hostname for this record (e.g. `bird1._domainkey.mail.acme.com`).\n',
+            min_length=1,
+        ),
+    ]
+    value: Annotated[str, Field(min_length=1)]
+    purpose: Annotated[
+        Purpose,
+        Field(
+            description='What this record is for.\n- `dkim` — signs outbound mail and proves domain ownership. - `return_path` — return-path (bounce) CNAME for sending. - `tracking` — branded open/click tracking CNAME (optional). - `dmarc` — advisory DMARC policy record. - `inbound_mx` — MX record routing mail to Bird for receiving. Always\n  present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own — see `DomainUpdate.inbound`.\n'
+        ),
+    ]
+    state: Annotated[
+        State,
+        Field(
+            description="Lifecycle state of this record.\n- `active` — the record backs the domain's current configuration. - `pending` — the record belongs to a staged configuration change;\n  publish it to complete the change.\n- `deprecated` — the record belonged to a previous configuration.\n  Keep it in DNS until `safe_to_remove` is `true`; in-flight mail and\n  previously sent tracked links may still resolve through it.\n"
+        ),
+    ]
+    optional: Annotated[
+        bool,
+        Field(
+            description='Whether this record can be skipped. Optional records enable extra functionality (e.g. tracking) but are not required for sending.\n'
+        ),
+    ]
+    status: Annotated[
+        Status6,
+        Field(
+            description="Verification status of this record's most recent DNS check.\n- `pending` — the record has not verified yet; publish it (or correct it)\n  and it will verify on the next check.\n- `verified` — the most recent check matched the expected value. - `warning` — the record verified before and a recent check no longer\n  matched, but it is still within the grace period. Sending is not yet\n  affected; fix the record before the grace period ends to avoid it\n  being blocked.\n- `failed` — the record verified before but later checks kept failing\n  past the grace period; the configuration has regressed and needs\n  attention.\n"
+        ),
+    ]
+    error: Annotated[
+        str | None,
+        Field(
+            description='Human-readable detail for a failed check on this record — what was found in DNS and why it did not match. Null when the record is verified or not yet checked.\n'
+        ),
+    ] = None
+    safe_to_remove: Annotated[
+        bool | None,
+        Field(
+            description='Only set on `deprecated` records: `true` once the record is no longer referenced by in-flight mail or live tracked links and can be deleted from your DNS. Null on `active` and `pending` records.\n'
+        ),
+    ] = None
+
+
+class Vendor(str, Enum):
+    other = 'other'
+    cloudflare = 'cloudflare'
+    route53 = 'route53'
+    godaddy = 'godaddy'
+    namecheap = 'namecheap'
+    google = 'google'
+    azure = 'azure'
+    digitalocean = 'digitalocean'
+    squarespace = 'squarespace'
+
+
+class Status7(str, Enum):
+    pending = 'pending'
+    verified = 'verified'
+    failed = 'failed'
+    temporary_failure = 'temporary_failure'
+    rejected = 'rejected'
+
+
+class Domain(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            examples=['dom_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^dom_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    domain: Annotated[
+        str,
+        Field(
+            description='The sending domain name. Set at creation and immutable.',
+            examples=['mail.acme.com'],
+            min_length=1,
+        ),
+    ]
+    vendor: Annotated[
+        Vendor,
+        Field(
+            description='The DNS provider hosting this domain\'s nameservers, so you know which provider\'s dashboard to manage the required DNS records in. Returns "other" when the provider has not been detected or is not recognized.\n'
+        ),
+    ]
+    status: Annotated[
+        Status7,
+        Field(
+            description='Domain ownership verification, proven by the DKIM record. Readiness to send or track is reported separately per capability under `capabilities.*.status`.\n- `pending` — the DKIM record has not been published yet. - `verified` — the DKIM record is in place; ownership is confirmed. - `failed` — a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure` — DNS resolution failed transiently (timeout,\n  unreachable nameserver). Verification is queued for retry on a 72h\n  cadence; customer should not edit DNS records before the retry runs.\n- `rejected` — the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n'
+        ),
+    ]
+    settings: DomainSettings
+    dkim: DomainDKIM
+    capabilities: DomainCapabilities
+    dns_records: Annotated[
+        list[DNSRecord],
+        Field(
+            description="The domain's DNS records and their individual verification state, returned in full on both the list and single-domain responses. This is the complete set to publish across DKIM, return-path, DMARC, tracking, and inbound; records for a staged change carry `state: pending`. Inbound MX records are always included as a regional reference, even while receiving is off (`capabilities.inbound.status` is `not_configured`) — their presence alone does not mean receiving is enabled (see `DomainUpdate.inbound`).\n"
+        ),
+    ]
+    last_checked_at: Annotated[
+        str | None,
+        Field(
+            description="When Bird last checked this domain's DNS records, whether or not the outcome changed. Updated on every verification — your manual refresh and the periodic automatic re-checks alike. Null if the domain has never been checked.\n"
+        ),
+    ] = None
+    verified_at: Annotated[
+        str | None,
+        Field(
+            description="When the domain's ownership was confirmed — the moment `status` became `verified` via the DKIM record. Unchanged by later re-checks while it stays verified. Null if the domain has never been verified.\n"
+        ),
+    ] = None
+    created_at: Annotated[str, Field(description='When the domain was added.')]
+    updated_at: Annotated[
+        str,
+        Field(
+            description="When the domain's configuration was last changed (such as a settings or return-path change). Verification re-checks do not change this; see `last_checked_at` and `verified_at` for verification timing.\n"
+        ),
+    ]
+
+
+class DomainList(FieldListEnvelopeWithTotal):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[Domain]
+
+
+class DomainReturnPathConfig(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='Name part to use for the return-path domain. For example, `send` on `mail.acme.com` becomes `send.mail.acme.com`. Defaults to `send` when omitted at creation.\n',
+            examples=['send'],
+            max_length=63,
+            min_length=1,
+            pattern='^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$',
+        ),
+    ]
+
+
+class DomainTrackingConfig(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='Name part to use for branded open and click tracking URLs. For example, `links` on `mail.acme.com` becomes `links.mail.acme.com`.\n',
+            examples=['links'],
+            max_length=63,
+            min_length=1,
+            pattern='^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$',
+        ),
+    ]
+
+
+class DomainDKIMConfig(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    mode: Annotated[
+        Mode | None,
+        Field(
+            description='How the DKIM public key is published in your DNS.\n- `txt` — you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated` — preview, currently unavailable; supplying it returns\n  `422`. When available, you publish a single CNAME and Bird hosts\n  and rotates the key with no further DNS changes on your side.\n'
+        ),
+    ] = 'txt'
+
+
+class DomainCreate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    domain: Annotated[
+        str,
+        Field(
+            description='The domain you will send from — the domain of your `from` addresses. Use a dedicated subdomain (e.g. `mail.acme.com`) rather than your registered domain so sending reputation stays separate from other services on the domain.\n',
+            examples=['mail.acme.com'],
+            min_length=1,
+            pattern='^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]{0,61}[A-Za-z0-9])$',
+        ),
+    ]
+    return_path: DomainReturnPathConfig | None = None
+    tracking: DomainTrackingConfig | None = None
+    dkim: DomainDKIMConfig | None = None
+    settings: DomainSettings | None = None
+
+
+class DomainInboundConfig(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    enabled: Annotated[
+        bool,
+        Field(
+            description='Set `true` to enable receiving on this domain, `false` to disable it. Disabling tears receiving down and removes the MX records from `dns_records`; this is immediate in the normal case, and if a step needs retrying the capability clears as soon as teardown finishes.\n',
+            examples=[True],
+        ),
+    ]
+
+
+class DomainUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    settings: DomainSettings | None = None
+    return_path: DomainReturnPathConfig | None = None
+    tracking: Annotated[
+        DomainTrackingConfig | None,
+        Field(
+            description='Set or change the tracking name part, or remove tracking by passing null. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.\n'
+        ),
+    ] = None
+    dkim: DomainDKIMConfig | None = None
+    inbound: DomainInboundConfig | None = None
+
+
 class WebhookEventType(RootModel[str]):
     root: Annotated[
         str,
@@ -2915,7 +3321,7 @@ class EventDomainFailedData(BaseModel):
     ] = None
 
 
-class Type5(str, Enum):
+class Type6(str, Enum):
     domain_failed = 'domain.failed'
 
 
@@ -2970,7 +3376,7 @@ class EventDomainVerifiedData(BaseModel):
     ]
 
 
-class Type6(str, Enum):
+class Type7(str, Enum):
     domain_verified = 'domain.verified'
 
 
@@ -3056,7 +3462,7 @@ class EventEmailAcceptedData(EventEmailBase):
     )
 
 
-class Type7(str, Enum):
+class Type8(str, Enum):
     email_accepted = 'email.accepted'
 
 
@@ -3124,7 +3530,7 @@ class EventEmailBouncedData(EventEmailBase):
     ]
 
 
-class Type8(str, Enum):
+class Type9(str, Enum):
     email_bounced = 'email.bounced'
 
 
@@ -3190,7 +3596,7 @@ class EventEmailCanceledData(EventEmailMessageBase):
     )
 
 
-class Type9(str, Enum):
+class Type10(str, Enum):
     email_canceled = 'email.canceled'
 
 
@@ -3241,7 +3647,7 @@ class EventEmailClickedData(EventEmailBase):
     ]
 
 
-class Type10(str, Enum):
+class Type11(str, Enum):
     email_clicked = 'email.clicked'
 
 
@@ -3277,7 +3683,7 @@ class EventEmailComplainedData(EventEmailBase):
     ]
 
 
-class Type11(str, Enum):
+class Type12(str, Enum):
     email_complained = 'email.complained'
 
 
@@ -3330,7 +3736,7 @@ class EventEmailDeferredData(EventEmailBase):
     ]
 
 
-class Type12(str, Enum):
+class Type13(str, Enum):
     email_deferred = 'email.deferred'
 
 
@@ -3359,7 +3765,7 @@ class EventEmailDeliveredData(EventEmailBase):
     )
 
 
-class Type13(str, Enum):
+class Type14(str, Enum):
     email_delivered = 'email.delivered'
 
 
@@ -3388,7 +3794,7 @@ class EventEmailListUnsubscribedData(EventEmailBase):
     )
 
 
-class Type14(str, Enum):
+class Type15(str, Enum):
     email_list_unsubscribed = 'email.list_unsubscribed'
 
 
@@ -3431,7 +3837,7 @@ class EventEmailOpenedData(EventEmailBase):
     ]
 
 
-class Type15(str, Enum):
+class Type16(str, Enum):
     email_opened = 'email.opened'
 
 
@@ -3491,7 +3897,7 @@ class EventEmailOutOfBandBounceData(EventEmailBase):
     ]
 
 
-class Type16(str, Enum):
+class Type17(str, Enum):
     email_out_of_band_bounce = 'email.out_of_band_bounce'
 
 
@@ -3520,7 +3926,7 @@ class EventEmailProcessedData(EventEmailBase):
     )
 
 
-class Type17(str, Enum):
+class Type18(str, Enum):
     email_processed = 'email.processed'
 
 
@@ -3628,7 +4034,7 @@ class EventEmailReceivedData(BaseModel):
     ] = None
 
 
-class Type18(str, Enum):
+class Type19(str, Enum):
     email_received = 'email.received'
 
 
@@ -3668,7 +4074,7 @@ class EventEmailRejectedData(EventEmailBase):
     rejection_reason: EmailRejectionReason
 
 
-class Type19(str, Enum):
+class Type20(str, Enum):
     email_rejected = 'email.rejected'
 
 
@@ -3705,7 +4111,7 @@ class EventEmailScheduledData(EventEmailMessageBase):
     ]
 
 
-class Type20(str, Enum):
+class Type21(str, Enum):
     email_scheduled = 'email.scheduled'
 
 
@@ -3734,7 +4140,7 @@ class EventEmailUnsubscribedData(EventEmailBase):
     )
 
 
-class Type21(str, Enum):
+class Type22(str, Enum):
     email_unsubscribed = 'email.unsubscribed'
 
 
@@ -3790,7 +4196,7 @@ class EventEmailMailboxMessageDeliveredData(BaseModel):
     ]
 
 
-class Type22(str, Enum):
+class Type23(str, Enum):
     email_mailbox_message_delivered = 'email_mailbox.message_delivered'
 
 
@@ -3854,7 +4260,7 @@ class EventEmailMailboxMessageFailedData(BaseModel):
     ]
 
 
-class Type23(str, Enum):
+class Type24(str, Enum):
     email_mailbox_message_failed = 'email_mailbox.message_failed'
 
 
@@ -3979,7 +4385,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     ] = None
 
 
-class Type24(str, Enum):
+class Type25(str, Enum):
     email_mailbox_message_received = 'email_mailbox.message_received'
 
 
@@ -4035,7 +4441,7 @@ class EventEmailMailboxMessageSentData(BaseModel):
     ]
 
 
-class Type25(str, Enum):
+class Type26(str, Enum):
     email_mailbox_message_sent = 'email_mailbox.message_sent'
 
 
@@ -4081,7 +4487,7 @@ class EventEmailMailboxSuspendedData(BaseModel):
     ]
 
 
-class Type26(str, Enum):
+class Type27(str, Enum):
     email_mailbox_suspended = 'email_mailbox.suspended'
 
 
@@ -4144,7 +4550,7 @@ class EventEmailMailboxThreadCreatedData(BaseModel):
     ]
 
 
-class Type27(str, Enum):
+class Type28(str, Enum):
     email_mailbox_thread_created = 'email_mailbox.thread_created'
 
 
@@ -4210,7 +4616,7 @@ class EventEmailSuppressionCreatedData(BaseModel):
     ]
 
 
-class Type28(str, Enum):
+class Type29(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -4293,7 +4699,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type29(str, Enum):
+class Type30(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -4336,7 +4742,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type30(str, Enum):
+class Type31(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -4365,7 +4771,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type31(str, Enum):
+class Type32(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -4397,7 +4803,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type32(str, Enum):
+class Type33(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -4429,7 +4835,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type33(str, Enum):
+class Type34(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -4472,7 +4878,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type34(str, Enum):
+class Type35(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -4503,7 +4909,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type35(str, Enum):
+class Type36(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 

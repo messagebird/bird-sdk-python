@@ -125,6 +125,38 @@ async def _ex_21() -> None:
 
 
 async def _ex_22() -> None:
+    domain = client.domains.create(domain="mail.acme.com")
+    print(domain.id, domain.status)
+
+
+async def _ex_23() -> None:
+    client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_24() -> None:
+    domain = client.domains.get("dom_01krdgeqcxet5s7t44vh8rt9mg")
+    print(domain.domain)
+
+
+async def _ex_25() -> None:
+    for domain in client.domains.list():
+        print(domain.id, domain.status)
+
+
+async def _ex_26() -> None:
+    domain = client.domains.update(
+        "dom_01krdgeqcxet5s7t44vh8rt9mg",
+        click_tracking=True, open_tracking=True, tracking="links",
+    )
+    print(domain.id)
+
+
+async def _ex_27() -> None:
+    domain = client.domains.verify("dom_01krdgeqcxet5s7t44vh8rt9mg")
+    print(domain.status)
+
+
+async def _ex_28() -> None:
     try:
         client.email.send(
             from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
@@ -140,25 +172,25 @@ async def _ex_22() -> None:
         print(err.status_code, err.code, err.request_id)
 
 
-async def _ex_23() -> None:
+async def _ex_29() -> None:
     async with AsyncBird() as client:
         async for message in client.email.list(status="delivered"):
             print(message.id)
 
 
-async def _ex_24() -> None:
+async def _ex_30() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
 
 
-async def _ex_25() -> None:
+async def _ex_31() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
     page = client.email.list(status="delivered")  # page.data, page.next_cursor
     print(len(page.data), page.next_cursor)
 
 
-async def _ex_26() -> None:
+async def _ex_32() -> None:
     client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -168,7 +200,7 @@ async def _ex_26() -> None:
     )
 
 
-async def _ex_27() -> None:
+async def _ex_33() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -178,7 +210,7 @@ async def _ex_27() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_28() -> None:
+async def _ex_34() -> None:
     batch = client.email.send_batch(
         messages=[
             {
@@ -199,12 +231,12 @@ async def _ex_28() -> None:
         print(item.id, item.status)
 
 
-async def _ex_29() -> None:
+async def _ex_35() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_30() -> None:
+async def _ex_36() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -213,7 +245,7 @@ async def _ex_30() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_31() -> None:
+async def _ex_37() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -221,46 +253,46 @@ async def _ex_31() -> None:
     )
 
 
-async def _ex_32() -> None:
+async def _ex_38() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_33() -> None:
+async def _ex_39() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_34() -> None:
+async def _ex_40() -> None:
     result = client.verify.verifications.check("123456", phone="+15551234567")
     print(result.success)
 
 
-async def _ex_35() -> None:
+async def _ex_41() -> None:
     verification = client.verify.verifications.create(phone="+15551234567")
     print(verification.id, verification.status)
 
 
-async def _ex_36() -> None:
+async def _ex_42() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_37() -> None:
+async def _ex_43() -> None:
     for message in client.whatsapp.list(status=["delivered"]):
         print(message.id, message.status)
 
 
-async def _ex_38() -> None:
+async def _ex_44() -> None:
     events = client.whatsapp.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_39() -> None:
+async def _ex_45() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -270,7 +302,7 @@ async def _ex_39() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_40() -> None:
+async def _ex_46() -> None:
     templates = client.whatsapp_templates.list()
     for template in templates.data:
         print(template.name, template.status)

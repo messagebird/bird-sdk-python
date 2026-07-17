@@ -285,6 +285,47 @@ class AudienceListContactsParams(TypedDict, total=False):
     ending_before: str
 
 
+class _DomainCreateRequired(TypedDict):
+    domain: str
+
+
+class DomainCreateParams(_DomainCreateRequired, total=False):
+    """Params for ``client.domains.create``. ``domain`` is required; the rest
+    default server-side when omitted. ``return_path`` and ``tracking`` are the
+    name part only (Bird appends the sending domain); ``dkim_mode`` is ``"txt"``
+    or ``"delegated"``.
+    """
+
+    return_path: str
+    tracking: str
+    dkim_mode: str
+    click_tracking: bool
+    open_tracking: bool
+
+
+class DomainUpdateParams(TypedDict, total=False):
+    """Params for ``client.domains.update``. Every key is optional — only the
+    fields you pass change. Pass ``tracking=None`` to remove the tracking domain
+    (both tracking toggles must be off first, else the API returns 409).
+    """
+
+    click_tracking: bool
+    open_tracking: bool
+    tracking: str | None
+    return_path: str
+    dkim_mode: str
+    inbound_enabled: bool
+
+
+class DomainListParams(TypedDict, total=False):
+    """Filters for ``client.domains.list``. Every key is optional."""
+
+    name: str
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
 class _AudienceContactsAddRequired(TypedDict):
     contact_ids: Sequence[str]
 

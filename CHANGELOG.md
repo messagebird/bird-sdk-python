@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+- Add the sending domains collection (sync and async): `client.domains.create`, `.get`, `.list`, `.update`, `.delete`, and `.verify`. Register a sending domain, publish the DNS records it returns, then verify until it is usable as a sender. Requires an API key with the `domains` scope.
+
 ## 0.7.5
 
 - Add the Realtime webhook event types: `REALTIME_CACHE_CHANNELS`, `REALTIME_CHANNEL_EXISTENCE`, `REALTIME_CLIENT_EVENTS`, `REALTIME_PRESENCE`, and `REALTIME_SUBSCRIPTION_COUNT`. Additive; no breaking change.
