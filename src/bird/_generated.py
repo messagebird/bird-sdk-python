@@ -2727,7 +2727,7 @@ class WhatsAppEvent(BaseModel):
         Field(
             description='Failure detail. Present on `whatsapp.failed` events; null otherwise.'
         ),
-    ]
+    ] = None
 
 
 class WhatsAppEventList(BaseModel):
@@ -4932,6 +4932,232 @@ class EventSMSUndelivered(BaseModel):
     data: EventSMSUndeliveredData
 
 
+class WhatsAppAddress(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    phone_number: Annotated[
+        str | None,
+        Field(
+            description='Phone number in E.164 format, when known.',
+            examples=['+15550001111'],
+            min_length=1,
+        ),
+    ] = None
+    bsuid: Annotated[
+        str | None,
+        Field(
+            description="Business-scoped user ID — Meta's identifier for the WhatsApp user. Present only on the WhatsApp-user side of the message.\n",
+            examples=['NL.xxxx'],
+            min_length=1,
+        ),
+    ] = None
+
+
+class EventWhatsAppBase(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    whatsapp_id: Annotated[
+        str,
+        Field(
+            description='ID of the WhatsApp message.',
+            examples=['wam_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^wam_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='ID of the workspace.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    direction: Annotated[
+        Direction,
+        Field(
+            description='Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).'
+        ),
+    ]
+    from_: Annotated[
+        WhatsAppAddress,
+        Field(
+            alias='from',
+            description='Sender of the message. On outbound messages, the business number it was sent from.',
+        ),
+    ]
+    to: Annotated[
+        WhatsAppAddress,
+        Field(
+            description='Recipient of the message. On outbound messages, the WhatsApp contact.'
+        ),
+    ]
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.\n'
+        ),
+    ]
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.\n',
+            examples=[{'order_id': 'ord_123'}],
+        ),
+    ]
+
+
+class EventWhatsAppAcceptedData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type37(str, Enum):
+    whatsapp_accepted = 'whatsapp.accepted'
+
+
+class EventWhatsAppAccepted(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['whatsapp.accepted'],
+        Field(description='Event type.', examples=['whatsapp.accepted']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time Bird accepted and charged the send request.',
+            examples=['2026-07-16 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppAcceptedData
+
+
+class EventWhatsAppDeliveredData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type38(str, Enum):
+    whatsapp_delivered = 'whatsapp.delivered'
+
+
+class EventWhatsAppDelivered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['whatsapp.delivered'],
+        Field(description='Event type.', examples=['whatsapp.delivered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="Time the message was delivered to the recipient's device.",
+            examples=['2026-07-16 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppDeliveredData
+
+
+class EventWhatsAppFailedData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    error: Annotated[
+        WhatsAppError | None, Field(description='Why the message terminally failed.')
+    ]
+
+
+class Type39(str, Enum):
+    whatsapp_failed = 'whatsapp.failed'
+
+
+class EventWhatsAppFailed(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['whatsapp.failed'],
+        Field(description='Event type.', examples=['whatsapp.failed']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the failure was recorded.',
+            examples=['2026-07-16 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppFailedData
+
+
+class EventWhatsAppReadData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type40(str, Enum):
+    whatsapp_read = 'whatsapp.read'
+
+
+class EventWhatsAppRead(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['whatsapp.read'],
+        Field(description='Event type.', examples=['whatsapp.read']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the recipient read the message.',
+            examples=['2026-07-16 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppReadData
+
+
+class EventWhatsAppSentData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type41(str, Enum):
+    whatsapp_sent = 'whatsapp.sent'
+
+
+class EventWhatsAppSent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['whatsapp.sent'],
+        Field(description='Event type.', examples=['whatsapp.sent']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time Bird handed the message to Meta for delivery.',
+            examples=['2026-07-16 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppSentData
+
+
 class WebhookEvent(
     RootModel[
         EventDomainFailed
@@ -4965,6 +5191,11 @@ class WebhookEvent(
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered
+        | EventWhatsAppAccepted
+        | EventWhatsAppDelivered
+        | EventWhatsAppFailed
+        | EventWhatsAppRead
+        | EventWhatsAppSent
     ]
 ):
     root: Annotated[
@@ -4998,7 +5229,12 @@ class WebhookEvent(
         | EventSMSFailed
         | EventSMSRejected
         | EventSMSSent
-        | EventSMSUndelivered,
+        | EventSMSUndelivered
+        | EventWhatsAppAccepted
+        | EventWhatsAppDelivered
+        | EventWhatsAppFailed
+        | EventWhatsAppRead
+        | EventWhatsAppSent,
         Field(
             description="Discriminated union of every webhook event the Bird platform emits.\nEach variant is the full delivery body: `type` names the event, `timestamp` is when the event occurred, and `data` carries the event-specific payload. The `type` property selects the variant — SDKs that consume this schema (openapi-typescript, oapi-codegen) generate a narrowed union keyed on `type`, so customer code can switch on the event id and access the variant-specific payload fields without casting.\nDelivery metadata (the event id and per-attempt signature headers) rides in HTTP headers per Standard Webhooks and is handled by the SDK's webhook verification helper, which returns one of these variants.\n",
             discriminator='type',

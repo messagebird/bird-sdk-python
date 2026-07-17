@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2
+
+- Add the WhatsApp webhook event types: `WHATSAPP_ACCEPTED`, `WHATSAPP_SENT`, `WHATSAPP_DELIVERED`, `WHATSAPP_READ`, and `WHATSAPP_FAILED`. Additive; no breaking change.
+
 ## 0.8.1
 
 - Docs: align the SDK example markers on the `audiences`, `contacts`, and `contact_properties` resources with their operation keys so the API reference renders their Python code samples. Marker comments only — no change to the published API or runtime.
