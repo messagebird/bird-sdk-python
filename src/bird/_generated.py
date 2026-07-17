@@ -3949,6 +3949,13 @@ class EventEmailProcessed(BaseModel):
     data: EventEmailProcessedData
 
 
+class Authentication(Enum):
+    pass_ = 'pass'
+    fail = 'fail'
+    unknown = 'unknown'
+    NoneType_None = None
+
+
 class EventEmailReceivedData(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -4006,6 +4013,12 @@ class EventEmailReceivedData(BaseModel):
         Field(
             description='In-Reply-To header — the Message-ID this message replies to, or null when it is not a reply.',
             examples=['<previous-message@example.com>'],
+        ),
+    ] = None
+    authentication: Annotated[
+        Authentication | None,
+        Field(
+            description="Whether the sender of the received message was authenticated. `pass` means the sender's identity was verified; `fail` means it was checked and did not verify; `unknown` means no verdict is available and the sender should not be treated as verified.\n"
         ),
     ] = None
     spf_pass: Annotated[
@@ -4365,6 +4378,12 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
             ge=0,
         ),
     ]
+    authentication: Annotated[
+        Authentication | None,
+        Field(
+            description="Whether the sender of the received message was authenticated. `pass` means the sender's identity was verified; `fail` means it was checked and did not verify; `unknown` means no verdict is available and the sender should not be treated as verified.\n"
+        ),
+    ] = None
     spf_pass: Annotated[
         bool | None,
         Field(
