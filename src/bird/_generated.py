@@ -1662,7 +1662,7 @@ class SMSMessage(BaseModel):
     last_error: Annotated[
         SMSError | None,
         Field(
-            description='Failure detail on a terminally failed or rejected message. Null otherwise.'
+            description='Failure detail on a terminally failed or rejected message. Present only when the message failed.'
         ),
     ] = None
     created_at: Annotated[
@@ -2429,44 +2429,22 @@ class WhatsAppMessageStatus(str, Enum):
     received = 'received'
 
 
-class WhatsAppMessageBusiness(BaseModel):
+class WhatsAppAddress(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
     phone_number: Annotated[
         str | None,
         Field(
-            description='E.164 phone number of the WhatsApp business account that sent the message.',
-            examples=['+15557654321'],
-            min_length=1,
-        ),
-    ] = None
-    phone_number_id: Annotated[
-        str | None,
-        Field(
-            description='The WhatsApp phone number identifier. Present only for account-owned numbers.',
-            examples=['397968058767338'],
-            min_length=1,
-        ),
-    ] = None
-
-
-class WhatsAppMessageContact(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    phone_number: Annotated[
-        str | None,
-        Field(
-            description="Contact's phone number in E.164 format, when known.",
-            examples=['+15551234567'],
+            description='Phone number in E.164 format, when known.',
+            examples=['+15550001111'],
             min_length=1,
         ),
     ] = None
     bsuid: Annotated[
         str | None,
         Field(
-            description="Business-scoped user ID (Meta's WhatsApp identifier for this contact within the business account), when available.",
+            description="Business-scoped user ID — Meta's identifier for the WhatsApp user. Present only on the WhatsApp-user side of the message.\n",
             examples=['NL.xxxx'],
             min_length=1,
         ),
@@ -2504,9 +2482,9 @@ class WhatsAppMessageTemplate(BaseModel):
         Field(
             description="The template's stable handle (for example `bird_otp`).",
             examples=['bird_otp'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern='^[a-z0-9_]+$',
         ),
     ]
     category: Annotated[
@@ -2582,8 +2560,19 @@ class WhatsAppMessage(BaseModel):
             description='Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).'
         ),
     ]
-    business: WhatsAppMessageBusiness
-    contact: WhatsAppMessageContact
+    from_: Annotated[
+        WhatsAppAddress,
+        Field(
+            alias='from',
+            description='Sender of the message. On outbound messages, the business number it was sent from; on inbound, the WhatsApp contact.',
+        ),
+    ]
+    to: Annotated[
+        WhatsAppAddress,
+        Field(
+            description='Recipient of the message. On outbound messages, the WhatsApp contact; on inbound, the business number.'
+        ),
+    ]
     template: Annotated[
         WhatsAppMessageTemplate | None,
         Field(
@@ -2594,7 +2583,7 @@ class WhatsAppMessage(BaseModel):
     last_error: Annotated[
         WhatsAppError | None,
         Field(
-            description='Failure detail for a message that did not reach the recipient. Null when there is no failure.'
+            description='Failure detail for a message that did not reach the recipient. Present only when the message failed.'
         ),
     ] = None
     created_at: Annotated[
@@ -2637,7 +2626,7 @@ class WhatsAppMessageList(FieldListEnvelope):
     ]
 
 
-class SendWhatsAppMessageTemplate(BaseModel):
+class WhatsAppTemplateSend(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -2646,9 +2635,9 @@ class SendWhatsAppMessageTemplate(BaseModel):
         Field(
             description='The template to send, by its name (for example `bird_otp`).',
             examples=['bird_otp'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern='^[a-z0-9_]+$',
         ),
     ]
     language: Annotated[
@@ -2665,7 +2654,7 @@ class SendWhatsAppMessageTemplate(BaseModel):
     ] = None
 
 
-class SendWhatsAppMessageRequest(BaseModel):
+class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -2678,7 +2667,7 @@ class SendWhatsAppMessageRequest(BaseModel):
         ),
     ]
     template: Annotated[
-        SendWhatsAppMessageTemplate | None,
+        WhatsAppTemplateSend | None,
         Field(
             description="The template to send. Bird selects the sender number from the template's category, so there is no sender field on this request. Templates are currently the only supported content type, so every send must include one; free-text content will be added in a future release.\n"
         ),
@@ -2724,9 +2713,7 @@ class WhatsAppEvent(BaseModel):
     ]
     error: Annotated[
         WhatsAppError | None,
-        Field(
-            description='Failure detail. Present on `whatsapp.failed` events; null otherwise.'
-        ),
+        Field(description='Failure detail. Present only on `whatsapp.failed` events.'),
     ] = None
 
 
@@ -2837,9 +2824,9 @@ class WhatsAppTemplate(BaseModel):
         Field(
             description="The template's stable handle. Pass it as the template reference when sending.",
             examples=['bird_otp'],
-            max_length=63,
+            max_length=512,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern='^[a-z0-9_]+$',
         ),
     ]
     scope: TemplateScope
@@ -4949,28 +4936,6 @@ class EventSMSUndelivered(BaseModel):
         ),
     ]
     data: EventSMSUndeliveredData
-
-
-class WhatsAppAddress(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    phone_number: Annotated[
-        str | None,
-        Field(
-            description='Phone number in E.164 format, when known.',
-            examples=['+15550001111'],
-            min_length=1,
-        ),
-    ] = None
-    bsuid: Annotated[
-        str | None,
-        Field(
-            description="Business-scoped user ID — Meta's identifier for the WhatsApp user. Present only on the WhatsApp-user side of the message.\n",
-            examples=['NL.xxxx'],
-            min_length=1,
-        ),
-    ] = None
 
 
 class EventWhatsAppBase(BaseModel):
