@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.4
+
+- **Breaking:** the contact list free-text filter is now `q` (was `search`), matching the API's renamed query parameter. Update `client.contacts.list(search=...)` to `client.contacts.list(q=...)`.
+
 ## 0.8.3
 
 - Received messages and the `email.received` event now carry `authentication` (`pass`/`fail`/`unknown`), a single summary of sender authentication; treat `unknown` as not verified. The `spf_pass`/`dkim_pass`/`dmarc_pass` fields remain. Additive; no breaking change.

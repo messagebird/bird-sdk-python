@@ -192,7 +192,7 @@ class Contacts:
         *,
         email: str | None = None,
         external_id: str | None = None,
-        search: str | None = None,
+        q: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -202,12 +202,12 @@ class Contacts:
         up by exact ``email`` or ``external_id``, or search by email substring.
 
         ```python
-        for contact in client.contacts.list(search="acme.com"):
+        for contact in client.contacts.list(q="acme.com"):
             print(contact.id, contact.email)
         ```
         """
         query = _list_query({
-            "email": email, "external_id": external_id, "search": search,
+            "email": email, "external_id": external_id, "q": q,
             "limit": limit, "starting_after": starting_after, "ending_before": ending_before,
         })
         return SyncPage(self._client, _PATH, query, Contact, options)
@@ -286,7 +286,7 @@ class AsyncContacts:
         *,
         email: str | None = None,
         external_id: str | None = None,
-        search: str | None = None,
+        q: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -294,7 +294,7 @@ class AsyncContacts:
     ) -> AsyncPage[Contact]:
         """List contacts, newest first; ``async for`` over the page to auto-paginate."""
         query = _list_query({
-            "email": email, "external_id": external_id, "search": search,
+            "email": email, "external_id": external_id, "q": q,
             "limit": limit, "starting_after": starting_after, "ending_before": ending_before,
         })
         return AsyncPage(self._client, _PATH, query, Contact, options)

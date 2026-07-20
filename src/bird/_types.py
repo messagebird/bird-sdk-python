@@ -205,7 +205,7 @@ class ContactListParams(TypedDict, total=False):
 
     email: str
     external_id: str
-    search: str
+    q: str
     limit: int
     starting_after: str
     ending_before: str

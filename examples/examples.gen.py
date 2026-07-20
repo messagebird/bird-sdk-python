@@ -115,7 +115,7 @@ async def _ex_19() -> None:
 
 
 async def _ex_20() -> None:
-    for contact in client.contacts.list(search="acme.com"):
+    for contact in client.contacts.list(q="acme.com"):
         print(contact.id, contact.email)
 
 
