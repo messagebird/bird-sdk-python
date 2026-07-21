@@ -4938,6 +4938,193 @@ class EventSMSUndelivered(BaseModel):
     data: EventSMSUndeliveredData
 
 
+class VoiceSessionID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['vcs_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^vcs_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class VoiceCallDirection(str, Enum):
+    inbound = 'inbound'
+    outbound = 'outbound'
+
+
+class EventVoiceBase(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    call_id: Annotated[
+        str,
+        Field(
+            description='ID of the call record.',
+            examples=['vcl_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^vcl_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    session_id: Annotated[
+        VoiceSessionID | None,
+        Field(
+            description='Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. Null when session correlation is not available for the call.'
+        ),
+    ] = None
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='ID of the workspace.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    direction: VoiceCallDirection
+    src_number: Annotated[
+        str,
+        Field(
+            description='Calling party number in E.164 format.',
+            examples=['+14155551234'],
+            min_length=1,
+        ),
+    ]
+    dst_number: Annotated[
+        str,
+        Field(
+            description='Called party number in E.164 format.',
+            examples=['+16505559876'],
+            min_length=1,
+        ),
+    ]
+
+
+class EventVoiceCallAnsweredData(EventVoiceBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type37(str, Enum):
+    voice_call_answered = 'voice.call.answered'
+
+
+class EventVoiceCallAnswered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['voice.call.answered'],
+        Field(description='Event type.', examples=['voice.call.answered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the call was answered.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVoiceCallAnsweredData
+
+
+class VoiceCallStatus(str, Enum):
+    answered = 'answered'
+    no_answer = 'no_answer'
+    busy = 'busy'
+    canceled = 'canceled'
+    failed = 'failed'
+    rejected = 'rejected'
+    unknown = 'unknown'
+    ringing = 'ringing'
+    in_progress = 'in_progress'
+
+
+class EventVoiceCallEndedData(EventVoiceBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status: VoiceCallStatus
+    sip_response_code: Annotated[
+        int | None,
+        Field(
+            description='Final SIP response code received from the carrier. Null when no SIP response was received, for example on timeout or DNS failure.',
+            examples=[200],
+            ge=100,
+        ),
+    ]
+    duration_ms: Annotated[
+        int,
+        Field(
+            description='Total call duration in milliseconds, measured from the first INVITE to the BYE or final response.',
+            examples=[65000],
+            ge=0,
+        ),
+    ]
+    billable_ms: Annotated[
+        int,
+        Field(
+            description='Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls.',
+            examples=[60000],
+            ge=0,
+        ),
+    ]
+
+
+class Type38(str, Enum):
+    voice_call_ended = 'voice.call.ended'
+
+
+class EventVoiceCallEnded(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['voice.call.ended'],
+        Field(description='Event type.', examples=['voice.call.ended']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='When the call ended (BYE or final non-2xx response).',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVoiceCallEndedData
+
+
+class EventVoiceCallInitiatedData(EventVoiceBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class Type39(str, Enum):
+    voice_call_initiated = 'voice.call.initiated'
+
+
+class EventVoiceCallInitiated(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['voice.call.initiated'],
+        Field(description='Event type.', examples=['voice.call.initiated']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the call was initiated.',
+            examples=['2026-05-21 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVoiceCallInitiatedData
+
+
 class EventWhatsAppBase(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -5000,7 +5187,7 @@ class EventWhatsAppAcceptedData(EventWhatsAppBase):
     )
 
 
-class Type37(str, Enum):
+class Type40(str, Enum):
     whatsapp_accepted = 'whatsapp.accepted'
 
 
@@ -5029,7 +5216,7 @@ class EventWhatsAppDeliveredData(EventWhatsAppBase):
     )
 
 
-class Type38(str, Enum):
+class Type41(str, Enum):
     whatsapp_delivered = 'whatsapp.delivered'
 
 
@@ -5061,7 +5248,7 @@ class EventWhatsAppFailedData(EventWhatsAppBase):
     ]
 
 
-class Type39(str, Enum):
+class Type42(str, Enum):
     whatsapp_failed = 'whatsapp.failed'
 
 
@@ -5090,7 +5277,7 @@ class EventWhatsAppReadData(EventWhatsAppBase):
     )
 
 
-class Type40(str, Enum):
+class Type43(str, Enum):
     whatsapp_read = 'whatsapp.read'
 
 
@@ -5119,7 +5306,7 @@ class EventWhatsAppSentData(EventWhatsAppBase):
     )
 
 
-class Type41(str, Enum):
+class Type44(str, Enum):
     whatsapp_sent = 'whatsapp.sent'
 
 
@@ -5175,6 +5362,9 @@ class WebhookEvent(
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered
+        | EventVoiceCallAnswered
+        | EventVoiceCallEnded
+        | EventVoiceCallInitiated
         | EventWhatsAppAccepted
         | EventWhatsAppDelivered
         | EventWhatsAppFailed
@@ -5214,6 +5404,9 @@ class WebhookEvent(
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered
+        | EventVoiceCallAnswered
+        | EventVoiceCallEnded
+        | EventVoiceCallInitiated
         | EventWhatsAppAccepted
         | EventWhatsAppDelivered
         | EventWhatsAppFailed
