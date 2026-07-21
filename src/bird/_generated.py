@@ -4579,13 +4579,6 @@ class EventEmailMailboxThreadCreated(BaseModel):
     data: EventEmailMailboxThreadCreatedData
 
 
-class Reason(str, Enum):
-    hard_bounce = 'hard_bounce'
-    complaint = 'complaint'
-    unsubscribe = 'unsubscribe'
-    manual = 'manual'
-
-
 class EventEmailSuppressionCreatedData(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -4608,8 +4601,12 @@ class EventEmailSuppressionCreatedData(BaseModel):
         ),
     ]
     reason: Annotated[
-        Reason,
-        Field(description='Why the address was suppressed.', examples=['hard_bounce']),
+        str,
+        Field(
+            description='Why the address was suppressed. This list grows over time — treat unknown values as informational rather than rejecting the event.\n',
+            examples=['hard_bounce'],
+            min_length=1,
+        ),
     ]
     workspace_id: Annotated[
         str,
