@@ -15,6 +15,7 @@ from bird._generated import (
 
 from bird._models import to_wire
 from bird._response import APIResponse
+from bird.resources.email_stats import AsyncEmailStats, EmailStats
 from bird._types import (
     Attachment,
     EmailAddressInput,
@@ -159,6 +160,7 @@ class Email:
     def __init__(self, client: SyncAPIClient, defaults: EmailDefaults | None = None) -> None:
         self._client = client
         self._defaults = defaults
+        self.stats = EmailStats(client)
 
     @property
     def with_raw_response(self) -> "EmailWithRawResponse":
@@ -350,6 +352,7 @@ class AsyncEmail:
     def __init__(self, client: AsyncAPIClient, defaults: EmailDefaults | None = None) -> None:
         self._client = client
         self._defaults = defaults
+        self.stats = AsyncEmailStats(client)
 
     @property
     def with_raw_response(self) -> "AsyncEmailWithRawResponse":

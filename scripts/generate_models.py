@@ -15,6 +15,7 @@ is checked in and guarded by the repo drift gate.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -26,7 +27,13 @@ from surface_ops import KEEP  # generated from the surface catalog; see surface_
 
 ROOT = Path(__file__).resolve().parent.parent
 BUNDLE = ROOT.parent.parent / "backend/openapi/.generated/openapi.public.bundle.yaml"
-OUT = ROOT / "src/bird/_generated.py"
+# Under beak, codegen writes to the per-run stage; beak sweeps it back.
+_STAGE = os.environ.get("BEAK_STAGE")
+OUT = (
+    Path(_STAGE) / "clients/sdk-python/src/bird/_generated.py"
+    if _STAGE
+    else ROOT / "src/bird/_generated.py"
+)
 
 HTTP_METHODS = {"get", "put", "post", "delete", "patch", "options", "head", "trace"}
 
@@ -139,7 +146,7 @@ def main() -> None:
         ],
         check=True,
     )
-    print(f"generated models into {OUT.relative_to(ROOT)}")
+    print(f"generated models into {OUT.relative_to(ROOT) if not _STAGE else OUT}")
 
 
 if __name__ == "__main__":
