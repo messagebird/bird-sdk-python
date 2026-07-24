@@ -2441,6 +2441,7 @@ class WhatsAppMessageStatus(str, Enum):
     sent = 'sent'
     delivered = 'delivered'
     failed = 'failed'
+    rejected = 'rejected'
     canceled = 'canceled'
     received = 'received'
 
@@ -2557,7 +2558,7 @@ class WhatsAppError(BaseModel):
     code: Annotated[
         str,
         Field(
-            description='Bird-stable failure reason, uniform whether the failure happened internally or was reported by the WhatsApp network. `insufficient_balance`: the workspace could not afford the send. `price_not_found`: no price was configured for this destination/template combination. `internal_error`: an unexpected Bird-side failure. `undeliverable`: the recipient could not be reached (for example not on WhatsApp, or the number is invalid). `service_window_expired`: the 24-hour customer care window has closed and a free-form message cannot be sent; send a template instead. `rate_limited`: the send was throttled. Open enum: new codes may be added over time, so treat any unrecognized value as a future code rather than an error.\n',
+            description="Failure reason, uniform whether the failure happened internally or was reported by the WhatsApp network. `insufficient_balance`: the workspace could not afford the send. `price_not_found`: no price was configured for this destination/template combination. `internal_error`: an unexpected Bird-side failure. `undeliverable`: the recipient could not be reached (for example not on WhatsApp, or the number is invalid). `service_window_expired`: the 24-hour customer care window has closed and a free-form message cannot be sent; send a template instead. `rate_limited`: the send was throttled. `recipient_suppressed`: the recipient is on the workspace's suppression list; the message was rejected before sending. Open enum: new codes may be added over time, so treat any unrecognized value as a future code rather than an error.\n",
             min_length=1,
         ),
     ]
@@ -6878,7 +6879,7 @@ class EventVoiceCallAnsweredData(EventVoiceBase):
 
 
 class Type41(str, Enum):
-    voice_call_answered = 'voice.call.answered'
+    voice_call_answered = 'voice_call.answered'
 
 
 class EventVoiceCallAnswered(BaseModel):
@@ -6886,8 +6887,8 @@ class EventVoiceCallAnswered(BaseModel):
         extra='allow',
     )
     type: Annotated[
-        Literal['voice.call.answered'],
-        Field(description='Event type.', examples=['voice.call.answered']),
+        Literal['voice_call.answered'],
+        Field(description='Event type.', examples=['voice_call.answered']),
     ]
     timestamp: Annotated[
         str,
@@ -6944,7 +6945,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
 
 
 class Type42(str, Enum):
-    voice_call_ended = 'voice.call.ended'
+    voice_call_ended = 'voice_call.ended'
 
 
 class EventVoiceCallEnded(BaseModel):
@@ -6952,8 +6953,8 @@ class EventVoiceCallEnded(BaseModel):
         extra='allow',
     )
     type: Annotated[
-        Literal['voice.call.ended'],
-        Field(description='Event type.', examples=['voice.call.ended']),
+        Literal['voice_call.ended'],
+        Field(description='Event type.', examples=['voice_call.ended']),
     ]
     timestamp: Annotated[
         str,
@@ -6973,7 +6974,7 @@ class EventVoiceCallInitiatedData(EventVoiceBase):
 
 
 class Type43(str, Enum):
-    voice_call_initiated = 'voice.call.initiated'
+    voice_call_initiated = 'voice_call.initiated'
 
 
 class EventVoiceCallInitiated(BaseModel):
@@ -6981,8 +6982,8 @@ class EventVoiceCallInitiated(BaseModel):
         extra='allow',
     )
     type: Annotated[
-        Literal['voice.call.initiated'],
-        Field(description='Event type.', examples=['voice.call.initiated']),
+        Literal['voice_call.initiated'],
+        Field(description='Event type.', examples=['voice_call.initiated']),
     ]
     timestamp: Annotated[
         str,
@@ -7170,13 +7171,46 @@ class EventWhatsAppRead(BaseModel):
     data: EventWhatsAppReadData
 
 
+class EventWhatsAppRejectedData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    error: Annotated[
+        WhatsAppError | None,
+        Field(description='Why the message was rejected before sending.'),
+    ]
+
+
+class Type48(str, Enum):
+    whatsapp_rejected = 'whatsapp.rejected'
+
+
+class EventWhatsAppRejected(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['whatsapp.rejected'],
+        Field(description='Event type.', examples=['whatsapp.rejected']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the rejection was recorded.',
+            examples=['2026-07-23 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppRejectedData
+
+
 class EventWhatsAppSentData(EventWhatsAppBase):
     model_config = ConfigDict(
         extra='allow',
     )
 
 
-class Type48(str, Enum):
+class Type49(str, Enum):
     whatsapp_sent = 'whatsapp.sent'
 
 
@@ -7243,6 +7277,7 @@ class WebhookEvent(
         | EventWhatsAppDelivered
         | EventWhatsAppFailed
         | EventWhatsAppRead
+        | EventWhatsAppRejected
         | EventWhatsAppSent
     ]
 ):
@@ -7289,6 +7324,7 @@ class WebhookEvent(
         | EventWhatsAppDelivered
         | EventWhatsAppFailed
         | EventWhatsAppRead
+        | EventWhatsAppRejected
         | EventWhatsAppSent,
         Field(
             description="Discriminated union of every webhook event the Bird platform emits.\n\nEach variant is the full delivery body: `type` names the event, `timestamp` is when the\nevent occurred, and `data` carries the event-specific payload. The `type` property\nselects the variant, and the generated SDK types narrow on it, so your code can switch\non the event id and read the variant-specific payload fields without casting.\n\nDelivery metadata (the event id and per-attempt signature headers) rides in HTTP headers\nper Standard Webhooks and is handled by the SDK's webhook verification helper, which\nreturns one of these variants. See the [webhooks guide](/docs/guides/webhooks) for\nheader names and the verification recipe.\n",
