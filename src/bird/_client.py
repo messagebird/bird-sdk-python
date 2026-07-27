@@ -31,6 +31,8 @@ from bird.resources.verify import AsyncVerify, Verify
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
 from bird.resources.whatsapp_templates import AsyncWhatsappTemplates, WhatsappTemplates
+from bird.resources.mailbox import AsyncMailboxes, Mailboxes
+from bird.resources.mailbox_thread import AsyncMailboxThreads, MailboxThreads
 
 _REGION_PREFIX = re.compile(r"^bk_([a-z]{2}[0-9]+)_")
 
@@ -158,6 +160,10 @@ class Bird(SyncAPIClient):
         self.audiences = Audiences(self)
         self.domains = Domains(self)
         self.webhooks = Webhooks(webhook_secret)
+        self.mailbox = Mailboxes(self)
+        self.mailbox_receive_rule = self.mailbox.receive_rules
+        self.mailbox_thread = MailboxThreads(self)
+        self.mailbox_thread_message = self.mailbox_thread.messages
 
     def with_options(
         self,
@@ -258,6 +264,10 @@ class AsyncBird(AsyncAPIClient):
         self.audiences = AsyncAudiences(self)
         self.domains = AsyncDomains(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
+        self.mailbox = AsyncMailboxes(self)
+        self.mailbox_receive_rule = self.mailbox.receive_rules
+        self.mailbox_thread = AsyncMailboxThreads(self)
+        self.mailbox_thread_message = self.mailbox_thread.messages
 
     def with_options(
         self,

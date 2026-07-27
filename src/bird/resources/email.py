@@ -15,7 +15,7 @@ from bird._generated import (
 
 from bird._models import to_wire
 from bird._response import APIResponse
-from bird.resources.email_stats import AsyncEmailStats, EmailStats
+from bird.resources.email_stats_gen import AsyncEmailStats, EmailStats
 from bird._types import (
     Attachment,
     EmailAddressInput,

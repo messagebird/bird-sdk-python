@@ -337,11 +337,142 @@ async def _ex_50() -> None:
 
 
 async def _ex_51() -> None:
+    msg = client.mailbox.compose(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg",
+        to=[{"address": "user@example.com"}],
+        subject="Hello",
+        text="Hi there",
+    )
+    print(msg.id, msg.thread_id)
+
+
+async def _ex_52() -> None:
+    mailbox = client.mailbox.create(display_name="Acme Support")
+    print(mailbox.id)
+
+
+async def _ex_53() -> None:
+    client.mailbox.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_54() -> None:
+    mailbox = client.mailbox.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.address)
+
+
+async def _ex_55() -> None:
+    labels = client.mailbox.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    for label in labels.data:
+        print(label.name)
+
+
+async def _ex_56() -> None:
+    for mailbox in client.mailbox.list():
+        print(mailbox.id, mailbox.address)
+
+
+async def _ex_57() -> None:
+    mailbox = client.mailbox.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.id)
+
+
+async def _ex_58() -> None:
+    mailbox = client.mailbox.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.id)
+
+
+async def _ex_59() -> None:
+    stats = client.mailbox.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(stats.summary)
+
+
+async def _ex_60() -> None:
+    mailbox = client.mailbox.update("mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing")
+    print(mailbox.display_name)
+
+
+async def _ex_61() -> None:
+    rule = client.mailbox_receive_rule.create(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com",
+    )
+    print(rule.id)
+
+
+async def _ex_62() -> None:
+    client.mailbox_receive_rule.delete(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+
+
+async def _ex_63() -> None:
+    for rule in client.mailbox_receive_rule.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(rule.id, rule.action)
+
+
+async def _ex_64() -> None:
+    client.mailbox_thread.delete("thr_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_65() -> None:
+    thread = client.mailbox_thread.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
+    print(thread.subject)
+
+
+async def _ex_66() -> None:
+    for thread in client.mailbox_thread.list():
+        print(thread.id, thread.subject)
+
+
+async def _ex_67() -> None:
+    thread = client.mailbox_thread.update(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg",
+        labels={"add": ["archive"]},
+    )
+    print(thread.id)
+
+
+async def _ex_68() -> None:
+    result = client.mailbox_thread_message.attachments(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    for attachment in result.data:
+        print(attachment.filename, attachment.size)
+
+
+async def _ex_69() -> None:
+    body = client.mailbox_thread_message.body(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    print(body.html)
+
+
+async def _ex_70() -> None:
+    message = client.mailbox_thread_message.get(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    print(message.subject)
+
+
+async def _ex_71() -> None:
+    for message in client.mailbox_thread_message.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(message.id, message.subject)
+
+
+async def _ex_72() -> None:
+    reply = client.mailbox_thread_message.reply(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg",
+        "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        text="Thanks for reaching out!",
+    )
+    print(reply.id)
+
+
+async def _ex_73() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_52() -> None:
+async def _ex_74() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -350,7 +481,7 @@ async def _ex_52() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_53() -> None:
+async def _ex_75() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -358,46 +489,46 @@ async def _ex_53() -> None:
     )
 
 
-async def _ex_54() -> None:
+async def _ex_76() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_55() -> None:
+async def _ex_77() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_56() -> None:
+async def _ex_78() -> None:
     result = client.verify.verifications.check("123456", phone="+15551234567")
     print(result.success)
 
 
-async def _ex_57() -> None:
+async def _ex_79() -> None:
     verification = client.verify.verifications.create(phone="+15551234567")
     print(verification.id, verification.status)
 
 
-async def _ex_58() -> None:
+async def _ex_80() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_59() -> None:
+async def _ex_81() -> None:
     for message in client.whatsapp.list(status=["delivered"]):
         print(message.id, message.status)
 
 
-async def _ex_60() -> None:
+async def _ex_82() -> None:
     events = client.whatsapp.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_61() -> None:
+async def _ex_83() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -407,7 +538,7 @@ async def _ex_61() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_62() -> None:
+async def _ex_84() -> None:
     templates = client.whatsapp_templates.list()
     for template in templates.data:
         print(template.name, template.status)

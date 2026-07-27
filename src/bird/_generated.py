@@ -4956,6 +4956,1026 @@ class DomainUpdate(BaseModel):
     inbound: DomainInboundConfig | None = None
 
 
+class Type6(str, Enum):
+    workspace = 'workspace'
+
+
+class MailboxOwner(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[Type6, Field(description='Owner principal type.')]
+    id: Annotated[
+        str,
+        Field(
+            description='Owner principal ID.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class ReceivePolicy(str, Enum):
+    open = 'open'
+    replies_only = 'replies_only'
+    allowlist = 'allowlist'
+    drop = 'drop'
+
+
+class State1(str, Enum):
+    active = 'active'
+    suspended = 'suspended'
+
+
+class Channel(str, Enum):
+    email = 'email'
+
+
+class RetentionTier(str, Enum):
+    field_30d = '30d'
+    field_90d = '90d'
+    field_1y = '1y'
+
+
+class Mailbox(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Mailbox ID.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    address: Annotated[
+        str,
+        Field(
+            description="The mailbox's email address. Immutable once created.",
+            examples=['concierge@inbox.ai'],
+            min_length=5,
+        ),
+    ]
+    display_name: Annotated[
+        str | None,
+        Field(
+            description='Display name used as the sender name on mail from this mailbox. Null when unset.',
+            examples=['Acme Concierge'],
+            max_length=255,
+        ),
+    ]
+    default_reply_to: Annotated[
+        str | None,
+        Field(
+            description='Default Reply-To address stamped on mail sent from this mailbox. Null when unset.'
+        ),
+    ]
+    receive_policy: Annotated[
+        ReceivePolicy,
+        Field(
+            description='Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule (replies to prior outbound are always admitted unless blocked); `drop` stores nothing.'
+        ),
+    ]
+    state: Annotated[
+        State1,
+        Field(
+            description='Lifecycle state. Suspended mailboxes stop emitting events; inbound mail is retained as blocked.'
+        ),
+    ]
+    channel: Annotated[
+        Channel,
+        Field(description='The channel this mailbox receives on. Always `email`.'),
+    ]
+    owner: MailboxOwner
+    inbound_address_id: Annotated[
+        str,
+        Field(
+            description="The underlying inbound address that receives this mailbox's mail.",
+            examples=['ina_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ina_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    retention_tier: Annotated[
+        RetentionTier,
+        Field(
+            description='How long the mailbox remembers message metadata and extracted text. Original rendered source (HTML, raw message, attachments) is always available for 30 days regardless of tier. `3y` and `10y` are reserved future tiers.'
+        ),
+    ]
+    message_count: Annotated[
+        int, Field(description='Number of retained messages across all threads.')
+    ]
+    thread_count: Annotated[int, Field(description='Number of retained threads.')]
+    unread_thread_count: Annotated[
+        int | None,
+        Field(
+            description='Number of threads with unread messages in this mailbox, excluding trash. Null on create/update responses.\n'
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any],
+        Field(
+            description='Your own key/value data attached to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved.'
+        ),
+    ]
+    local_part_generated: Annotated[
+        bool | None,
+        Field(
+            description="Whether Bird generated the local part of the address. `false` means a custom handle was chosen at creation; on the shared `inbox.ai` domain a custom handle counts against your plan's custom-handle allowance."
+        ),
+    ] = None
+    created_at: Annotated[
+        str, Field(description='When the mailbox was created.', min_length=1)
+    ]
+    updated_at: Annotated[
+        str, Field(description='When the mailbox was last updated.', min_length=1)
+    ]
+    deleted_at: Annotated[
+        str | None,
+        Field(
+            description='When the mailbox was deleted, or null if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and its remembered messages are permanently removed.'
+        ),
+    ] = None
+
+
+class MailboxList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[Mailbox]
+
+
+class RetentionTier1(str, Enum):
+    field_30d = '30d'
+
+
+class MailboxCreate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    local_part: Annotated[
+        str | None,
+        Field(
+            description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens; stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits (no leading, trailing, or repeated separators), reserved names such as `postmaster` or `abuse` are unavailable, and choosing your own local part uses one of your plan's custom-handle allowance slots (generated addresses are always available). Omit to have Bird generate a random local part.",
+            examples=['concierge'],
+            max_length=64,
+            min_length=1,
+            pattern='^[A-Za-z0-9._-]+$',
+        ),
+    ] = None
+    domain: Annotated[
+        str | None,
+        Field(
+            description="The domain the address lives under. Defaults to `inbox.ai`, Bird's shared mailbox domain, where creating the mailbox claims the address for your organization: first come, first served, and permanently reserved to your organization even after the mailbox is deleted. May instead name one of your own domains that is enabled for receiving email.",
+            examples=['mail.acme.com'],
+            max_length=255,
+            min_length=1,
+        ),
+    ] = 'inbox.ai'
+    display_name: Annotated[
+        str | None,
+        Field(
+            description='Display name used as the sender name on mail from this mailbox.',
+            examples=['Acme Concierge'],
+            max_length=255,
+            min_length=1,
+        ),
+    ] = None
+    default_reply_to: Annotated[
+        str | None,
+        Field(
+            description='Default Reply-To address stamped on mail sent from this mailbox.',
+            min_length=5,
+        ),
+    ] = None
+    receive_policy: Annotated[
+        ReceivePolicy | None,
+        Field(
+            description='Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule; `drop` stores nothing.'
+        ),
+    ] = 'open'
+    retention_tier: Annotated[
+        RetentionTier1 | None,
+        Field(
+            description='How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon.'
+        ),
+    ] = '30d'
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Your own key/value data to attach to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved.'
+        ),
+    ] = None
+
+
+class MailboxUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    display_name: Annotated[
+        str | None,
+        Field(
+            description='Display name used as the sender name on mail from this mailbox. Null clears it.',
+            max_length=255,
+        ),
+    ] = None
+    default_reply_to: Annotated[
+        str | None,
+        Field(
+            description='Default Reply-To address stamped on mail sent from this mailbox. Null clears it.'
+        ),
+    ] = None
+    receive_policy: Annotated[
+        ReceivePolicy | None,
+        Field(description='Which inbound mail the mailbox accepts.'),
+    ] = None
+    retention_tier: Annotated[
+        RetentionTier1 | None,
+        Field(
+            description='How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes memory older than the new horizon and requires `confirm=true` when messages older than the new horizon would be deleted. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon.'
+        ),
+    ] = '30d'
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Replaces the mailbox's key/value data. Up to 2 KB; keys starting with `__bird` are reserved."
+        ),
+    ] = None
+
+
+class MailboxStatsSummary(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    sends_accepted: Annotated[
+        int,
+        Field(
+            description='Distinct email messages the mailbox sent that were accepted, counted at the message level and summed per bucket across the period.',
+            examples=[231],
+            ge=0,
+        ),
+    ]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+    received: Annotated[
+        int,
+        Field(
+            description='Distinct emails the mailbox received, summed per bucket across the period.',
+            examples=[519],
+            ge=0,
+        ),
+    ]
+
+
+class MailboxStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    bucket: Annotated[
+        str,
+        Field(
+            description="The day (YYYY-MM-DD) or instant (RFC 3339, on the bucket boundary) this point covers, matching the period's grain.",
+            examples=['2026-07-21'],
+            min_length=1,
+        ),
+    ]
+    sends_accepted: Annotated[
+        int,
+        Field(
+            description='Distinct email messages the mailbox sent that were accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other sent-mail metric in `delivery` and `engagement` is recipient-level or event-level.\n',
+            examples=[12],
+            ge=0,
+        ),
+    ]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+    received: Annotated[
+        int,
+        Field(
+            description='Distinct emails the mailbox received in this bucket.',
+            examples=[34],
+            ge=0,
+        ),
+    ]
+
+
+class MailboxStatsResponse(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    period: EmailStatsSeriesPeriod
+    summary: MailboxStatsSummary
+    data: Annotated[
+        list[MailboxStatsPoint],
+        Field(
+            description='One row per bucket in the period, in chronological order. Buckets with no activity are included with zero counts.'
+        ),
+    ]
+
+
+class Action(str, Enum):
+    allow = 'allow'
+    block = 'block'
+
+
+class EntryType(str, Enum):
+    address = 'address'
+    domain = 'domain'
+
+
+class ReceiveRule(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Receive rule ID.',
+            examples=['erl_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^erl_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='The mailbox the rule applies to.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    action: Annotated[
+        Action,
+        Field(
+            description='What the rule does when it matches. Block rules always win — over allow rules and over the reply admission on allowlist mailboxes.'
+        ),
+    ]
+    entry: Annotated[
+        str,
+        Field(
+            description='The sender address or domain the rule matches. Domains also match their subdomains.',
+            examples=['partner.example.com'],
+            max_length=255,
+            min_length=1,
+        ),
+    ]
+    entry_type: Annotated[
+        EntryType, Field(description='Whether the entry is a full address or a domain.')
+    ]
+    note: Annotated[
+        str | None,
+        Field(
+            description='Your own note about why the rule exists. Null when unset.',
+            max_length=512,
+        ),
+    ]
+    created_at: Annotated[
+        str, Field(description='When the rule was created.', min_length=1)
+    ]
+
+
+class ReceiveRuleList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[ReceiveRule]
+
+
+class ReceiveRuleCreate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    action: Annotated[
+        Action,
+        Field(
+            description="What the rule does when it matches. Block rules always win. To flip an entry's action, delete the existing rule and re-create it."
+        ),
+    ]
+    entry: Annotated[
+        str,
+        Field(
+            description='The sender address (`alice@example.com`) or domain (`example.com`) to match. Domains also match their subdomains. Stored lowercase.',
+            examples=['partner.example.com'],
+            max_length=255,
+            min_length=1,
+        ),
+    ]
+    note: Annotated[
+        str | None,
+        Field(
+            description='Your own note about why the rule exists.',
+            max_length=512,
+            min_length=1,
+        ),
+    ] = None
+
+
+class SubjectItem(RootModel[str]):
+    root: Annotated[str, Field(min_length=1)]
+
+
+class TextItem(RootModel[str]):
+    root: Annotated[str, Field(min_length=1)]
+
+
+class EmailThreadHighlights(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    subject: Annotated[
+        list[SubjectItem] | None,
+        Field(
+            description="Matched fragments from the conversation's subject.",
+            examples=[['Re: your **order** **4821**']],
+        ),
+    ] = None
+    text: Annotated[
+        list[TextItem] | None,
+        Field(
+            description="Matched fragments from a message's body text.",
+            examples=[['confirming your **order** **4821** shipped']],
+        ),
+    ] = None
+
+
+class LastDirection(str, Enum):
+    inbound = 'inbound'
+    outbound = 'outbound'
+
+
+class Label(RootModel[str]):
+    root: Annotated[str, Field(max_length=64, min_length=1)]
+
+
+class EmailThread(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Thread ID.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    mailbox_id: Annotated[
+        str,
+        Field(
+            description='Mailbox this conversation belongs to.',
+            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    channel: Annotated[
+        str,
+        Field(
+            description='Channel this conversation lives on. Always `email`.',
+            examples=['email'],
+            min_length=1,
+        ),
+    ]
+    contact_id: Annotated[
+        ContactID | None,
+        Field(
+            description='Contact linked to this conversation, or null when none is linked.'
+        ),
+    ]
+    subject: Annotated[
+        str | None,
+        Field(
+            description='Subject of the conversation, taken from its first message. Null when that message had no subject.',
+            examples=['Re: Your order'],
+        ),
+    ]
+    participants: Annotated[
+        list[str],
+        Field(
+            description="Addresses that appear on the retained messages in this conversation, including the mailbox's own address."
+        ),
+    ]
+    message_count: Annotated[
+        int,
+        Field(
+            description='Number of retained messages in this conversation, both directions.',
+            ge=0,
+        ),
+    ]
+    unread_count: Annotated[
+        int,
+        Field(
+            description='Number of retained received messages that are still unread. Spam and blocked mail is not counted.',
+            ge=0,
+        ),
+    ]
+    last_message_at: Annotated[
+        str,
+        Field(
+            description='When the most recent retained message in this conversation was received or sent.',
+            min_length=1,
+        ),
+    ]
+    last_direction: Annotated[
+        LastDirection,
+        Field(
+            description='Direction of the most recent message — `inbound` for a received message, `outbound` for a sent one.'
+        ),
+    ]
+    labels: Annotated[
+        list[Label],
+        Field(
+            description="Labels on this conversation. Exactly one system placement label is always present — `inbox`, `archive` (filed away, done for now), `spam` (the opening message failed sender authentication), or `blocked` (rejected by the mailbox's receive policy or rules) — set by the message that started the conversation. Move a conversation by updating its labels: add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox` — or remove `spam`, `blocked`, or `archive` — to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list; a conversation carries at most 20.\n",
+            examples=[['inbox', 'urgent']],
+            max_length=20,
+        ),
+    ]
+    created_at: Annotated[
+        str, Field(description='When the thread was created.', min_length=1)
+    ]
+    updated_at: Annotated[
+        str, Field(description='When the thread last changed.', min_length=1)
+    ]
+    highlights: Annotated[
+        EmailThreadHighlights | None,
+        Field(
+            description='Matched search fragments, keyed by the field that matched. Returned only by thread search; omitted when listing threads.\n'
+        ),
+    ] = None
+
+
+class EmailThreadList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[EmailThread]
+
+
+class AddItem(RootModel[str]):
+    root: Annotated[
+        str, Field(max_length=64, min_length=1, pattern='^[^,\\s](?:[^,]*[^,\\s])?$')
+    ]
+
+
+class RemoveItem(RootModel[str]):
+    root: Annotated[
+        str, Field(max_length=64, min_length=1, pattern='^[^,\\s](?:[^,]*[^,\\s])?$')
+    ]
+
+
+class EmailLabelsUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    add: Annotated[
+        list[AddItem] | None,
+        Field(description='Labels to apply.', examples=[['urgent']], max_length=20),
+    ] = None
+    remove: Annotated[
+        list[RemoveItem] | None,
+        Field(description='Labels to take off.', examples=[['pending']], max_length=20),
+    ] = None
+
+
+class EmailThreadUpdateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    labels: EmailLabelsUpdate | None = None
+    contact_id: Annotated[
+        ContactID | None,
+        Field(
+            description='Contact to link this conversation to, or null to unlink the current contact.'
+        ),
+    ] = None
+
+
+class Status8(str, Enum):
+    delivered = 'delivered'
+    failed = 'failed'
+
+
+class EmailThreadMessageRecipient(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    address: Annotated[str, Field(description='Recipient address.', min_length=1)]
+    status: Annotated[
+        Status8,
+        Field(
+            description='Terminal outcome: `delivered`, or `failed` (bounce or provider rejection).'
+        ),
+    ]
+
+
+class EmailThreadMessageAttachment(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Attachment ID, used to download the attachment bytes.',
+            examples=['rea_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+        ),
+    ]
+    filename: Annotated[
+        str | None,
+        Field(
+            description='Original filename, or null when the attachment had none.',
+            examples=['invoice.pdf'],
+        ),
+    ]
+    content_type: Annotated[
+        str | None,
+        Field(
+            description='MIME content type, or null when it could not be determined.',
+            examples=['application/pdf'],
+        ),
+    ]
+    size: Annotated[int, Field(description='Attachment size in bytes.', ge=0)]
+
+
+class EmailThreadMessageSource(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    resource: Annotated[
+        str,
+        Field(
+            description='API path of the log entry for this message.',
+            examples=['/v1/email/inbound-messages/rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+        ),
+    ]
+    available_until: Annotated[
+        str,
+        Field(
+            description="When the log entry (and the message's original rendered source) expires.",
+            min_length=1,
+        ),
+    ]
+
+
+class Direction2(str, Enum):
+    inbound = 'inbound'
+    outbound = 'outbound'
+
+
+class Authentication(Enum):
+    pass_ = 'pass'
+    fail = 'fail'
+    unknown = 'unknown'
+    NoneType_None = None
+
+
+class EmailThreadMessage(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str,
+        Field(
+            description='Message ID. Received messages carry a `rem_` ID, sent messages an `em_` ID — the same IDs used by the received-message and sent-message logs.\n',
+            examples=['rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^(rem|em)_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    direction: Annotated[
+        Direction2,
+        Field(
+            description='Direction of the message — `inbound` for a received message, `outbound` for a sent one.'
+        ),
+    ]
+    channel: Annotated[
+        str,
+        Field(
+            description='Channel this message was carried on. Always `email`.',
+            examples=['email'],
+            min_length=1,
+        ),
+    ]
+    thread_id: Annotated[
+        str,
+        Field(
+            description='Conversation this message belongs to.',
+            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    from_: Annotated[
+        str, Field(alias='from', description='Sender address.', min_length=1)
+    ]
+    to: Annotated[list[str], Field(description='Recipient addresses on the To line.')]
+    cc: Annotated[
+        list[str],
+        Field(
+            description='Recipient addresses on the Cc line. Empty when the message had none.'
+        ),
+    ]
+    delivered_to: Annotated[
+        str | None,
+        Field(
+            description='Address the message was actually delivered to, when it differs from the mailbox address (for example mail routed in from another address). Null for sent messages and for mail addressed directly to the mailbox.\n'
+        ),
+    ]
+    subject: Annotated[
+        str | None,
+        Field(
+            description='Message subject. Null when the message had no subject.',
+            examples=['Re: Your order'],
+        ),
+    ]
+    preview: Annotated[
+        str | None, Field(description='Short plain-text preview of the message body.')
+    ]
+    extracted_text: Annotated[
+        str | None,
+        Field(
+            description="Plain-text content of the message with quoted history stripped — readable for the mailbox's full retention period, both directions. Always present when fetching a single message; on list endpoints it is included only when the request sets `include=extracted_text`. Null when no text could be extracted.\n"
+        ),
+    ] = None
+    labels: Annotated[
+        list[Label],
+        Field(
+            description="Labels on this message. System labels carry its state: a received message holds exactly one placement label — `inbox` for accepted mail, `archive` when its conversation was filed away, `spam` (failed sender authentication), or `blocked` (rejected by the mailbox's receive policy or rules) — plus `unread` until it is read. `trash` marks a message in the trash, either direction. Custom labels share the same list; a message carries at most 20.\n",
+            examples=[['inbox', 'unread']],
+            max_length=20,
+        ),
+    ]
+    status: Annotated[
+        str | None,
+        Field(
+            description='Folded delivery status of a sent message: `accepted`, `sent` (provider handoff), `delivered` (all attempted recipients delivered), or `failed` (terminal failure). Null for received messages.\n'
+        ),
+    ]
+    recipients: Annotated[
+        list[EmailThreadMessageRecipient] | None,
+        Field(
+            description="Terminal per-recipient delivery outcomes of a sent message, folded in as they become known — part of the message's durable memory. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.\n"
+        ),
+    ]
+    authentication: Annotated[
+        Authentication | None,
+        Field(
+            description="Whether the sender of a received message was authenticated. `pass` means the sender's identity was verified; `fail` means it was checked and did not verify; `unknown` means no verdict could be determined and the sender should not be treated as verified. Null for sent messages. Part of the message's durable memory — readable for the mailbox's full retention period, so the verdict survives after the 30-day inbound log has expired.\n"
+        ),
+    ]
+    spf_pass: Annotated[
+        bool | None,
+        Field(
+            description="Whether SPF passed for the sender of a received message. Null for sent messages and when no verdict is available. Durable for the mailbox's retention period.\n"
+        ),
+    ]
+    dkim_pass: Annotated[
+        bool | None,
+        Field(
+            description="Whether DKIM passed for the sender of a received message. Null for sent messages and when no verdict is available. Durable for the mailbox's retention period.\n"
+        ),
+    ]
+    dmarc_pass: Annotated[
+        bool | None,
+        Field(
+            description="Whether DMARC passed for the sender of a received message. Null for sent messages and when no verdict is available. Durable for the mailbox's retention period.\n"
+        ),
+    ]
+    purge_at: Annotated[
+        str,
+        Field(
+            description='When the message will be permanently deleted: the end of the mailbox\'s retention period, pulled nearer (at most 30 days out) while the message is in the trash. Restore a trashed message before then with `PATCH {"labels": {"remove": ["trash"]}}`.\n',
+            min_length=1,
+        ),
+    ]
+    attachment_count: Annotated[
+        int, Field(description='Number of attachments on the message.', ge=0)
+    ]
+    attachment_manifest: Annotated[
+        list[EmailThreadMessageAttachment],
+        Field(
+            description="Attachment metadata (filename, content type, size). Remains readable for the mailbox's retention period even after the attachment bytes themselves have expired.\n"
+        ),
+    ]
+    reference_ids: Annotated[
+        list[str],
+        Field(
+            description='RFC 5322 References header entries used to thread the conversation.'
+        ),
+    ]
+    contact_id: Annotated[
+        ContactID | None,
+        Field(
+            description='Contact linked to this message, or null when none is linked.'
+        ),
+    ]
+    source: EmailThreadMessageSource
+    occurred_at: Annotated[
+        str,
+        Field(
+            description='When the message was received or accepted for sending.',
+            min_length=1,
+        ),
+    ]
+
+
+class EmailThreadMessageList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[EmailThreadMessage]
+
+
+class EmailThreadMessageBody(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    html: Annotated[
+        str | None,
+        Field(
+            description='The HTML body of the message, or null when the message had no HTML part.'
+        ),
+    ]
+    text: Annotated[
+        str | None,
+        Field(
+            description='The plain-text body of the message, or null when the message had no text part.'
+        ),
+    ]
+
+
+class EmailThreadMessageAttachmentList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[EmailThreadMessageAttachment]
+
+
+class EmailThreadMessageReplyRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    html: Annotated[
+        str | None,
+        Field(
+            description='HTML body of the reply. At least one of html or text must be provided.',
+            max_length=524288,
+        ),
+    ] = None
+    text: Annotated[
+        str | None,
+        Field(
+            description='Plain-text body of the reply. At least one of html or text must be provided.',
+            max_length=524288,
+        ),
+    ] = None
+    reply_all: Annotated[
+        bool | None,
+        Field(
+            description="Also send the reply to the original To and Cc recipients, minus the mailbox's own address."
+        ),
+    ] = False
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n',
+            max_length=20,
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n'
+        ),
+    ] = None
+    category: Annotated[
+        Category | None,
+        Field(
+            description='Content classification — controls suppression policy. `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions. Default: transactional.\n'
+        ),
+    ] = 'transactional'
+
+
+class EmailMailboxComposeRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    to: Annotated[
+        list[EmailAddressInput1 | EmailAddress],
+        Field(
+            description='Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            max_length=50,
+            min_length=1,
+        ),
+    ]
+    cc: Annotated[
+        list[EmailAddressInput1 | EmailAddress] | None,
+        Field(
+            description='CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            max_length=50,
+        ),
+    ] = None
+    bcc: Annotated[
+        list[EmailAddressInput1 | EmailAddress] | None,
+        Field(
+            description='BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            max_length=50,
+        ),
+    ] = None
+    subject: Annotated[
+        str, Field(description='Message subject line.', max_length=998, min_length=1)
+    ]
+    html: Annotated[
+        str | None,
+        Field(
+            description='HTML body. At least one of html or text must be provided.',
+            max_length=524288,
+        ),
+    ] = None
+    text: Annotated[
+        str | None,
+        Field(
+            description='Plain-text body. At least one of html or text must be provided.',
+            max_length=524288,
+        ),
+    ] = None
+    reply_to: Annotated[
+        list[EmailAddressInput1 | EmailAddress] | None,
+        Field(
+            description="Reply-To addresses. When omitted, the mailbox's `default_reply_to` applies (replies then come back to the mailbox itself).\n",
+            max_length=25,
+            min_length=1,
+        ),
+    ] = None
+    attachments: Annotated[
+        list[EmailAttachment] | None,
+        Field(
+            description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Attachment metadata endures on the message's `attachment_manifest`; the bytes are downloadable for 30 days.\n",
+            max_length=20,
+        ),
+    ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description='Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n',
+            max_length=20,
+        ),
+    ] = None
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n'
+        ),
+    ] = None
+    category: Annotated[
+        Category | None,
+        Field(
+            description='Content classification — controls suppression policy. `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions. Default: transactional.\n'
+        ),
+    ] = 'transactional'
+
+
+class Type7(str, Enum):
+    system = 'system'
+    custom = 'custom'
+
+
+class EmailMailboxLabel(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='The label name, as it appears on conversations and messages.',
+            examples=['inbox'],
+            max_length=64,
+            min_length=1,
+        ),
+    ]
+    type: Annotated[
+        Type7,
+        Field(
+            description="`system` labels are built in and carry state — the placements `inbox`, `archive`, `spam`, `blocked`, and `sent`, plus `trash` and `unread`. `custom` labels are the workspace's own tags."
+        ),
+    ]
+
+
+class EmailMailboxLabelList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: list[EmailMailboxLabel]
+
+
 class WebhookEventType(RootModel[str]):
     root: Annotated[
         str,
@@ -5005,7 +6025,7 @@ class EventDomainFailedData(BaseModel):
     ] = None
 
 
-class Type6(str, Enum):
+class Type8(str, Enum):
     domain_failed = 'domain.failed'
 
 
@@ -5060,7 +6080,7 @@ class EventDomainVerifiedData(BaseModel):
     ]
 
 
-class Type7(str, Enum):
+class Type9(str, Enum):
     domain_verified = 'domain.verified'
 
 
@@ -5146,7 +6166,7 @@ class EventEmailAcceptedData(EventEmailBase):
     )
 
 
-class Type8(str, Enum):
+class Type10(str, Enum):
     email_accepted = 'email.accepted'
 
 
@@ -5214,7 +6234,7 @@ class EventEmailBouncedData(EventEmailBase):
     ]
 
 
-class Type9(str, Enum):
+class Type11(str, Enum):
     email_bounced = 'email.bounced'
 
 
@@ -5280,7 +6300,7 @@ class EventEmailCanceledData(EventEmailMessageBase):
     )
 
 
-class Type10(str, Enum):
+class Type12(str, Enum):
     email_canceled = 'email.canceled'
 
 
@@ -5331,7 +6351,7 @@ class EventEmailClickedData(EventEmailBase):
     ]
 
 
-class Type11(str, Enum):
+class Type13(str, Enum):
     email_clicked = 'email.clicked'
 
 
@@ -5367,7 +6387,7 @@ class EventEmailComplainedData(EventEmailBase):
     ]
 
 
-class Type12(str, Enum):
+class Type14(str, Enum):
     email_complained = 'email.complained'
 
 
@@ -5420,7 +6440,7 @@ class EventEmailDeferredData(EventEmailBase):
     ]
 
 
-class Type13(str, Enum):
+class Type15(str, Enum):
     email_deferred = 'email.deferred'
 
 
@@ -5449,7 +6469,7 @@ class EventEmailDeliveredData(EventEmailBase):
     )
 
 
-class Type14(str, Enum):
+class Type16(str, Enum):
     email_delivered = 'email.delivered'
 
 
@@ -5478,7 +6498,7 @@ class EventEmailListUnsubscribedData(EventEmailBase):
     )
 
 
-class Type15(str, Enum):
+class Type17(str, Enum):
     email_list_unsubscribed = 'email.list_unsubscribed'
 
 
@@ -5521,7 +6541,7 @@ class EventEmailOpenedData(EventEmailBase):
     ]
 
 
-class Type16(str, Enum):
+class Type18(str, Enum):
     email_opened = 'email.opened'
 
 
@@ -5581,7 +6601,7 @@ class EventEmailOutOfBandBounceData(EventEmailBase):
     ]
 
 
-class Type17(str, Enum):
+class Type19(str, Enum):
     email_out_of_band_bounce = 'email.out_of_band_bounce'
 
 
@@ -5610,7 +6630,7 @@ class EventEmailProcessedData(EventEmailBase):
     )
 
 
-class Type18(str, Enum):
+class Type20(str, Enum):
     email_processed = 'email.processed'
 
 
@@ -5631,13 +6651,6 @@ class EventEmailProcessed(BaseModel):
         ),
     ]
     data: EventEmailProcessedData
-
-
-class Authentication(Enum):
-    pass_ = 'pass'
-    fail = 'fail'
-    unknown = 'unknown'
-    NoneType_None = None
 
 
 class EventEmailReceivedData(BaseModel):
@@ -5731,7 +6744,7 @@ class EventEmailReceivedData(BaseModel):
     ] = None
 
 
-class Type19(str, Enum):
+class Type21(str, Enum):
     email_received = 'email.received'
 
 
@@ -5771,7 +6784,7 @@ class EventEmailRejectedData(EventEmailBase):
     rejection_reason: EmailRejectionReason
 
 
-class Type20(str, Enum):
+class Type22(str, Enum):
     email_rejected = 'email.rejected'
 
 
@@ -5808,7 +6821,7 @@ class EventEmailScheduledData(EventEmailMessageBase):
     ]
 
 
-class Type21(str, Enum):
+class Type23(str, Enum):
     email_scheduled = 'email.scheduled'
 
 
@@ -5837,7 +6850,7 @@ class EventEmailUnsubscribedData(EventEmailBase):
     )
 
 
-class Type22(str, Enum):
+class Type24(str, Enum):
     email_unsubscribed = 'email.unsubscribed'
 
 
@@ -5893,7 +6906,7 @@ class EventEmailMailboxMessageDeliveredData(BaseModel):
     ]
 
 
-class Type23(str, Enum):
+class Type25(str, Enum):
     email_mailbox_message_delivered = 'email_mailbox.message_delivered'
 
 
@@ -5957,7 +6970,7 @@ class EventEmailMailboxMessageFailedData(BaseModel):
     ]
 
 
-class Type24(str, Enum):
+class Type26(str, Enum):
     email_mailbox_message_failed = 'email_mailbox.message_failed'
 
 
@@ -6088,7 +7101,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     ] = None
 
 
-class Type25(str, Enum):
+class Type27(str, Enum):
     email_mailbox_message_received = 'email_mailbox.message_received'
 
 
@@ -6144,7 +7157,7 @@ class EventEmailMailboxMessageSentData(BaseModel):
     ]
 
 
-class Type26(str, Enum):
+class Type28(str, Enum):
     email_mailbox_message_sent = 'email_mailbox.message_sent'
 
 
@@ -6190,7 +7203,7 @@ class EventEmailMailboxSuspendedData(BaseModel):
     ]
 
 
-class Type27(str, Enum):
+class Type29(str, Enum):
     email_mailbox_suspended = 'email_mailbox.suspended'
 
 
@@ -6253,7 +7266,7 @@ class EventEmailMailboxThreadCreatedData(BaseModel):
     ]
 
 
-class Type28(str, Enum):
+class Type30(str, Enum):
     email_mailbox_thread_created = 'email_mailbox.thread_created'
 
 
@@ -6316,7 +7329,7 @@ class EventEmailSuppressionCreatedData(BaseModel):
     ]
 
 
-class Type29(str, Enum):
+class Type31(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -6399,7 +7412,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type30(str, Enum):
+class Type32(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -6442,7 +7455,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type31(str, Enum):
+class Type33(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -6471,7 +7484,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type32(str, Enum):
+class Type34(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -6503,7 +7516,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type33(str, Enum):
+class Type35(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -6535,7 +7548,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type34(str, Enum):
+class Type36(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -6578,7 +7591,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type35(str, Enum):
+class Type37(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -6647,7 +7660,7 @@ class EventSMSTfnVerificationApprovedData(EventSMSTfnVerificationBase):
     )
 
 
-class Type36(str, Enum):
+class Type38(str, Enum):
     sms_tfn_verification_approved = 'sms.tfn_verification.approved'
 
 
@@ -6676,7 +7689,7 @@ class EventSMSTfnVerificationInfoRequestedData(EventSMSTfnVerificationBase):
     )
 
 
-class Type37(str, Enum):
+class Type39(str, Enum):
     sms_tfn_verification_info_requested = 'sms.tfn_verification.info_requested'
 
 
@@ -6725,7 +7738,7 @@ class EventSMSTfnVerificationRejectedData(EventSMSTfnVerificationBase):
     ]
 
 
-class Type38(str, Enum):
+class Type40(str, Enum):
     sms_tfn_verification_rejected = 'sms.tfn_verification.rejected'
 
 
@@ -6754,7 +7767,7 @@ class EventSMSTfnVerificationSubmittedData(EventSMSTfnVerificationBase):
     )
 
 
-class Type39(str, Enum):
+class Type41(str, Enum):
     sms_tfn_verification_submitted = 'sms.tfn_verification.submitted'
 
 
@@ -6786,7 +7799,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type40(str, Enum):
+class Type42(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 
@@ -6878,7 +7891,7 @@ class EventVoiceCallAnsweredData(EventVoiceBase):
     )
 
 
-class Type41(str, Enum):
+class Type43(str, Enum):
     voice_call_answered = 'voice_call.answered'
 
 
@@ -6944,7 +7957,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
     ]
 
 
-class Type42(str, Enum):
+class Type44(str, Enum):
     voice_call_ended = 'voice_call.ended'
 
 
@@ -6973,7 +7986,7 @@ class EventVoiceCallInitiatedData(EventVoiceBase):
     )
 
 
-class Type43(str, Enum):
+class Type45(str, Enum):
     voice_call_initiated = 'voice_call.initiated'
 
 
@@ -6994,6 +8007,11 @@ class EventVoiceCallInitiated(BaseModel):
         ),
     ]
     data: EventVoiceCallInitiatedData
+
+
+class Direction3(str, Enum):
+    outbound = 'outbound'
+    inbound = 'inbound'
 
 
 class EventWhatsAppBase(BaseModel):
@@ -7019,7 +8037,7 @@ class EventWhatsAppBase(BaseModel):
         ),
     ]
     direction: Annotated[
-        Direction,
+        Direction3,
         Field(
             description='Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).'
         ),
@@ -7058,7 +8076,7 @@ class EventWhatsAppAcceptedData(EventWhatsAppBase):
     )
 
 
-class Type44(str, Enum):
+class Type46(str, Enum):
     whatsapp_accepted = 'whatsapp.accepted'
 
 
@@ -7087,7 +8105,7 @@ class EventWhatsAppDeliveredData(EventWhatsAppBase):
     )
 
 
-class Type45(str, Enum):
+class Type47(str, Enum):
     whatsapp_delivered = 'whatsapp.delivered'
 
 
@@ -7119,7 +8137,7 @@ class EventWhatsAppFailedData(EventWhatsAppBase):
     ]
 
 
-class Type46(str, Enum):
+class Type48(str, Enum):
     whatsapp_failed = 'whatsapp.failed'
 
 
@@ -7148,7 +8166,7 @@ class EventWhatsAppReadData(EventWhatsAppBase):
     )
 
 
-class Type47(str, Enum):
+class Type49(str, Enum):
     whatsapp_read = 'whatsapp.read'
 
 
@@ -7181,7 +8199,7 @@ class EventWhatsAppRejectedData(EventWhatsAppBase):
     ]
 
 
-class Type48(str, Enum):
+class Type50(str, Enum):
     whatsapp_rejected = 'whatsapp.rejected'
 
 
@@ -7210,7 +8228,7 @@ class EventWhatsAppSentData(EventWhatsAppBase):
     )
 
 
-class Type49(str, Enum):
+class Type51(str, Enum):
     whatsapp_sent = 'whatsapp.sent'
 
 

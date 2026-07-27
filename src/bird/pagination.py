@@ -23,8 +23,9 @@ T = TypeVar("T", bound=pydantic.BaseModel)
 
 
 def _request_kwargs(options: RequestOptions | None, query: dict[str, object]) -> dict[str, Any]:
+    clean = {key: value for key, value in query.items() if value is not None}
     kwargs: dict[str, Any] = dict(options or {})
-    kwargs["extra_query"] = {**(kwargs.get("extra_query") or {}), **query}
+    kwargs["extra_query"] = {**(kwargs.get("extra_query") or {}), **clean}
     return kwargs
 
 
