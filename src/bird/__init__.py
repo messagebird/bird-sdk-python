@@ -1,9 +1,7 @@
-"""The official Python SDK for the Bird email platform (ADR-0045).
+"""The official Python SDK for the Bird email platform.
 
-The wire models are generated from the OpenAPI spec into ``bird._generated`` and
-never hand-edited; this package is the hand-written, idiomatic layer on top — a
-synchronous ``Bird`` client and an asynchronous ``AsyncBird`` client, a typed
-exception hierarchy, safe retries, pagination, and webhook verification.
+It offers a synchronous ``Bird`` client and an asynchronous ``AsyncBird`` client,
+a typed exception hierarchy, safe retries, pagination, and webhook verification.
 """
 
 from __future__ import annotations

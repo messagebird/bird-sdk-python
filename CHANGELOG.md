@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.1
+
+- Docs: resource and package docstrings now describe behavior only, without internal implementation notes.
+
 ## 0.12.0
 
 - Agent mailboxes (inbox.ai): client.mailbox, client.mailbox_receive_rule, client.mailbox_thread, client.mailbox_thread_message

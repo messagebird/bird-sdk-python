@@ -1,12 +1,10 @@
-"""Workspace contacts: ``client.contacts`` — create/get/update/delete a contact,
-list the workspace's contacts, and bulk upsert with ``batch``.
+"""Workspace contacts: ``client.contacts`` — create, get, update, and delete a
+contact, list the workspace's contacts, and bulk upsert with ``batch``.
 
-``create``/``get``/``delete`` are generated (see ``contacts_gen``); the methods
-here are the hand-written overrides: ``update`` (partial-update clear semantics),
-``batch`` (bulk upsert), and ``list`` (auto-paginating). A contact is unique by
-email address within a workspace, and optionally by your own ``external_id``.
-``batch`` matches each entry by email, creating or updating up to 1,000 contacts
-in one request and optionally adding them all to one or more audiences.
+A contact is unique by email address within a workspace, and optionally by your
+own ``external_id``. ``batch`` matches each entry by email, creating or updating
+up to 1,000 contacts in one request and optionally adding them all to one or more
+audiences.
 """
 
 from __future__ import annotations

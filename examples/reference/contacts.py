@@ -3,7 +3,7 @@
 Each bird:snippet region is harvested for the docs site + README; the keys match
 the surface catalog (contacts.<leaf>). Hand-written and type-checked (pyright
 includes examples/); nothing regenerates over it. The override methods —
-contacts.update/batch/list — keep their examples inline in
+contacts.update/batch — keep their examples inline in
 src/bird/resources/contacts.py, since nothing regenerates over a hand method.
 """
 
