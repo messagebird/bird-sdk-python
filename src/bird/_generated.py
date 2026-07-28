@@ -2245,6 +2245,21 @@ class SMSTemplateList(BaseModel):
     ]
 
 
+class StatsGrain(str, Enum):
+    day = 'day'
+    hour = 'hour'
+
+
+class VerificationTerminalReason(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description='Why a verification session reached its final state without succeeding: `attempts_exhausted` (too many incorrect passcodes) or `ttl_elapsed` (the time window elapsed before a correct passcode). Open enum — new reasons may be added over time, so treat any unrecognized value as a future reason rather than an error.',
+            min_length=1,
+        ),
+    ]
+
+
 class VerificationTo(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -2318,9 +2333,9 @@ class Verification(Timestamps):
         ),
     ]
     reason: Annotated[
-        str | None,
+        VerificationTerminalReason | None,
         Field(
-            description='Why the verification reached its final state: `attempts_exhausted` (too many incorrect passcodes) or `ttl_elapsed` (the time window elapsed before a correct passcode). Null while `pending` and once `verified`. Open enum; treat any unrecognized value as a future reason.'
+            description='Why the verification reached its final state, or null while `pending` and once `verified`. See the enum for the values it can take.'
         ),
     ] = None
     to: VerificationTo
@@ -2965,14 +2980,7 @@ class EmailStatsSeriesPeriod(BaseModel):
             pattern='^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$',
         ),
     ]
-    grain: Annotated[
-        str,
-        Field(
-            description='The bucket grain of the series, either `day` or `hour`.',
-            examples=['day'],
-            min_length=1,
-        ),
-    ]
+    grain: StatsGrain
     data_as_of: Annotated[
         str | None,
         Field(
@@ -7822,6 +7830,344 @@ class EventSMSUndelivered(BaseModel):
     data: EventSMSUndeliveredData
 
 
+class EventVerifyBase(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    verification_id: Annotated[
+        str,
+        Field(
+            description='ID of the verification session.',
+            examples=['vrf_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^vrf_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description='ID of the workspace.',
+            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+    to: Annotated[
+        VerificationTo,
+        Field(
+            description='The recipient identity of the verification session (email address, phone number, or both), echoed on every event so you can correlate without an extra lookup. An individual attempt reports the single address it was dispatched to in its own `address` field.'
+        ),
+    ]
+    metadata: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.\n',
+            examples=[{'user_id': 'usr_123'}],
+        ),
+    ]
+
+
+class EventVerifyAttemptDeliveredData(EventVerifyBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    channel: Annotated[
+        str,
+        Field(
+            description='The channel this attempt was sent on.',
+            examples=['sms'],
+            min_length=1,
+        ),
+    ]
+    address: Annotated[
+        str,
+        Field(
+            description='The single address this attempt was dispatched to, an E.164 phone number or an email address.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    carrier: Annotated[
+        str | None,
+        Field(
+            description='Carrier that delivered the message, when the carrier network reports it. Always null for email and WhatsApp.',
+            examples=['Verizon'],
+        ),
+    ]
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description='Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email and WhatsApp.',
+            examples=['311480'],
+        ),
+    ]
+    delivered_at: Annotated[
+        str,
+        Field(
+            description='Time delivery was confirmed.',
+            examples=['2026-07-24 12:00:05+00:00'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type43(str, Enum):
+    verify_attempt_delivered = 'verify.attempt.delivered'
+
+
+class EventVerifyAttemptDelivered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['verify.attempt.delivered'],
+        Field(description='Event type.', examples=['verify.attempt.delivered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time delivery was confirmed.',
+            examples=['2026-07-24 12:00:05+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVerifyAttemptDeliveredData
+
+
+class EventVerifyAttemptSentData(EventVerifyBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    channel: Annotated[
+        str,
+        Field(
+            description='The channel this attempt was sent on.',
+            examples=['sms'],
+            min_length=1,
+        ),
+    ]
+    address: Annotated[
+        str,
+        Field(
+            description='The single address this attempt was dispatched to, an E.164 phone number or an email address.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    from_: Annotated[
+        str | None,
+        Field(
+            alias='from',
+            description='The sender the passcode was sent from: a phone number, alphanumeric sender ID, short code, or email address. Null when the channel exposes no sender.',
+            examples=['Authifly'],
+        ),
+    ]
+    sent_at: Annotated[
+        str,
+        Field(
+            description='Time the passcode was dispatched.',
+            examples=['2026-07-24 12:00:01+00:00'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type44(str, Enum):
+    verify_attempt_sent = 'verify.attempt.sent'
+
+
+class EventVerifyAttemptSent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['verify.attempt.sent'],
+        Field(description='Event type.', examples=['verify.attempt.sent']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the passcode was dispatched.',
+            examples=['2026-07-24 12:00:01+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVerifyAttemptSentData
+
+
+class EventVerifyAttemptUndeliveredData(EventVerifyBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    channel: Annotated[
+        str,
+        Field(
+            description='The channel this attempt was sent on.',
+            examples=['sms'],
+            min_length=1,
+        ),
+    ]
+    address: Annotated[
+        str,
+        Field(
+            description='The single address this attempt was dispatched to, an E.164 phone number or an email address.',
+            examples=['+15551234567'],
+            min_length=1,
+        ),
+    ]
+    reason: Annotated[
+        str,
+        Field(
+            description='Why the attempt failed to reach the recipient.',
+            examples=['carrier_rejected'],
+            min_length=1,
+        ),
+    ]
+    error: Annotated[
+        str | None,
+        Field(
+            description='Diagnostic text describing the failure, for display only. Null when none was reported.',
+            examples=['550: mailbox unavailable'],
+        ),
+    ]
+    failed_at: Annotated[
+        str,
+        Field(
+            description='Time the failure was recorded.',
+            examples=['2026-07-24 12:00:05+00:00'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type45(str, Enum):
+    verify_attempt_undelivered = 'verify.attempt.undelivered'
+
+
+class EventVerifyAttemptUndelivered(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['verify.attempt.undelivered'],
+        Field(description='Event type.', examples=['verify.attempt.undelivered']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the failure was recorded.',
+            examples=['2026-07-24 12:00:05+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVerifyAttemptUndeliveredData
+
+
+class EventVerifyVerificationCreatedData(EventVerifyBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    channel: Annotated[
+        str,
+        Field(
+            description="The first channel of the verification's resolved channel plan.",
+            examples=['sms'],
+            min_length=1,
+        ),
+    ]
+    status: Annotated[
+        str,
+        Field(
+            description="The verification's state at creation, always `pending`. Open enum for forward compatibility.",
+            examples=['pending'],
+            min_length=1,
+        ),
+    ]
+    created_at: Annotated[
+        str,
+        Field(
+            description='Time the verification session was created.',
+            examples=['2026-07-24 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type46(str, Enum):
+    verify_verification_created = 'verify.verification.created'
+
+
+class EventVerifyVerificationCreated(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['verify.verification.created'],
+        Field(description='Event type.', examples=['verify.verification.created']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the verification session was created.',
+            examples=['2026-07-24 12:00:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVerifyVerificationCreatedData
+
+
+class EventVerifyVerificationVerifiedData(EventVerifyBase):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status: Annotated[
+        str,
+        Field(
+            description="The verification's state, always `verified`. Open enum for forward compatibility.",
+            examples=['verified'],
+            min_length=1,
+        ),
+    ]
+    channel: Annotated[
+        VerificationChannel | None,
+        Field(
+            description='The channel whose passcode the recipient confirmed, the channel that converted. Null when the verification was resolved without attributing a channel.',
+            examples=['sms'],
+        ),
+    ]
+    verified_at: Annotated[
+        str,
+        Field(
+            description='Time the verification was verified.',
+            examples=['2026-07-24 12:01:00+00:00'],
+            min_length=1,
+        ),
+    ]
+
+
+class Type47(str, Enum):
+    verify_verification_verified = 'verify.verification.verified'
+
+
+class EventVerifyVerificationVerified(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        Literal['verify.verification.verified'],
+        Field(description='Event type.', examples=['verify.verification.verified']),
+    ]
+    timestamp: Annotated[
+        str,
+        Field(
+            description='Time the verification was verified.',
+            examples=['2026-07-24 12:01:00+00:00'],
+            min_length=1,
+        ),
+    ]
+    data: EventVerifyVerificationVerifiedData
+
+
 class VoiceSessionID(RootModel[str]):
     root: Annotated[
         str,
@@ -7891,7 +8237,7 @@ class EventVoiceCallAnsweredData(EventVoiceBase):
     )
 
 
-class Type43(str, Enum):
+class Type48(str, Enum):
     voice_call_answered = 'voice_call.answered'
 
 
@@ -7957,7 +8303,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
     ]
 
 
-class Type44(str, Enum):
+class Type49(str, Enum):
     voice_call_ended = 'voice_call.ended'
 
 
@@ -7986,7 +8332,7 @@ class EventVoiceCallInitiatedData(EventVoiceBase):
     )
 
 
-class Type45(str, Enum):
+class Type50(str, Enum):
     voice_call_initiated = 'voice_call.initiated'
 
 
@@ -8076,7 +8422,7 @@ class EventWhatsAppAcceptedData(EventWhatsAppBase):
     )
 
 
-class Type46(str, Enum):
+class Type51(str, Enum):
     whatsapp_accepted = 'whatsapp.accepted'
 
 
@@ -8105,7 +8451,7 @@ class EventWhatsAppDeliveredData(EventWhatsAppBase):
     )
 
 
-class Type47(str, Enum):
+class Type52(str, Enum):
     whatsapp_delivered = 'whatsapp.delivered'
 
 
@@ -8137,7 +8483,7 @@ class EventWhatsAppFailedData(EventWhatsAppBase):
     ]
 
 
-class Type48(str, Enum):
+class Type53(str, Enum):
     whatsapp_failed = 'whatsapp.failed'
 
 
@@ -8166,7 +8512,7 @@ class EventWhatsAppReadData(EventWhatsAppBase):
     )
 
 
-class Type49(str, Enum):
+class Type54(str, Enum):
     whatsapp_read = 'whatsapp.read'
 
 
@@ -8199,7 +8545,7 @@ class EventWhatsAppRejectedData(EventWhatsAppBase):
     ]
 
 
-class Type50(str, Enum):
+class Type55(str, Enum):
     whatsapp_rejected = 'whatsapp.rejected'
 
 
@@ -8228,7 +8574,7 @@ class EventWhatsAppSentData(EventWhatsAppBase):
     )
 
 
-class Type51(str, Enum):
+class Type56(str, Enum):
     whatsapp_sent = 'whatsapp.sent'
 
 
@@ -8288,6 +8634,11 @@ class WebhookEvent(
         | EventSMSTfnVerificationRejected
         | EventSMSTfnVerificationSubmitted
         | EventSMSUndelivered
+        | EventVerifyAttemptDelivered
+        | EventVerifyAttemptSent
+        | EventVerifyAttemptUndelivered
+        | EventVerifyVerificationCreated
+        | EventVerifyVerificationVerified
         | EventVoiceCallAnswered
         | EventVoiceCallEnded
         | EventVoiceCallInitiated
@@ -8335,6 +8686,11 @@ class WebhookEvent(
         | EventSMSTfnVerificationRejected
         | EventSMSTfnVerificationSubmitted
         | EventSMSUndelivered
+        | EventVerifyAttemptDelivered
+        | EventVerifyAttemptSent
+        | EventVerifyAttemptUndelivered
+        | EventVerifyVerificationCreated
+        | EventVerifyVerificationVerified
         | EventVoiceCallAnswered
         | EventVoiceCallEnded
         | EventVoiceCallInitiated

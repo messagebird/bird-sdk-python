@@ -62,6 +62,16 @@ class Resource:
         response = self._client.request(verb, path, body=body, **_opts(options))
         return model.model_validate(response.json())
 
+    def _action(
+        self,
+        verb: str,
+        path: str,
+        model: type[T],
+        options: RequestOptions | None,
+    ) -> T:
+        response = self._client.request(verb, path, **_opts(options))
+        return model.model_validate(response.json())
+
     def _delete(self, path: str, options: RequestOptions | None) -> None:
         self._client.request("DELETE", path, **_opts(options))
 
@@ -93,6 +103,16 @@ class AsyncResource:
         options: RequestOptions | None,
     ) -> T:
         response = await self._client.request(verb, path, body=body, **_opts(options))
+        return model.model_validate(response.json())
+
+    async def _action(
+        self,
+        verb: str,
+        path: str,
+        model: type[T],
+        options: RequestOptions | None,
+    ) -> T:
+        response = await self._client.request(verb, path, **_opts(options))
         return model.model_validate(response.json())
 
     async def _delete(self, path: str, options: RequestOptions | None) -> None:

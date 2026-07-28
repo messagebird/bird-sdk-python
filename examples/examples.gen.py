@@ -66,7 +66,7 @@ async def _ex_9() -> None:
 
 async def _ex_10() -> None:
     prop = client.contact_properties.archive("prp_01krdgeqcxet5s7t44vh8rt9mg")
-    print(prop.archived)
+    print(prop.key, prop.archived)
 
 
 async def _ex_11() -> None:
@@ -76,7 +76,7 @@ async def _ex_11() -> None:
 
 async def _ex_12() -> None:
     prop = client.contact_properties.get("prp_01krdgeqcxet5s7t44vh8rt9mg")
-    print(prop.key)
+    print(prop.key, prop.type)
 
 
 async def _ex_13() -> None:
