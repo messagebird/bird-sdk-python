@@ -4,27 +4,31 @@ Register a domain, publish the DNS records it returns, then call :meth:`verify`
 until it is usable as a sender. ``return_path`` and ``tracking`` are the name
 part only — Bird appends the sending domain (``links`` on ``mail.acme.com``
 becomes ``links.mail.acme.com``).
+
+``create`` and ``update`` are hand-written: they flatten the nested
+tracking/return-path/dkim/settings wire objects into flat keyword arguments.
+The read, delete, and verify methods are generated onto the base.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._generated import Domain, DomainCreate, DomainUpdate
 from bird._models import to_wire_exclude_unset
-from bird._types import NOT_GIVEN, NotGiven, RequestOptions
-from bird.pagination import AsyncPage, SyncPage
+from bird._types import Omit, RequestOptions, omit
+from bird.resources.domains_gen import AsyncDomainsBase, DomainsBase
 
 _PATH = "/v1/email/domains"
 
 
-def _opts(options: RequestOptions | None) -> dict[str, Any]:
-    return dict(options or {})
-
-
-def _list_query(values: dict[str, Any]) -> dict[str, object]:
-    return {key: value for key, value in values.items() if value is not None}
+def _settings(click_tracking: bool | None, open_tracking: bool | None) -> dict[str, Any]:
+    settings: dict[str, Any] = {}
+    if click_tracking is not None:
+        settings["click_tracking"] = click_tracking
+    if open_tracking is not None:
+        settings["open_tracking"] = open_tracking
+    return settings
 
 
 def _create_body(
@@ -55,7 +59,7 @@ def _update_body(
     *,
     click_tracking: bool | None,
     open_tracking: bool | None,
-    tracking: str | None | NotGiven,
+    tracking: str | None | Omit,
     return_path: str | None,
     dkim_mode: str | None,
     inbound_enabled: bool | None,
@@ -64,9 +68,9 @@ def _update_body(
     settings = _settings(click_tracking, open_tracking)
     if settings:
         data["settings"] = settings
-    # NOT_GIVEN leaves tracking unchanged; None removes it (emits tracking: null);
+    # omit leaves tracking unchanged; None removes it (emits tracking: null);
     # a string sets the tracking name.
-    if not isinstance(tracking, NotGiven):
+    if not isinstance(tracking, Omit):
         data["tracking"] = None if tracking is None else {"name": tracking}
     if return_path is not None:
         data["return_path"] = {"name": return_path}
@@ -77,20 +81,8 @@ def _update_body(
     return to_wire_exclude_unset(DomainUpdate, data)
 
 
-def _settings(click_tracking: bool | None, open_tracking: bool | None) -> dict[str, Any]:
-    settings: dict[str, Any] = {}
-    if click_tracking is not None:
-        settings["click_tracking"] = click_tracking
-    if open_tracking is not None:
-        settings["open_tracking"] = open_tracking
-    return settings
-
-
-class Domains:
+class Domains(DomainsBase):
     """Manage the workspace's sending domains. Reach it via ``client.domains``."""
-
-    def __init__(self, client: SyncAPIClient) -> None:
-        self._client = client
 
     def create(
         self,
@@ -115,20 +107,7 @@ class Domains:
             domain=domain, return_path=return_path, tracking=tracking,
             dkim_mode=dkim_mode, click_tracking=click_tracking, open_tracking=open_tracking,
         )
-        response = self._client.request("POST", _PATH, body=body, **_opts(options))
-        return Domain.model_validate(response.json())
-
-    def get(self, domain_id: str, *, options: RequestOptions | None = None) -> Domain:
-        """Fetch a single sending domain by id, with its DNS records and their
-        per-record verification state.
-
-        ```python
-        domain = client.domains.get("dom_01krdgeqcxet5s7t44vh8rt9mg")
-        print(domain.domain)
-        ```
-        """
-        response = self._client.request("GET", f"{_PATH}/{domain_id}", **_opts(options))
-        return Domain.model_validate(response.json())
+        return self._write("POST", _PATH, body, Domain, options)
 
     def update(
         self,
@@ -136,7 +115,7 @@ class Domains:
         *,
         click_tracking: bool | None = None,
         open_tracking: bool | None = None,
-        tracking: str | None | NotGiven = NOT_GIVEN,
+        tracking: str | None | Omit = omit,
         return_path: str | None = None,
         dkim_mode: str | None = None,
         inbound_enabled: bool | None = None,
@@ -159,60 +138,11 @@ class Domains:
             click_tracking=click_tracking, open_tracking=open_tracking, tracking=tracking,
             return_path=return_path, dkim_mode=dkim_mode, inbound_enabled=inbound_enabled,
         )
-        response = self._client.request("PATCH", f"{_PATH}/{domain_id}", body=body, **_opts(options))
-        return Domain.model_validate(response.json())
-
-    def delete(self, domain_id: str, *, options: RequestOptions | None = None) -> None:
-        """Delete a sending domain. Mail already accepted still sends; no new mail
-        can be sent from it.
-
-        ```python
-        client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")
-        ```
-        """
-        self._client.request("DELETE", f"{_PATH}/{domain_id}", **_opts(options))
-
-    def verify(self, domain_id: str, *, options: RequestOptions | None = None) -> Domain:
-        """Trigger a fresh DNS check and return the refreshed domain with
-        per-record results. Safe to repeat while waiting for DNS to propagate.
-
-        ```python
-        domain = client.domains.verify("dom_01krdgeqcxet5s7t44vh8rt9mg")
-        print(domain.status)
-        ```
-        """
-        response = self._client.request("POST", f"{_PATH}/{domain_id}/verify", **_opts(options))
-        return Domain.model_validate(response.json())
-
-    def list(
-        self,
-        *,
-        name: str | None = None,
-        limit: int | None = None,
-        starting_after: str | None = None,
-        ending_before: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> SyncPage[Domain]:
-        """List the workspace's sending domains, newest first; iterate the page to
-        auto-paginate.
-
-        ```python
-        for domain in client.domains.list():
-            print(domain.id, domain.status)
-        ```
-        """
-        query = _list_query({
-            "name": name, "limit": limit,
-            "starting_after": starting_after, "ending_before": ending_before,
-        })
-        return SyncPage(self._client, _PATH, query, Domain, options)
+        return self._write("PATCH", f"{_PATH}/{domain_id}", body, Domain, options)
 
 
-class AsyncDomains:
+class AsyncDomains(AsyncDomainsBase):
     """Async mirror of `Domains`: ``await`` each call, ``async for`` over a list."""
-
-    def __init__(self, client: AsyncAPIClient) -> None:
-        self._client = client
 
     async def create(
         self,
@@ -231,13 +161,7 @@ class AsyncDomains:
             domain=domain, return_path=return_path, tracking=tracking,
             dkim_mode=dkim_mode, click_tracking=click_tracking, open_tracking=open_tracking,
         )
-        response = await self._client.request("POST", _PATH, body=body, **_opts(options))
-        return Domain.model_validate(response.json())
-
-    async def get(self, domain_id: str, *, options: RequestOptions | None = None) -> Domain:
-        """Fetch a single sending domain by id, with its DNS records."""
-        response = await self._client.request("GET", f"{_PATH}/{domain_id}", **_opts(options))
-        return Domain.model_validate(response.json())
+        return await self._write("POST", _PATH, body, Domain, options)
 
     async def update(
         self,
@@ -245,7 +169,7 @@ class AsyncDomains:
         *,
         click_tracking: bool | None = None,
         open_tracking: bool | None = None,
-        tracking: str | None | NotGiven = NOT_GIVEN,
+        tracking: str | None | Omit = omit,
         return_path: str | None = None,
         dkim_mode: str | None = None,
         inbound_enabled: bool | None = None,
@@ -257,32 +181,4 @@ class AsyncDomains:
             click_tracking=click_tracking, open_tracking=open_tracking, tracking=tracking,
             return_path=return_path, dkim_mode=dkim_mode, inbound_enabled=inbound_enabled,
         )
-        response = await self._client.request("PATCH", f"{_PATH}/{domain_id}", body=body, **_opts(options))
-        return Domain.model_validate(response.json())
-
-    async def delete(self, domain_id: str, *, options: RequestOptions | None = None) -> None:
-        """Delete a sending domain. Mail already accepted still sends."""
-        await self._client.request("DELETE", f"{_PATH}/{domain_id}", **_opts(options))
-
-    async def verify(self, domain_id: str, *, options: RequestOptions | None = None) -> Domain:
-        """Trigger a fresh DNS check and return the refreshed domain. Safe to
-        repeat while waiting for DNS to propagate."""
-        response = await self._client.request("POST", f"{_PATH}/{domain_id}/verify", **_opts(options))
-        return Domain.model_validate(response.json())
-
-    def list(
-        self,
-        *,
-        name: str | None = None,
-        limit: int | None = None,
-        starting_after: str | None = None,
-        ending_before: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> AsyncPage[Domain]:
-        """List the workspace's sending domains, newest first; ``async for`` over
-        the page to auto-paginate."""
-        query = _list_query({
-            "name": name, "limit": limit,
-            "starting_after": starting_after, "ending_before": ending_before,
-        })
-        return AsyncPage(self._client, _PATH, query, Domain, options)
+        return await self._write("PATCH", f"{_PATH}/{domain_id}", body, Domain, options)

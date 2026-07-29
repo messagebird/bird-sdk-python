@@ -176,41 +176,6 @@ class VerificationCheckParams(_VerificationCheckRequired, total=False):
     phone: str
 
 
-class _ContactCreateRequired(TypedDict):
-    email: str
-
-
-class ContactCreateParams(_ContactCreateRequired, total=False):
-    """Params for ``client.contacts.create``. ``email`` is required."""
-
-    first_name: str
-    last_name: str
-    external_id: str
-    data: Mapping[str, Any]
-
-
-class ContactUpdateParams(TypedDict, total=False):
-    """Params for ``client.contacts.update``. Every key is optional — only the
-    fields you pass change."""
-
-    email: str
-    first_name: str
-    last_name: str
-    external_id: str
-    data: Mapping[str, Any]
-
-
-class ContactListParams(TypedDict, total=False):
-    """Filters for ``client.contacts.list``. Every key is optional."""
-
-    email: str
-    external_id: str
-    q: str
-    limit: int
-    starting_after: str
-    ending_before: str
-
-
 class _ContactBatchRequired(TypedDict):
     contacts: Sequence[Mapping[str, Any]]
 
@@ -239,50 +204,6 @@ class ContactPropertyUpdateParams(TypedDict, total=False):
     """Params for ``client.contact_properties.update``. Every key is optional."""
 
     fallback_value: Any
-
-
-class ContactPropertyListParams(TypedDict, total=False):
-    """Filters for ``client.contact_properties.list``. Every key is optional."""
-
-    limit: int
-    starting_after: str
-    ending_before: str
-
-
-class _AudienceCreateRequired(TypedDict):
-    name: str
-
-
-class AudienceCreateParams(_AudienceCreateRequired, total=False):
-    """Params for ``client.audiences.create``. ``name`` is required; an unset
-    ``type`` defaults to ``"static"`` on the server."""
-
-    description: str
-    type: str
-
-
-class AudienceUpdateParams(TypedDict, total=False):
-    """Params for ``client.audiences.update``. Every key is optional — only the
-    fields you pass change."""
-
-    name: str
-    description: str
-
-
-class AudienceListParams(TypedDict, total=False):
-    """Filters for ``client.audiences.list``. Every key is optional."""
-
-    limit: int
-    starting_after: str
-    ending_before: str
-
-
-class AudienceListContactsParams(TypedDict, total=False):
-    """Filters for ``client.audiences.list_contacts``. Every key is optional."""
-
-    limit: int
-    starting_after: str
-    ending_before: str
 
 
 class _DomainCreateRequired(TypedDict):
@@ -317,241 +238,78 @@ class DomainUpdateParams(TypedDict, total=False):
     inbound_enabled: bool
 
 
-class DomainListParams(TypedDict, total=False):
-    """Filters for ``client.domains.list``. Every key is optional."""
-
-    name: str
-    limit: int
-    starting_after: str
-    ending_before: str
+class _RealtimePublishRequired(TypedDict):
+    event: str
+    channels: Sequence[str]
 
 
-class _AudienceContactsAddRequired(TypedDict):
-    contact_ids: Sequence[str]
+class RealtimePublishParams(_RealtimePublishRequired, total=False):
+    """Params for ``client.realtime.publish``. ``event`` and ``channels`` are
+    required (up to 100 channels). ``data`` is any JSON value — object, array, or
+    scalar — capped at 10 KB serialized. ``exclude_connection_id`` skips the
+    connection that triggered the change, and ``include`` asks for per-channel
+    counts (``member_count`` presence-only, ``connection_count`` gated on the app's
+    connection-counting flag)."""
+
+    data: Any
+    exclude_connection_id: str
+    include: Sequence[str]
 
 
-class AudienceContactsAddParams(_AudienceContactsAddRequired, total=False):
-    """Params for ``client.audiences.add_contacts``. ``contact_ids`` is
-    required — up to 1,000 existing contact ids."""
+class _RealtimeBatchEventRequired(TypedDict):
+    event: str
+    channel: str
 
 
-class _AudienceContactsRemoveRequired(TypedDict):
-    contact_ids: Sequence[str]
+class RealtimeBatchEventParams(_RealtimeBatchEventRequired, total=False):
+    """One event inside ``client.realtime.publish_batch``. Unlike ``publish``, a
+    batch event targets a single ``channel``."""
+
+    data: Any
+    exclude_connection_id: str
+    include: Sequence[str]
 
 
-class AudienceContactsRemoveParams(_AudienceContactsRemoveRequired, total=False):
-    """Params for ``client.audiences.remove_contacts``. ``contact_ids`` is
-    required — up to 1,000 existing contact ids."""
+class _RealtimePublishBatchRequired(TypedDict):
+    events: Sequence[RealtimeBatchEventParams]
 
 
-class NotGiven:
+class RealtimePublishBatchParams(_RealtimePublishBatchRequired, total=False):
+    """Params for ``client.realtime.publish_batch``. ``events`` is required — 1 to
+    10 events, all validated before any is delivered."""
+
+
+class RealtimeChannelsListParams(TypedDict, total=False):
+    """Filters for ``client.realtime.channels.list``. Every key is optional. This
+    read is a live snapshot, not a paginated collection, so there is no cursor."""
+
+    prefix: str
+    include: Sequence[str]
+
+
+class RealtimeChannelGetParams(TypedDict, total=False):
+    """Query params for ``client.realtime.channels.get``. Every key is optional."""
+
+    include: Sequence[str]
+
+
+class Omit:
     """Sentinel for an argument the caller left unset, distinct from an explicit
-    ``None``. ``timeout=None`` means "no timeout"; ``timeout=NOT_GIVEN`` means
-    "use the client default". Falsy so ``if not timeout`` reads naturally.
+    ``None``: a value sets it, ``None`` sends JSON ``null`` (clearing a nullable
+    field), and ``omit`` (the default) leaves it out of the request entirely.
+    Falsy so ``if not x`` reads naturally. Matches the reference SDKs
+    (openai-python / anthropic-sdk-python).
     """
 
     def __bool__(self) -> bool:
         return False
 
     def __repr__(self) -> str:
-        return "NOT_GIVEN"
+        return "omit"
 
 
-NOT_GIVEN = NotGiven()
+omit = Omit()
 
 Headers = Mapping[str, str]
 Query = Mapping[str, Any]
 Body = Any
-
-
-# Query params for the email statistics reads (client.email.stats.*). Each
-# method also takes these as explicit keyword arguments; the TypedDict is for
-# callers who build the dict and splat it. Every key is optional.
-
-class EmailStatsSummaryParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.summary``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sending_domain: str
-    tag: str
-    sending_ip: str
-    recipient_domain: str
-    template: str
-    compare: str
-
-class EmailStatsDailyParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.daily``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sending_domain: str
-    tag: str
-    sending_ip: str
-    recipient_domain: str
-    template: str
-
-class EmailStatsHourlyParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.hourly``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sending_domain: str
-    tag: str
-    sending_ip: str
-    recipient_domain: str
-    template: str
-
-class EmailStatsByTagParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_tag``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsByCategoryParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_category``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsBySendingIpParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_sending_ip``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsBySendingDomainParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_sending_domain``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsByRecipientDomainParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_recipient_domain``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsByMailboxProviderParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_mailbox_provider``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsByMailboxProviderRegionParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_mailbox_provider_region``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsByTemplateParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_template``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str
-
-class EmailStatsByLocationParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_location``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    group_by: str
-    sort: str
-    limit: int
-
-class EmailStatsByClientParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_client``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    group_by: str
-    sort: str
-    limit: int
-
-class EmailStatsByBounceCodeParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_bounce_code``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-
-class EmailStatsByComplaintTypeParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_complaint_type``. Every key is optional."""
-
-    from_: str
-    to: str
-    timezone: str
-    category: str
-    sort: str
-    limit: int
-
-class EmailStatsByBroadcastParams(TypedDict, total=False):
-    """Query params for ``client.email.stats.by_broadcast``. Every key is optional."""
-
-    from_: str
-    to: str
-    category: str
-    sort: str
-    limit: int
-    include_trend: bool
-    trend_grain: str

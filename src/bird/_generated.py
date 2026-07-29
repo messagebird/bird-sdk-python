@@ -230,6 +230,249 @@ class Timestamps(BaseModel):
     updated_at: Annotated[str, Field(min_length=1)]
 
 
+class RealtimeAppID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['rap_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^rap_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class RealtimeChannelName(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
+            examples=['orders-42'],
+            max_length=164,
+            min_length=1,
+            pattern='^[A-Za-z0-9_=@,.;-]+$',
+        ),
+    ]
+
+
+class RealtimeChannelInclude(str, Enum):
+    member_count = 'member_count'
+    connection_count = 'connection_count'
+
+
+class RealtimePublish(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    event: Annotated[
+        str,
+        Field(
+            description='The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.',
+            examples=['order-updated'],
+            max_length=200,
+            min_length=1,
+        ),
+    ]
+    channels: Annotated[
+        list[RealtimeChannelName],
+        Field(
+            description='The channels to deliver the event to (up to 100 per call). Prefix with `private-` or `presence-` for authenticated channels.\n',
+            examples=[['orders', 'orders-42']],
+            max_length=100,
+            min_length=1,
+        ),
+    ]
+    data: Annotated[
+        Any | None,
+        Field(
+            description='Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized.'
+        ),
+    ] = None
+    exclude_connection_id: Annotated[
+        str | None,
+        Field(
+            description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
+            examples=['123.4567'],
+            min_length=1,
+        ),
+    ] = None
+    include: Annotated[
+        list[RealtimeChannelInclude] | None,
+        Field(
+            description="Per-channel attributes to return alongside the publish, reflecting each channel's state at publish time (same semantics and validation errors as on the channel endpoints: `member_count` is presence-channels only, `connection_count` requires the app's connection-counting flag). Requesting attributes counts as one additional message toward usage."
+        ),
+    ] = None
+
+
+class RealtimeChannelCounts(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    member_count: Annotated[
+        int | None,
+        Field(
+            description='Distinct members (presence channels only; requires include=member_count).'
+        ),
+    ] = None
+    connection_count: Annotated[
+        int | None,
+        Field(
+            description="Connections currently subscribed to this channel (requires include=connection_count and the app's connection-counting flag). Channel-scoped — distinct from the app-wide peak connections metric."
+        ),
+    ] = None
+
+
+class RealtimeChannelListItem(RealtimeChannelCounts):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: Annotated[
+        str,
+        Field(
+            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
+            examples=['orders-42'],
+            max_length=164,
+            min_length=1,
+            pattern='^[A-Za-z0-9_=@,.;-]+$',
+        ),
+    ]
+
+
+class RealtimePublishResult(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[RealtimeChannelListItem] | None,
+        Field(
+            description='Per-channel attributes at publish time, present only when the request asked for them via `include`; one item per distinct target channel, sorted by name.'
+        ),
+    ] = None
+
+
+class RealtimeBatchEvent(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    event: Annotated[
+        str,
+        Field(
+            description='The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.',
+            examples=['order-updated'],
+            max_length=200,
+            min_length=1,
+        ),
+    ]
+    channel: Annotated[
+        str,
+        Field(
+            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
+            examples=['orders-42'],
+            max_length=164,
+            min_length=1,
+            pattern='^[A-Za-z0-9_=@,.;-]+$',
+        ),
+    ]
+    data: Annotated[
+        Any | None,
+        Field(
+            description='Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized.'
+        ),
+    ] = None
+    exclude_connection_id: Annotated[
+        str | None,
+        Field(
+            description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
+            examples=['123.4567'],
+            min_length=1,
+        ),
+    ] = None
+    include: Annotated[
+        list[RealtimeChannelInclude] | None,
+        Field(
+            description="Attributes of this event's channel to return alongside the publish (same semantics and validation errors as on the channel endpoints). Requesting attributes counts as one additional message toward usage."
+        ),
+    ] = None
+
+
+class RealtimeBatchPublish(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    events: Annotated[
+        list[RealtimeBatchEvent],
+        Field(description='Up to 10 events per batch.', max_length=10, min_length=1),
+    ]
+
+
+class RealtimeBatchPublishResultItem(RealtimeChannelCounts):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    channel: Annotated[
+        str,
+        Field(
+            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
+            examples=['orders-42'],
+            max_length=164,
+            min_length=1,
+            pattern='^[A-Za-z0-9_=@,.;-]+$',
+        ),
+    ]
+
+
+class RealtimeBatchPublishResult(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[RealtimeBatchPublishResultItem] | None,
+        Field(
+            description='Per-event channel attributes at publish time, present only when at least one event asked for them via `include`. Positional: one item per event, in request order.'
+        ),
+    ] = None
+
+
+class RealtimeChannelsList(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Annotated[
+        list[RealtimeChannelListItem],
+        Field(description='The occupied channels, sorted by name.'),
+    ]
+
+
+class RealtimeChannelInfo(RealtimeChannelCounts):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    occupied: Annotated[
+        bool, Field(description='Whether at least one client is subscribed.')
+    ]
+
+
+class RealtimeChannelMember(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    member_id: Annotated[
+        str,
+        Field(
+            description='An app-defined member id — the identity of your application\'s end user ("member"), assigned when your auth server authorizes them. Never a Bird user. Max 128 characters, restricted to URL-safe characters because member ids appear directly in API request paths. Broader than a channel name — allows `+ : @ . _ -` etc. for real identifiers (phone numbers, emails, `member:42`), but excludes `/ ? # %` and whitespace.',
+            max_length=128,
+            min_length=1,
+            pattern="^[A-Za-z0-9._~!$&'()*+,;=:@-]+$",
+        ),
+    ]
+
+
+class RealtimeChannelMembers(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    members: list[RealtimeChannelMember]
+
+
 class EmailID(RootModel[str]):
     root: Annotated[
         str,
@@ -3513,7 +3756,12 @@ class EmailStatsTagsResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailTagStatsPoint],
         Field(
@@ -3653,7 +3901,12 @@ class EmailStatsComparison(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsSummaryPeriod
+    period: Annotated[
+        EmailStatsSummaryPeriod,
+        Field(
+            description='The preceding window these comparison figures cover, the equal-length window ending immediately before the requested start (the prior day for day windows, the prior hour for hour windows). For a request covering 2026-05-01 to 2026-05-31, this is 2026-03-31 to 2026-04-30, both inclusive.'
+        ),
+    ]
     sends_accepted: Annotated[
         int,
         Field(
@@ -3672,7 +3925,12 @@ class EmailStatsSummary(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsSummaryPeriod
+    period: Annotated[
+        EmailStatsSummaryPeriod,
+        Field(
+            description='The window the response covers (echoed back from the request, day or hour grain), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     sends_accepted: Annotated[
         int,
         Field(
@@ -3836,7 +4094,12 @@ class EmailStatsBySendingIpResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailSendingIpStatsPoint],
         Field(
@@ -3880,7 +4143,12 @@ class EmailStatsBySendingDomainResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailSendingDomainStatsPoint],
         Field(
@@ -3924,7 +4192,12 @@ class EmailStatsByCategoryResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailCategoryStatsPoint],
         Field(
@@ -4064,7 +4337,12 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailMailboxProviderStatsPoint],
         Field(
@@ -4116,7 +4394,12 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailMailboxProviderRegionStatsPoint],
         Field(
@@ -4160,7 +4443,12 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailRecipientDomainStatsPoint],
         Field(
@@ -4205,7 +4493,12 @@ class EmailStatsByTemplateResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailTemplateStatsPoint],
         Field(
@@ -4318,7 +4611,12 @@ class EmailStatsByLocationResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailLocationStatsPoint],
         Field(
@@ -4367,7 +4665,12 @@ class EmailStatsByClientResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailClientStatsPoint],
         Field(
@@ -4457,7 +4760,12 @@ class EmailStatsByBounceCodeResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailBounceCodeStatsPoint],
         Field(
@@ -4500,7 +4808,12 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailComplaintTypeStatsPoint],
         Field(
@@ -4545,7 +4858,12 @@ class EmailStatsByBroadcastResponse(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    period: EmailStatsPeriod
+    period: Annotated[
+        EmailStatsPeriod,
+        Field(
+            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+        ),
+    ]
     data: Annotated[
         list[EmailBroadcastStatsPoint],
         Field(
@@ -4674,11 +4992,36 @@ class DomainCapabilities(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    sending: DomainCapability
-    return_path: DomainCapability
-    dmarc: DomainCapability
-    tracking: DomainCapability
-    inbound: DomainCapability | None = None
+    sending: Annotated[
+        DomainCapability,
+        Field(
+            description='Overall authorization to send from this domain. Verified when the DKIM record, the return-path CNAME, and a DMARC policy are all in place. Required for live sends.\n'
+        ),
+    ]
+    return_path: Annotated[
+        DomainCapability,
+        Field(
+            description='Return-path (bounce) CNAME verification. The return-path domain receives bounce and complaint notifications and is what mailbox providers check for SPF — no separate SPF record is needed.\n'
+        ),
+    ]
+    dmarc: Annotated[
+        DomainCapability,
+        Field(
+            description='DMARC policy check. Satisfied by any valid DMARC record covering the sending domain — on the domain itself or on its registered (organizational) domain; `domain` reports where the policy was found. A minimal policy of `p=none` is sufficient.\n'
+        ),
+    ]
+    tracking: Annotated[
+        DomainCapability,
+        Field(
+            description='Branded open/click tracking domain. `not_configured` until a tracking domain is set. Tracked links are served over HTTPS once the CNAME verifies.\n'
+        ),
+    ]
+    inbound: Annotated[
+        DomainCapability | None,
+        Field(
+            description='Inbound mail receiving. `not_configured` until receiving is enabled on this domain (see `DomainUpdate.inbound`), then `pending` while the published MX records are checked, and `verified` once they resolve to Bird. The MX records to publish are always listed under `dns_records` (`purpose: inbound_mx`) as a regional reference, even while this is `not_configured` — enabling is what actually starts delivery.\n'
+        ),
+    ] = None
 
 
 class Type5(str, Enum):
@@ -4953,15 +5296,30 @@ class DomainUpdate(BaseModel):
         extra='allow',
     )
     settings: DomainSettings | None = None
-    return_path: DomainReturnPathConfig | None = None
+    return_path: Annotated[
+        DomainReturnPathConfig | None,
+        Field(
+            description='Change the return-path name part. Cannot be removed — the return-path is required for sending.\n'
+        ),
+    ] = None
     tracking: Annotated[
         DomainTrackingConfig | None,
         Field(
             description='Set or change the tracking name part, or remove tracking by passing null. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.\n'
         ),
     ] = None
-    dkim: DomainDKIMConfig | None = None
-    inbound: DomainInboundConfig | None = None
+    dkim: Annotated[
+        DomainDKIMConfig | None,
+        Field(
+            description='Change how the DKIM key is published. The current key keeps signing until the new configuration verifies, so mail is never sent unsigned during the transition.\n'
+        ),
+    ] = None
+    inbound: Annotated[
+        DomainInboundConfig | None,
+        Field(
+            description="Enable or disable receiving on this domain. Enabling claims the domain for inbound and moves `capabilities.inbound.status` from `not_configured` to `pending`, then `verified` once the MX records resolve to Bird. The MX records to publish are always present under `dns_records` (`purpose: inbound_mx`) as a regional reference, so their presence does not mean receiving is on — a domain still needs enabling whenever `capabilities.inbound.status` is `not_configured`. Enabling requires the domain's DKIM to be verified first (ownership proof): a fresh enable on a domain whose DKIM is not verified returns `422` `E05019` and claims nothing. A domain already receiving inbound for another organization returns `422` `E05018`.\n"
+        ),
+    ] = None
 
 
 class Type6(str, Enum):

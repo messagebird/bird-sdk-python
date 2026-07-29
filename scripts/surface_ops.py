@@ -64,4 +64,10 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/threads/{thread_id}/messages/{message_id}/body": {"get"},
     "/v1/email/threads/{thread_id}/messages/{message_id}/reply": {"post"},
     "/v1/email/threads/{thread_id}/messages/{message_id}/attachments": {"get"},
+    "/v1/realtime/apps/{realtime_app_id}/events": {"post"},
+    "/v1/realtime/apps/{realtime_app_id}/batch-events": {"post"},
+    "/v1/realtime/apps/{realtime_app_id}/channels": {"get"},
+    "/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}": {"get"},
+    "/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}/members": {"get"},
+    "/v1/realtime/apps/{realtime_app_id}/members/{member_id}/disconnect": {"post"},
 }

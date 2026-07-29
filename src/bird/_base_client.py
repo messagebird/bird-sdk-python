@@ -23,7 +23,7 @@ import httpx
 from bird._caller import detect_caller
 from bird._constants import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, INITIAL_RETRY_DELAY, MAX_RETRY_DELAY
 from bird._exceptions import APIConnectionError, APITimeoutError, from_response, parse_retry_after
-from bird._types import NOT_GIVEN, NotGiven
+from bird._types import omit, Omit
 from bird._version import __version__
 
 USER_AGENT = f"bird-sdk-python/{__version__} ({platform.python_implementation().lower()}/{platform.python_version()})"
@@ -81,7 +81,7 @@ class BaseClient:
         base_url: str,
         api_key: str,
         api_version: str | None = None,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
+        timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int = DEFAULT_MAX_RETRIES,
         default_headers: Mapping[str, str] | None = None,
         default_query: Mapping[str, Any] | None = None,
@@ -90,7 +90,7 @@ class BaseClient:
         self.api_key = api_key
         self.api_version = api_version
         self.max_retries = max_retries
-        self.timeout: httpx.Timeout | float | None = DEFAULT_TIMEOUT if isinstance(timeout, NotGiven) else timeout
+        self.timeout: httpx.Timeout | float | None = DEFAULT_TIMEOUT if isinstance(timeout, Omit) else timeout
         self._default_headers = dict(default_headers or {})
         self._default_query = dict(default_query or {})
 
@@ -119,7 +119,7 @@ class BaseClient:
         extra_headers: Mapping[str, str] | None,
         extra_query: Mapping[str, Any] | None,
         extra_body: Mapping[str, Any] | None,
-        timeout: httpx.Timeout | float | None | NotGiven,
+        timeout: httpx.Timeout | float | None | Omit,
         idempotency_key: str | None,
     ) -> httpx.Request:
         _validate_request_path(self.base_url, path)
@@ -132,7 +132,7 @@ class BaseClient:
             json=body,
             params=query or None,
             headers=self._headers(extra_headers, idempotency_key),
-            timeout=self.timeout if isinstance(timeout, NotGiven) else timeout,
+            timeout=self.timeout if isinstance(timeout, Omit) else timeout,
         )
 
     @staticmethod
@@ -173,7 +173,7 @@ class SyncAPIClient(BaseClient):
         extra_headers: Mapping[str, str] | None = None,
         extra_query: Mapping[str, Any] | None = None,
         extra_body: Mapping[str, Any] | None = None,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
+        timeout: httpx.Timeout | float | None | Omit = omit,
         idempotency_key: str | None = None,
         max_retries: int | None = None,
     ) -> httpx.Response:
@@ -233,7 +233,7 @@ class AsyncAPIClient(BaseClient):
         extra_headers: Mapping[str, str] | None = None,
         extra_query: Mapping[str, Any] | None = None,
         extra_body: Mapping[str, Any] | None = None,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
+        timeout: httpx.Timeout | float | None | Omit = omit,
         idempotency_key: str | None = None,
         max_retries: int | None = None,
     ) -> httpx.Response:

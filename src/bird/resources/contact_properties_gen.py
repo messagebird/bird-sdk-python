@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from bird._generated import (
     ContactProperty,
 )
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
+
+
+class ContactPropertyListParams(TypedDict, total=False):
+    """Query params for ``client.contact_properties.list``. Every key is optional."""
+
+    limit: int
+    starting_after: str
+    ending_before: str
 
 
 class ContactPropertiesBase(Resource):

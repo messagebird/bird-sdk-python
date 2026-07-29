@@ -19,12 +19,13 @@ import pydantic
 from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._constants import DEFAULT_MAX_RETRIES
 from bird._exceptions import BirdError
-from bird._types import NOT_GIVEN, EmailDefaults, NotGiven
-from bird.resources.audiences import AsyncAudiences, Audiences
+from bird._types import omit, EmailDefaults, Omit
+from bird.resources.audiences_gen import AsyncAudiences, Audiences
 from bird.resources.contact_properties import AsyncContactProperties, ContactProperties
 from bird.resources.contacts import AsyncContacts, Contacts
 from bird.resources.domains import AsyncDomains, Domains
 from bird.resources.email import AsyncEmail, Email
+from bird.resources.realtime import AsyncRealtime, Realtime
 from bird.resources.sms import AsyncSms, Sms
 from bird.resources.sms_templates import AsyncSMSTemplates, SMSTemplates
 from bird.resources.verify import AsyncVerify, Verify
@@ -76,7 +77,7 @@ def _with_overrides(
     ``BIRD_BASE_URL`` env var, the deployment-wide override _resolve honors above
     region — is set, matching the constructor's precedence."""
     merged: dict[str, Any] = {**config, "http_client": live_client}
-    given = {key: value for key, value in overrides.items() if not isinstance(value, NotGiven)}
+    given = {key: value for key, value in overrides.items() if not isinstance(value, Omit)}
     # api_key drives the region (ADR-0036): a new key (or region) without an explicit
     # base_url must re-resolve the endpoint, not inherit the parent's resolved one.
     if ("api_key" in given or "region" in given) and "base_url" not in given:
@@ -125,8 +126,10 @@ class Bird(SyncAPIClient):
         base_url: str | None = None,
         api_version: str | None = None,
         webhook_secret: str | None = None,
+        realtime_key: str | None = None,
+        realtime_secret: str | None = None,
         email_defaults: EmailDefaults | None = None,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
+        timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int = DEFAULT_MAX_RETRIES,
         default_headers: Mapping[str, str] | None = None,
         default_query: Mapping[str, Any] | None = None,
@@ -139,6 +142,8 @@ class Bird(SyncAPIClient):
             "base_url": base_url,
             "api_version": api_version,
             "webhook_secret": webhook_secret,
+            "realtime_key": realtime_key,
+            "realtime_secret": realtime_secret,
             "email_defaults": email_defaults,
             "timeout": timeout,
             "max_retries": max_retries,
@@ -147,7 +152,7 @@ class Bird(SyncAPIClient):
             "http_client": http_client,
         }
         # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "email_defaults", "region")})
+        super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")})
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
         self.sms = Sms(self)
@@ -164,21 +169,24 @@ class Bird(SyncAPIClient):
         self.mailbox_receive_rule = self.mailbox.receive_rules
         self.mailbox_thread = MailboxThreads(self)
         self.mailbox_thread_message = self.mailbox_thread.messages
+        self.realtime = Realtime(self, realtime_key, realtime_secret)
 
     def with_options(
         self,
         *,
-        api_key: str | None | NotGiven = NOT_GIVEN,
-        region: str | None | NotGiven = NOT_GIVEN,
-        base_url: str | None | NotGiven = NOT_GIVEN,
-        api_version: str | None | NotGiven = NOT_GIVEN,
-        webhook_secret: str | None | NotGiven = NOT_GIVEN,
-        email_defaults: EmailDefaults | None | NotGiven = NOT_GIVEN,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
-        max_retries: int | NotGiven = NOT_GIVEN,
-        default_headers: Mapping[str, str] | None | NotGiven = NOT_GIVEN,
-        default_query: Mapping[str, Any] | None | NotGiven = NOT_GIVEN,
-        http_client: httpx.Client | None | NotGiven = NOT_GIVEN,
+        api_key: str | None | Omit = omit,
+        region: str | None | Omit = omit,
+        base_url: str | None | Omit = omit,
+        api_version: str | None | Omit = omit,
+        webhook_secret: str | None | Omit = omit,
+        realtime_key: str | None | Omit = omit,
+        realtime_secret: str | None | Omit = omit,
+        email_defaults: EmailDefaults | None | Omit = omit,
+        timeout: httpx.Timeout | float | None | Omit = omit,
+        max_retries: int | Omit = omit,
+        default_headers: Mapping[str, str] | None | Omit = omit,
+        default_query: Mapping[str, Any] | None | Omit = omit,
+        http_client: httpx.Client | None | Omit = omit,
     ) -> "Bird":
         """Return a new client with some options overridden, reusing this client's
         HTTP connection pool (the derived client never closes it) unless you pass
@@ -188,7 +196,8 @@ class Bird(SyncAPIClient):
         (the same precedence the constructor uses)."""
         return Bird(**_with_overrides(self._config, self._client, {
             "api_key": api_key, "region": region, "base_url": base_url, "api_version": api_version,
-            "webhook_secret": webhook_secret, "email_defaults": email_defaults, "timeout": timeout,
+            "webhook_secret": webhook_secret, "realtime_key": realtime_key,
+            "realtime_secret": realtime_secret, "email_defaults": email_defaults, "timeout": timeout,
             "max_retries": max_retries, "default_headers": default_headers, "default_query": default_query,
             "http_client": http_client,
         }))
@@ -229,8 +238,10 @@ class AsyncBird(AsyncAPIClient):
         base_url: str | None = None,
         api_version: str | None = None,
         webhook_secret: str | None = None,
+        realtime_key: str | None = None,
+        realtime_secret: str | None = None,
         email_defaults: EmailDefaults | None = None,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
+        timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int = DEFAULT_MAX_RETRIES,
         default_headers: Mapping[str, str] | None = None,
         default_query: Mapping[str, Any] | None = None,
@@ -243,6 +254,8 @@ class AsyncBird(AsyncAPIClient):
             "base_url": base_url,
             "api_version": api_version,
             "webhook_secret": webhook_secret,
+            "realtime_key": realtime_key,
+            "realtime_secret": realtime_secret,
             "email_defaults": email_defaults,
             "timeout": timeout,
             "max_retries": max_retries,
@@ -251,7 +264,7 @@ class AsyncBird(AsyncAPIClient):
             "http_client": http_client,
         }
         # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "email_defaults", "region")})
+        super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")})
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
         self.sms = AsyncSms(self)
@@ -268,21 +281,24 @@ class AsyncBird(AsyncAPIClient):
         self.mailbox_receive_rule = self.mailbox.receive_rules
         self.mailbox_thread = AsyncMailboxThreads(self)
         self.mailbox_thread_message = self.mailbox_thread.messages
+        self.realtime = AsyncRealtime(self, realtime_key, realtime_secret)
 
     def with_options(
         self,
         *,
-        api_key: str | None | NotGiven = NOT_GIVEN,
-        region: str | None | NotGiven = NOT_GIVEN,
-        base_url: str | None | NotGiven = NOT_GIVEN,
-        api_version: str | None | NotGiven = NOT_GIVEN,
-        webhook_secret: str | None | NotGiven = NOT_GIVEN,
-        email_defaults: EmailDefaults | None | NotGiven = NOT_GIVEN,
-        timeout: httpx.Timeout | float | None | NotGiven = NOT_GIVEN,
-        max_retries: int | NotGiven = NOT_GIVEN,
-        default_headers: Mapping[str, str] | None | NotGiven = NOT_GIVEN,
-        default_query: Mapping[str, Any] | None | NotGiven = NOT_GIVEN,
-        http_client: httpx.AsyncClient | None | NotGiven = NOT_GIVEN,
+        api_key: str | None | Omit = omit,
+        region: str | None | Omit = omit,
+        base_url: str | None | Omit = omit,
+        api_version: str | None | Omit = omit,
+        webhook_secret: str | None | Omit = omit,
+        realtime_key: str | None | Omit = omit,
+        realtime_secret: str | None | Omit = omit,
+        email_defaults: EmailDefaults | None | Omit = omit,
+        timeout: httpx.Timeout | float | None | Omit = omit,
+        max_retries: int | Omit = omit,
+        default_headers: Mapping[str, str] | None | Omit = omit,
+        default_query: Mapping[str, Any] | None | Omit = omit,
+        http_client: httpx.AsyncClient | None | Omit = omit,
     ) -> "AsyncBird":
         """Return a new client with some options overridden, reusing this client's
         HTTP connection pool (the derived client never closes it) unless you pass
@@ -292,7 +308,8 @@ class AsyncBird(AsyncAPIClient):
         (the same precedence the constructor uses)."""
         return AsyncBird(**_with_overrides(self._config, self._client, {
             "api_key": api_key, "region": region, "base_url": base_url, "api_version": api_version,
-            "webhook_secret": webhook_secret, "email_defaults": email_defaults, "timeout": timeout,
+            "webhook_secret": webhook_secret, "realtime_key": realtime_key,
+            "realtime_secret": realtime_secret, "email_defaults": email_defaults, "timeout": timeout,
             "max_retries": max_retries, "default_headers": default_headers, "default_query": default_query,
             "http_client": http_client,
         }))

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0
+
+- Add Realtime data-plane methods: publish, batch publish, channel list/get/members, and member disconnect.
+- `contacts.update` now clears a nullable field when passed `None` (distinct from omitting it, which leaves it unchanged).
+- Add the audiences resource. `AudienceContactsAddParams`/`AudienceContactsRemoveParams` are now `AudienceAddContactsParams`/`AudienceRemoveContactsParams` (match the method names).
+- Add the domains resource: create, read, update, delete, and verify. List supports `sort`/`order`/`include_total`.
+- Export the request-unset sentinel `Omit` / `omit` from the top-level `bird` package: a request-body parameter defaults to `omit` (left out of the request), distinct from an explicit `None` (sends JSON `null`, clearing a nullable field). Standardizes the SDK on a single `Omit` sentinel (previously an internal `NotGiven`).
+- Add `verify.*` webhook event types and payloads.
+- Internal improvements.
+
 ## 0.12.2
 
 - Extract the verification terminal-reason enum into a shared `VerificationTerminalReason` type (no behavior change).

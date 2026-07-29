@@ -2,9 +2,9 @@
 
 Each bird:snippet region is harvested for the docs site + README; the keys match
 the surface catalog (contacts.<leaf>). Hand-written and type-checked (pyright
-includes examples/); nothing regenerates over it. The override methods —
-contacts.update/batch — keep their examples inline in
-src/bird/resources/contacts.py, since nothing regenerates over a hand method.
+includes examples/); nothing regenerates over it. The override method —
+contacts.batch — keeps its example inline in src/bird/resources/contacts.py,
+since nothing regenerates over a hand method.
 """
 
 from bird import Bird
@@ -24,6 +24,11 @@ def contacts_get() -> None:
 
 def contacts_delete() -> None:
     client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+def contacts_update() -> None:
+    contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
+    print(contact.first_name)
 
 
 def contacts_list() -> None:

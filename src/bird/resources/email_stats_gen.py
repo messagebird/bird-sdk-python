@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from bird._generated import (
     EmailStatsByBounceCodeResponse,
     EmailStatsByBroadcastResponse,
@@ -21,6 +23,210 @@ from bird._generated import (
 )
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
+
+
+class EmailStatsSummaryParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.summary``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sending_domain: str
+    tag: str
+    sending_ip: str
+    recipient_domain: str
+    template: str
+    compare: str
+
+
+class EmailStatsDailyParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.daily``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sending_domain: str
+    tag: str
+    sending_ip: str
+    recipient_domain: str
+    template: str
+
+
+class EmailStatsHourlyParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.hourly``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sending_domain: str
+    tag: str
+    sending_ip: str
+    recipient_domain: str
+    template: str
+
+
+class EmailStatsByTagParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_tag``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsByCategoryParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_category``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsBySendingIpParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_sending_ip``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsBySendingDomainParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_sending_domain``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsByRecipientDomainParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_recipient_domain``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsByMailboxProviderParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_mailbox_provider``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsByMailboxProviderRegionParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_mailbox_provider_region``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsByTemplateParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_template``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
+class EmailStatsByLocationParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_location``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    group_by: str
+    sort: str
+    limit: int
+
+
+class EmailStatsByClientParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_client``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    group_by: str
+    sort: str
+    limit: int
+
+
+class EmailStatsByBounceCodeParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_bounce_code``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+
+
+class EmailStatsByComplaintTypeParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_complaint_type``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+
+
+class EmailStatsByBroadcastParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_broadcast``. Every key is optional."""
+
+    from_: str
+    to: str
+    category: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
 
 
 class EmailStats(Resource):

@@ -62,6 +62,17 @@ class Resource:
         response = self._client.request(verb, path, body=body, **_opts(options))
         return model.model_validate(response.json())
 
+    def _write_none(
+        self,
+        verb: str,
+        path: str,
+        body: dict[str, object],
+        options: RequestOptions | None,
+    ) -> None:
+        """A write whose success is 204 (no body): same write lifecycle as
+        :meth:`_write`, but the response is discarded."""
+        self._client.request(verb, path, body=body, **_opts(options))
+
     def _action(
         self,
         verb: str,
@@ -104,6 +115,17 @@ class AsyncResource:
     ) -> T:
         response = await self._client.request(verb, path, body=body, **_opts(options))
         return model.model_validate(response.json())
+
+    async def _write_none(
+        self,
+        verb: str,
+        path: str,
+        body: dict[str, object],
+        options: RequestOptions | None,
+    ) -> None:
+        """A write whose success is 204 (no body): same write lifecycle as
+        :meth:`_write`, but the response is discarded."""
+        await self._client.request(verb, path, body=body, **_opts(options))
 
     async def _action(
         self,

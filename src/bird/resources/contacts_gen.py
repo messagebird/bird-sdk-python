@@ -3,16 +3,51 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, TypedDict
 
 from bird._generated import (
     Contact,
     ContactCreateRequest,
+    ContactUpdateRequest,
 )
-from bird._models import to_wire
+from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
+
+
+class ContactListParams(TypedDict, total=False):
+    """Query params for ``client.contacts.list``. Every key is optional."""
+
+    email: str
+    external_id: str
+    q: str
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
+class _ContactCreateRequired(TypedDict):
+    email: str
+
+
+class ContactCreateParams(_ContactCreateRequired, total=False):
+    """Params for ``client.contacts.create``. ``email`` is required."""
+
+    first_name: str
+    last_name: str
+    external_id: str
+    data: Mapping[str, Any]
+
+
+class ContactUpdateParams(TypedDict, total=False):
+    """Params for ``client.contacts.update``. Every key is optional."""
+
+    email: str
+    first_name: str | None
+    last_name: str | None
+    external_id: str | None
+    data: Mapping[str, Any]
 
 
 class ContactsBase(Resource):
@@ -94,6 +129,44 @@ class ContactsBase(Resource):
         return self._write(
             "POST",
             "/v1/contacts",
+            body,
+            Contact,
+            options,
+        )
+
+    def update(
+        self,
+        contact_id: str,
+        *,
+        email: str | None = None,
+        first_name: str | None | Omit = omit,
+        last_name: str | None | Omit = omit,
+        external_id: str | None | Omit = omit,
+        data: Mapping[str, Any] | None = None,
+        options: RequestOptions | None = None,
+    ) -> Contact:
+        """Update a contact's name, external_id, email, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key.
+
+        ```python
+        contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
+        print(contact.first_name)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if email is not None:
+            _body["email"] = email
+        if not isinstance(first_name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["first_name"] = first_name
+        if not isinstance(last_name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["last_name"] = last_name
+        if not isinstance(external_id, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["external_id"] = external_id
+        if data is not None:
+            _body["data"] = data
+        body = to_wire_exclude_unset(ContactUpdateRequest, _body)
+        return self._write(
+            "PATCH",
+            f"/v1/contacts/{contact_id}",
             body,
             Contact,
             options,
@@ -193,6 +266,44 @@ class AsyncContactsBase(AsyncResource):
         return await self._write(
             "POST",
             "/v1/contacts",
+            body,
+            Contact,
+            options,
+        )
+
+    async def update(
+        self,
+        contact_id: str,
+        *,
+        email: str | None = None,
+        first_name: str | None | Omit = omit,
+        last_name: str | None | Omit = omit,
+        external_id: str | None | Omit = omit,
+        data: Mapping[str, Any] | None = None,
+        options: RequestOptions | None = None,
+    ) -> Contact:
+        """Update a contact's name, external_id, email, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key.
+
+        ```python
+        contact = await client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
+        print(contact.first_name)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if email is not None:
+            _body["email"] = email
+        if not isinstance(first_name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["first_name"] = first_name
+        if not isinstance(last_name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["last_name"] = last_name
+        if not isinstance(external_id, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["external_id"] = external_id
+        if data is not None:
+            _body["data"] = data
+        body = to_wire_exclude_unset(ContactUpdateRequest, _body)
+        return await self._write(
+            "PATCH",
+            f"/v1/contacts/{contact_id}",
             body,
             Contact,
             options,

@@ -13,8 +13,6 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from bird._generated import (
-    Contact,
-    ContactUpdateRequest,
     ContactUpsertRequest,
     ContactUpsertResult,
 )
@@ -22,29 +20,11 @@ from bird._models import to_wire
 from bird._types import RequestOptions
 from bird.resources.contacts_gen import AsyncContactsBase, ContactsBase
 
-_PATH = "/v1/contacts"
 _BATCH_PATH = "/v1/contacts/batch"
 
 
 def _opts(options: RequestOptions | None) -> dict[str, Any]:
     return dict(options or {})
-
-
-def _update_body(
-    *,
-    email: str | None,
-    first_name: str | None,
-    last_name: str | None,
-    external_id: str | None,
-    data: Mapping[str, Any] | None,
-) -> dict[str, Any]:
-    return to_wire(ContactUpdateRequest, {
-        "email":       email,
-        "first_name":  first_name,
-        "last_name":   last_name,
-        "external_id": external_id,
-        "data":        data,
-    })
 
 
 def _batch_body(
@@ -65,32 +45,6 @@ def _batch_body(
 
 class Contacts(ContactsBase):
     """Manage workspace contacts. Reach it via ``client.contacts``."""
-
-    def update(
-        self,
-        contact_id: str,
-        *,
-        email: str | None = None,
-        first_name: str | None = None,
-        last_name: str | None = None,
-        external_id: str | None = None,
-        data: Mapping[str, Any] | None = None,
-        options: RequestOptions | None = None,
-    ) -> Contact:
-        """Edit a contact. Only the fields you pass change; ``data`` is merged into
-        the contact's existing custom values, and a key set to ``None`` removes it.
-
-        ```python
-        contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
-        print(contact.first_name)
-        ```
-        """
-        body = _update_body(
-            email=email, first_name=first_name, last_name=last_name,
-            external_id=external_id, data=data,
-        )
-        response = self._client.request("PATCH", f"{_PATH}/{contact_id}", body=body, **_opts(options))
-        return Contact.model_validate(response.json())
 
     def batch(
         self,
@@ -118,27 +72,6 @@ class Contacts(ContactsBase):
 
 class AsyncContacts(AsyncContactsBase):
     """Async mirror of `Contacts`: ``await`` each call, ``async for`` over a list."""
-
-    async def update(
-        self,
-        contact_id: str,
-        *,
-        email: str | None = None,
-        first_name: str | None = None,
-        last_name: str | None = None,
-        external_id: str | None = None,
-        data: Mapping[str, Any] | None = None,
-        options: RequestOptions | None = None,
-    ) -> Contact:
-        """Edit a contact. Only the fields you pass change."""
-        body = _update_body(
-            email=email, first_name=first_name, last_name=last_name,
-            external_id=external_id, data=data,
-        )
-        response = await self._client.request(
-            "PATCH", f"{_PATH}/{contact_id}", body=body, **_opts(options)
-        )
-        return Contact.model_validate(response.json())
 
     async def batch(
         self,

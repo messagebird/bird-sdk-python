@@ -468,11 +468,52 @@ async def _ex_72() -> None:
 
 
 async def _ex_73() -> None:
+    channel = client.realtime.channels.get(
+        "rap_01krd...", "presence-lobby", include=["member_count"]
+    )
+    print(channel.occupied, channel.member_count)
+
+
+async def _ex_74() -> None:
+    channels = client.realtime.channels.list("rap_01krd...", prefix="presence-")
+    for channel in channels.data:
+        print(channel.name)
+
+
+async def _ex_75() -> None:
+    members = client.realtime.channels.members("rap_01krd...", "presence-lobby")
+    print([member.member_id for member in members.members])
+
+
+async def _ex_76() -> None:
+    client.realtime.members.disconnect("rap_01krd...", "member:42")
+
+
+async def _ex_77() -> None:
+    client.realtime.publish(
+        "rap_01krd...",
+        event="order-updated",
+        channels=["orders", "orders-42"],
+        data={"id": 42, "status": "shipped"},
+    )
+
+
+async def _ex_78() -> None:
+    client.realtime.publish_batch(
+        "rap_01krd...",
+        events=[
+            {"event": "order-created", "channel": "orders", "data": {"id": 1}},
+            {"event": "order-updated", "channel": "orders", "data": {"id": 2}},
+        ],
+    )
+
+
+async def _ex_79() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_74() -> None:
+async def _ex_80() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -481,7 +522,7 @@ async def _ex_74() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_75() -> None:
+async def _ex_81() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -489,46 +530,46 @@ async def _ex_75() -> None:
     )
 
 
-async def _ex_76() -> None:
+async def _ex_82() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_77() -> None:
+async def _ex_83() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_78() -> None:
+async def _ex_84() -> None:
     result = client.verify.verifications.check("123456", phone="+15551234567")
     print(result.success)
 
 
-async def _ex_79() -> None:
+async def _ex_85() -> None:
     verification = client.verify.verifications.create(phone="+15551234567")
     print(verification.id, verification.status)
 
 
-async def _ex_80() -> None:
+async def _ex_86() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_81() -> None:
+async def _ex_87() -> None:
     for message in client.whatsapp.list(status=["delivered"]):
         print(message.id, message.status)
 
 
-async def _ex_82() -> None:
+async def _ex_88() -> None:
     events = client.whatsapp.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_83() -> None:
+async def _ex_89() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -538,7 +579,7 @@ async def _ex_83() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_84() -> None:
+async def _ex_90() -> None:
     templates = client.whatsapp_templates.list()
     for template in templates.data:
         print(template.name, template.status)

@@ -89,6 +89,42 @@ for template in client.whatsapp_templates.list().data:
     print(template.name, template.status)
 ```
 
+## Realtime
+
+Every Realtime call is scoped to one Realtime app and authenticated with that app's own key and secret — separate from your Bird API key — configured once on the client. Calling a Realtime method without them raises `BirdError` before any request is sent.
+
+```python
+client = Bird(api_key="bk_eu1_...", realtime_key="rk_...", realtime_secret="rs_...")
+
+# Publish one event to up to 100 channels
+client.realtime.publish(
+    "rap_01krd…",
+    event="order-updated",
+    channels=["orders", "orders-42"],
+    data={"id": 42, "status": "shipped"},
+    exclude_connection_id="81721.1907241",  # don't echo back to the client that acted
+)
+
+# Publish up to 10 events at once — each targets a single channel
+client.realtime.publish_batch(
+    "rap_01krd…",
+    events=[
+        {"event": "order-created", "channel": "orders", "data": {"id": 1}},
+        {"event": "order-updated", "channel": "orders", "data": {"id": 2}},
+    ],
+)
+
+# Live channel state — a snapshot, not a paginated collection
+for channel in client.realtime.channels.list("rap_01krd…", prefix="presence-").data:
+    print(channel.name)
+
+channel = client.realtime.channels.get("rap_01krd…", "presence-lobby", include=["member_count"])
+members = client.realtime.channels.members("rap_01krd…", "presence-lobby")
+
+# Close every connection authenticated as this member
+client.realtime.members.disconnect("rap_01krd…", "member:42")
+```
+
 ## Webhooks
 
 ```python
@@ -163,14 +199,15 @@ asyncio.run(main())
 
 ## Configuration
 
-| Option                   | Description                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| `api_key`                | API key; falls back to `BIRD_API_KEY`.                                         |
-| `region` / `base_url`    | Region (or explicit base URL); falls back to the key prefix / `BIRD_BASE_URL`. |
-| `timeout`, `max_retries` | Request timeout and retry budget; overridable per call via `options`.          |
-| `webhook_secret`         | Signing secret for `webhooks.unwrap`.                                          |
-| `email_defaults`         | Client-wide `send` defaults.                                                   |
-| `http_client`            | Inject your own `httpx.Client` / `AsyncClient`.                                |
+| Option                             | Description                                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `api_key`                          | API key; falls back to `BIRD_API_KEY`.                                                                    |
+| `region` / `base_url`              | Region (or explicit base URL); falls back to the key prefix / `BIRD_BASE_URL`.                            |
+| `timeout`, `max_retries`           | Request timeout and retry budget; overridable per call via `options`.                                     |
+| `webhook_secret`                   | Signing secret for `webhooks.unwrap`.                                                                     |
+| `realtime_key` / `realtime_secret` | Realtime app credentials, sent as `X-Realtime-Key` / `X-Realtime-Secret` on every `client.realtime` call. |
+| `email_defaults`                   | Client-wide `send` defaults.                                                                              |
+| `http_client`                      | Inject your own `httpx.Client` / `AsyncClient`.                                                           |
 
 `client.with_options(...)` derives a new client (reusing the connection pool); every method also takes a trailing `options` for per-call `timeout` / `max_retries` / `idempotency_key` / `extra_headers`.
 
