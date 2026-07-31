@@ -28,7 +28,7 @@ def _send_body(
 ) -> dict[str, Any]:
     body: dict[str, Any] = {"to": to}
     if template is not None:
-        tmpl: dict[str, Any] = {"name": template}
+        tmpl: dict[str, Any] = {"slug": template}
         if language is not None:
             tmpl["language"] = language
         if components is not None:

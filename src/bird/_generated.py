@@ -2824,14 +2824,14 @@ class WhatsAppMessageTemplate(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: Annotated[
+    slug: Annotated[
         str,
         Field(
             description="The template's stable handle (for example `bird_otp`).",
             examples=['bird_otp'],
-            max_length=512,
+            max_length=63,
             min_length=1,
-            pattern='^[a-z0-9_]+$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     category: Annotated[
@@ -2984,14 +2984,14 @@ class WhatsAppTemplateSend(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: Annotated[
+    slug: Annotated[
         str,
         Field(
-            description='The template to send, by its name (for example `bird_otp`).',
+            description='The template to send, by its slug (for example `bird_otp`).',
             examples=['bird_otp'],
-            max_length=512,
+            max_length=63,
             min_length=1,
-            pattern='^[a-z0-9_]+$',
+            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
     language: Annotated[
