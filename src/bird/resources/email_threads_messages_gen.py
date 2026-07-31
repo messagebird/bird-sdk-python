@@ -36,8 +36,8 @@ class EmailAttachment(_EmailAttachmentRequired, total=False):
     content_id: str
 
 
-class MailboxThreadMessageListParams(TypedDict, total=False):
-    """Query params for ``client.mailbox_thread_message.list``. Every key is optional."""
+class EmailThreadsMessagesListParams(TypedDict, total=False):
+    """Query params for ``client.email.threads.messages.list``. Every key is optional."""
 
     direction: str
     label: str
@@ -47,8 +47,8 @@ class MailboxThreadMessageListParams(TypedDict, total=False):
     ending_before: str
 
 
-class MailboxThreadMessageReplyParams(TypedDict, total=False):
-    """Params for ``client.mailbox_thread_message.reply``. Every key is optional."""
+class EmailThreadsMessagesReplyParams(TypedDict, total=False):
+    """Params for ``client.email.threads.messages.reply``. Every key is optional."""
 
     html: str
     text: str
@@ -59,7 +59,7 @@ class MailboxThreadMessageReplyParams(TypedDict, total=False):
     attachments: Sequence[EmailAttachment]
 
 
-class MailboxThreadMessage(Resource):
+class EmailThreadsMessages(Resource):
     def list(
         self,
         thread_id: str,
@@ -75,7 +75,7 @@ class MailboxThreadMessage(Resource):
         """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's durable plain text.
 
         ```python
-        for message in client.mailbox_thread_message.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
+        for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
             print(message.id, message.subject)
         ```
         """
@@ -99,7 +99,7 @@ class MailboxThreadMessage(Resource):
         """Get one conversation message with its extracted plain text — readable for the mailbox's full retention period, no MIME parsing needed.
 
         ```python
-        message = client.mailbox_thread_message.get(
+        message = client.email.threads.messages.get(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(message.subject)
@@ -122,7 +122,7 @@ class MailboxThreadMessage(Resource):
         """Get the original rendered HTML and plain-text body of a conversation message. Available 30 days; after that use the message's extracted_text.
 
         ```python
-        body = client.mailbox_thread_message.body(
+        body = client.email.threads.messages.body(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(body.html)
@@ -152,7 +152,7 @@ class MailboxThreadMessage(Resource):
         """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically.
 
         ```python
-        reply = client.mailbox_thread_message.reply(
+        reply = client.email.threads.messages.reply(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
             text="Thanks for reaching out!",
         )
@@ -189,7 +189,7 @@ class MailboxThreadMessage(Resource):
         """List the attachments on a conversation message. Bytes are downloadable for 30 days; the metadata also rides the message's attachment_manifest durably.
 
         ```python
-        result = client.mailbox_thread_message.attachments(
+        result = client.email.threads.messages.attachments(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         )
         for attachment in result.data:
@@ -204,7 +204,7 @@ class MailboxThreadMessage(Resource):
         )
 
 
-class AsyncMailboxThreadMessage(AsyncResource):
+class AsyncEmailThreadsMessages(AsyncResource):
     def list(
         self,
         thread_id: str,
@@ -220,7 +220,7 @@ class AsyncMailboxThreadMessage(AsyncResource):
         """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's durable plain text.
 
         ```python
-        async for message in client.mailbox_thread_message.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
+        async for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
             print(message.id, message.subject)
         ```
         """
@@ -244,7 +244,7 @@ class AsyncMailboxThreadMessage(AsyncResource):
         """Get one conversation message with its extracted plain text — readable for the mailbox's full retention period, no MIME parsing needed.
 
         ```python
-        message = await client.mailbox_thread_message.get(
+        message = await client.email.threads.messages.get(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(message.subject)
@@ -267,7 +267,7 @@ class AsyncMailboxThreadMessage(AsyncResource):
         """Get the original rendered HTML and plain-text body of a conversation message. Available 30 days; after that use the message's extracted_text.
 
         ```python
-        body = await client.mailbox_thread_message.body(
+        body = await client.email.threads.messages.body(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(body.html)
@@ -297,7 +297,7 @@ class AsyncMailboxThreadMessage(AsyncResource):
         """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically.
 
         ```python
-        reply = await client.mailbox_thread_message.reply(
+        reply = await client.email.threads.messages.reply(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
             text="Thanks for reaching out!",
         )
@@ -334,7 +334,7 @@ class AsyncMailboxThreadMessage(AsyncResource):
         """List the attachments on a conversation message. Bytes are downloadable for 30 days; the metadata also rides the message's attachment_manifest durably.
 
         ```python
-        result = await client.mailbox_thread_message.attachments(
+        result = await client.email.threads.messages.attachments(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         )
         for attachment in result.data:

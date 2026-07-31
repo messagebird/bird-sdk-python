@@ -31,16 +31,6 @@ from bird.resources.sms_templates_gen import AsyncSmsTemplates, SmsTemplates
 from bird.resources.verify import AsyncVerify, Verify
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
-from bird.resources.mailbox import AsyncMailboxes, Mailboxes
-from bird.resources.mailbox_receive_rule_gen import (
-    AsyncMailboxReceiveRule,
-    MailboxReceiveRule,
-)
-from bird.resources.mailbox_thread_gen import AsyncMailboxThread, MailboxThread
-from bird.resources.mailbox_thread_message_gen import (
-    AsyncMailboxThreadMessage,
-    MailboxThreadMessage,
-)
 
 _REGION_PREFIX = re.compile(r"^bk_([a-z]{2}[0-9]+)_")
 
@@ -171,10 +161,6 @@ class Bird(SyncAPIClient):
         self.audiences = Audiences(self)
         self.domains = Domains(self)
         self.webhooks = Webhooks(webhook_secret)
-        self.mailbox = Mailboxes(self)
-        self.mailbox_receive_rule = MailboxReceiveRule(self)
-        self.mailbox_thread = MailboxThread(self)
-        self.mailbox_thread_message = MailboxThreadMessage(self)
         self.realtime = Realtime(self, realtime_key, realtime_secret)
 
     def with_options(
@@ -282,10 +268,6 @@ class AsyncBird(AsyncAPIClient):
         self.audiences = AsyncAudiences(self)
         self.domains = AsyncDomains(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
-        self.mailbox = AsyncMailboxes(self)
-        self.mailbox_receive_rule = AsyncMailboxReceiveRule(self)
-        self.mailbox_thread = AsyncMailboxThread(self)
-        self.mailbox_thread_message = AsyncMailboxThreadMessage(self)
         self.realtime = AsyncRealtime(self, realtime_key, realtime_secret)
 
     def with_options(

@@ -14,8 +14,8 @@ from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
 
 
-class MailboxReceiveRuleListParams(TypedDict, total=False):
-    """Query params for ``client.mailbox_receive_rule.list``. Every key is optional."""
+class EmailMailboxesReceiveRulesListParams(TypedDict, total=False):
+    """Query params for ``client.email.mailboxes.receive_rules.list``. Every key is optional."""
 
     action: str
     limit: int
@@ -23,18 +23,18 @@ class MailboxReceiveRuleListParams(TypedDict, total=False):
     ending_before: str
 
 
-class _MailboxReceiveRuleCreateRequired(TypedDict):
+class _EmailMailboxesReceiveRulesCreateRequired(TypedDict):
     action: str
     entry: str
 
 
-class MailboxReceiveRuleCreateParams(_MailboxReceiveRuleCreateRequired, total=False):
-    """Params for ``client.mailbox_receive_rule.create``. ``action`` and ``entry`` are required."""
+class EmailMailboxesReceiveRulesCreateParams(_EmailMailboxesReceiveRulesCreateRequired, total=False):
+    """Params for ``client.email.mailboxes.receive_rules.create``. ``action`` and ``entry`` are required."""
 
     note: str
 
 
-class MailboxReceiveRule(Resource):
+class EmailMailboxesReceiveRules(Resource):
     def list(
         self,
         mailbox_id: str,
@@ -48,7 +48,7 @@ class MailboxReceiveRule(Resource):
         """List a mailbox's allow/block receive rules as a cursor page, oldest first. Filter by action.
 
         ```python
-        for rule in client.mailbox_receive_rule.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        for rule in client.email.mailboxes.receive_rules.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
             print(rule.id, rule.action)
         ```
         """
@@ -72,7 +72,7 @@ class MailboxReceiveRule(Resource):
         """Add an allow or block rule for a sender address or domain to a mailbox. Block always wins; up to 200 rules per mailbox.
 
         ```python
-        rule = client.mailbox_receive_rule.create(
+        rule = client.email.mailboxes.receive_rules.create(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
         )
         print(rule.id)
@@ -104,7 +104,7 @@ class MailboxReceiveRule(Resource):
         """Remove a receive rule from a mailbox. Delete-and-recreate is how an entry's action is flipped.
 
         ```python
-        client.mailbox_receive_rule.delete(
+        client.email.mailboxes.receive_rules.delete(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
         )
         ```
@@ -112,7 +112,7 @@ class MailboxReceiveRule(Resource):
         self._delete(f"/v1/email/mailboxes/{mailbox_id}/receive-rules/{rule_id}", options)
 
 
-class AsyncMailboxReceiveRule(AsyncResource):
+class AsyncEmailMailboxesReceiveRules(AsyncResource):
     def list(
         self,
         mailbox_id: str,
@@ -126,7 +126,7 @@ class AsyncMailboxReceiveRule(AsyncResource):
         """List a mailbox's allow/block receive rules as a cursor page, oldest first. Filter by action.
 
         ```python
-        async for rule in client.mailbox_receive_rule.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        async for rule in client.email.mailboxes.receive_rules.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
             print(rule.id, rule.action)
         ```
         """
@@ -150,7 +150,7 @@ class AsyncMailboxReceiveRule(AsyncResource):
         """Add an allow or block rule for a sender address or domain to a mailbox. Block always wins; up to 200 rules per mailbox.
 
         ```python
-        rule = await client.mailbox_receive_rule.create(
+        rule = await client.email.mailboxes.receive_rules.create(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
         )
         print(rule.id)
@@ -182,7 +182,7 @@ class AsyncMailboxReceiveRule(AsyncResource):
         """Remove a receive rule from a mailbox. Delete-and-recreate is how an entry's action is flipped.
 
         ```python
-        await client.mailbox_receive_rule.delete(
+        await client.email.mailboxes.receive_rules.delete(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
         )
         ```

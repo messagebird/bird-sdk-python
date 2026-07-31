@@ -627,7 +627,13 @@ class EmailMessage(BaseModel):
     bcc: Annotated[list[EmailAddress] | None, Field(description='BCC recipients.')] = (
         None
     )
-    subject: Annotated[str, Field(description='Message subject line.', min_length=1)]
+    subject: Annotated[
+        str,
+        Field(
+            description="The subject line as delivered. For a send that used a template, the stored subject is the template's, so this reports it with the send's `parameters` substituted in, which is what the recipient saw.\n",
+            min_length=1,
+        ),
+    ]
     category: EmailMessageCategory
     reply_to: Annotated[
         list[EmailAddress] | None,
@@ -720,6 +726,12 @@ class EmailMessage(BaseModel):
             description='Arbitrary JSON metadata stored on the message object and echoed in webhook payloads. See EmailMessageSendRequest for the tags vs metadata distinction.'
         ),
     ] = None
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description='The substitution values this send supplied, or null for a send that carried its content inline. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.\n'
+        ),
+    ] = None
     attachments: Annotated[
         list[EmailAttachmentRef] | None,
         Field(
@@ -806,7 +818,7 @@ class EmailTemplateSend1(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send. Omit it to send the template's default language. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
             examples=['pt-BR'],
             max_length=35,
             min_length=2,
@@ -847,7 +859,7 @@ class EmailTemplateSend2(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send. Omit it to send the template's default language. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
             examples=['pt-BR'],
             max_length=35,
             min_length=2,
@@ -1016,7 +1028,12 @@ class EmailMessageSendRequest(BaseModel):
             pattern='^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$',
         ),
     ] = None
-    category: EmailMessageCategory | None = 'marketing'
+    category: Annotated[
+        EmailMessageCategory | None,
+        Field(
+            description="Content classification. Controls suppression policy: `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail. When you send with `template` and omit this field, the message takes the template's own classification, so a template created as `transactional` sends as transactional. Set this field to classify a single send differently from its template; it always takes precedence. Sends that carry no template and no category are `marketing`.\n"
+        ),
+    ] = 'marketing'
     in_reply_to_message_id: Annotated[
         str | None,
         Field(

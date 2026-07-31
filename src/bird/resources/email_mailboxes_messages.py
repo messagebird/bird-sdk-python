@@ -1,5 +1,5 @@
-"""Mailboxes: ``client.mailbox`` — the override residue over the generated
-facade: ``compose`` (address-list body).
+"""Mailbox messages: ``client.email.mailboxes.messages`` — the override residue
+over the generated mailbox facade: ``create`` (address-list body).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from bird._generated import (
 )
 from bird._models import to_wire_exclude_unset
 from bird._types import RequestOptions
-from bird.resources.mailbox_gen import AsyncMailboxBase, MailboxBase
+from bird._resource import AsyncResource, Resource
 
 _PATH = "/v1/email/mailboxes"
 
@@ -21,10 +21,10 @@ def _compose_body(**kwargs: Any) -> dict[str, Any]:
     return to_wire_exclude_unset(EmailMailboxComposeRequest, kwargs)
 
 
-class Mailboxes(MailboxBase):
-    """Manage the workspace's email mailboxes. Reach it via ``client.mailbox``."""
+class EmailMailboxesMessages(Resource):
+    """Send messages from a mailbox. Reach it via ``client.email.mailboxes.messages``."""
 
-    def compose(
+    def create(
         self,
         mailbox_id: str,
         *,
@@ -34,7 +34,7 @@ class Mailboxes(MailboxBase):
         """Compose and send an outbound message from a mailbox.
 
         ```python
-        msg = client.mailbox.compose(
+        msg = client.email.mailboxes.messages.create(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg",
             to=[{"address": "user@example.com"}],
             subject="Hello",
@@ -52,10 +52,10 @@ class Mailboxes(MailboxBase):
         )
 
 
-class AsyncMailboxes(AsyncMailboxBase):
-    """Async mirror of `Mailboxes`: ``await`` each call, ``async for`` over a list."""
+class AsyncEmailMailboxesMessages(AsyncResource):
+    """Async mirror of `EmailMailboxesMessages`."""
 
-    async def compose(
+    async def create(
         self,
         mailbox_id: str,
         *,

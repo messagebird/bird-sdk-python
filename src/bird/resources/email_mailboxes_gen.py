@@ -18,8 +18,8 @@ from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
-class MailboxListParams(TypedDict, total=False):
-    """Query params for ``client.mailbox.list``. Every key is optional."""
+class EmailMailboxesListParams(TypedDict, total=False):
+    """Query params for ``client.email.mailboxes.list``. Every key is optional."""
 
     address: str
     q: str
@@ -31,8 +31,8 @@ class MailboxListParams(TypedDict, total=False):
     ending_before: str
 
 
-class MailboxCreateParams(TypedDict, total=False):
-    """Params for ``client.mailbox.create``. Every key is optional."""
+class EmailMailboxesCreateParams(TypedDict, total=False):
+    """Params for ``client.email.mailboxes.create``. Every key is optional."""
 
     local_part: str
     domain: str
@@ -43,8 +43,8 @@ class MailboxCreateParams(TypedDict, total=False):
     metadata: Mapping[str, Any]
 
 
-class MailboxUpdateParams(TypedDict, total=False):
-    """Params for ``client.mailbox.update``. Every key is optional."""
+class EmailMailboxesUpdateParams(TypedDict, total=False):
+    """Params for ``client.email.mailboxes.update``. Every key is optional."""
 
     display_name: str | None
     default_reply_to: str | None
@@ -53,8 +53,8 @@ class MailboxUpdateParams(TypedDict, total=False):
     metadata: Mapping[str, Any]
 
 
-class MailboxStatsParams(TypedDict, total=False):
-    """Query params for ``client.mailbox.stats``. Every key is optional."""
+class EmailMailboxesStatsParams(TypedDict, total=False):
+    """Query params for ``client.email.mailboxes.stats``. Every key is optional."""
 
     from_: str
     to: str
@@ -62,7 +62,7 @@ class MailboxStatsParams(TypedDict, total=False):
     granularity: str
 
 
-class MailboxBase(Resource):
+class EmailMailboxes(Resource):
     def list(
         self,
         *,
@@ -79,7 +79,7 @@ class MailboxBase(Resource):
         """List the workspace's mailboxes as a cursor page, newest first. Search addresses and display names with q, or filter by exact address, state, or domain.
 
         ```python
-        for mailbox in client.mailbox.list():
+        for mailbox in client.email.mailboxes.list():
             print(mailbox.id, mailbox.address)
         ```
         """
@@ -110,7 +110,7 @@ class MailboxBase(Resource):
         """Create a mailbox — a durable agent identity that owns an email address, groups mail into threads, and remembers conversations for its retention tier.
 
         ```python
-        mailbox = client.mailbox.create(display_name="Acme Support")
+        mailbox = client.email.mailboxes.create(display_name="Acme Support")
         print(mailbox.id)
         ```
         """
@@ -142,7 +142,7 @@ class MailboxBase(Resource):
     ) -> Mailbox:
         """
         ```python
-        mailbox = client.mailbox.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.address)
         ```
         """
@@ -168,7 +168,7 @@ class MailboxBase(Resource):
         """Update a mailbox's display name, reply-to, receive policy, retention tier, contact, or metadata. Lowering the retention tier onto remembered messages older than the new horizon requires confirm=true.
 
         ```python
-        mailbox = client.mailbox.update(
+        mailbox = client.email.mailboxes.update(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
         )
         print(mailbox.display_name)
@@ -206,7 +206,7 @@ class MailboxBase(Resource):
         """Delete a mailbox. The address stops receiving immediately and is quarantined; the mailbox and its remembered messages stay restorable for 30 days via the restore endpoint, then are permanently deleted.
 
         ```python
-        client.mailbox.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
         self._delete(f"/v1/email/mailboxes/{mailbox_id}", options)
@@ -220,7 +220,7 @@ class MailboxBase(Resource):
         """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns 404; a mailbox that is not deleted returns 409.
 
         ```python
-        mailbox = client.mailbox.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        mailbox = client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.id)
         ```
         """
@@ -240,7 +240,7 @@ class MailboxBase(Resource):
         """Reactivate a suspended mailbox so it can send and receive again and its threads become visible. Fails if your plan does not have room for another active mailbox (or another custom inbox.ai handle); delete an active mailbox or upgrade first. A mailbox that is not suspended returns 409.
 
         ```python
-        mailbox = client.mailbox.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        mailbox = client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.state)
         ```
         """
@@ -263,7 +263,7 @@ class MailboxBase(Resource):
     ) -> MailboxStatsResponse:
         """
         ```python
-        stats = client.mailbox.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        stats = client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(stats.summary)
         ```
         """
@@ -288,7 +288,7 @@ class MailboxBase(Resource):
         """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in use.
 
         ```python
-        labels = client.mailbox.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         for label in labels.data:
             print(label.name)
         ```
@@ -301,7 +301,7 @@ class MailboxBase(Resource):
         )
 
 
-class AsyncMailboxBase(AsyncResource):
+class AsyncEmailMailboxes(AsyncResource):
     def list(
         self,
         *,
@@ -318,7 +318,7 @@ class AsyncMailboxBase(AsyncResource):
         """List the workspace's mailboxes as a cursor page, newest first. Search addresses and display names with q, or filter by exact address, state, or domain.
 
         ```python
-        async for mailbox in client.mailbox.list():
+        async for mailbox in client.email.mailboxes.list():
             print(mailbox.id, mailbox.address)
         ```
         """
@@ -349,7 +349,7 @@ class AsyncMailboxBase(AsyncResource):
         """Create a mailbox — a durable agent identity that owns an email address, groups mail into threads, and remembers conversations for its retention tier.
 
         ```python
-        mailbox = await client.mailbox.create(display_name="Acme Support")
+        mailbox = await client.email.mailboxes.create(display_name="Acme Support")
         print(mailbox.id)
         ```
         """
@@ -381,7 +381,7 @@ class AsyncMailboxBase(AsyncResource):
     ) -> Mailbox:
         """
         ```python
-        mailbox = await client.mailbox.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        mailbox = await client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.address)
         ```
         """
@@ -407,7 +407,7 @@ class AsyncMailboxBase(AsyncResource):
         """Update a mailbox's display name, reply-to, receive policy, retention tier, contact, or metadata. Lowering the retention tier onto remembered messages older than the new horizon requires confirm=true.
 
         ```python
-        mailbox = await client.mailbox.update(
+        mailbox = await client.email.mailboxes.update(
             "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
         )
         print(mailbox.display_name)
@@ -445,7 +445,7 @@ class AsyncMailboxBase(AsyncResource):
         """Delete a mailbox. The address stops receiving immediately and is quarantined; the mailbox and its remembered messages stay restorable for 30 days via the restore endpoint, then are permanently deleted.
 
         ```python
-        await client.mailbox.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        await client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
         await self._delete(f"/v1/email/mailboxes/{mailbox_id}", options)
@@ -459,7 +459,7 @@ class AsyncMailboxBase(AsyncResource):
         """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns 404; a mailbox that is not deleted returns 409.
 
         ```python
-        mailbox = await client.mailbox.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        mailbox = await client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.id)
         ```
         """
@@ -479,7 +479,7 @@ class AsyncMailboxBase(AsyncResource):
         """Reactivate a suspended mailbox so it can send and receive again and its threads become visible. Fails if your plan does not have room for another active mailbox (or another custom inbox.ai handle); delete an active mailbox or upgrade first. A mailbox that is not suspended returns 409.
 
         ```python
-        mailbox = await client.mailbox.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        mailbox = await client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.state)
         ```
         """
@@ -502,7 +502,7 @@ class AsyncMailboxBase(AsyncResource):
     ) -> MailboxStatsResponse:
         """
         ```python
-        stats = await client.mailbox.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        stats = await client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(stats.summary)
         ```
         """
@@ -527,7 +527,7 @@ class AsyncMailboxBase(AsyncResource):
         """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in use.
 
         ```python
-        labels = await client.mailbox.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+        labels = await client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         for label in labels.data:
             print(label.name)
         ```

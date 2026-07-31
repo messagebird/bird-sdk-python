@@ -129,3 +129,119 @@ def email_stats_byBroadcast() -> None:
     for row in stats.data:
         print(row)
 
+def mailbox_list() -> None:
+    for mailbox in client.email.mailboxes.list():
+        print(mailbox.id, mailbox.address)
+
+
+def mailbox_create() -> None:
+    mailbox = client.email.mailboxes.create(display_name="Acme Support")
+    print(mailbox.id)
+
+
+def mailbox_get() -> None:
+    mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.address)
+
+
+def mailbox_delete() -> None:
+    client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+def mailbox_restore() -> None:
+    mailbox = client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.id)
+
+
+def mailbox_resume() -> None:
+    mailbox = client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.state)
+
+
+def mailbox_stats() -> None:
+    stats = client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(stats.summary)
+
+
+def mailbox_labels() -> None:
+    labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    for label in labels.data:
+        print(label.name)
+
+
+def mailbox_update() -> None:
+    mailbox = client.email.mailboxes.update(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
+    )
+    print(mailbox.display_name)
+
+def mailbox_receive_rule_list() -> None:
+    for rule in client.email.mailboxes.receive_rules.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(rule.id, rule.action)
+
+
+def mailbox_receive_rule_create() -> None:
+    rule = client.email.mailboxes.receive_rules.create(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
+    )
+    print(rule.id)
+
+
+def mailbox_receive_rule_delete() -> None:
+    client.email.mailboxes.receive_rules.delete(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
+    )
+
+def mailbox_thread_list() -> None:
+    for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(thread.id, thread.subject)
+
+
+def mailbox_thread_get() -> None:
+    thread = client.email.threads.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
+    print(thread.subject)
+
+
+def mailbox_thread_update() -> None:
+    thread = client.email.threads.update(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
+    )
+    print(thread.id)
+
+
+def mailbox_thread_delete() -> None:
+    client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
+
+def mailbox_thread_message_list() -> None:
+    for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(message.id, message.subject)
+
+
+def mailbox_thread_message_get() -> None:
+    message = client.email.threads.messages.get(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    print(message.subject)
+
+
+def mailbox_thread_message_body() -> None:
+    body = client.email.threads.messages.body(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    print(body.html)
+
+
+def mailbox_thread_message_attachments() -> None:
+    result = client.email.threads.messages.attachments(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    for attachment in result.data:
+        print(attachment.filename, attachment.size)
+
+
+def mailbox_thread_message_reply() -> None:
+    reply = client.email.threads.messages.reply(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        text="Thanks for reaching out!",
+    )
+    print(reply.id)

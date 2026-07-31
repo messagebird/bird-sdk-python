@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.0
+
+- Email message reads now report the message as delivered. For a send that used a template, `subject` and the bodies from the message-content endpoint previously returned the template source, tokens and all, which is content no recipient received; they now return that source with the send's substitution values applied. The values themselves are exposed as a new `parameters` field so the inputs stay visible beside the result. Sends that supplied their content inline are unaffected.
+- Nest mailboxes and threads under email, matching the URL and the CLI/MCP names. client.mailbox becomes client.email.mailboxes, client.mailbox_thread becomes client.email.threads, client.mailbox_thread_message becomes client.email.threads.messages, client.mailbox_receive_rule becomes client.email.mailboxes.receive_rules, and mailbox.compose becomes email.mailboxes.messages.create. Params TypedDicts are renamed to match.
+- Document that a template's `language_source_required` setting makes the send block's `language` mandatory.
+- Documented how category resolves on a send-by-template: omitting it takes the template's own classification, and setting it always overrides the template.
+
 ## 0.14.0
 
 - Add an optional `language` to the email template send block, selecting which of the template's languages to send. The template's `on_missing_language` decides whether an unstocked language falls back or is rejected.

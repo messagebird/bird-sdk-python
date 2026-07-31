@@ -201,6 +201,81 @@ async def _ex_33() -> None:
 
 
 async def _ex_34() -> None:
+    mailbox = client.email.mailboxes.create(display_name="Acme Support")
+    print(mailbox.id)
+
+
+async def _ex_35() -> None:
+    client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_36() -> None:
+    mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.address)
+
+
+async def _ex_37() -> None:
+    labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    for label in labels.data:
+        print(label.name)
+
+
+async def _ex_38() -> None:
+    for mailbox in client.email.mailboxes.list():
+        print(mailbox.id, mailbox.address)
+
+
+async def _ex_39() -> None:
+    msg = client.email.mailboxes.messages.create(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg",
+        to=[{"address": "user@example.com"}],
+        subject="Hello",
+        text="Hi there",
+    )
+    print(msg.id, msg.thread_id)
+
+
+async def _ex_40() -> None:
+    rule = client.email.mailboxes.receive_rules.create(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
+    )
+    print(rule.id)
+
+
+async def _ex_41() -> None:
+    client.email.mailboxes.receive_rules.delete(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
+    )
+
+
+async def _ex_42() -> None:
+    for rule in client.email.mailboxes.receive_rules.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(rule.id, rule.action)
+
+
+async def _ex_43() -> None:
+    mailbox = client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.id)
+
+
+async def _ex_44() -> None:
+    mailbox = client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.state)
+
+
+async def _ex_45() -> None:
+    stats = client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(stats.summary)
+
+
+async def _ex_46() -> None:
+    mailbox = client.email.mailboxes.update(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
+    )
+    print(mailbox.display_name)
+
+
+async def _ex_47() -> None:
     client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -210,7 +285,7 @@ async def _ex_34() -> None:
     )
 
 
-async def _ex_35() -> None:
+async def _ex_48() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -220,7 +295,7 @@ async def _ex_35() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_36() -> None:
+async def _ex_49() -> None:
     batch = client.email.send_batch(
         messages=[
             {
@@ -241,25 +316,25 @@ async def _ex_36() -> None:
         print(item.id, item.status)
 
 
-async def _ex_37() -> None:
+async def _ex_50() -> None:
     stats = client.email.stats.by_bounce_code(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_38() -> None:
+async def _ex_51() -> None:
     stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_39() -> None:
+async def _ex_52() -> None:
     stats = client.email.stats.by_category(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_40() -> None:
+async def _ex_53() -> None:
     stats = client.email.stats.by_client(
         from_="2026-05-01", to="2026-05-25", group_by="email_client",
     )
@@ -267,13 +342,13 @@ async def _ex_40() -> None:
         print(row)
 
 
-async def _ex_41() -> None:
+async def _ex_54() -> None:
     stats = client.email.stats.by_complaint_type(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_42() -> None:
+async def _ex_55() -> None:
     stats = client.email.stats.by_location(
         from_="2026-05-01", to="2026-05-25", group_by="country",
     )
@@ -281,31 +356,31 @@ async def _ex_42() -> None:
         print(row)
 
 
-async def _ex_43() -> None:
+async def _ex_56() -> None:
     stats = client.email.stats.by_mailbox_provider(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_44() -> None:
+async def _ex_57() -> None:
     stats = client.email.stats.by_mailbox_provider_region(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_45() -> None:
+async def _ex_58() -> None:
     stats = client.email.stats.by_recipient_domain(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_46() -> None:
+async def _ex_59() -> None:
     stats = client.email.stats.by_sending_domain(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_47() -> None:
+async def _ex_60() -> None:
     stats = client.email.stats.by_sending_ip(
         from_="2026-05-01", to="2026-05-25", sort="bounces.block",
     )
@@ -313,26 +388,26 @@ async def _ex_47() -> None:
         print(row)
 
 
-async def _ex_48() -> None:
+async def _ex_61() -> None:
     stats = client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
     for row in stats.data:
         print(row)
     print(stats.total)
 
 
-async def _ex_49() -> None:
+async def _ex_62() -> None:
     stats = client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_50() -> None:
+async def _ex_63() -> None:
     stats = client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
     for point in stats.data:
         print(point.bucket, point.sends_accepted)
 
 
-async def _ex_51() -> None:
+async def _ex_64() -> None:
     stats = client.email.stats.hourly(
         from_="2026-05-25T00:00:00Z",
         to="2026-05-25T23:59:59Z",
@@ -341,140 +416,65 @@ async def _ex_51() -> None:
         print(point.bucket, point.delivery)
 
 
-async def _ex_52() -> None:
+async def _ex_65() -> None:
     summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
     print(summary.sends_accepted, summary.delivery)
 
 
-async def _ex_53() -> None:
-    msg = client.mailbox.compose(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg",
-        to=[{"address": "user@example.com"}],
-        subject="Hello",
-        text="Hi there",
-    )
-    print(msg.id, msg.thread_id)
-
-
-async def _ex_54() -> None:
-    mailbox = client.mailbox.create(display_name="Acme Support")
-    print(mailbox.id)
-
-
-async def _ex_55() -> None:
-    client.mailbox.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-
-
-async def _ex_56() -> None:
-    mailbox = client.mailbox.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    print(mailbox.address)
-
-
-async def _ex_57() -> None:
-    labels = client.mailbox.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    for label in labels.data:
-        print(label.name)
-
-
-async def _ex_58() -> None:
-    for mailbox in client.mailbox.list():
-        print(mailbox.id, mailbox.address)
-
-
-async def _ex_59() -> None:
-    mailbox = client.mailbox.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    print(mailbox.id)
-
-
-async def _ex_60() -> None:
-    mailbox = client.mailbox.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    print(mailbox.state)
-
-
-async def _ex_61() -> None:
-    stats = client.mailbox.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    print(stats.summary)
-
-
-async def _ex_62() -> None:
-    mailbox = client.mailbox.update(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
-    )
-    print(mailbox.display_name)
-
-
-async def _ex_63() -> None:
-    rule = client.mailbox_receive_rule.create(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
-    )
-    print(rule.id)
-
-
-async def _ex_64() -> None:
-    client.mailbox_receive_rule.delete(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
-    )
-
-
-async def _ex_65() -> None:
-    for rule in client.mailbox_receive_rule.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
-        print(rule.id, rule.action)
-
-
 async def _ex_66() -> None:
-    client.mailbox_thread.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
+    client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
 
 
 async def _ex_67() -> None:
-    thread = client.mailbox_thread.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
+    thread = client.email.threads.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
     print(thread.subject)
 
 
 async def _ex_68() -> None:
-    for thread in client.mailbox_thread.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+    for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
         print(thread.id, thread.subject)
 
 
 async def _ex_69() -> None:
-    thread = client.mailbox_thread.update(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
-    )
-    print(thread.id)
-
-
-async def _ex_70() -> None:
-    result = client.mailbox_thread_message.attachments(
+    result = client.email.threads.messages.attachments(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
     )
     for attachment in result.data:
         print(attachment.filename, attachment.size)
 
 
-async def _ex_71() -> None:
-    body = client.mailbox_thread_message.body(
+async def _ex_70() -> None:
+    body = client.email.threads.messages.body(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(body.html)
 
 
-async def _ex_72() -> None:
-    message = client.mailbox_thread_message.get(
+async def _ex_71() -> None:
+    message = client.email.threads.messages.get(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(message.subject)
 
 
-async def _ex_73() -> None:
-    for message in client.mailbox_thread_message.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
+async def _ex_72() -> None:
+    for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
         print(message.id, message.subject)
 
 
-async def _ex_74() -> None:
-    reply = client.mailbox_thread_message.reply(
+async def _ex_73() -> None:
+    reply = client.email.threads.messages.reply(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         text="Thanks for reaching out!",
     )
     print(reply.id)
+
+
+async def _ex_74() -> None:
+    thread = client.email.threads.update(
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
+    )
+    print(thread.id)
 
 
 async def _ex_75() -> None:

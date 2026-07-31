@@ -25,14 +25,21 @@ pip_args=(install --quiet "messagebird-sdk==${ver}")
 if [ -n "$index" ]; then
 	pip_args+=(--index-url "$index" --extra-index-url "https://pypi.org/simple/")
 fi
-# A just-published version can lag the index/CDN, so retry before giving up.
-for attempt in 1 2 3 4 5; do
-	if "$tmp/venv/bin/python" -m pip "${pip_args[@]}"; then
+# A just-published version can lag the index/CDN, so retry for ~5 minutes and
+# print pip's own output on the last attempt: a swallowed error makes a
+# propagation lag look identical to a packaging break.
+attempts=10
+for attempt in $(seq 1 "$attempts"); do
+	if out=$("$tmp/venv/bin/python" -m pip "${pip_args[@]}" 2>&1); then
 		break
 	fi
-	[ "$attempt" -eq 5 ] && { echo "smoke: messagebird-sdk==${ver} not installable after 5 attempts" >&2; exit 1; }
-	echo "smoke: messagebird-sdk==${ver} not available yet — retrying in 15s"
-	sleep 15
+	if [ "$attempt" -eq "$attempts" ]; then
+		echo "smoke: messagebird-sdk==${ver} not installable after ${attempts} attempts (~5m); last error:" >&2
+		printf '%s\n' "$out" | sed 's/^/  /' >&2
+		exit 1
+	fi
+	echo "smoke: messagebird-sdk==${ver} not available yet — retrying in 30s (attempt ${attempt}/${attempts})"
+	sleep 30
 done
 
 "$tmp/venv/bin/python" - <<PY

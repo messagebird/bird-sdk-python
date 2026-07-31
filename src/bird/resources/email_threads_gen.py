@@ -20,8 +20,8 @@ class EmailLabelsUpdate(TypedDict, total=False):
     remove: Sequence[str]
 
 
-class MailboxThreadListParams(TypedDict, total=False):
-    """Query params for ``client.mailbox_thread.list``. Every key is optional."""
+class EmailThreadsListParams(TypedDict, total=False):
+    """Query params for ``client.email.threads.list``. Every key is optional."""
 
     mailbox_id: str
     contact_id: str
@@ -36,20 +36,20 @@ class MailboxThreadListParams(TypedDict, total=False):
     ending_before: str
 
 
-class MailboxThreadUpdateParams(TypedDict, total=False):
-    """Params for ``client.mailbox_thread.update``. Every key is optional."""
+class EmailThreadsUpdateParams(TypedDict, total=False):
+    """Params for ``client.email.threads.update``. Every key is optional."""
 
     labels: EmailLabelsUpdate
     contact_id: str | None
 
 
-class MailboxThreadDeleteParams(TypedDict, total=False):
-    """Query params for ``client.mailbox_thread.delete``. Every key is optional."""
+class EmailThreadsDeleteParams(TypedDict, total=False):
+    """Query params for ``client.email.threads.delete``. Every key is optional."""
 
     permanent: bool
 
 
-class MailboxThread(Resource):
+class EmailThreads(Resource):
     def list(
         self,
         *,
@@ -69,7 +69,7 @@ class MailboxThread(Resource):
         """List mailbox conversations as a cursor page, most recently active first. `label` selects the view — inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
 
         ```python
-        for thread in client.mailbox_thread.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
             print(thread.id, thread.subject)
         ```
         """
@@ -97,7 +97,7 @@ class MailboxThread(Resource):
         """Get one conversation: participants, counts, labels, read state. Fetch its messages with the thread messages endpoint.
 
         ```python
-        thread = client.mailbox_thread.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
+        thread = client.email.threads.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
         print(thread.subject)
         ```
         """
@@ -119,7 +119,7 @@ class MailboxThread(Resource):
         """Add or remove labels on a conversation — adding `spam` files it as spam, adding `archive` clears it out of the inbox, adding `inbox` brings it back — or link/unlink a contact.
 
         ```python
-        thread = client.mailbox_thread.update(
+        thread = client.email.threads.update(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
         )
         print(thread.id)
@@ -149,7 +149,7 @@ class MailboxThread(Resource):
         """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with ?permanent=true.
 
         ```python
-        client.mailbox_thread.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
+        client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
         ```
         """
         self._delete(
@@ -161,7 +161,7 @@ class MailboxThread(Resource):
         )
 
 
-class AsyncMailboxThread(AsyncResource):
+class AsyncEmailThreads(AsyncResource):
     def list(
         self,
         *,
@@ -181,7 +181,7 @@ class AsyncMailboxThread(AsyncResource):
         """List mailbox conversations as a cursor page, most recently active first. `label` selects the view — inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
 
         ```python
-        async for thread in client.mailbox_thread.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
+        async for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
             print(thread.id, thread.subject)
         ```
         """
@@ -209,7 +209,7 @@ class AsyncMailboxThread(AsyncResource):
         """Get one conversation: participants, counts, labels, read state. Fetch its messages with the thread messages endpoint.
 
         ```python
-        thread = await client.mailbox_thread.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
+        thread = await client.email.threads.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
         print(thread.subject)
         ```
         """
@@ -231,7 +231,7 @@ class AsyncMailboxThread(AsyncResource):
         """Add or remove labels on a conversation — adding `spam` files it as spam, adding `archive` clears it out of the inbox, adding `inbox` brings it back — or link/unlink a contact.
 
         ```python
-        thread = await client.mailbox_thread.update(
+        thread = await client.email.threads.update(
             "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
         )
         print(thread.id)
@@ -261,7 +261,7 @@ class AsyncMailboxThread(AsyncResource):
         """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with ?permanent=true.
 
         ```python
-        await client.mailbox_thread.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
+        await client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
         ```
         """
         await self._delete(

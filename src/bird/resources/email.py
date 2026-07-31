@@ -15,6 +15,8 @@ from bird._generated import (
 
 from bird._models import to_wire
 from bird._response import APIResponse
+from bird.resources.email_mailboxes import AsyncEmailMailboxes, EmailMailboxes
+from bird.resources.email_threads import AsyncEmailThreads, EmailThreads
 from bird.resources.email_stats_gen import AsyncEmailStats, EmailStats
 from bird._types import (
     Attachment,
@@ -157,6 +159,8 @@ class Email(EmailBase):
         super().__init__(client)
         self._defaults = defaults
         self.stats = EmailStats(client)
+        self.mailboxes = EmailMailboxes(client)
+        self.threads = EmailThreads(client)
 
     @property
     def with_raw_response(self) -> "EmailWithRawResponse":
@@ -304,6 +308,8 @@ class AsyncEmail(AsyncEmailBase):
         super().__init__(client)
         self._defaults = defaults
         self.stats = AsyncEmailStats(client)
+        self.mailboxes = AsyncEmailMailboxes(client)
+        self.threads = AsyncEmailThreads(client)
 
     @property
     def with_raw_response(self) -> "AsyncEmailWithRawResponse":
