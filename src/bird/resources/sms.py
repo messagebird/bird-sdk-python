@@ -10,10 +10,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._generated import SMSMessage, SMSMessageBatchResponse
 from bird._types import RequestOptions
-from bird.pagination import AsyncPage, SyncPage
+from bird.resources.sms_gen import AsyncSmsBase, SmsBase
 
 _PATH = "/v1/sms/messages"
 _BATCH_PATH = "/v1/sms/batches"
@@ -22,9 +21,6 @@ _BATCH_PATH = "/v1/sms/batches"
 def _opts(options: RequestOptions | None) -> dict[str, Any]:
     return dict(options or {})
 
-
-def _list_query(values: dict[str, Any]) -> dict[str, object]:
-    return {key: value for key, value in values.items() if value is not None}
 
 
 def _send_body(
@@ -75,11 +71,8 @@ def _message_body(m: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
-class Sms:
+class Sms(SmsBase):
     """Send and read SMS messages. Reach it via ``client.sms``."""
-
-    def __init__(self, client: SyncAPIClient) -> None:
-        self._client = client
 
     def send(
         self,
@@ -120,8 +113,7 @@ class Sms:
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
         )
-        response = self._client.request("POST", _PATH, body=body, **_opts(options))
-        return SMSMessage.model_validate(response.json())
+        return self._write("POST", _PATH, body, SMSMessage, options)
 
     def send_batch(
         self, *, messages: Sequence[Mapping[str, Any]], options: RequestOptions | None = None
@@ -132,49 +124,11 @@ class Sms:
         response = self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return SMSMessageBatchResponse.model_validate(response.json())
 
-    def get(self, message_id: str, *, options: RequestOptions | None = None) -> SMSMessage:
-        """Fetch a single SMS message with its current status, segments, and cost."""
-        response = self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
-        return SMSMessage.model_validate(response.json())
-
-    def list(
-        self,
-        *,
-        direction: str | None = None,
-        status: Sequence[str] | None = None,
-        error_code: Sequence[str] | None = None,
-        category: str | None = None,
-        to: str | None = None,
-        from_: str | None = None,
-        tag: Sequence[str] | None = None,
-        limit: int | None = None,
-        starting_after: str | None = None,
-        ending_before: str | None = None,
-        created_after: str | None = None,
-        created_before: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> SyncPage[SMSMessage]:
-        """List SMS messages, newest first; iterate the page to auto-paginate.
-
-        ```python
-        for message in client.sms.list(direction="outbound"):
-            print(message.id, message.status)
-        ```
-        """
-        query = _list_query({
-            "direction": direction, "status": status, "error_code": error_code,
-            "category": category, "to": to, "from": from_, "tag": tag,
-            "limit": limit, "starting_after": starting_after, "ending_before": ending_before,
-            "created_after": created_after, "created_before": created_before,
-        })
-        return SyncPage(self._client, _PATH, query, SMSMessage, options)
 
 
-class AsyncSms:
+
+class AsyncSms(AsyncSmsBase):
     """Async mirror of `Sms`: ``await`` each call, ``async for`` over a list."""
-
-    def __init__(self, client: AsyncAPIClient) -> None:
-        self._client = client
 
     async def send(
         self,
@@ -195,8 +149,7 @@ class AsyncSms:
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
         )
-        response = await self._client.request("POST", _PATH, body=body, **_opts(options))
-        return SMSMessage.model_validate(response.json())
+        return await self._write("POST", _PATH, body, SMSMessage, options)
 
     async def send_batch(
         self, *, messages: Sequence[Mapping[str, Any]], options: RequestOptions | None = None
@@ -206,33 +159,4 @@ class AsyncSms:
         response = await self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return SMSMessageBatchResponse.model_validate(response.json())
 
-    async def get(self, message_id: str, *, options: RequestOptions | None = None) -> SMSMessage:
-        """Fetch a single SMS message with its current status, segments, and cost."""
-        response = await self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
-        return SMSMessage.model_validate(response.json())
 
-    def list(
-        self,
-        *,
-        direction: str | None = None,
-        status: Sequence[str] | None = None,
-        error_code: Sequence[str] | None = None,
-        category: str | None = None,
-        to: str | None = None,
-        from_: str | None = None,
-        tag: Sequence[str] | None = None,
-        limit: int | None = None,
-        starting_after: str | None = None,
-        ending_before: str | None = None,
-        created_after: str | None = None,
-        created_before: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> AsyncPage[SMSMessage]:
-        """List SMS messages, newest first; ``async for`` over the page to auto-paginate."""
-        query = _list_query({
-            "direction": direction, "status": status, "error_code": error_code,
-            "category": category, "to": to, "from": from_, "tag": tag,
-            "limit": limit, "starting_after": starting_after, "ending_before": ending_before,
-            "created_after": created_after, "created_before": created_before,
-        })
-        return AsyncPage(self._client, _PATH, query, SMSMessage, options)

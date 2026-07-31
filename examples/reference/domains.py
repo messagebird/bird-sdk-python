@@ -2,14 +2,26 @@
 
 Each bird:snippet region is harvested for the docs site + README; the keys match
 the surface catalog (domains.<leaf>). Hand-written and type-checked (pyright
-includes examples/); nothing regenerates over it. The override methods —
-domains.create and domains.update — keep their examples inline in
-src/bird/resources/domains.py, since nothing regenerates over a hand method.
+includes examples/); nothing regenerates over it.
 """
 
 from bird import Bird
 
 client = Bird()
+
+
+def domains_create() -> None:
+    domain = client.domains.create(domain="mail.acme.com")
+    print(domain.id, domain.status)
+
+
+def domains_update() -> None:
+    domain = client.domains.update(
+        "dom_01krdgeqcxet5s7t44vh8rt9mg",
+        settings={"click_tracking": True, "open_tracking": True},
+        tracking={"name": "links"},
+    )
+    print(domain.id)
 
 
 def domains_get() -> None:

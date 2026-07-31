@@ -3,7 +3,7 @@
 Both resolve configuration the same way — the API key from the ``api_key``
 argument or ``BIRD_API_KEY``; the base URL from ``base_url``, ``BIRD_BASE_URL``,
 or the region (explicit ``region`` or inferred from the ``bk_{region}_…`` key
-prefix, ADR-0036). They add the escape-hatch verb methods over the request
+prefix). They add the escape-hatch verb methods over the request
 lifecycle in ``_base_client``; resource namespaces attach on top.
 """
 
@@ -21,19 +21,26 @@ from bird._constants import DEFAULT_MAX_RETRIES
 from bird._exceptions import BirdError
 from bird._types import omit, EmailDefaults, Omit
 from bird.resources.audiences_gen import AsyncAudiences, Audiences
-from bird.resources.contact_properties import AsyncContactProperties, ContactProperties
-from bird.resources.contacts import AsyncContacts, Contacts
-from bird.resources.domains import AsyncDomains, Domains
+from bird.resources.contact_properties_gen import AsyncContactProperties, ContactProperties
+from bird.resources.contacts_gen import AsyncContacts, Contacts
+from bird.resources.domains_gen import AsyncDomains, Domains
 from bird.resources.email import AsyncEmail, Email
 from bird.resources.realtime import AsyncRealtime, Realtime
 from bird.resources.sms import AsyncSms, Sms
-from bird.resources.sms_templates import AsyncSMSTemplates, SMSTemplates
+from bird.resources.sms_templates_gen import AsyncSmsTemplates, SmsTemplates
 from bird.resources.verify import AsyncVerify, Verify
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
-from bird.resources.whatsapp_templates import AsyncWhatsappTemplates, WhatsappTemplates
 from bird.resources.mailbox import AsyncMailboxes, Mailboxes
-from bird.resources.mailbox_thread import AsyncMailboxThreads, MailboxThreads
+from bird.resources.mailbox_receive_rule_gen import (
+    AsyncMailboxReceiveRule,
+    MailboxReceiveRule,
+)
+from bird.resources.mailbox_thread_gen import AsyncMailboxThread, MailboxThread
+from bird.resources.mailbox_thread_message_gen import (
+    AsyncMailboxThreadMessage,
+    MailboxThreadMessage,
+)
 
 _REGION_PREFIX = re.compile(r"^bk_([a-z]{2}[0-9]+)_")
 
@@ -73,12 +80,12 @@ def _with_overrides(
     the parent's resolved config, reuse the live HTTP client (so the derived client
     shares the pool and doesn't own it), then apply the caller's non-default
     overrides. Overriding ``api_key`` or ``region`` re-derives the base URL from the
-    new key's region prefix (ADR-0036) unless an explicit ``base_url`` — or the
+    new key's region prefix unless an explicit ``base_url`` — or the
     ``BIRD_BASE_URL`` env var, the deployment-wide override _resolve honors above
     region — is set, matching the constructor's precedence."""
     merged: dict[str, Any] = {**config, "http_client": live_client}
     given = {key: value for key, value in overrides.items() if not isinstance(value, Omit)}
-    # api_key drives the region (ADR-0036): a new key (or region) without an explicit
+    # api_key drives the region: a new key (or region) without an explicit
     # base_url must re-resolve the endpoint, not inherit the parent's resolved one.
     if ("api_key" in given or "region" in given) and "base_url" not in given:
         merged.pop("base_url", None)
@@ -156,9 +163,8 @@ class Bird(SyncAPIClient):
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
         self.sms = Sms(self)
-        self.sms_templates = SMSTemplates(self)
+        self.sms_templates = SmsTemplates(self)
         self.whatsapp = Whatsapp(self)
-        self.whatsapp_templates = WhatsappTemplates(self)
         self.verify = Verify(self)
         self.contacts = Contacts(self)
         self.contact_properties = ContactProperties(self)
@@ -166,9 +172,9 @@ class Bird(SyncAPIClient):
         self.domains = Domains(self)
         self.webhooks = Webhooks(webhook_secret)
         self.mailbox = Mailboxes(self)
-        self.mailbox_receive_rule = self.mailbox.receive_rules
-        self.mailbox_thread = MailboxThreads(self)
-        self.mailbox_thread_message = self.mailbox_thread.messages
+        self.mailbox_receive_rule = MailboxReceiveRule(self)
+        self.mailbox_thread = MailboxThread(self)
+        self.mailbox_thread_message = MailboxThreadMessage(self)
         self.realtime = Realtime(self, realtime_key, realtime_secret)
 
     def with_options(
@@ -268,9 +274,8 @@ class AsyncBird(AsyncAPIClient):
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
         self.sms = AsyncSms(self)
-        self.sms_templates = AsyncSMSTemplates(self)
+        self.sms_templates = AsyncSmsTemplates(self)
         self.whatsapp = AsyncWhatsapp(self)
-        self.whatsapp_templates = AsyncWhatsappTemplates(self)
         self.verify = AsyncVerify(self)
         self.contacts = AsyncContacts(self)
         self.contact_properties = AsyncContactProperties(self)
@@ -278,9 +283,9 @@ class AsyncBird(AsyncAPIClient):
         self.domains = AsyncDomains(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
         self.mailbox = AsyncMailboxes(self)
-        self.mailbox_receive_rule = self.mailbox.receive_rules
-        self.mailbox_thread = AsyncMailboxThreads(self)
-        self.mailbox_thread_message = self.mailbox_thread.messages
+        self.mailbox_receive_rule = AsyncMailboxReceiveRule(self)
+        self.mailbox_thread = AsyncMailboxThread(self)
+        self.mailbox_thread_message = AsyncMailboxThreadMessage(self)
         self.realtime = AsyncRealtime(self, realtime_key, realtime_secret)
 
     def with_options(

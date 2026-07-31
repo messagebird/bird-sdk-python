@@ -5,7 +5,7 @@ originates from issuing a request — both transport failures with no HTTP respo
 (``APIConnectionError`` / ``APITimeoutError``) and HTTP status errors
 (``APIStatusError`` and its subclasses), so ``except APIError`` catches a timeout or
 connection reset alongside a 500. ``APIStatusError`` carries the HTTP ``status_code``;
-branch on its ``type`` (the ADR-0016 categories in ``ErrorType``) or catch
+branch on its ``type`` (the categories in ``ErrorType``) or catch
 ``RateLimitError`` / ``ValidationError`` for the extra data they carry. A bad webhook
 signature is ``WebhookVerificationError`` — it happens after a 200, so it is not an
 ``APIError``.
@@ -22,7 +22,7 @@ from typing import Any, Mapping
 
 
 class ErrorType(str, Enum):
-    """The coarse error category clients branch on (ADR-0016)."""
+    """The coarse error category clients branch on."""
 
     bad_request = "bad_request_error"
     auth = "auth_error"
@@ -50,7 +50,7 @@ class ErrorDetail:
 
 @dataclass(frozen=True)
 class ErrorNextAction:
-    """One recovery operation the server suggests (ADR-0073): call it to resolve
+    """One recovery operation the server suggests: call it to resolve
     the error, then retry the original request."""
 
     operation: str

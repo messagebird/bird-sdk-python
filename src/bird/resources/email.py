@@ -23,7 +23,7 @@ from bird._types import (
     EmailSendParams,
     RequestOptions,
 )
-from bird.pagination import AsyncPage, SyncPage
+from .email_gen import AsyncEmailBase, EmailBase
 
 _BATCH_PATH = "/v1/email/batches"
 
@@ -73,7 +73,7 @@ def _send_body(
     defaults: EmailDefaults | None,
 ) -> dict[str, Any]:
     # A per-send value wins; an unset field falls back to the client's EmailDefaults
-    # (ADR-0045). `from_` maps to the wire field "from" (a Python keyword). `template`
+    #. `from_` maps to the wire field "from" (a Python keyword). `template`
     # and `parameters` are per-send only (not defaultable).
     d = defaults or {}
     raw_from = from_ if from_ is not None else d.get("from_")
@@ -152,13 +152,9 @@ def _opts(options: RequestOptions | None) -> dict[str, Any]:
     return dict(options or {})
 
 
-def _list_query(values: dict[str, Any]) -> dict[str, object]:
-    return {key: value for key, value in values.items() if value is not None}
-
-
-class Email:
+class Email(EmailBase):
     def __init__(self, client: SyncAPIClient, defaults: EmailDefaults | None = None) -> None:
-        self._client = client
+        super().__init__(client)
         self._defaults = defaults
         self.stats = EmailStats(client)
 
@@ -291,53 +287,8 @@ class Email:
         response = self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return EmailMessageBatchResponse.model_validate(response.json())
 
-    def get(self, message_id: str, *, options: RequestOptions | None = None) -> EmailMessage:
-        """Fetch a previously sent message by id."""
-        response = self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
-        return EmailMessage.model_validate(response.json())
 
-    def cancel(self, message_id: str, *, options: RequestOptions | None = None) -> None:
-        """Cancel a scheduled message before it sends.
-
-        Only a message that is still scheduled can be canceled; one that already
-        started sending — or was previously canceled — raises a conflict error.
-        Canceling does not return consumed scheduled-send quota. Returns no content.
-        """
-        self._client.request("POST", f"{_PATH}/{message_id}/cancel", **_opts(options))
-
-    def list(
-        self,
-        *,
-        limit: int | None = None,
-        starting_after: str | None = None,
-        ending_before: str | None = None,
-        status: str | None = None,
-        tag: str | None = None,
-        category: str | None = None,
-        to: str | None = None,
-        from_: str | None = None,
-        created_after: str | None = None,
-        created_before: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> SyncPage[EmailMessage]:
-        """List messages, newest first; iterate the page to auto-paginate.
-
-        ```python
-        for message in client.email.list(status="delivered"):
-            print(message.id)
-        page = client.email.list(status="delivered")  # page.data, page.next_cursor
-        print(len(page.data), page.next_cursor)
-        ```
-        """
-        query = _list_query({
-            "limit": limit, "starting_after": starting_after, "ending_before": ending_before,
-            "status": status, "tag": tag, "category": category, "to": to, "from": from_,
-            "created_after": created_after, "created_before": created_before,
-        })
-        return SyncPage(self._client, _PATH, query, EmailMessage, options)
-
-
-class AsyncEmail:
+class AsyncEmail(AsyncEmailBase):
     """Async mirror of `Email`: ``await`` each call, ``async for`` over a list.
 
     ```python
@@ -350,7 +301,7 @@ class AsyncEmail:
     """
 
     def __init__(self, client: AsyncAPIClient, defaults: EmailDefaults | None = None) -> None:
-        self._client = client
+        super().__init__(client)
         self._defaults = defaults
         self.stats = AsyncEmailStats(client)
 
@@ -401,36 +352,6 @@ class AsyncEmail:
         body = _batch_body(messages, self._defaults)
         response = await self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return EmailMessageBatchResponse.model_validate(response.json())
-
-    async def get(self, message_id: str, *, options: RequestOptions | None = None) -> EmailMessage:
-        response = await self._client.request("GET", f"{_PATH}/{message_id}", **_opts(options))
-        return EmailMessage.model_validate(response.json())
-
-    async def cancel(self, message_id: str, *, options: RequestOptions | None = None) -> None:
-        """Cancel a scheduled message before it sends (see `Email.cancel`)."""
-        await self._client.request("POST", f"{_PATH}/{message_id}/cancel", **_opts(options))
-
-    def list(
-        self,
-        *,
-        limit: int | None = None,
-        starting_after: str | None = None,
-        ending_before: str | None = None,
-        status: str | None = None,
-        tag: str | None = None,
-        category: str | None = None,
-        to: str | None = None,
-        from_: str | None = None,
-        created_after: str | None = None,
-        created_before: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> AsyncPage[EmailMessage]:
-        query = _list_query({
-            "limit": limit, "starting_after": starting_after, "ending_before": ending_before,
-            "status": status, "tag": tag, "category": category, "to": to, "from": from_,
-            "created_after": created_after, "created_before": created_before,
-        })
-        return AsyncPage(self._client, _PATH, query, EmailMessage, options)
 
 
 class EmailWithRawResponse:

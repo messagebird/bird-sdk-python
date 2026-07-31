@@ -5,7 +5,7 @@ iterated, transparently fetches the rest: ``for msg in client.email.list()`` /
 ``async for msg in client.email.list()``. The async page is also awaitable —
 ``page = await client.email.list()`` gives the first page for cursor-level control,
 mirroring the sync eager fetch. ``next_cursor`` from each response is sent back as
-``starting_after`` to advance (ADR-0045). Per-call options thread through every
+``starting_after`` to advance. Per-call options thread through every
 page request.
 """
 

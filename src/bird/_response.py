@@ -3,7 +3,7 @@
 Returned by ``client.<resource>.with_raw_response.<method>(...)``: read transport
 metadata (``status_code``, ``headers``, ``request_id``) and call ``parse()`` for
 the typed model. This is the Python form of the transport-metadata escape hatch
-the Go and TS SDKs expose (ADR-0045).
+the Go and TS SDKs expose.
 """
 
 from __future__ import annotations

@@ -473,6 +473,24 @@ class RealtimeChannelMembers(BaseModel):
     members: list[RealtimeChannelMember]
 
 
+class EmailMessageStatus(str, Enum):
+    scheduled = 'scheduled'
+    accepted = 'accepted'
+    processed = 'processed'
+    deferred = 'deferred'
+    delivered = 'delivered'
+    partial_failure = 'partial_failure'
+    bounced = 'bounced'
+    complained = 'complained'
+    rejected = 'rejected'
+    canceled = 'canceled'
+
+
+class EmailMessageCategory(str, Enum):
+    marketing = 'marketing'
+    transactional = 'transactional'
+
+
 class EmailID(RootModel[str]):
     root: Annotated[
         str,
@@ -504,19 +522,6 @@ class EmailAddress(BaseModel):
             pattern='^[^\\r\\n]+$',
         ),
     ] = None
-
-
-class EmailMessageStatus(str, Enum):
-    scheduled = 'scheduled'
-    accepted = 'accepted'
-    processed = 'processed'
-    deferred = 'deferred'
-    delivered = 'delivered'
-    partial_failure = 'partial_failure'
-    bounced = 'bounced'
-    complained = 'complained'
-    rejected = 'rejected'
-    canceled = 'canceled'
 
 
 class Tag(BaseModel):
@@ -590,11 +595,6 @@ class EmailAttachmentRef(BaseModel):
     ] = None
 
 
-class Category(str, Enum):
-    marketing = 'marketing'
-    transactional = 'transactional'
-
-
 class EmailMessage(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -628,12 +628,7 @@ class EmailMessage(BaseModel):
         None
     )
     subject: Annotated[str, Field(description='Message subject line.', min_length=1)]
-    category: Annotated[
-        Category,
-        Field(
-            description='Content classification. Controls suppression policy — `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions.\n'
-        ),
-    ]
+    category: EmailMessageCategory
     reply_to: Annotated[
         list[EmailAddress] | None,
         Field(
@@ -798,20 +793,29 @@ class EmailTemplateSend1(BaseModel):
             pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ]
-    name: Annotated[
+    slug: Annotated[
         str | None,
         Field(
-            description='The template to send, by its name handle — a workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
+            description='The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
             examples=['welcome-email'],
             max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ] = None
+    language: Annotated[
+        str | None,
+        Field(
+            description="Which of the template's languages to send. Omit it to send the template's default language. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            examples=['pt-BR'],
+            max_length=35,
+            min_length=2,
+        ),
+    ] = None
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Cap: 16 KB serialized.\n",
+            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Send everything the template's `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n",
             examples=[{'first_name': 'Ada'}],
         ),
     ] = None
@@ -830,20 +834,29 @@ class EmailTemplateSend2(BaseModel):
             pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
         ),
     ] = None
-    name: Annotated[
+    slug: Annotated[
         str,
         Field(
-            description='The template to send, by its name handle — a workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
+            description='The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
             examples=['welcome-email'],
             max_length=63,
             min_length=1,
             pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
         ),
     ]
+    language: Annotated[
+        str | None,
+        Field(
+            description="Which of the template's languages to send. Omit it to send the template's default language. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            examples=['pt-BR'],
+            max_length=35,
+            min_length=2,
+        ),
+    ] = None
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Cap: 16 KB serialized.\n",
+            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Send everything the template's `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n",
             examples=[{'first_name': 'Ada'}],
         ),
     ] = None
@@ -1003,12 +1016,7 @@ class EmailMessageSendRequest(BaseModel):
             pattern='^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$',
         ),
     ] = None
-    category: Annotated[
-        Category | None,
-        Field(
-            description='Content classification — independent of which endpoint you use. Controls suppression policy: `marketing` blocks on all suppression reasons (use for marketing content); `transactional` allows delivery through complaint and unsubscribe suppressions (use for receipts, password resets, and similar operational messages). Default: marketing.\n'
-        ),
-    ] = 'marketing'
+    category: EmailMessageCategory | None = 'marketing'
     in_reply_to_message_id: Annotated[
         str | None,
         Field(
@@ -1075,6 +1083,11 @@ class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
 
 class Status(str, Enum):
     accepted = 'accepted'
+
+
+class Category(str, Enum):
+    marketing = 'marketing'
+    transactional = 'transactional'
 
 
 class EmailMessageBatchItem(BaseModel):
@@ -1433,7 +1446,7 @@ class AudienceList(FieldListEnvelope):
     data: Annotated[list[Audience], Field(description='Page of audience objects.')]
 
 
-class Type2(str, Enum):
+class ContactPropertyType(str, Enum):
     ContactPropertyTypeString = 'string'
     ContactPropertyTypeNumber = 'number'
     ContactPropertyTypeBoolean = 'boolean'
@@ -1461,12 +1474,7 @@ class ContactProperty(Timestamps):
             pattern='^[a-z][a-z0-9_]*$',
         ),
     ]
-    type: Annotated[
-        Type2,
-        Field(
-            description='The value type every contact must use for this property. Cannot be changed after creation.'
-        ),
-    ]
+    type: ContactPropertyType
     fallback_value: Annotated[
         Any | None,
         Field(
@@ -1506,12 +1514,7 @@ class ContactPropertyCreateRequest(BaseModel):
             pattern='^[a-z][a-z0-9_]*$',
         ),
     ]
-    type: Annotated[
-        Type2,
-        Field(
-            description='The value type every contact must use for this property. Cannot be changed after creation.'
-        ),
-    ]
+    type: ContactPropertyType
     fallback_value: Annotated[
         Any | None,
         Field(
@@ -1534,12 +1537,6 @@ class ContactPropertyUpdateRequest(BaseModel):
     ] = None
 
 
-class Type4(str, Enum):
-    AudienceTypeStatic = 'static'
-    AudienceTypeDynamic = 'dynamic'
-    AudienceTypeExternal = 'external'
-
-
 class AudienceCreateRequest(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -1557,7 +1554,7 @@ class AudienceCreateRequest(BaseModel):
         ),
     ] = None
     type: Annotated[
-        Type4 | None,
+        Type1 | None,
         Field(
             description="How the audience's recipients are determined. `static` (the default) is an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable; creating an audience with either returns a validation error.\n"
         ),
@@ -1664,6 +1661,18 @@ class AudienceContactsRemoveRequest(BaseModel):
     ]
 
 
+class MessageDirection(str, Enum):
+    outbound = 'outbound'
+    inbound = 'inbound'
+
+
+class SMSMessageCategory(str, Enum):
+    transactional = 'transactional'
+    marketing = 'marketing'
+    authentication = 'authentication'
+    service = 'service'
+
+
 class SMSMessageStatus(str, Enum):
     scheduled = 'scheduled'
     accepted = 'accepted'
@@ -1675,13 +1684,6 @@ class SMSMessageStatus(str, Enum):
     canceled = 'canceled'
     expired = 'expired'
     received = 'received'
-
-
-class SMSMessageCategory(str, Enum):
-    transactional = 'transactional'
-    marketing = 'marketing'
-    authentication = 'authentication'
-    service = 'service'
 
 
 class Encoding(str, Enum):
@@ -2041,7 +2043,7 @@ class SMSMessageSendRequest1(BaseModel):
         str | None,
         Field(
             alias='from',
-            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, or spaces, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n',
+            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n',
             examples=['+15557654321'],
             min_length=1,
         ),
@@ -2171,7 +2173,7 @@ class SMSMessageSendRequest2(BaseModel):
         str | None,
         Field(
             alias='from',
-            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, or spaces, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n',
+            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n',
             examples=['+15557654321'],
             min_length=1,
         ),
@@ -2493,6 +2495,11 @@ class StatsGrain(str, Enum):
     hour = 'hour'
 
 
+class StatsTrendGrain(str, Enum):
+    daily = 'daily'
+    hourly = 'hourly'
+
+
 class VerificationTerminalReason(RootModel[str]):
     root: Annotated[
         str,
@@ -2544,6 +2551,30 @@ class VerificationChannelEntry(BaseModel):
         Field(
             description='The channel a passcode is delivered over. Open enum — new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.',
             min_length=1,
+        ),
+    ]
+
+
+class Money(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    amount: Annotated[
+        str,
+        Field(
+            description='Decimal amount as a string, in major currency units.',
+            examples=['0.00995'],
+            min_length=1,
+        ),
+    ]
+    currency_code: Annotated[
+        str,
+        Field(
+            description='ISO 4217 currency code.',
+            examples=['USD'],
+            max_length=3,
+            min_length=3,
+            pattern='^[A-Z]{3}$',
         ),
     ]
 
@@ -2904,6 +2935,12 @@ class WhatsAppMessage(BaseModel):
             description='When the message was read by the recipient. Null until then.'
         ),
     ] = None
+    cost: Annotated[
+        Money | None,
+        Field(
+            description="Amount charged for this message, at full precision. Null until the message has been priced, and on messages that were rejected before pricing. The rate depends on the template category and the recipient's country."
+        ),
+    ] = None
     tags: Annotated[
         list[Tag] | None,
         Field(
@@ -3028,175 +3065,6 @@ class WhatsAppEventList(BaseModel):
         Field(
             description='Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full; this list is not paginated.'
         ),
-    ]
-
-
-class WhatsAppTemplateExampleParameter(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    type: Annotated[
-        str,
-        Field(description='The kind of value this parameter accepts.', min_length=1),
-    ]
-    text: Annotated[
-        str | None,
-        Field(
-            description='An example value for a text parameter. Present when `type` is `text`.',
-            examples=['123456'],
-            min_length=1,
-        ),
-    ] = None
-    name: Annotated[
-        str | None,
-        Field(
-            description='The named placeholder this example fills, for templates that use named parameters. Absent for system templates, which use positional parameters.',
-            examples=['first_name'],
-            min_length=1,
-        ),
-    ] = None
-
-
-class WhatsAppTemplateButton(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    type: Annotated[
-        str,
-        Field(
-            description="The button's behavior type.", examples=['url'], min_length=1
-        ),
-    ]
-    otp_type: Annotated[
-        str | None,
-        Field(
-            description='How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.',
-            examples=['copy_code'],
-            min_length=1,
-        ),
-    ] = None
-    text: Annotated[
-        str,
-        Field(
-            description="The button's label text.", examples=['Copy code'], min_length=1
-        ),
-    ]
-    url: Annotated[
-        str | None,
-        Field(
-            description='The URL the button opens, with any variable placeholder shown inline. Present on link buttons.',
-            examples=[
-                'https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code=otp{{1}}'
-            ],
-            min_length=1,
-        ),
-    ] = None
-    example_parameters: Annotated[
-        list[WhatsAppTemplateExampleParameter] | None,
-        Field(
-            description="Example values for this button's variables, in placeholder order. Present when the button URL has variables."
-        ),
-    ] = None
-
-
-class WhatsAppTemplateComponent(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    type: Annotated[
-        str,
-        Field(
-            description="The content block's type within the template.",
-            examples=['body'],
-            min_length=1,
-        ),
-    ]
-    text: Annotated[
-        str | None,
-        Field(
-            description="The block's text content, with any variable placeholders shown inline. Present when the block carries text.",
-            examples=['Your verification code is {{1}}.'],
-            min_length=1,
-        ),
-    ] = None
-    example_parameters: Annotated[
-        list[WhatsAppTemplateExampleParameter] | None,
-        Field(
-            description="Example values for this block's variables, in placeholder order (one per `{{n}}`). Use them to see what a filled message looks like. Present when the block has variables."
-        ),
-    ] = None
-    buttons: Annotated[
-        list[WhatsAppTemplateButton] | None,
-        Field(
-            description='The buttons attached to this block. Present when the block carries buttons.'
-        ),
-    ] = None
-
-
-class WhatsAppTemplate(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    id: Annotated[
-        str,
-        Field(
-            description='Stable Bird identifier for the template.',
-            examples=['wat_01krdgeqcxet5s7t44vh8rt9mg'],
-            min_length=1,
-            pattern='^wat_[0-9a-hjkmnp-tv-z]{26}$',
-        ),
-    ]
-    name: Annotated[
-        str,
-        Field(
-            description="The template's stable handle. Pass it as the template reference when sending.",
-            examples=['bird_otp'],
-            max_length=512,
-            min_length=1,
-            pattern='^[a-z0-9_]+$',
-        ),
-    ]
-    description: Annotated[
-        str | None,
-        Field(
-            description="Optional description of the template's purpose. Null when unset.",
-            examples=['One-time passcode verification.'],
-        ),
-    ] = None
-    scope: TemplateScope
-    language: Annotated[
-        str,
-        Field(
-            description='Language code of the template variant (for example `en` or `pt_BR`).',
-            examples=['en'],
-            min_length=1,
-        ),
-    ]
-    category: Annotated[
-        str,
-        Field(
-            description='Content classification applied to messages sent from this template.',
-            min_length=1,
-        ),
-    ]
-    status: Annotated[
-        str, Field(description="The template's review and health status.", min_length=1)
-    ]
-    components: Annotated[
-        list[WhatsAppTemplateComponent],
-        Field(
-            description='The content blocks that make up the template, in display order.'
-        ),
-    ]
-
-
-class WhatsAppTemplateList(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    data: Annotated[
-        list[WhatsAppTemplate],
-        Field(description='The templates available to your workspace.'),
     ]
 
 
@@ -5024,7 +4892,7 @@ class DomainCapabilities(BaseModel):
     ] = None
 
 
-class Type5(str, Enum):
+class Type3(str, Enum):
     TXT = 'TXT'
     CNAME = 'CNAME'
     MX = 'MX'
@@ -5055,7 +4923,7 @@ class DNSRecord(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    type: Type5
+    type: Type3
     name: Annotated[
         str,
         Field(
@@ -5322,7 +5190,7 @@ class DomainUpdate(BaseModel):
     ] = None
 
 
-class Type6(str, Enum):
+class Type4(str, Enum):
     workspace = 'workspace'
 
 
@@ -5330,7 +5198,7 @@ class MailboxOwner(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    type: Annotated[Type6, Field(description='Owner principal type.')]
+    type: Annotated[Type4, Field(description='Owner principal type.')]
     id: Annotated[
         str,
         Field(
@@ -6222,12 +6090,14 @@ class EmailThreadMessageReplyRequest(BaseModel):
             description='Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n'
         ),
     ] = None
-    category: Annotated[
-        Category | None,
+    category: EmailMessageCategory | None = 'transactional'
+    attachments: Annotated[
+        list[EmailAttachment] | None,
         Field(
-            description='Content classification — controls suppression policy. `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions. Default: transactional.\n'
+            description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata endures on the message's `attachment_manifest`; the bytes are downloadable for 30 days.\n",
+            max_length=20,
         ),
-    ] = 'transactional'
+    ] = None
 
 
 class EmailMailboxComposeRequest(BaseModel):
@@ -6301,15 +6171,10 @@ class EmailMailboxComposeRequest(BaseModel):
             description='Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n'
         ),
     ] = None
-    category: Annotated[
-        Category | None,
-        Field(
-            description='Content classification — controls suppression policy. `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions. Default: transactional.\n'
-        ),
-    ] = 'transactional'
+    category: EmailMessageCategory | None = 'transactional'
 
 
-class Type7(str, Enum):
+class Type5(str, Enum):
     system = 'system'
     custom = 'custom'
 
@@ -6328,7 +6193,7 @@ class EmailMailboxLabel(BaseModel):
         ),
     ]
     type: Annotated[
-        Type7,
+        Type5,
         Field(
             description="`system` labels are built in and carry state — the placements `inbox`, `archive`, `spam`, `blocked`, and `sent`, plus `trash` and `unread`. `custom` labels are the workspace's own tags."
         ),
@@ -6391,7 +6256,7 @@ class EventDomainFailedData(BaseModel):
     ] = None
 
 
-class Type8(str, Enum):
+class Type6(str, Enum):
     domain_failed = 'domain.failed'
 
 
@@ -6446,7 +6311,7 @@ class EventDomainVerifiedData(BaseModel):
     ]
 
 
-class Type9(str, Enum):
+class Type7(str, Enum):
     domain_verified = 'domain.verified'
 
 
@@ -6532,7 +6397,7 @@ class EventEmailAcceptedData(EventEmailBase):
     )
 
 
-class Type10(str, Enum):
+class Type8(str, Enum):
     email_accepted = 'email.accepted'
 
 
@@ -6600,7 +6465,7 @@ class EventEmailBouncedData(EventEmailBase):
     ]
 
 
-class Type11(str, Enum):
+class Type9(str, Enum):
     email_bounced = 'email.bounced'
 
 
@@ -6666,7 +6531,7 @@ class EventEmailCanceledData(EventEmailMessageBase):
     )
 
 
-class Type12(str, Enum):
+class Type10(str, Enum):
     email_canceled = 'email.canceled'
 
 
@@ -6717,7 +6582,7 @@ class EventEmailClickedData(EventEmailBase):
     ]
 
 
-class Type13(str, Enum):
+class Type11(str, Enum):
     email_clicked = 'email.clicked'
 
 
@@ -6753,7 +6618,7 @@ class EventEmailComplainedData(EventEmailBase):
     ]
 
 
-class Type14(str, Enum):
+class Type12(str, Enum):
     email_complained = 'email.complained'
 
 
@@ -6806,7 +6671,7 @@ class EventEmailDeferredData(EventEmailBase):
     ]
 
 
-class Type15(str, Enum):
+class Type13(str, Enum):
     email_deferred = 'email.deferred'
 
 
@@ -6835,7 +6700,7 @@ class EventEmailDeliveredData(EventEmailBase):
     )
 
 
-class Type16(str, Enum):
+class Type14(str, Enum):
     email_delivered = 'email.delivered'
 
 
@@ -6864,7 +6729,7 @@ class EventEmailListUnsubscribedData(EventEmailBase):
     )
 
 
-class Type17(str, Enum):
+class Type15(str, Enum):
     email_list_unsubscribed = 'email.list_unsubscribed'
 
 
@@ -6907,7 +6772,7 @@ class EventEmailOpenedData(EventEmailBase):
     ]
 
 
-class Type18(str, Enum):
+class Type16(str, Enum):
     email_opened = 'email.opened'
 
 
@@ -6967,7 +6832,7 @@ class EventEmailOutOfBandBounceData(EventEmailBase):
     ]
 
 
-class Type19(str, Enum):
+class Type17(str, Enum):
     email_out_of_band_bounce = 'email.out_of_band_bounce'
 
 
@@ -6996,7 +6861,7 @@ class EventEmailProcessedData(EventEmailBase):
     )
 
 
-class Type20(str, Enum):
+class Type18(str, Enum):
     email_processed = 'email.processed'
 
 
@@ -7110,7 +6975,7 @@ class EventEmailReceivedData(BaseModel):
     ] = None
 
 
-class Type21(str, Enum):
+class Type19(str, Enum):
     email_received = 'email.received'
 
 
@@ -7150,7 +7015,7 @@ class EventEmailRejectedData(EventEmailBase):
     rejection_reason: EmailRejectionReason
 
 
-class Type22(str, Enum):
+class Type20(str, Enum):
     email_rejected = 'email.rejected'
 
 
@@ -7187,7 +7052,7 @@ class EventEmailScheduledData(EventEmailMessageBase):
     ]
 
 
-class Type23(str, Enum):
+class Type21(str, Enum):
     email_scheduled = 'email.scheduled'
 
 
@@ -7216,7 +7081,7 @@ class EventEmailUnsubscribedData(EventEmailBase):
     )
 
 
-class Type24(str, Enum):
+class Type22(str, Enum):
     email_unsubscribed = 'email.unsubscribed'
 
 
@@ -7272,7 +7137,7 @@ class EventEmailMailboxMessageDeliveredData(BaseModel):
     ]
 
 
-class Type25(str, Enum):
+class Type23(str, Enum):
     email_mailbox_message_delivered = 'email_mailbox.message_delivered'
 
 
@@ -7336,7 +7201,7 @@ class EventEmailMailboxMessageFailedData(BaseModel):
     ]
 
 
-class Type26(str, Enum):
+class Type24(str, Enum):
     email_mailbox_message_failed = 'email_mailbox.message_failed'
 
 
@@ -7467,7 +7332,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     ] = None
 
 
-class Type27(str, Enum):
+class Type25(str, Enum):
     email_mailbox_message_received = 'email_mailbox.message_received'
 
 
@@ -7523,7 +7388,7 @@ class EventEmailMailboxMessageSentData(BaseModel):
     ]
 
 
-class Type28(str, Enum):
+class Type26(str, Enum):
     email_mailbox_message_sent = 'email_mailbox.message_sent'
 
 
@@ -7569,7 +7434,7 @@ class EventEmailMailboxSuspendedData(BaseModel):
     ]
 
 
-class Type29(str, Enum):
+class Type27(str, Enum):
     email_mailbox_suspended = 'email_mailbox.suspended'
 
 
@@ -7632,7 +7497,7 @@ class EventEmailMailboxThreadCreatedData(BaseModel):
     ]
 
 
-class Type30(str, Enum):
+class Type28(str, Enum):
     email_mailbox_thread_created = 'email_mailbox.thread_created'
 
 
@@ -7695,7 +7560,7 @@ class EventEmailSuppressionCreatedData(BaseModel):
     ]
 
 
-class Type31(str, Enum):
+class Type29(str, Enum):
     email_suppression_created = 'email_suppression.created'
 
 
@@ -7778,7 +7643,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
 
 
-class Type32(str, Enum):
+class Type30(str, Enum):
     sms_accepted = 'sms.accepted'
 
 
@@ -7821,7 +7686,7 @@ class EventSMSDeliveredData(EventSMSBase):
     ]
 
 
-class Type33(str, Enum):
+class Type31(str, Enum):
     sms_delivered = 'sms.delivered'
 
 
@@ -7850,7 +7715,7 @@ class EventSMSExpiredData(EventSMSBase):
     )
 
 
-class Type34(str, Enum):
+class Type32(str, Enum):
     sms_expired = 'sms.expired'
 
 
@@ -7882,7 +7747,7 @@ class EventSMSFailedData(EventSMSBase):
     ]
 
 
-class Type35(str, Enum):
+class Type33(str, Enum):
     sms_failed = 'sms.failed'
 
 
@@ -7914,7 +7779,7 @@ class EventSMSRejectedData(EventSMSBase):
     ]
 
 
-class Type36(str, Enum):
+class Type34(str, Enum):
     sms_rejected = 'sms.rejected'
 
 
@@ -7957,7 +7822,7 @@ class EventSMSSentData(EventSMSBase):
     ]
 
 
-class Type37(str, Enum):
+class Type35(str, Enum):
     sms_sent = 'sms.sent'
 
 
@@ -8026,7 +7891,7 @@ class EventSMSTfnVerificationApprovedData(EventSMSTfnVerificationBase):
     )
 
 
-class Type38(str, Enum):
+class Type36(str, Enum):
     sms_tfn_verification_approved = 'sms.tfn_verification.approved'
 
 
@@ -8055,7 +7920,7 @@ class EventSMSTfnVerificationInfoRequestedData(EventSMSTfnVerificationBase):
     )
 
 
-class Type39(str, Enum):
+class Type37(str, Enum):
     sms_tfn_verification_info_requested = 'sms.tfn_verification.info_requested'
 
 
@@ -8104,7 +7969,7 @@ class EventSMSTfnVerificationRejectedData(EventSMSTfnVerificationBase):
     ]
 
 
-class Type40(str, Enum):
+class Type38(str, Enum):
     sms_tfn_verification_rejected = 'sms.tfn_verification.rejected'
 
 
@@ -8133,7 +7998,7 @@ class EventSMSTfnVerificationSubmittedData(EventSMSTfnVerificationBase):
     )
 
 
-class Type41(str, Enum):
+class Type39(str, Enum):
     sms_tfn_verification_submitted = 'sms.tfn_verification.submitted'
 
 
@@ -8165,7 +8030,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type42(str, Enum):
+class Type40(str, Enum):
     sms_undelivered = 'sms.undelivered'
 
 
@@ -8269,7 +8134,7 @@ class EventVerifyAttemptDeliveredData(EventVerifyBase):
     ]
 
 
-class Type43(str, Enum):
+class Type41(str, Enum):
     verify_attempt_delivered = 'verify.attempt.delivered'
 
 
@@ -8330,7 +8195,7 @@ class EventVerifyAttemptSentData(EventVerifyBase):
     ]
 
 
-class Type44(str, Enum):
+class Type42(str, Enum):
     verify_attempt_sent = 'verify.attempt.sent'
 
 
@@ -8398,7 +8263,7 @@ class EventVerifyAttemptUndeliveredData(EventVerifyBase):
     ]
 
 
-class Type45(str, Enum):
+class Type43(str, Enum):
     verify_attempt_undelivered = 'verify.attempt.undelivered'
 
 
@@ -8451,7 +8316,7 @@ class EventVerifyVerificationCreatedData(EventVerifyBase):
     ]
 
 
-class Type46(str, Enum):
+class Type44(str, Enum):
     verify_verification_created = 'verify.verification.created'
 
 
@@ -8503,7 +8368,7 @@ class EventVerifyVerificationVerifiedData(EventVerifyBase):
     ]
 
 
-class Type47(str, Enum):
+class Type45(str, Enum):
     verify_verification_verified = 'verify.verification.verified'
 
 
@@ -8595,7 +8460,7 @@ class EventVoiceCallAnsweredData(EventVoiceBase):
     )
 
 
-class Type48(str, Enum):
+class Type46(str, Enum):
     voice_call_answered = 'voice_call.answered'
 
 
@@ -8661,7 +8526,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
     ]
 
 
-class Type49(str, Enum):
+class Type47(str, Enum):
     voice_call_ended = 'voice_call.ended'
 
 
@@ -8690,7 +8555,7 @@ class EventVoiceCallInitiatedData(EventVoiceBase):
     )
 
 
-class Type50(str, Enum):
+class Type48(str, Enum):
     voice_call_initiated = 'voice_call.initiated'
 
 
@@ -8780,7 +8645,7 @@ class EventWhatsAppAcceptedData(EventWhatsAppBase):
     )
 
 
-class Type51(str, Enum):
+class Type49(str, Enum):
     whatsapp_accepted = 'whatsapp.accepted'
 
 
@@ -8809,7 +8674,7 @@ class EventWhatsAppDeliveredData(EventWhatsAppBase):
     )
 
 
-class Type52(str, Enum):
+class Type50(str, Enum):
     whatsapp_delivered = 'whatsapp.delivered'
 
 
@@ -8841,7 +8706,7 @@ class EventWhatsAppFailedData(EventWhatsAppBase):
     ]
 
 
-class Type53(str, Enum):
+class Type51(str, Enum):
     whatsapp_failed = 'whatsapp.failed'
 
 
@@ -8870,7 +8735,7 @@ class EventWhatsAppReadData(EventWhatsAppBase):
     )
 
 
-class Type54(str, Enum):
+class Type52(str, Enum):
     whatsapp_read = 'whatsapp.read'
 
 
@@ -8903,7 +8768,7 @@ class EventWhatsAppRejectedData(EventWhatsAppBase):
     ]
 
 
-class Type55(str, Enum):
+class Type53(str, Enum):
     whatsapp_rejected = 'whatsapp.rejected'
 
 
@@ -8932,7 +8797,7 @@ class EventWhatsAppSentData(EventWhatsAppBase):
     )
 
 
-class Type56(str, Enum):
+class Type54(str, Enum):
     whatsapp_sent = 'whatsapp.sent'
 
 

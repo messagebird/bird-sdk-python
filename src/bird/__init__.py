@@ -12,11 +12,8 @@ from bird._types import (
     Attachment,
     Omit,
     omit,
-    ContactBatchParams,
     ContactPropertyCreateParams,
     ContactPropertyUpdateParams,
-    DomainCreateParams,
-    DomainUpdateParams,
     EmailDefaults,
     EmailListParams,
     EmailSendBatchParams,
@@ -28,8 +25,6 @@ from bird._types import (
     RealtimePublishParams,
     RequestOptions,
     SmsSendParams,
-    VerificationCheckParams,
-    VerificationCreateParams,
     WhatsappSendParams,
 )
 from bird._generated import (
@@ -81,8 +76,6 @@ from bird._generated import (
     WhatsAppEvent,
     WhatsAppEventList,
     WhatsAppMessage,
-    WhatsAppTemplate,
-    WhatsAppTemplateList,
 )
 from bird.resources.audiences_gen import (
     AudienceAddContactsParams,
@@ -93,12 +86,17 @@ from bird.resources.audiences_gen import (
     AudienceUpdateParams,
 )
 from bird.resources.contacts_gen import (
+    ContactBatchParams,
     ContactCreateParams,
     ContactListParams,
     ContactUpdateParams,
 )
 from bird.resources.contact_properties_gen import ContactPropertyListParams
-from bird.resources.domains_gen import DomainListParams
+from bird.resources.domains_gen import (
+    DomainCreateParams,
+    DomainListParams,
+    DomainUpdateParams,
+)
 from bird.resources.email_stats_gen import (
     EmailStatsByBounceCodeParams,
     EmailStatsByBroadcastParams,
@@ -116,6 +114,11 @@ from bird.resources.email_stats_gen import (
     EmailStatsDailyParams,
     EmailStatsHourlyParams,
     EmailStatsSummaryParams,
+)
+from bird.resources.sms_templates_gen import SmsTemplateListParams
+from bird.resources.verify_verifications_gen import (
+    VerifyVerificationsCheckParams,
+    VerifyVerificationsCreateParams,
 )
 from bird._event_types import WebhookEventType
 from bird.resources.webhooks import GenericWebhookEvent
@@ -230,14 +233,13 @@ __all__ = [
     "SMSMessageBatchResponse",
     "SMSTemplate",
     "SMSTemplateList",
+    "SmsTemplateListParams",
     "WhatsappSendParams",
     "WhatsAppMessage",
     "WhatsAppEvent",
     "WhatsAppEventList",
-    "WhatsAppTemplate",
-    "WhatsAppTemplateList",
-    "VerificationCreateParams",
-    "VerificationCheckParams",
+    "VerifyVerificationsCreateParams",
+    "VerifyVerificationsCheckParams",
     "Verification",
     "VerificationCheckResult",
     "WebhookEvent",

@@ -2,14 +2,50 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from bird._generated import (
     Domain,
+    DomainCreate,
+    DomainUpdate,
 )
+from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
+
+
+class _DomainReturnPathConfigRequired(TypedDict):
+    name: str
+
+
+class DomainReturnPathConfig(_DomainReturnPathConfigRequired, total=False):
+    pass
+
+
+class _DomainTrackingConfigRequired(TypedDict):
+    name: str
+
+
+class DomainTrackingConfig(_DomainTrackingConfigRequired, total=False):
+    pass
+
+
+class DomainDKIMConfig(TypedDict, total=False):
+    mode: str
+
+
+class DomainSettings(TypedDict, total=False):
+    click_tracking: bool
+    open_tracking: bool
+
+
+class _DomainInboundConfigRequired(TypedDict):
+    enabled: bool
+
+
+class DomainInboundConfig(_DomainInboundConfigRequired, total=False):
+    pass
 
 
 class DomainListParams(TypedDict, total=False):
@@ -24,7 +60,30 @@ class DomainListParams(TypedDict, total=False):
     include_total: bool
 
 
-class DomainsBase(Resource):
+class _DomainCreateRequired(TypedDict):
+    domain: str
+
+
+class DomainCreateParams(_DomainCreateRequired, total=False):
+    """Params for ``client.domains.create``. ``domain`` is required."""
+
+    return_path: DomainReturnPathConfig
+    tracking: DomainTrackingConfig
+    dkim: DomainDKIMConfig
+    settings: DomainSettings
+
+
+class DomainUpdateParams(TypedDict, total=False):
+    """Params for ``client.domains.update``. Every key is optional."""
+
+    settings: DomainSettings
+    return_path: DomainReturnPathConfig
+    tracking: DomainTrackingConfig | None
+    dkim: DomainDKIMConfig
+    inbound: DomainInboundConfig
+
+
+class Domains(Resource):
     def list(
         self,
         *,
@@ -75,6 +134,41 @@ class DomainsBase(Resource):
             options,
         )
 
+    def create(
+        self,
+        *,
+        domain: str,
+        return_path: DomainReturnPathConfig | None = None,
+        tracking: DomainTrackingConfig | None = None,
+        dkim: DomainDKIMConfig | None = None,
+        settings: DomainSettings | None = None,
+        options: RequestOptions | None = None,
+    ) -> Domain:
+        """Register a new sending domain and get the DNS records to publish. Flow: call this, publish the returned DNS records at your DNS provider, then call email_domains_verify (repeat until status is verified — DNS propagation can take minutes to hours).
+
+        ```python
+        domain = client.domains.create(domain="mail.acme.com")
+        print(domain.id, domain.status)
+        ```
+        """
+        body = to_wire(
+            DomainCreate,
+            {
+                "domain": domain,
+                "return_path": return_path,
+                "tracking": tracking,
+                "dkim": dkim,
+                "settings": settings,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/email/domains",
+            body,
+            Domain,
+            options,
+        )
+
     def verify(
         self,
         domain_id: str,
@@ -95,6 +189,48 @@ class DomainsBase(Resource):
             options,
         )
 
+    def update(
+        self,
+        domain_id: str,
+        *,
+        settings: DomainSettings | None = None,
+        return_path: DomainReturnPathConfig | None = None,
+        tracking: DomainTrackingConfig | None | Omit = omit,
+        dkim: DomainDKIMConfig | None = None,
+        inbound: DomainInboundConfig | None = None,
+        options: RequestOptions | None = None,
+    ) -> Domain:
+        """Update a sending domain's tracking and inbound configuration. Tracking: toggle click_tracking and open_tracking (applied immediately to new sends), and set, change, or remove the tracking domain (the name part only — Bird appends the sending domain). Enabling either toggle with no tracking domain configured returns 409; removing the tracking domain while either toggle is still on also returns 409. Tracking-domain changes on a verified domain are staged behind DNS verification, so the current config keeps serving until the new records verify. Inbound receiving: set inbound.enabled to start or stop receiving mail for the domain. Enabling requires the domain's DKIM to be verified first (a fresh enable on an unverified domain returns 422), and a domain already receiving inbound for another organization returns 422. The MX records to publish are always listed in dns_records regardless, so enabling — not merely publishing them — is what turns receiving on.
+
+        ```python
+        domain = client.domains.update(
+            "dom_01krdgeqcxet5s7t44vh8rt9mg",
+            settings={"click_tracking": True, "open_tracking": True},
+            tracking={"name": "links"},
+        )
+        print(domain.id)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if settings is not None:
+            _body["settings"] = settings
+        if return_path is not None:
+            _body["return_path"] = return_path
+        if not isinstance(tracking, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["tracking"] = tracking
+        if dkim is not None:
+            _body["dkim"] = dkim
+        if inbound is not None:
+            _body["inbound"] = inbound
+        body = to_wire_exclude_unset(DomainUpdate, _body)
+        return self._write(
+            "PATCH",
+            f"/v1/email/domains/{domain_id}",
+            body,
+            Domain,
+            options,
+        )
+
     def delete(
         self,
         domain_id: str,
@@ -110,7 +246,7 @@ class DomainsBase(Resource):
         self._delete(f"/v1/email/domains/{domain_id}", options)
 
 
-class AsyncDomainsBase(AsyncResource):
+class AsyncDomains(AsyncResource):
     def list(
         self,
         *,
@@ -161,6 +297,41 @@ class AsyncDomainsBase(AsyncResource):
             options,
         )
 
+    async def create(
+        self,
+        *,
+        domain: str,
+        return_path: DomainReturnPathConfig | None = None,
+        tracking: DomainTrackingConfig | None = None,
+        dkim: DomainDKIMConfig | None = None,
+        settings: DomainSettings | None = None,
+        options: RequestOptions | None = None,
+    ) -> Domain:
+        """Register a new sending domain and get the DNS records to publish. Flow: call this, publish the returned DNS records at your DNS provider, then call email_domains_verify (repeat until status is verified — DNS propagation can take minutes to hours).
+
+        ```python
+        domain = await client.domains.create(domain="mail.acme.com")
+        print(domain.id, domain.status)
+        ```
+        """
+        body = to_wire(
+            DomainCreate,
+            {
+                "domain": domain,
+                "return_path": return_path,
+                "tracking": tracking,
+                "dkim": dkim,
+                "settings": settings,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/email/domains",
+            body,
+            Domain,
+            options,
+        )
+
     async def verify(
         self,
         domain_id: str,
@@ -177,6 +348,48 @@ class AsyncDomainsBase(AsyncResource):
         return await self._action(
             "POST",
             f"/v1/email/domains/{domain_id}/verify",
+            Domain,
+            options,
+        )
+
+    async def update(
+        self,
+        domain_id: str,
+        *,
+        settings: DomainSettings | None = None,
+        return_path: DomainReturnPathConfig | None = None,
+        tracking: DomainTrackingConfig | None | Omit = omit,
+        dkim: DomainDKIMConfig | None = None,
+        inbound: DomainInboundConfig | None = None,
+        options: RequestOptions | None = None,
+    ) -> Domain:
+        """Update a sending domain's tracking and inbound configuration. Tracking: toggle click_tracking and open_tracking (applied immediately to new sends), and set, change, or remove the tracking domain (the name part only — Bird appends the sending domain). Enabling either toggle with no tracking domain configured returns 409; removing the tracking domain while either toggle is still on also returns 409. Tracking-domain changes on a verified domain are staged behind DNS verification, so the current config keeps serving until the new records verify. Inbound receiving: set inbound.enabled to start or stop receiving mail for the domain. Enabling requires the domain's DKIM to be verified first (a fresh enable on an unverified domain returns 422), and a domain already receiving inbound for another organization returns 422. The MX records to publish are always listed in dns_records regardless, so enabling — not merely publishing them — is what turns receiving on.
+
+        ```python
+        domain = await client.domains.update(
+            "dom_01krdgeqcxet5s7t44vh8rt9mg",
+            settings={"click_tracking": True, "open_tracking": True},
+            tracking={"name": "links"},
+        )
+        print(domain.id)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if settings is not None:
+            _body["settings"] = settings
+        if return_path is not None:
+            _body["return_path"] = return_path
+        if not isinstance(tracking, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["tracking"] = tracking
+        if dkim is not None:
+            _body["dkim"] = dkim
+        if inbound is not None:
+            _body["inbound"] = inbound
+        body = to_wire_exclude_unset(DomainUpdate, _body)
+        return await self._write(
+            "PATCH",
+            f"/v1/email/domains/{domain_id}",
+            body,
             Domain,
             options,
         )

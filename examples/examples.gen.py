@@ -146,7 +146,8 @@ async def _ex_25() -> None:
 async def _ex_26() -> None:
     domain = client.domains.update(
         "dom_01krdgeqcxet5s7t44vh8rt9mg",
-        click_tracking=True, open_tracking=True, tracking="links",
+        settings={"click_tracking": True, "open_tracking": True},
+        tracking={"name": "links"},
     )
     print(domain.id)
 
@@ -157,6 +158,10 @@ async def _ex_27() -> None:
 
 
 async def _ex_28() -> None:
+    client.email.cancel("em_abc123")
+
+
+async def _ex_29() -> None:
     try:
         client.email.send(
             from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
@@ -172,25 +177,30 @@ async def _ex_28() -> None:
         print(err.status_code, err.code, err.request_id)
 
 
-async def _ex_29() -> None:
+async def _ex_30() -> None:
+    message = client.email.get("em_abc123")
+    print(message.id, message.status, message.delivered_count)
+
+
+async def _ex_31() -> None:
     async with AsyncBird() as client:
         async for message in client.email.list(status="delivered"):
             print(message.id)
 
 
-async def _ex_30() -> None:
+async def _ex_32() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
 
 
-async def _ex_31() -> None:
+async def _ex_33() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
     page = client.email.list(status="delivered")  # page.data, page.next_cursor
     print(len(page.data), page.next_cursor)
 
 
-async def _ex_32() -> None:
+async def _ex_34() -> None:
     client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -200,7 +210,7 @@ async def _ex_32() -> None:
     )
 
 
-async def _ex_33() -> None:
+async def _ex_35() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -210,7 +220,7 @@ async def _ex_33() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_34() -> None:
+async def _ex_36() -> None:
     batch = client.email.send_batch(
         messages=[
             {
@@ -231,25 +241,25 @@ async def _ex_34() -> None:
         print(item.id, item.status)
 
 
-async def _ex_35() -> None:
+async def _ex_37() -> None:
     stats = client.email.stats.by_bounce_code(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_36() -> None:
+async def _ex_38() -> None:
     stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_37() -> None:
+async def _ex_39() -> None:
     stats = client.email.stats.by_category(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_38() -> None:
+async def _ex_40() -> None:
     stats = client.email.stats.by_client(
         from_="2026-05-01", to="2026-05-25", group_by="email_client",
     )
@@ -257,13 +267,13 @@ async def _ex_38() -> None:
         print(row)
 
 
-async def _ex_39() -> None:
+async def _ex_41() -> None:
     stats = client.email.stats.by_complaint_type(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_40() -> None:
+async def _ex_42() -> None:
     stats = client.email.stats.by_location(
         from_="2026-05-01", to="2026-05-25", group_by="country",
     )
@@ -271,31 +281,31 @@ async def _ex_40() -> None:
         print(row)
 
 
-async def _ex_41() -> None:
+async def _ex_43() -> None:
     stats = client.email.stats.by_mailbox_provider(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_42() -> None:
+async def _ex_44() -> None:
     stats = client.email.stats.by_mailbox_provider_region(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_43() -> None:
+async def _ex_45() -> None:
     stats = client.email.stats.by_recipient_domain(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_44() -> None:
+async def _ex_46() -> None:
     stats = client.email.stats.by_sending_domain(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_45() -> None:
+async def _ex_47() -> None:
     stats = client.email.stats.by_sending_ip(
         from_="2026-05-01", to="2026-05-25", sort="bounces.block",
     )
@@ -303,26 +313,26 @@ async def _ex_45() -> None:
         print(row)
 
 
-async def _ex_46() -> None:
+async def _ex_48() -> None:
     stats = client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
     for row in stats.data:
         print(row)
     print(stats.total)
 
 
-async def _ex_47() -> None:
+async def _ex_49() -> None:
     stats = client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_48() -> None:
+async def _ex_50() -> None:
     stats = client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
     for point in stats.data:
         print(point.bucket, point.sends_accepted)
 
 
-async def _ex_49() -> None:
+async def _ex_51() -> None:
     stats = client.email.stats.hourly(
         from_="2026-05-25T00:00:00Z",
         to="2026-05-25T23:59:59Z",
@@ -331,12 +341,12 @@ async def _ex_49() -> None:
         print(point.bucket, point.delivery)
 
 
-async def _ex_50() -> None:
+async def _ex_52() -> None:
     summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
     print(summary.sends_accepted, summary.delivery)
 
 
-async def _ex_51() -> None:
+async def _ex_53() -> None:
     msg = client.mailbox.compose(
         "mbx_01krdgeqcxet5s7t44vh8rt9mg",
         to=[{"address": "user@example.com"}],
@@ -346,92 +356,93 @@ async def _ex_51() -> None:
     print(msg.id, msg.thread_id)
 
 
-async def _ex_52() -> None:
+async def _ex_54() -> None:
     mailbox = client.mailbox.create(display_name="Acme Support")
     print(mailbox.id)
 
 
-async def _ex_53() -> None:
+async def _ex_55() -> None:
     client.mailbox.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_54() -> None:
+async def _ex_56() -> None:
     mailbox = client.mailbox.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(mailbox.address)
 
 
-async def _ex_55() -> None:
+async def _ex_57() -> None:
     labels = client.mailbox.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     for label in labels.data:
         print(label.name)
 
 
-async def _ex_56() -> None:
+async def _ex_58() -> None:
     for mailbox in client.mailbox.list():
         print(mailbox.id, mailbox.address)
 
 
-async def _ex_57() -> None:
+async def _ex_59() -> None:
     mailbox = client.mailbox.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(mailbox.id)
 
 
-async def _ex_58() -> None:
+async def _ex_60() -> None:
     mailbox = client.mailbox.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    print(mailbox.id)
+    print(mailbox.state)
 
 
-async def _ex_59() -> None:
+async def _ex_61() -> None:
     stats = client.mailbox.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(stats.summary)
 
 
-async def _ex_60() -> None:
-    mailbox = client.mailbox.update("mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing")
+async def _ex_62() -> None:
+    mailbox = client.mailbox.update(
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
+    )
     print(mailbox.display_name)
 
 
-async def _ex_61() -> None:
+async def _ex_63() -> None:
     rule = client.mailbox_receive_rule.create(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com",
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
     )
     print(rule.id)
 
 
-async def _ex_62() -> None:
+async def _ex_64() -> None:
     client.mailbox_receive_rule.delete(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg",
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
     )
 
 
-async def _ex_63() -> None:
+async def _ex_65() -> None:
     for rule in client.mailbox_receive_rule.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
         print(rule.id, rule.action)
 
 
-async def _ex_64() -> None:
-    client.mailbox_thread.delete("thr_01krdgeqcxet5s7t44vh8rt9mg")
+async def _ex_66() -> None:
+    client.mailbox_thread.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
 
 
-async def _ex_65() -> None:
+async def _ex_67() -> None:
     thread = client.mailbox_thread.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
     print(thread.subject)
 
 
-async def _ex_66() -> None:
-    for thread in client.mailbox_thread.list():
+async def _ex_68() -> None:
+    for thread in client.mailbox_thread.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
         print(thread.id, thread.subject)
 
 
-async def _ex_67() -> None:
+async def _ex_69() -> None:
     thread = client.mailbox_thread.update(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg",
-        labels={"add": ["archive"]},
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
     )
     print(thread.id)
 
 
-async def _ex_68() -> None:
+async def _ex_70() -> None:
     result = client.mailbox_thread_message.attachments(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
     )
@@ -439,57 +450,56 @@ async def _ex_68() -> None:
         print(attachment.filename, attachment.size)
 
 
-async def _ex_69() -> None:
+async def _ex_71() -> None:
     body = client.mailbox_thread_message.body(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(body.html)
 
 
-async def _ex_70() -> None:
+async def _ex_72() -> None:
     message = client.mailbox_thread_message.get(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(message.subject)
 
 
-async def _ex_71() -> None:
+async def _ex_73() -> None:
     for message in client.mailbox_thread_message.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
         print(message.id, message.subject)
 
 
-async def _ex_72() -> None:
+async def _ex_74() -> None:
     reply = client.mailbox_thread_message.reply(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg",
-        "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
         text="Thanks for reaching out!",
     )
     print(reply.id)
 
 
-async def _ex_73() -> None:
+async def _ex_75() -> None:
     channel = client.realtime.channels.get(
         "rap_01krd...", "presence-lobby", include=["member_count"]
     )
     print(channel.occupied, channel.member_count)
 
 
-async def _ex_74() -> None:
+async def _ex_76() -> None:
     channels = client.realtime.channels.list("rap_01krd...", prefix="presence-")
     for channel in channels.data:
         print(channel.name)
 
 
-async def _ex_75() -> None:
+async def _ex_77() -> None:
     members = client.realtime.channels.members("rap_01krd...", "presence-lobby")
     print([member.member_id for member in members.members])
 
 
-async def _ex_76() -> None:
+async def _ex_78() -> None:
     client.realtime.members.disconnect("rap_01krd...", "member:42")
 
 
-async def _ex_77() -> None:
+async def _ex_79() -> None:
     client.realtime.publish(
         "rap_01krd...",
         event="order-updated",
@@ -498,7 +508,7 @@ async def _ex_77() -> None:
     )
 
 
-async def _ex_78() -> None:
+async def _ex_80() -> None:
     client.realtime.publish_batch(
         "rap_01krd...",
         events=[
@@ -508,12 +518,17 @@ async def _ex_78() -> None:
     )
 
 
-async def _ex_79() -> None:
+async def _ex_81() -> None:
+    message = client.sms.get("sms_abc123")
+    print(message.id, message.status)
+
+
+async def _ex_82() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_80() -> None:
+async def _ex_83() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -522,7 +537,7 @@ async def _ex_80() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_81() -> None:
+async def _ex_84() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -530,46 +545,53 @@ async def _ex_81() -> None:
     )
 
 
-async def _ex_82() -> None:
+async def _ex_85() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_83() -> None:
+async def _ex_86() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_84() -> None:
-    result = client.verify.verifications.check("123456", phone="+15551234567")
+async def _ex_87() -> None:
+    result = client.verify.verifications.check(
+        to={"phone_number": "+15551234567"}, code="123456"
+    )
     print(result.success)
 
 
-async def _ex_85() -> None:
-    verification = client.verify.verifications.create(phone="+15551234567")
+async def _ex_88() -> None:
+    verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
     print(verification.id, verification.status)
 
 
-async def _ex_86() -> None:
+async def _ex_89() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_87() -> None:
-    for message in client.whatsapp.list(status=["delivered"]):
-        print(message.id, message.status)
+async def _ex_90() -> None:
+    msg = client.whatsapp.get("wa_abc123")
+    print(msg.id, msg.status)
 
 
-async def _ex_88() -> None:
-    events = client.whatsapp.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg")
+async def _ex_91() -> None:
+    for msg in client.whatsapp.list(status=["delivered"]):
+        print(msg.id, msg.status)
+
+
+async def _ex_92() -> None:
+    events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_89() -> None:
+async def _ex_93() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -577,9 +599,3 @@ async def _ex_89() -> None:
         components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
     )
     print(msg.id, msg.status)
-
-
-async def _ex_90() -> None:
-    templates = client.whatsapp_templates.list()
-    for template in templates.data:
-        print(template.name, template.status)

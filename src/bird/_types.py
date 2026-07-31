@@ -14,7 +14,7 @@ EmailAddressInput = Union[str, Mapping[str, str]]
 
 class RequestOptions(TypedDict, total=False):
     """Per-call overrides, passed as the trailing ``options`` argument of any
-    resource method (the cross-SDK options object, ADR-0042 §10). Every key is
+    resource method (the cross-SDK options object). Every key is
     optional.
     """
 
@@ -29,7 +29,7 @@ class RequestOptions(TypedDict, total=False):
 class EmailDefaults(TypedDict, total=False):
     """Workspace-wide defaults for ``client.email.send``, set on the client. A
     per-send value always wins; an unset send field falls back to its default
-    (the cross-SDK channel-defaults merge, ADR-0045). Every key is optional.
+    (the cross-SDK channel-defaults merge). Every key is optional.
     """
 
     from_: EmailAddressInput
@@ -61,7 +61,7 @@ class Attachment(_AttachmentRequired, total=False):
 
 # Per-method params types — the dict form of each method's keyword arguments, for
 # callers who build the payload as a dict and splat it (``client.email.send(**params)``).
-# Parity with Go's request struct / TS's params type (ADR-0045). Keys mirror the
+# Parity with Go's request struct / TS's params type. Keys mirror the
 # keyword argument names (``from_``, not the wire ``from``).
 
 
@@ -153,41 +153,6 @@ class WhatsappSendParams(_WhatsappSendRequired, total=False):
     components: Sequence[Mapping[str, Any]]
 
 
-class VerificationCreateParams(TypedDict, total=False):
-    """Params for ``client.verify.verifications.create``. Provide ``email``,
-    ``phone``, or both; every key is optional."""
-
-    email: str
-    phone: str
-    code_length: int
-    channels: Sequence[str]
-    metadata: Mapping[str, Any]
-
-
-class _VerificationCheckRequired(TypedDict):
-    code: str
-
-
-class VerificationCheckParams(_VerificationCheckRequired, total=False):
-    """Params for ``client.verify.verifications.check``. ``code`` is required;
-    identify the verification with ``email`` and/or ``phone``."""
-
-    email: str
-    phone: str
-
-
-class _ContactBatchRequired(TypedDict):
-    contacts: Sequence[Mapping[str, Any]]
-
-
-class ContactBatchParams(_ContactBatchRequired, total=False):
-    """Params for ``client.contacts.batch``. ``contacts`` is required — a sequence
-    of per-contact params, each shaped like ``ContactCreateParams``."""
-
-    audience_ids: Sequence[str]
-    data_mode: str
-
-
 class _ContactPropertyCreateRequired(TypedDict):
     key: str
     type: str
@@ -204,38 +169,6 @@ class ContactPropertyUpdateParams(TypedDict, total=False):
     """Params for ``client.contact_properties.update``. Every key is optional."""
 
     fallback_value: Any
-
-
-class _DomainCreateRequired(TypedDict):
-    domain: str
-
-
-class DomainCreateParams(_DomainCreateRequired, total=False):
-    """Params for ``client.domains.create``. ``domain`` is required; the rest
-    default server-side when omitted. ``return_path`` and ``tracking`` are the
-    name part only (Bird appends the sending domain); ``dkim_mode`` is ``"txt"``
-    or ``"delegated"``.
-    """
-
-    return_path: str
-    tracking: str
-    dkim_mode: str
-    click_tracking: bool
-    open_tracking: bool
-
-
-class DomainUpdateParams(TypedDict, total=False):
-    """Params for ``client.domains.update``. Every key is optional — only the
-    fields you pass change. Pass ``tracking=None`` to remove the tracking domain
-    (both tracking toggles must be off first, else the API returns 409).
-    """
-
-    click_tracking: bool
-    open_tracking: bool
-    tracking: str | None
-    return_path: str
-    dkim_mode: str
-    inbound_enabled: bool
 
 
 class _RealtimePublishRequired(TypedDict):

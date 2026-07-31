@@ -83,10 +83,6 @@ message = client.whatsapp.get("wam_01krd…")
 # List — iterating the page auto-paginates across cursors
 for message in client.whatsapp.list(status=["delivered"]):
     print(message.id, message.status)
-
-# List the templates available to the workspace
-for template in client.whatsapp_templates.list().data:
-    print(template.name, template.status)
 ```
 
 ## Realtime

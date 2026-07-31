@@ -58,8 +58,10 @@ class Resource:
         body: dict[str, object],
         model: type[T],
         options: RequestOptions | None,
+        query: dict[str, object] | None = None,
     ) -> T:
-        response = self._client.request(verb, path, body=body, **_opts(options))
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        response = self._client.request(verb, path, body=body, **kwargs)
         return model.model_validate(response.json())
 
     def _write_none(
@@ -68,10 +70,12 @@ class Resource:
         path: str,
         body: dict[str, object],
         options: RequestOptions | None,
+        query: dict[str, object] | None = None,
     ) -> None:
         """A write whose success is 204 (no body): same write lifecycle as
         :meth:`_write`, but the response is discarded."""
-        self._client.request(verb, path, body=body, **_opts(options))
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        self._client.request(verb, path, body=body, **kwargs)
 
     def _action(
         self,
@@ -83,8 +87,17 @@ class Resource:
         response = self._client.request(verb, path, **_opts(options))
         return model.model_validate(response.json())
 
-    def _delete(self, path: str, options: RequestOptions | None) -> None:
-        self._client.request("DELETE", path, **_opts(options))
+    def _action_none(self, verb: str, path: str, options: RequestOptions | None) -> None:
+        self._client.request(verb, path, **_opts(options))
+
+    def _delete(
+        self,
+        path: str,
+        options: RequestOptions | None,
+        query: dict[str, object] | None = None,
+    ) -> None:
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        self._client.request("DELETE", path, **kwargs)
 
 
 class AsyncResource:
@@ -112,8 +125,10 @@ class AsyncResource:
         body: dict[str, object],
         model: type[T],
         options: RequestOptions | None,
+        query: dict[str, object] | None = None,
     ) -> T:
-        response = await self._client.request(verb, path, body=body, **_opts(options))
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        response = await self._client.request(verb, path, body=body, **kwargs)
         return model.model_validate(response.json())
 
     async def _write_none(
@@ -122,10 +137,12 @@ class AsyncResource:
         path: str,
         body: dict[str, object],
         options: RequestOptions | None,
+        query: dict[str, object] | None = None,
     ) -> None:
         """A write whose success is 204 (no body): same write lifecycle as
         :meth:`_write`, but the response is discarded."""
-        await self._client.request(verb, path, body=body, **_opts(options))
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        await self._client.request(verb, path, body=body, **kwargs)
 
     async def _action(
         self,
@@ -137,5 +154,14 @@ class AsyncResource:
         response = await self._client.request(verb, path, **_opts(options))
         return model.model_validate(response.json())
 
-    async def _delete(self, path: str, options: RequestOptions | None) -> None:
-        await self._client.request("DELETE", path, **_opts(options))
+    async def _action_none(self, verb: str, path: str, options: RequestOptions | None) -> None:
+        await self._client.request(verb, path, **_opts(options))
+
+    async def _delete(
+        self,
+        path: str,
+        options: RequestOptions | None,
+        query: dict[str, object] | None = None,
+    ) -> None:
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        await self._client.request("DELETE", path, **kwargs)

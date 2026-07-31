@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from bird._generated import (
     ContactProperty,
+    ContactPropertyCreateRequest,
+    ContactPropertyUpdateRequest,
 )
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
@@ -20,7 +23,24 @@ class ContactPropertyListParams(TypedDict, total=False):
     ending_before: str
 
 
-class ContactPropertiesBase(Resource):
+class _ContactPropertyCreateRequired(TypedDict):
+    key: str
+    type: str
+
+
+class ContactPropertyCreateParams(_ContactPropertyCreateRequired, total=False):
+    """Params for ``client.contact_properties.create``. ``key`` and ``type`` are required."""
+
+    fallback_value: Any
+
+
+class ContactPropertyUpdateParams(TypedDict, total=False):
+    """Params for ``client.contact_properties.update``. Every key is optional."""
+
+    fallback_value: Any
+
+
+class ContactProperties(Resource):
     def list(
         self,
         *,
@@ -59,6 +79,65 @@ class ContactPropertiesBase(Resource):
         return self._get(
             f"/v1/contact-properties/{property_id}",
             {},
+            ContactProperty,
+            options,
+        )
+
+    def create(
+        self,
+        *,
+        key: str,
+        type: str,
+        fallback_value: Any | None = None,
+        options: RequestOptions | None = None,
+    ) -> ContactProperty:
+        """Define a custom contact property (key + value type) that becomes available in contact data and as a broadcast template variable. The key and type cannot change after creation; a workspace holds at most 200 properties, archived included.
+
+        ```python
+        prop = client.contact_properties.create(key="plan", type="string")
+        print(prop.id, prop.key)
+        ```
+        """
+        body = to_wire(
+            ContactPropertyCreateRequest,
+            {
+                "key": key,
+                "type": type,
+                "fallback_value": fallback_value,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/contact-properties",
+            body,
+            ContactProperty,
+            options,
+        )
+
+    def update(
+        self,
+        property_id: str,
+        *,
+        fallback_value: Any | None = None,
+        options: RequestOptions | None = None,
+    ) -> ContactProperty:
+        """Update a contact property's fallback value. The key and type are immutable; create a new property instead.
+
+        ```python
+        prop = client.contact_properties.update("prp_01krdgeqcxet5s7t44vh8rt9mg", fallback_value="free")
+        print(prop.fallback_value)
+        ```
+        """
+        body = to_wire(
+            ContactPropertyUpdateRequest,
+            {
+                "fallback_value": fallback_value,
+            },
+        )
+        return self._write(
+            "PATCH",
+            f"/v1/contact-properties/{property_id}",
+            body,
             ContactProperty,
             options,
         )
@@ -104,7 +183,7 @@ class ContactPropertiesBase(Resource):
         )
 
 
-class AsyncContactPropertiesBase(AsyncResource):
+class AsyncContactProperties(AsyncResource):
     def list(
         self,
         *,
@@ -143,6 +222,65 @@ class AsyncContactPropertiesBase(AsyncResource):
         return await self._get(
             f"/v1/contact-properties/{property_id}",
             {},
+            ContactProperty,
+            options,
+        )
+
+    async def create(
+        self,
+        *,
+        key: str,
+        type: str,
+        fallback_value: Any | None = None,
+        options: RequestOptions | None = None,
+    ) -> ContactProperty:
+        """Define a custom contact property (key + value type) that becomes available in contact data and as a broadcast template variable. The key and type cannot change after creation; a workspace holds at most 200 properties, archived included.
+
+        ```python
+        prop = await client.contact_properties.create(key="plan", type="string")
+        print(prop.id, prop.key)
+        ```
+        """
+        body = to_wire(
+            ContactPropertyCreateRequest,
+            {
+                "key": key,
+                "type": type,
+                "fallback_value": fallback_value,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/contact-properties",
+            body,
+            ContactProperty,
+            options,
+        )
+
+    async def update(
+        self,
+        property_id: str,
+        *,
+        fallback_value: Any | None = None,
+        options: RequestOptions | None = None,
+    ) -> ContactProperty:
+        """Update a contact property's fallback value. The key and type are immutable; create a new property instead.
+
+        ```python
+        prop = await client.contact_properties.update("prp_01krdgeqcxet5s7t44vh8rt9mg", fallback_value="free")
+        print(prop.fallback_value)
+        ```
+        """
+        body = to_wire(
+            ContactPropertyUpdateRequest,
+            {
+                "fallback_value": fallback_value,
+            },
+        )
+        return await self._write(
+            "PATCH",
+            f"/v1/contact-properties/{property_id}",
+            body,
             ContactProperty,
             options,
         )

@@ -1,13 +1,29 @@
-"""Example source for the generated email.stats methods.
+"""Example source for the generated email and email.stats methods.
 
 Each bird:snippet region is harvested for the docs site + README; the keys
-match the surface catalog (email.stats.<leaf>). Hand-written and type-checked
+match the surface catalog (email.<leaf>, email.stats.<leaf>). Hand-written and type-checked
 (pyright includes examples/); nothing regenerates over it.
 """
 
 from bird import Bird
 
 client = Bird()
+
+
+def email_get() -> None:
+    message = client.email.get("em_abc123")
+    print(message.id, message.status, message.delivered_count)
+
+
+def email_cancel() -> None:
+    client.email.cancel("em_abc123")
+
+
+def email_list() -> None:
+    for message in client.email.list(status="delivered"):
+        print(message.id)
+    page = client.email.list(status="delivered")  # page.data, page.next_cursor
+    print(len(page.data), page.next_cursor)
 
 def email_stats_summary() -> None:
     summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")

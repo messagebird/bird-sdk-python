@@ -10,7 +10,7 @@ from bird._exceptions import BirdError
 class BaseModel(pydantic.BaseModel):
     """Base for every generated wire model.
 
-    Forward-compatible by default (ADR-0045): a field the server adds later is
+    Forward-compatible by default: a field the server adds later is
     accepted and preserved rather than raising, so an older SDK keeps working
     against a newer API. The generator sets ``extra="allow"`` on each model via
     ``--extra-fields``; this base reasserts it and adds the config the facade needs.

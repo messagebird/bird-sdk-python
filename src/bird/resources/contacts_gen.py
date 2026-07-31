@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
 from bird._generated import (
     Contact,
     ContactCreateRequest,
     ContactUpdateRequest,
+    ContactUpsertRequest,
+    ContactUpsertResult,
 )
 from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
@@ -50,7 +52,18 @@ class ContactUpdateParams(TypedDict, total=False):
     data: Mapping[str, Any]
 
 
-class ContactsBase(Resource):
+class _ContactBatchRequired(TypedDict):
+    contacts: Sequence[ContactCreateParams]
+
+
+class ContactBatchParams(_ContactBatchRequired, total=False):
+    """Params for ``client.contacts.batch``. ``contacts`` is required."""
+
+    audience_ids: Sequence[str]
+    data_mode: str
+
+
+class Contacts(Resource):
     def list(
         self,
         *,
@@ -186,8 +199,40 @@ class ContactsBase(Resource):
         """
         self._delete(f"/v1/contacts/{contact_id}", options)
 
+    def batch(
+        self,
+        *,
+        contacts: Sequence[ContactCreateParams],
+        audience_ids: Sequence[str] | None = None,
+        data_mode: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> ContactUpsertResult:
+        """Create or update up to 1,000 contacts in one request, matched by email address, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
 
-class AsyncContactsBase(AsyncResource):
+        ```python
+        result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
+        for item in result.data:
+            print(item.email, item.status)
+        ```
+        """
+        body = to_wire(
+            ContactUpsertRequest,
+            {
+                "contacts": contacts,
+                "audience_ids": audience_ids,
+                "data_mode": data_mode,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/contacts/batch",
+            body,
+            ContactUpsertResult,
+            options,
+        )
+
+
+class AsyncContacts(AsyncResource):
     def list(
         self,
         *,
@@ -322,3 +367,35 @@ class AsyncContactsBase(AsyncResource):
         ```
         """
         await self._delete(f"/v1/contacts/{contact_id}", options)
+
+    async def batch(
+        self,
+        *,
+        contacts: Sequence[ContactCreateParams],
+        audience_ids: Sequence[str] | None = None,
+        data_mode: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> ContactUpsertResult:
+        """Create or update up to 1,000 contacts in one request, matched by email address, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
+
+        ```python
+        result = await client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
+        for item in result.data:
+            print(item.email, item.status)
+        ```
+        """
+        body = to_wire(
+            ContactUpsertRequest,
+            {
+                "contacts": contacts,
+                "audience_ids": audience_ids,
+                "data_mode": data_mode,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/contacts/batch",
+            body,
+            ContactUpsertResult,
+            options,
+        )

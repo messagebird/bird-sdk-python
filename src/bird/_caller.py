@@ -1,4 +1,4 @@
-"""Bird-Caller detection: which agent harness drives the SDK (ADR-0074).
+"""Bird-Caller detection: which agent harness drives the SDK.
 
 Best-effort, non-authoritative usage telemetry -- it only labels traffic, never
 gates behavior. The single source of truth is ``clients/caller-detection.yaml``

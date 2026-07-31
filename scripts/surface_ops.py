@@ -30,7 +30,6 @@ KEEP: dict[str, set[str]] = {
     "/v1/whatsapp/messages": {"get", "post"},
     "/v1/whatsapp/messages/{message_id}": {"get"},
     "/v1/whatsapp/messages/{message_id}/events": {"get"},
-    "/v1/whatsapp/templates": {"get"},
     "/v1/verify/verifications": {"post"},
     "/v1/verify/verifications/check": {"post"},
     "/v1/email/domains": {"get", "post"},

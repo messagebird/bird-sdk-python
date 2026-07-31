@@ -3,7 +3,7 @@
 ``BaseClient`` owns header assembly (SDK-owned headers always win), retries with
 jittered backoff that honors ``Retry-After``, a per-attempt timeout, and the
 once-and-reuse idempotency key for mutations — generated once per logical call so
-a retried write never double-applies (ADR-0045). ``SyncAPIClient`` and
+a retried write never double-applies. ``SyncAPIClient`` and
 ``AsyncAPIClient`` add the transport loop; a resource method calls ``request()``
 and never implements retries itself.
 """
@@ -28,7 +28,7 @@ from bird._version import __version__
 
 USER_AGENT = f"bird-sdk-python/{__version__} ({platform.python_implementation().lower()}/{platform.python_version()})"
 
-# Bird-* client-identity headers (ADR-0074): the API attributes the SDK
+# Bird-* client-identity headers: the API attributes the SDK
 # surface from these, not the User-Agent. Telemetry labels only; computed once.
 # Keys use the canonical wire casing (matching the Go/TS SDKs).
 _CLIENT_HEADERS = {
