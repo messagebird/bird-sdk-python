@@ -524,6 +524,40 @@ class EmailAddress(BaseModel):
     ] = None
 
 
+class LanguageTag(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description='A language tag in BCP-47 form, for example `en` or `pt-BR`.',
+            examples=['pt-BR'],
+            max_length=35,
+            min_length=2,
+        ),
+    ]
+
+
+class EmailTemplateID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
+class EmailTemplateVersionID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=['emv_01krdgeqcxet5s7t44vh8rt9mg'],
+            min_length=1,
+            pattern='^emv_[0-9a-hjkmnp-tv-z]{26}$',
+        ),
+    ]
+
+
 class Tag(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -714,6 +748,30 @@ class EmailMessage(BaseModel):
     click_count: Annotated[
         int, Field(description='Total click events across all recipients.')
     ]
+    requested_language: Annotated[
+        LanguageTag | None,
+        Field(
+            description="The template language this send asked for, in canonical form (`pt-BR` for a request of `pt-br`). Null when the send named no language (it took the template's default) or used no template at all. Compare it with `resolved_language`: when they differ, the language you asked for was not available and the template's `on_missing_language` policy chose the one shown there instead.\n"
+        ),
+    ] = None
+    resolved_language: Annotated[
+        LanguageTag | None,
+        Field(
+            description="The template language this send was actually delivered in, in canonical form. Null when the send used no template. A non-null value with a null `requested_language` means the send named no language and took the template's default.\n"
+        ),
+    ] = None
+    template_id: Annotated[
+        EmailTemplateID | None,
+        Field(
+            description='The template this send rendered from, or null for a send that supplied its content inline.\n'
+        ),
+    ] = None
+    template_version_id: Annotated[
+        EmailTemplateVersionID | None,
+        Field(
+            description="The exact template version this send rendered from, or null for an inline send. A template's live version changes every time you submit it, so this is what identifies the wording that was actually delivered, together with `resolved_language`.\n"
+        ),
+    ] = None
     tags: Annotated[
         list[Tag] | None,
         Field(
@@ -1126,6 +1184,30 @@ class EmailMessageBatchItem(BaseModel):
     category: Annotated[
         Category, Field(description='Resolved category for this batch item.')
     ]
+    requested_language: Annotated[
+        LanguageTag | None,
+        Field(
+            description='The template language this item asked for, in canonical form. Null when the item named no language or used no template. Every item in a batch resolves its own template reference, so this and `resolved_language` can differ from item to item.\n'
+        ),
+    ] = None
+    resolved_language: Annotated[
+        LanguageTag | None,
+        Field(
+            description='The template language this item was actually delivered in, in canonical form. Null when the item used no template. A value here differing from `requested_language` means the template did not carry the language asked for and its `on_missing_language` policy chose this one.\n'
+        ),
+    ] = None
+    template_id: Annotated[
+        EmailTemplateID | None,
+        Field(
+            description='The template this item rendered from, or null for an item that supplied its content inline.\n'
+        ),
+    ] = None
+    template_version_id: Annotated[
+        EmailTemplateVersionID | None,
+        Field(
+            description="The exact template version this item rendered from, or null for an inline item. Record it if you need to reproduce what was sent: a template's live version changes every time you submit it.\n"
+        ),
+    ] = None
 
 
 class EmailMessageBatchResponse(BaseModel):

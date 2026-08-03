@@ -60,6 +60,7 @@ def _send_body(
     html: str | None,
     text: str | None,
     template: str | None,
+    language: str | None,
     parameters: Mapping[str, Any] | None,
     cc: Sequence[EmailAddressInput] | None,
     bcc: Sequence[EmailAddressInput] | None,
@@ -77,6 +78,8 @@ def _send_body(
     # A per-send value wins; an unset field falls back to the client's EmailDefaults
     #. `from_` maps to the wire field "from" (a Python keyword). `template`
     # and `parameters` are per-send only (not defaultable).
+    if language is not None and template is None:
+        raise BirdError("invalid request: language requires template")
     d = defaults or {}
     raw_from = from_ if from_ is not None else d.get("from_")
     raw_reply_to = reply_to if reply_to is not None else d.get("reply_to")
@@ -86,11 +89,12 @@ def _send_body(
         "subject":      subject,
         "html":         html,
         "text":         text,
-        # A template send nests its reference (id or name) and variables under the
-        # template object; an inline send uses the top-level parameters (the two
-        # content modes are exclusive). The `emt_` prefix marks an id, else a name.
+        # A template send nests its reference (id or slug), language, and variables
+        # under the template object; an inline send uses the top-level parameters
+        # (the two content modes are exclusive). The `emt_` prefix marks an id, else
+        # a slug handle.
         "template": (
-            {("id" if template.startswith("emt_") else "name"): template, "parameters": parameters}
+            {("id" if template.startswith("emt_") else "slug"): template, "language": language, "parameters": parameters}
             if template is not None else None
         ),
         "parameters":   parameters if template is None else None,
@@ -126,6 +130,7 @@ def _batch_body(
             html=m.get("html"),
             text=m.get("text"),
             template=m.get("template"),
+            language=m.get("language"),
             parameters=m.get("parameters"),
             cc=m.get("cc"),
             bcc=m.get("bcc"),
@@ -177,6 +182,7 @@ class Email(EmailBase):
         html: str | None = None,
         text: str | None = None,
         template: str | None = None,
+        language: str | None = None,
         parameters: Mapping[str, Any] | None = None,
         cc: Sequence[EmailAddressInput] | None = None,
         bcc: Sequence[EmailAddressInput] | None = None,
@@ -243,7 +249,7 @@ class Email(EmailBase):
         """
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
-            template=template, parameters=parameters,
+            template=template, language=language, parameters=parameters,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
@@ -324,6 +330,7 @@ class AsyncEmail(AsyncEmailBase):
         html: str | None = None,
         text: str | None = None,
         template: str | None = None,
+        language: str | None = None,
         parameters: Mapping[str, Any] | None = None,
         cc: Sequence[EmailAddressInput] | None = None,
         bcc: Sequence[EmailAddressInput] | None = None,
@@ -340,7 +347,7 @@ class AsyncEmail(AsyncEmailBase):
     ) -> EmailMessage:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
-            template=template, parameters=parameters,
+            template=template, language=language, parameters=parameters,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
@@ -370,7 +377,7 @@ class EmailWithRawResponse:
     def send(
         self, *, from_: EmailAddressInput | None = None, to: Sequence[EmailAddressInput],
         subject: str | None = None, html: str | None = None, text: str | None = None,
-        template: str | None = None, parameters: Mapping[str, Any] | None = None,
+        template: str | None = None, language: str | None = None, parameters: Mapping[str, Any] | None = None,
         cc: Sequence[EmailAddressInput] | None = None, bcc: Sequence[EmailAddressInput] | None = None,
         reply_to: Sequence[EmailAddressInput] | None = None, headers: Mapping[str, str] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None, metadata: Mapping[str, Any] | None = None,
@@ -380,7 +387,7 @@ class EmailWithRawResponse:
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
-            template=template, parameters=parameters,
+            template=template, language=language, parameters=parameters,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
@@ -402,7 +409,7 @@ class AsyncEmailWithRawResponse:
     async def send(
         self, *, from_: EmailAddressInput | None = None, to: Sequence[EmailAddressInput],
         subject: str | None = None, html: str | None = None, text: str | None = None,
-        template: str | None = None, parameters: Mapping[str, Any] | None = None,
+        template: str | None = None, language: str | None = None, parameters: Mapping[str, Any] | None = None,
         cc: Sequence[EmailAddressInput] | None = None, bcc: Sequence[EmailAddressInput] | None = None,
         reply_to: Sequence[EmailAddressInput] | None = None, headers: Mapping[str, str] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None, metadata: Mapping[str, Any] | None = None,
@@ -412,7 +419,7 @@ class AsyncEmailWithRawResponse:
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
-            template=template, parameters=parameters,
+            template=template, language=language, parameters=parameters,
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,

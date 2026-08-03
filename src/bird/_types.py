@@ -81,6 +81,7 @@ class EmailSendParams(_EmailSendRequired, total=False):
     html: str
     text: str
     template: str
+    language: str
     parameters: Mapping[str, Any]
     cc: Sequence[EmailAddressInput]
     bcc: Sequence[EmailAddressInput]

@@ -121,6 +121,16 @@ from bird.resources.verify_verifications_gen import (
     VerifyVerificationsCreateParams,
 )
 from bird._event_types import WebhookEventType
+from bird._open_enums import (
+    ContactChannel,
+    EmailEventType,
+    VerificationAttemptFailureReason,
+    VerificationChannel,
+    VerificationTerminalReason,
+    WhatsAppErrorCode,
+    WhatsAppTemplateCategory,
+    WhatsAppTemplateParameterType,
+)
 from bird.resources.webhooks import GenericWebhookEvent
 from bird._exceptions import (
     APIConnectionError,
@@ -245,6 +255,14 @@ __all__ = [
     "WebhookEvent",
     "GenericWebhookEvent",
     "WebhookEventType",
+    "ContactChannel",
+    "EmailEventType",
+    "VerificationAttemptFailureReason",
+    "VerificationChannel",
+    "VerificationTerminalReason",
+    "WhatsAppErrorCode",
+    "WhatsAppTemplateCategory",
+    "WhatsAppTemplateParameterType",
     "BirdError",
     "APIError",
     "APIStatusError",

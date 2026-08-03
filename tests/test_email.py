@@ -282,6 +282,48 @@ def test_send_plain_string_stays_plain_on_wire() -> None:
 
 
 @respx.mock
+def test_send_template_by_slug_serializes_to_wire() -> None:
+    # A non-emt_-prefixed template ref is a slug handle, not a name (email
+    # templates have no "name" field — only id/slug); this is the wire shape a
+    # `oneOf` on id/slug actually accepts.
+    route = respx.post(f"{BASE}/v1/email/messages").mock(return_value=httpx.Response(200, json=_message()))
+    client().email.send(from_="a@b.com", to=["c@d.com"], template="welcome-email")
+    body = json.loads(route.calls.last.request.content)
+    assert body["template"] == {"slug": "welcome-email"}
+
+
+@respx.mock
+def test_send_template_by_id_serializes_to_wire() -> None:
+    route = respx.post(f"{BASE}/v1/email/messages").mock(return_value=httpx.Response(200, json=_message()))
+    client().email.send(from_="a@b.com", to=["c@d.com"], template="emt_01krdgeqcxet5s7t44vh8rt9mg")
+    body = json.loads(route.calls.last.request.content)
+    assert body["template"] == {"id": "emt_01krdgeqcxet5s7t44vh8rt9mg"}
+
+
+@respx.mock
+def test_send_template_language_serializes_to_wire() -> None:
+    route = respx.post(f"{BASE}/v1/email/messages").mock(return_value=httpx.Response(200, json=_message()))
+    client().email.send(from_="a@b.com", to=["c@d.com"], template="welcome-email", language="pt-BR")
+    body = json.loads(route.calls.last.request.content)
+    assert body["template"] == {"slug": "welcome-email", "language": "pt-BR"}
+
+
+@respx.mock
+def test_send_template_language_omitted_when_unset() -> None:
+    route = respx.post(f"{BASE}/v1/email/messages").mock(return_value=httpx.Response(200, json=_message()))
+    client().email.send(from_="a@b.com", to=["c@d.com"], template="welcome-email")
+    body = json.loads(route.calls.last.request.content)
+    assert "language" not in body["template"]
+
+
+def test_send_language_without_template_is_rejected() -> None:
+    # language only qualifies a template reference; the wire has no top-level
+    # language field, so silently dropping it would leave the caller's ask unmet.
+    with pytest.raises(BirdError):
+        client().email.send(from_="a@b.com", to=["c@d.com"], subject="hi", html="<p>hi</p>", language="pt-BR")
+
+
+@respx.mock
 def test_response_round_trips_name() -> None:
     # When the server returns a display name, msg.from_.name and msg.to[0].name are set.
     data = {
