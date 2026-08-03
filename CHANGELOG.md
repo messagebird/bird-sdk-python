@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0
+
+- Open-enum fields now carry their known values: reading one offers the values the API can send, and a value added by a newer server still decodes.
+
 ## 0.17.0
 
 - Add a per-send `language` override for templated email: `EmailSendParams.Language` on the Go SDK, a `language` keyword argument on `client.email.send`/`send_batch` in the Python SDK, and `--language` on `bird email send`. Omitting it keeps today's behavior, sending the template's default language.

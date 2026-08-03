@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Union, Any, Literal
 
 from bird._models import BaseModel
 from pydantic import Base64Str, ConfigDict, Field, RootModel
@@ -11,7 +11,7 @@ from pydantic import Base64Str, ConfigDict, Field, RootModel
 
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     param: Annotated[
         str,
@@ -21,25 +21,25 @@ class ErrorDetail(BaseModel):
         ),
     ]
     message: Annotated[
-        str, Field(description='What is wrong with this field.', min_length=1)
+        str, Field(description="What is wrong with this field.", min_length=1)
     ]
 
 
 class ErrorNextAction(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     operation: Annotated[
         str,
         Field(
-            description='The operationId of a follow-up operation that resolves this error. Call it, then retry the original request.',
+            description="The operationId of a follow-up operation that resolves this error. Call it, then retry the original request.",
             min_length=1,
         ),
     ]
     description: Annotated[
         str | None,
         Field(
-            description='A short, human-readable label for the recovery step, suitable for display.',
+            description="A short, human-readable label for the recovery step, suitable for display.",
             min_length=1,
         ),
     ] = None
@@ -47,19 +47,19 @@ class ErrorNextAction(BaseModel):
 
 class UnmetGate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     slug: Annotated[
         str,
         Field(
-            description='Stable identifier for the verification requirement.',
+            description="Stable identifier for the verification requirement.",
             min_length=1,
         ),
     ]
     name: Annotated[
         str,
         Field(
-            description='Human-readable name of the verification requirement.',
+            description="Human-readable name of the verification requirement.",
             min_length=1,
         ),
     ]
@@ -71,76 +71,76 @@ class UnmetGate(BaseModel):
         ),
     ]
     remediation_kind: Annotated[
-        str, Field(description='How to resolve this requirement.', min_length=1)
+        str, Field(description="How to resolve this requirement.", min_length=1)
     ]
 
 
 class Type(str, Enum):
-    auth_error = 'auth_error'
-    bad_request_error = 'bad_request_error'
-    billing_error = 'billing_error'
-    conflict_error = 'conflict_error'
-    gone_error = 'gone_error'
-    internal_error = 'internal_error'
-    misdirected_error = 'misdirected_error'
-    not_found_error = 'not_found_error'
-    not_implemented_error = 'not_implemented_error'
-    payload_too_large_error = 'payload_too_large_error'
-    permission_error = 'permission_error'
-    precondition_error = 'precondition_error'
-    rate_limit_error = 'rate_limit_error'
-    service_unavailable_error = 'service_unavailable_error'
-    too_early_error = 'too_early_error'
-    validation_error = 'validation_error'
+    auth_error = "auth_error"
+    bad_request_error = "bad_request_error"
+    billing_error = "billing_error"
+    conflict_error = "conflict_error"
+    gone_error = "gone_error"
+    internal_error = "internal_error"
+    misdirected_error = "misdirected_error"
+    not_found_error = "not_found_error"
+    not_implemented_error = "not_implemented_error"
+    payload_too_large_error = "payload_too_large_error"
+    permission_error = "permission_error"
+    precondition_error = "precondition_error"
+    rate_limit_error = "rate_limit_error"
+    service_unavailable_error = "service_unavailable_error"
+    too_early_error = "too_early_error"
+    validation_error = "validation_error"
 
 
 class ErrorBody(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Type, Field(description='Broad category for coarse client branching.')
+        Type, Field(description="Broad category for coarse client branching.")
     ]
     code: Annotated[
         str,
         Field(
-            description='Opaque, stable, unique error identifier. Never reused.',
+            description="Opaque, stable, unique error identifier. Never reused.",
             min_length=1,
-            pattern='^E\\d{5}$',
+            pattern="^E\\d{5}$",
         ),
     ]
     name: Annotated[
         str,
         Field(
-            description='Human-readable slug for log readability. Paired with code, never replaces it.',
+            description="Human-readable slug for log readability. Paired with code, never replaces it.",
             min_length=1,
         ),
     ]
     message: Annotated[
         str,
         Field(
-            description='Human-readable description. Not stable; clients must not parse it.',
+            description="Human-readable description. Not stable; clients must not parse it.",
             min_length=1,
         ),
     ]
     param: Annotated[
         str | None,
         Field(
-            description='Identifies the offending field. Omitted when not applicable.',
+            description="Identifies the offending field. Omitted when not applicable.",
             min_length=1,
         ),
     ] = None
     doc_url: Annotated[
         str,
         Field(
-            description='Stable link to the docs page for this error code.',
+            description="Stable link to the docs page for this error code.",
             min_length=1,
         ),
     ]
     request_id: Annotated[
         str,
         Field(
-            description='Request correlation ID. Also returned as the X-Request-Id response header.',
+            description="Request correlation ID. Also returned as the X-Request-Id response header.",
             min_length=1,
         ),
     ]
@@ -154,64 +154,64 @@ class ErrorBody(BaseModel):
     details: Annotated[
         list[ErrorDetail] | None,
         Field(
-            description='Per-field validation errors. Present only on validation_error responses.'
+            description="Per-field validation errors. Present only on validation_error responses."
         ),
     ] = None
     remediation: Annotated[
         str | None,
         Field(
-            description='A human-readable next step to resolve this error. Present when a recovery is known.',
+            description="A human-readable next step to resolve this error. Present when a recovery is known.",
             min_length=1,
         ),
     ] = None
     next: Annotated[
         list[ErrorNextAction] | None,
         Field(
-            description='Operations that resolve this error, in the order to try them. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.'
+            description="Operations that resolve this error, in the order to try them. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts."
         ),
     ] = None
     unmet_gates: Annotated[
         list[UnmetGate] | None,
         Field(
-            description='The verification requirements blocking this action, each with the flow that resolves it. Present only when an action is blocked pending verification.'
+            description="The verification requirements blocking this action, each with the flow that resolves it. Present only when an action is blocked pending verification."
         ),
     ] = None
 
 
 class Error(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     error: ErrorBody
 
 
 class FieldListEnvelope(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     next_cursor: Annotated[
         str | None,
         Field(
-            description='Cursor for the next page. Pass back as `starting_after` to advance forward. Null when no next page exists.'
+            description="Cursor for the next page. Pass back as `starting_after` to advance forward. Null when no next page exists."
         ),
     ]
     prev_cursor: Annotated[
         str | None,
         Field(
-            description='Cursor for the previous page. Pass back as `ending_before` to step backward. Null when no previous page exists.'
+            description="Cursor for the previous page. Pass back as `ending_before` to step backward. Null when no previous page exists."
         ),
     ]
     refresh_cursor: Annotated[
         str | None,
         Field(
-            description='Refresh anchor. Pass back as `ending_before` later to fetch items that have appeared since this response. Non-null whenever `data` is non-empty; null only on an empty page. Distinct from `prev_cursor`.'
+            description="Refresh anchor. Pass back as `ending_before` later to fetch items that have appeared since this response. Non-null whenever `data` is non-empty; null only on an empty page. Distinct from `prev_cursor`."
         ),
     ]
 
 
 class FieldListEnvelopeWithTotal(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     total: Annotated[
         int | None,
@@ -224,7 +224,7 @@ class FieldListEnvelopeWithTotal(FieldListEnvelope):
 
 class Timestamps(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     created_at: Annotated[str, Field(min_length=1)]
     updated_at: Annotated[str, Field(min_length=1)]
@@ -234,9 +234,9 @@ class RealtimeAppID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['rap_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["rap_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^rap_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^rap_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
@@ -245,29 +245,29 @@ class RealtimeChannelName(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
-            examples=['orders-42'],
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            examples=["orders-42"],
             max_length=164,
             min_length=1,
-            pattern='^[A-Za-z0-9_=@,.;-]+$',
+            pattern="^[A-Za-z0-9_=@,.;-]+$",
         ),
     ]
 
 
 class RealtimeChannelInclude(str, Enum):
-    member_count = 'member_count'
-    connection_count = 'connection_count'
+    member_count = "member_count"
+    connection_count = "connection_count"
 
 
 class RealtimePublish(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     event: Annotated[
         str,
         Field(
-            description='The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.',
-            examples=['order-updated'],
+            description="The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.",
+            examples=["order-updated"],
             max_length=200,
             min_length=1,
         ),
@@ -275,8 +275,8 @@ class RealtimePublish(BaseModel):
     channels: Annotated[
         list[RealtimeChannelName],
         Field(
-            description='The channels to deliver the event to (up to 100 per call). Prefix with `private-` or `presence-` for authenticated channels.\n',
-            examples=[['orders', 'orders-42']],
+            description="The channels to deliver the event to (up to 100 per call). Prefix with `private-` or `presence-` for authenticated channels.\n",
+            examples=[["orders", "orders-42"]],
             max_length=100,
             min_length=1,
         ),
@@ -284,14 +284,14 @@ class RealtimePublish(BaseModel):
     data: Annotated[
         Any | None,
         Field(
-            description='Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized.'
+            description="Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized."
         ),
     ] = None
     exclude_connection_id: Annotated[
         str | None,
         Field(
             description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
-            examples=['123.4567'],
+            examples=["123.4567"],
             min_length=1,
         ),
     ] = None
@@ -305,12 +305,12 @@ class RealtimePublish(BaseModel):
 
 class RealtimeChannelCounts(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     member_count: Annotated[
         int | None,
         Field(
-            description='Distinct members (presence channels only; requires include=member_count).'
+            description="Distinct members (presence channels only; requires include=member_count)."
         ),
     ] = None
     connection_count: Annotated[
@@ -323,41 +323,41 @@ class RealtimeChannelCounts(BaseModel):
 
 class RealtimeChannelListItem(RealtimeChannelCounts):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str,
         Field(
-            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
-            examples=['orders-42'],
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            examples=["orders-42"],
             max_length=164,
             min_length=1,
-            pattern='^[A-Za-z0-9_=@,.;-]+$',
+            pattern="^[A-Za-z0-9_=@,.;-]+$",
         ),
     ]
 
 
 class RealtimePublishResult(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[RealtimeChannelListItem] | None,
         Field(
-            description='Per-channel attributes at publish time, present only when the request asked for them via `include`; one item per distinct target channel, sorted by name.'
+            description="Per-channel attributes at publish time, present only when the request asked for them via `include`; one item per distinct target channel, sorted by name."
         ),
     ] = None
 
 
 class RealtimeBatchEvent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     event: Annotated[
         str,
         Field(
-            description='The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.',
-            examples=['order-updated'],
+            description="The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.",
+            examples=["order-updated"],
             max_length=200,
             min_length=1,
         ),
@@ -365,24 +365,24 @@ class RealtimeBatchEvent(BaseModel):
     channel: Annotated[
         str,
         Field(
-            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
-            examples=['orders-42'],
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            examples=["orders-42"],
             max_length=164,
             min_length=1,
-            pattern='^[A-Za-z0-9_=@,.;-]+$',
+            pattern="^[A-Za-z0-9_=@,.;-]+$",
         ),
     ]
     data: Annotated[
         Any | None,
         Field(
-            description='Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized.'
+            description="Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized."
         ),
     ] = None
     exclude_connection_id: Annotated[
         str | None,
         Field(
             description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
-            examples=['123.4567'],
+            examples=["123.4567"],
             min_length=1,
         ),
     ] = None
@@ -396,64 +396,64 @@ class RealtimeBatchEvent(BaseModel):
 
 class RealtimeBatchPublish(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     events: Annotated[
         list[RealtimeBatchEvent],
-        Field(description='Up to 10 events per batch.', max_length=10, min_length=1),
+        Field(description="Up to 10 events per batch.", max_length=10, min_length=1),
     ]
 
 
 class RealtimeBatchPublishResultItem(RealtimeChannelCounts):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     channel: Annotated[
         str,
         Field(
-            description='A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.',
-            examples=['orders-42'],
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            examples=["orders-42"],
             max_length=164,
             min_length=1,
-            pattern='^[A-Za-z0-9_=@,.;-]+$',
+            pattern="^[A-Za-z0-9_=@,.;-]+$",
         ),
     ]
 
 
 class RealtimeBatchPublishResult(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[RealtimeBatchPublishResultItem] | None,
         Field(
-            description='Per-event channel attributes at publish time, present only when at least one event asked for them via `include`. Positional: one item per event, in request order.'
+            description="Per-event channel attributes at publish time, present only when at least one event asked for them via `include`. Positional: one item per event, in request order."
         ),
     ] = None
 
 
 class RealtimeChannelsList(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[RealtimeChannelListItem],
-        Field(description='The occupied channels, sorted by name.'),
+        Field(description="The occupied channels, sorted by name."),
     ]
 
 
 class RealtimeChannelInfo(RealtimeChannelCounts):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     occupied: Annotated[
-        bool, Field(description='Whether at least one client is subscribed.')
+        bool, Field(description="Whether at least one client is subscribed.")
     ]
 
 
 class RealtimeChannelMember(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     member_id: Annotated[
         str,
@@ -468,58 +468,58 @@ class RealtimeChannelMember(BaseModel):
 
 class RealtimeChannelMembers(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     members: list[RealtimeChannelMember]
 
 
 class EmailMessageStatus(str, Enum):
-    scheduled = 'scheduled'
-    accepted = 'accepted'
-    processed = 'processed'
-    deferred = 'deferred'
-    delivered = 'delivered'
-    partial_failure = 'partial_failure'
-    bounced = 'bounced'
-    complained = 'complained'
-    rejected = 'rejected'
-    canceled = 'canceled'
+    scheduled = "scheduled"
+    accepted = "accepted"
+    processed = "processed"
+    deferred = "deferred"
+    delivered = "delivered"
+    partial_failure = "partial_failure"
+    bounced = "bounced"
+    complained = "complained"
+    rejected = "rejected"
+    canceled = "canceled"
 
 
 class EmailMessageCategory(str, Enum):
-    marketing = 'marketing'
-    transactional = 'transactional'
+    marketing = "marketing"
+    transactional = "transactional"
 
 
 class EmailID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class EmailAddress(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email: Annotated[
         str,
         Field(
-            description='Email address.', examples=['jane@example.com'], min_length=5
+            description="Email address.", examples=["jane@example.com"], min_length=5
         ),
     ]
     name: Annotated[
         str | None,
         Field(
-            description='Display name shown alongside the address in mail clients.',
-            examples=['Jane Doe'],
+            description="Display name shown alongside the address in mail clients.",
+            examples=["Jane Doe"],
             max_length=256,
             min_length=1,
-            pattern='^[^\\r\\n]+$',
+            pattern="^[^\\r\\n]+$",
         ),
     ] = None
 
@@ -528,8 +528,8 @@ class LanguageTag(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            description='A language tag in BCP-47 form, for example `en` or `pt-BR`.',
-            examples=['pt-BR'],
+            description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+            examples=["pt-BR"],
             max_length=35,
             min_length=2,
         ),
@@ -540,9 +540,9 @@ class EmailTemplateID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
@@ -551,102 +551,102 @@ class EmailTemplateVersionID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['emv_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^emv_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class Tag(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str,
         Field(
-            description='Tag name. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 32 characters.\n',
-            examples=['category'],
+            description="Tag name. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 32 characters.\n",
+            examples=["category"],
             max_length=32,
             min_length=1,
-            pattern='^[A-Za-z0-9_-]+$',
+            pattern="^[A-Za-z0-9_-]+$",
         ),
     ]
     value: Annotated[
         str,
         Field(
-            description='Tag value. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 64 characters.\n',
-            examples=['welcome'],
+            description="Tag value. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 64 characters.\n",
+            examples=["welcome"],
             max_length=64,
             min_length=1,
-            pattern='^[A-Za-z0-9_-]+$',
+            pattern="^[A-Za-z0-9_-]+$",
         ),
     ]
 
 
 class EmailAttachmentRef(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str | None,
         Field(
-            description='Attachment ID, stable per email send.',
-            examples=['ea_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Attachment ID, stable per email send.",
+            examples=["ea_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ea_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ea_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
     filename: Annotated[
         str,
         Field(
-            description='Filename as shown to the recipient.',
-            examples=['invoice.pdf'],
+            description="Filename as shown to the recipient.",
+            examples=["invoice.pdf"],
             min_length=1,
         ),
     ]
     content_type: Annotated[
         str | None,
         Field(
-            description='Resolved MIME type at send time.', examples=['application/pdf']
+            description="Resolved MIME type at send time.", examples=["application/pdf"]
         ),
     ] = None
     size: Annotated[
-        int, Field(description='Decoded size in bytes.', examples=[215432], ge=0)
+        int, Field(description="Decoded size in bytes.", examples=[215432], ge=0)
     ]
     inline: Annotated[
         bool | None,
         Field(
-            description='True when the attachment was sent inline via a `content_id` reference in the HTML body, false for regular file attachments.\n',
+            description="True when the attachment was sent inline via a `content_id` reference in the HTML body, false for regular file attachments.\n",
             examples=[False],
         ),
     ] = None
     content_id: Annotated[
         str | None,
         Field(
-            description='The Content-ID set at send time, when the attachment was inline.'
+            description="The Content-ID set at send time, when the attachment was inline."
         ),
     ] = None
 
 
 class EmailMessage(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Message ID.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Message ID.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     from_: Annotated[
         EmailAddress,
         Field(
-            alias='from',
-            description='Sender address. `name` is present when a display name was provided on the send.',
+            alias="from",
+            description="Sender address. `name` is present when a display name was provided on the send.",
         ),
     ]
     to: Annotated[
@@ -657,8 +657,8 @@ class EmailMessage(BaseModel):
             min_length=1,
         ),
     ]
-    cc: Annotated[list[EmailAddress] | None, Field(description='CC recipients.')] = None
-    bcc: Annotated[list[EmailAddress] | None, Field(description='BCC recipients.')] = (
+    cc: Annotated[list[EmailAddress] | None, Field(description="CC recipients.")] = None
+    bcc: Annotated[list[EmailAddress] | None, Field(description="BCC recipients.")] = (
         None
     )
     subject: Annotated[
@@ -672,7 +672,7 @@ class EmailMessage(BaseModel):
     reply_to: Annotated[
         list[EmailAddress] | None,
         Field(
-            description='Reply-To addresses, if set on the send. Empty/null when no Reply-To was provided.',
+            description="Reply-To addresses, if set on the send. Empty/null when no Reply-To was provided.",
             max_length=25,
         ),
     ] = None
@@ -685,68 +685,68 @@ class EmailMessage(BaseModel):
     accepted_count: Annotated[
         int,
         Field(
-            description='Number of recipients currently in the `accepted` state — Bird has the send and is preparing to deliver.'
+            description="Number of recipients currently in the `accepted` state — Bird has the send and is preparing to deliver."
         ),
     ]
     processed_count: Annotated[
         int,
         Field(
-            description='Number of recipients for whom Bird has processed the message and queued it for delivery.'
+            description="Number of recipients for whom Bird has processed the message and queued it for delivery."
         ),
     ]
     delivered_count: Annotated[
         int,
         Field(
-            description='Number of recipients whose messages were accepted by the remote MTA.'
+            description="Number of recipients whose messages were accepted by the remote MTA."
         ),
     ]
     bounced_count: Annotated[
         int,
         Field(
-            description='Number of recipients that resulted in a permanent delivery failure.'
+            description="Number of recipients that resulted in a permanent delivery failure."
         ),
     ]
     complained_count: Annotated[
-        int, Field(description='Number of recipients that reported spam.')
+        int, Field(description="Number of recipients that reported spam.")
     ]
     deferred_count: Annotated[
         int,
         Field(
-            description='Number of recipients in transient delivery deferral; the provider is retrying.'
+            description="Number of recipients in transient delivery deferral; the provider is retrying."
         ),
     ]
     rejected_count: Annotated[
         int,
         Field(
-            description='Number of recipients rejected before delivery. See the per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` for the specific cause (suppression match, transmission failure, generation failure, or policy refusal).\n'
+            description="Number of recipients rejected before delivery. See the per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` for the specific cause (suppression match, transmission failure, generation failure, or policy refusal).\n"
         ),
     ]
     processing_latency_ms: Annotated[
         int | None,
         Field(
-            description='Time between Bird accepting the send and the message being processed for delivery, in milliseconds, for the fastest recipient. Null until the first recipient reaches `processed`.\n',
+            description="Time between Bird accepting the send and the message being processed for delivery, in milliseconds, for the fastest recipient. Null until the first recipient reaches `processed`.\n",
             ge=0,
         ),
     ] = None
     delivery_latency_ms: Annotated[
         int | None,
         Field(
-            description='Time between the message being processed and the receiving mail server accepting it, in milliseconds, for the fastest delivered recipient. Null until the first recipient is delivered.\n',
+            description="Time between the message being processed and the receiving mail server accepting it, in milliseconds, for the fastest delivered recipient. Null until the first recipient is delivered.\n",
             ge=0,
         ),
     ] = None
     total_latency_ms: Annotated[
         int | None,
         Field(
-            description='End-to-end accept → delivered time for the fastest delivered recipient, in milliseconds. Null until the first recipient is delivered.\n',
+            description="End-to-end accept → delivered time for the fastest delivered recipient, in milliseconds. Null until the first recipient is delivered.\n",
             ge=0,
         ),
     ] = None
     open_count: Annotated[
-        int, Field(description='Total open events across all recipients.')
+        int, Field(description="Total open events across all recipients.")
     ]
     click_count: Annotated[
-        int, Field(description='Total click events across all recipients.')
+        int, Field(description="Total click events across all recipients.")
     ]
     requested_language: Annotated[
         LanguageTag | None,
@@ -763,7 +763,7 @@ class EmailMessage(BaseModel):
     template_id: Annotated[
         EmailTemplateID | None,
         Field(
-            description='The template this send rendered from, or null for a send that supplied its content inline.\n'
+            description="The template this send rendered from, or null for a send that supplied its content inline.\n"
         ),
     ] = None
     template_version_id: Annotated[
@@ -775,19 +775,19 @@ class EmailMessage(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` filter labels applied to this send. See EmailMessageSendRequest for the tags vs metadata distinction.'
+            description="Structured `{name, value}` filter labels applied to this send. See EmailMessageSendRequest for the tags vs metadata distinction."
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON metadata stored on the message object and echoed in webhook payloads. See EmailMessageSendRequest for the tags vs metadata distinction.'
+            description="Arbitrary JSON metadata stored on the message object and echoed in webhook payloads. See EmailMessageSendRequest for the tags vs metadata distinction."
         ),
     ] = None
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The substitution values this send supplied, or null for a send that carried its content inline. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.\n'
+            description="The substitution values this send supplied, or null for a send that carried its content inline. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.\n"
         ),
     ] = None
     attachments: Annotated[
@@ -797,87 +797,87 @@ class EmailMessage(BaseModel):
         ),
     ] = None
     track_opens: Annotated[
-        bool, Field(description='Whether open tracking is enabled for this send.')
+        bool, Field(description="Whether open tracking is enabled for this send.")
     ]
     track_clicks: Annotated[
-        bool, Field(description='Whether click tracking is enabled for this send.')
+        bool, Field(description="Whether click tracking is enabled for this send.")
     ]
     created_at: Annotated[
-        str, Field(description='When the send request was accepted.', min_length=1)
+        str, Field(description="When the send request was accepted.", min_length=1)
     ]
     thread_id: Annotated[
         str | None,
         Field(
-            description='Thread this message belongs to. Null until threading is enabled.',
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            description="Thread this message belongs to. Null until threading is enabled.",
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
     in_reply_to_message_id: Annotated[
-        EmailID | None, Field(description='The message this one is a reply to, if any.')
+        EmailID | None, Field(description="The message this one is a reply to, if any.")
     ] = None
     delivered_at: Annotated[
         str | None,
         Field(
-            description='When all recipients reached a terminal delivered state, or null if not yet fully delivered.'
+            description="When all recipients reached a terminal delivered state, or null if not yet fully delivered."
         ),
     ] = None
     scheduled_at: Annotated[
         str | None,
         Field(
-            description='When this message is scheduled to send, for a send created with a future send time. Null for an immediate send. Stays set after the scheduled send fires.'
+            description="When this message is scheduled to send, for a send created with a future send time. Null for an immediate send. Stays set after the scheduled send fires."
         ),
     ] = None
 
 
 class EmailMessageList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    data: Annotated[list[EmailMessage], Field(description='Page of message objects.')]
+    data: Annotated[list[EmailMessage], Field(description="Page of message objects.")]
 
 
 class EmailAddressInput1(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            description='Email address, optionally in RFC 5322 mailbox form with an embedded display name.',
-            examples=['Jane Doe <jane@example.com>'],
+            description="Email address, optionally in RFC 5322 mailbox form with an embedded display name.",
+            examples=["Jane Doe <jane@example.com>"],
             max_length=998,
             min_length=5,
-            pattern='^[^\\r\\n]+$',
-            title='Email string',
+            pattern="^[^\\r\\n]+$",
+            title="Email string",
         ),
     ]
 
 
 class EmailTemplateSend1(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='The template to send, by its id.',
-            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The template to send, by its id.",
+            examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     slug: Annotated[
         str | None,
         Field(
-            description='The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
-            examples=['welcome-email'],
+            description="The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).",
+            examples=["welcome-email"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ] = None
     language: Annotated[
         str | None,
         Field(
             description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
-            examples=['pt-BR'],
+            examples=["pt-BR"],
             max_length=35,
             min_length=2,
         ),
@@ -886,39 +886,39 @@ class EmailTemplateSend1(BaseModel):
         dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Send everything the template's `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n",
-            examples=[{'first_name': 'Ada'}],
+            examples=[{"first_name": "Ada"}],
         ),
     ] = None
 
 
 class EmailTemplateSend2(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str | None,
         Field(
-            description='The template to send, by its id.',
-            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The template to send, by its id.",
+            examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
     slug: Annotated[
         str,
         Field(
-            description='The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).',
-            examples=['welcome-email'],
+            description="The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).",
+            examples=["welcome-email"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
     language: Annotated[
         str | None,
         Field(
             description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
-            examples=['pt-BR'],
+            examples=["pt-BR"],
             max_length=35,
             min_length=2,
         ),
@@ -927,20 +927,20 @@ class EmailTemplateSend2(BaseModel):
         dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Send everything the template's `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n",
-            examples=[{'first_name': 'Ada'}],
+            examples=[{"first_name": "Ada"}],
         ),
     ] = None
 
 
 class EmailAttachment(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     filename: Annotated[
         str,
         Field(
-            description='Filename shown to the recipient. Required.',
-            examples=['invoice.pdf'],
+            description="Filename shown to the recipient. Required.",
+            examples=["invoice.pdf"],
             max_length=255,
             min_length=1,
         ),
@@ -948,50 +948,50 @@ class EmailAttachment(BaseModel):
     content: Annotated[
         Base64Str,
         Field(
-            description='Base64-encoded attachment bytes. Required. Counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n',
+            description="Base64-encoded attachment bytes. Required. Counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n",
             min_length=1,
         ),
     ]
     path: Annotated[
         str | None,
         Field(
-            description='Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `UnsupportedEmailFeature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n'
+            description="Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `UnsupportedEmailFeature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n"
         ),
     ] = None
     content_type: Annotated[
         str | None,
         Field(
-            description='MIME type. Inferred from `filename` extension when omitted. Used to enforce the blocklist of disallowed executable / script types.\n',
-            examples=['application/pdf'],
+            description="MIME type. Inferred from `filename` extension when omitted. Used to enforce the blocklist of disallowed executable / script types.\n",
+            examples=["application/pdf"],
         ),
     ] = None
     content_id: Annotated[
         str | None,
         Field(
             description='RFC 2392 Content-ID. When set, the attachment is rendered inline and can be referenced from the HTML body as `<img src="cid:{content_id}"/>`. When omitted, the attachment is rendered as a regular file attachment.\n',
-            examples=['invoice-logo'],
+            examples=["invoice-logo"],
             max_length=128,
             min_length=1,
-            pattern='^[A-Za-z0-9._-]+$',
+            pattern="^[A-Za-z0-9._-]+$",
         ),
     ] = None
 
 
 class EmailMessageSendRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     from_: Annotated[
         EmailAddressInput1 | EmailAddress,
         Field(
-            alias='from',
-            description='Sender address, as a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name. Must be from a verified domain in this workspace.',
+            alias="from",
+            description="Sender address, as a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name. Must be from a verified domain in this workspace.",
         ),
     ]
     to: Annotated[
         list[EmailAddressInput1 | EmailAddress],
         Field(
-            description='Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
             max_length=50,
             min_length=1,
         ),
@@ -999,21 +999,21 @@ class EmailMessageSendRequest(BaseModel):
     cc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description='CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     bcc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description='BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     subject: Annotated[
         str | None,
         Field(
-            description='Message subject line. Required for inline sends; omit it when sending a `template` (the template supplies the subject).',
+            description="Message subject line. Required for inline sends; omit it when sending a `template` (the template supplies the subject).",
             max_length=998,
             min_length=1,
         ),
@@ -1021,21 +1021,21 @@ class EmailMessageSendRequest(BaseModel):
     html: Annotated[
         str | None,
         Field(
-            description='HTML body. At least one of html or text must be provided.',
+            description="HTML body. At least one of html or text must be provided.",
             max_length=524288,
         ),
     ] = None
     text: Annotated[
         str | None,
         Field(
-            description='Plain-text body. At least one of html or text must be provided.',
+            description="Plain-text body. At least one of html or text must be provided.",
             max_length=524288,
         ),
     ] = None
     reply_to: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description='Reply-To addresses, each a plain email string, an RFC 5322 mailbox string, or an object with an optional display name. RFC 5322 allows multiple. Every recipient reply hits all listed addresses, so 1-2 is typical; the 25 cap exists to prevent runaway header sizes that some MTAs reject.\n',
+            description="Reply-To addresses, each a plain email string, an RFC 5322 mailbox string, or an object with an optional display name. RFC 5322 allows multiple. Every recipient reply hits all listed addresses, so 1-2 is typical; the 25 cap exists to prevent runaway header sizes that some MTAs reject.\n",
             max_length=25,
             min_length=1,
         ),
@@ -1050,40 +1050,40 @@ class EmailMessageSendRequest(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics rollups by tag, and surface in webhook payloads. Cap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.\n',
+            description="Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics rollups by tag, and surface in webhook payloads. Cap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON object **stored, returned on API reads, and echoed in webhook payloads**. Path-queryable in analytics (e.g. filter on `metadata.order_id`) but not surfaced as a first-class dashboard filter dimension. Cap: 2 KB serialized. Use metadata for per-send context like internal IDs, foreign keys, and structured payloads you want round-tripped through events. For low-cardinality filterable labels, use `tags` instead.\n'
+            description="Arbitrary JSON object **stored, returned on API reads, and echoed in webhook payloads**. Path-queryable in analytics (e.g. filter on `metadata.order_id`) but not surfaced as a first-class dashboard filter dimension. Cap: 2 KB serialized. Use metadata for per-send context like internal IDs, foreign keys, and structured payloads you want round-tripped through events. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Template variables used to personalize inline content. Tokens in the subject and body (e.g. `{{ first_name }}`) are replaced with these values at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.\n'
+            description="Template variables used to personalize inline content. Tokens in the subject and body (e.g. `{{ first_name }}`) are replaced with these values at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.\n"
         ),
     ] = None
     template: Annotated[
         EmailTemplateSend1 | EmailTemplateSend2 | None,
         Field(
-            description='Send a stored template instead of inline content. When set, omit `subject`/`html`/`text` — the template supplies them; personalize with `template.parameters`.\n'
+            description="Send a stored template instead of inline content. When set, omit `subject`/`html`/`text` — the template supplies them; personalize with `template.parameters`.\n"
         ),
     ] = None
     track_opens: Annotated[
-        bool | None, Field(description='Whether to track open events for this message.')
+        bool | None, Field(description="Whether to track open events for this message.")
     ] = True
     track_clicks: Annotated[
         bool | None,
-        Field(description='Whether to track click events for this message.'),
+        Field(description="Whether to track click events for this message."),
     ] = True
     ip_pool_id: Annotated[
         str | None,
         Field(
             description="ID of the IP pool to send from (`ipp_` prefix), or `ipp_shared` to route through the shared pool explicitly. Omit to use your organization's default pool. An unknown pool, or a pool with no dedicated IPs available to send from, is rejected with a `422`.\n",
-            pattern='^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$',
+            pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
         ),
     ] = None
     category: Annotated[
@@ -1091,20 +1091,20 @@ class EmailMessageSendRequest(BaseModel):
         Field(
             description="Content classification. Controls suppression policy: `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail. When you send with `template` and omit this field, the message takes the template's own classification, so a template created as `transactional` sends as transactional. Set this field to classify a single send differently from its template; it always takes precedence. Sends that carry no template and no category are `marketing`.\n"
         ),
-    ] = 'marketing'
+    ] = "marketing"
     in_reply_to_message_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — threaded replies. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, sets In-Reply-To and References headers automatically.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Preview feature — threaded replies. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, sets In-Reply-To and References headers automatically.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
     attachments: Annotated[
         list[EmailAttachment] | None,
         Field(
-            description='File attachments. Bird rejects sends whose estimated generated message size exceeds 20 MB. The estimate is the HTML and text body plus all attachments and inline images measured after base64 encoding. Keep total raw attachment content at or below 15 MB for reliable headroom. In batch sends, this per-message cap still applies and the serialized JSON request body for the whole batch has a hard 20 MB cap. See the EmailAttachment schema for the full field contract.\n',
+            description="File attachments. Bird rejects sends whose estimated generated message size exceeds 20 MB. The estimate is the HTML and text body plus all attachments and inline images measured after base64 encoding. Keep total raw attachment content at or below 15 MB for reliable headroom. In batch sends, this per-message cap still applies and the serialized JSON request body for the whole batch has a hard 20 MB cap. See the EmailAttachment schema for the full field contract.\n",
             max_length=20,
         ),
     ] = None
@@ -1117,14 +1117,14 @@ class EmailMessageSendRequest(BaseModel):
     contact_id: Annotated[
         str | None,
         Field(
-            description='Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`.'
+            description="Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`."
         ),
     ] = None
     topic_id: Annotated[
         str | None,
         Field(
             description="Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, a non-empty `topic_id` gates delivery on the recipient's opt-in state for that topic — if the recipient is opt_out, the send is silently suppressed and an `email.suppressed` event fires with `reason: topic_opt_out`.\n",
-            pattern='^top_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^top_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
 
@@ -1133,20 +1133,20 @@ class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
     root: Annotated[
         list[EmailMessageSendRequest],
         Field(
-            description='Batch of email message send requests. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.\n',
+            description="Batch of email message send requests. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.\n",
             examples=[
                 [
                     {
-                        'from': {'email': 'hello@bird.com', 'name': 'Bird Support'},
-                        'to': [{'email': 'jane@example.com', 'name': 'Jane Doe'}],
-                        'subject': 'Your receipt for order #1234',
-                        'text': 'Thanks for your purchase! Your receipt is attached.',
+                        "from": {"email": "hello@bird.com", "name": "Bird Support"},
+                        "to": [{"email": "jane@example.com", "name": "Jane Doe"}],
+                        "subject": "Your receipt for order #1234",
+                        "text": "Thanks for your purchase! Your receipt is attached.",
                     },
                     {
-                        'from': {'email': 'hello@bird.com', 'name': 'Bird Support'},
-                        'to': [{'email': 'john@example.com', 'name': 'John Roe'}],
-                        'subject': 'Your receipt for order #1235',
-                        'text': 'Thanks for your purchase! Your receipt is attached.',
+                        "from": {"email": "hello@bird.com", "name": "Bird Support"},
+                        "to": [{"email": "john@example.com", "name": "John Roe"}],
+                        "subject": "Your receipt for order #1235",
+                        "text": "Thanks for your purchase! Your receipt is attached.",
                     },
                 ]
             ],
@@ -1157,49 +1157,49 @@ class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
 
 
 class Status(str, Enum):
-    accepted = 'accepted'
+    accepted = "accepted"
 
 
 class Category(str, Enum):
-    marketing = 'marketing'
-    transactional = 'transactional'
+    marketing = "marketing"
+    transactional = "transactional"
 
 
 class EmailMessageBatchItem(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Message ID assigned to this batch item.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Message ID assigned to this batch item.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     status: Annotated[
-        Status, Field(description='Initial status of this message in the batch.')
+        Status, Field(description="Initial status of this message in the batch.")
     ]
     category: Annotated[
-        Category, Field(description='Resolved category for this batch item.')
+        Category, Field(description="Resolved category for this batch item.")
     ]
     requested_language: Annotated[
         LanguageTag | None,
         Field(
-            description='The template language this item asked for, in canonical form. Null when the item named no language or used no template. Every item in a batch resolves its own template reference, so this and `resolved_language` can differ from item to item.\n'
+            description="The template language this item asked for, in canonical form. Null when the item named no language or used no template. Every item in a batch resolves its own template reference, so this and `resolved_language` can differ from item to item.\n"
         ),
     ] = None
     resolved_language: Annotated[
         LanguageTag | None,
         Field(
-            description='The template language this item was actually delivered in, in canonical form. Null when the item used no template. A value here differing from `requested_language` means the template did not carry the language asked for and its `on_missing_language` policy chose this one.\n'
+            description="The template language this item was actually delivered in, in canonical form. Null when the item used no template. A value here differing from `requested_language` means the template did not carry the language asked for and its `on_missing_language` policy chose this one.\n"
         ),
     ] = None
     template_id: Annotated[
         EmailTemplateID | None,
         Field(
-            description='The template this item rendered from, or null for an item that supplied its content inline.\n'
+            description="The template this item rendered from, or null for an item that supplied its content inline.\n"
         ),
     ] = None
     template_version_id: Annotated[
@@ -1212,27 +1212,27 @@ class EmailMessageBatchItem(BaseModel):
 
 class EmailMessageBatchResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[EmailMessageBatchItem],
-        Field(description='One entry per message in the batch, in submission order.'),
+        Field(description="One entry per message in the batch, in submission order."),
     ]
 
 
 class RecipientRole(str, Enum):
-    to = 'to'
-    cc = 'cc'
-    bcc = 'bcc'
+    to = "to"
+    cc = "cc"
+    bcc = "bcc"
 
 
 class AudienceID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
@@ -1241,34 +1241,28 @@ class ContactID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['con_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^con_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
-class ContactChannel(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='A channel a contact can be reached on. Open enum: `email` is present when the contact has an email address; more values (`sms`, `whatsapp`, `voice`) are added as contacts gain identifiers for other channels. Treat any unrecognized value as a future channel rather than an error. Slugs match `ChannelSlug`.\n',
-            min_length=1,
-        ),
-    ]
+class ContactChannel(str, Enum):
+    email = "email"
 
 
 class Contact(Timestamps):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='ID of the contact (`con_`-prefixed), accepted by every operation that takes a `contact_id`.',
-            examples=['con_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the contact (`con_`-prefixed), accepted by every operation that takes a `contact_id`.",
+            examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^con_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     email: Annotated[
@@ -1296,7 +1290,7 @@ class Contact(Timestamps):
     external_id: Annotated[
         str | None,
         Field(
-            description='Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.',
+            description="Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.",
             max_length=254,
         ),
     ] = None
@@ -1307,9 +1301,10 @@ class Contact(Timestamps):
         ),
     ] = None
     channels: Annotated[
-        list[ContactChannel] | None,
+        list[Annotated[Union[ContactChannel, str], Field(union_mode="left_to_right")]]
+        | None,
         Field(
-            description='Channels this contact can be reached on, derived from the identifiers it has. A contact with an email address includes `email`. More values are added as a contact gains identifiers for other channels.\n'
+            description="Channels this contact can be reached on, derived from the identifiers it has. A contact with an email address includes `email`. More values are added as a contact gains identifiers for other channels.\n"
         ),
     ] = None
     created_at: str
@@ -1318,14 +1313,14 @@ class Contact(Timestamps):
 
 class ContactList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    data: Annotated[list[Contact], Field(description='Page of contact objects.')]
+    data: Annotated[list[Contact], Field(description="Page of contact objects.")]
 
 
 class ContactCreateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email: Annotated[
         str,
@@ -1344,7 +1339,7 @@ class ContactCreateRequest(BaseModel):
     external_id: Annotated[
         str | None,
         Field(
-            description='Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.',
+            description="Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.",
             max_length=254,
         ),
     ] = None
@@ -1357,18 +1352,18 @@ class ContactCreateRequest(BaseModel):
 
 
 class DataMode(str, Enum):
-    merge = 'merge'
-    replace_ = 'replace'
+    merge = "merge"
+    replace_ = "replace"
 
 
 class ContactUpsertRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     contacts: Annotated[
         list[ContactCreateRequest],
         Field(
-            description='Contacts to create or update, matched by email address. Existing contacts are updated with the fields each entry supplies; omitted fields keep their stored values, so an entry can set fields but never clear them. New addresses create contacts.',
+            description="Contacts to create or update, matched by email address. Existing contacts are updated with the fields each entry supplies; omitted fields keep their stored values, so an entry can set fields but never clear them. New addresses create contacts.",
             max_length=1000,
             min_length=1,
         ),
@@ -1376,7 +1371,7 @@ class ContactUpsertRequest(BaseModel):
     audience_ids: Annotated[
         list[AudienceID] | None,
         Field(
-            description='Audiences every contact in this request is added to. Contacts that are already members are left in place. Every listed audience must exist, or the whole request fails with a validation error and nothing is written.',
+            description="Audiences every contact in this request is added to. Contacts that are already members are left in place. Every listed audience must exist, or the whole request fails with a validation error and nothing is written.",
             max_length=10,
             min_length=1,
         ),
@@ -1386,80 +1381,80 @@ class ContactUpsertRequest(BaseModel):
         Field(
             description="How a supplied `data` object is applied to an existing contact. `merge` (the default) merges the supplied keys onto the contact's stored custom values, and a key with a `null` value deletes that one key. `replace` overwrites the whole stored `data` map with the supplied one. In both modes a contact that omits `data` keeps its stored values unchanged, so an import that touches one attribute never wipes the others.\n"
         ),
-    ] = 'merge'
+    ] = "merge"
 
 
 class ContactUpsertError(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
         str,
         Field(
-            description='Machine-readable error category for this entry, such as `validation_error` or `conflict_error`, in the same vocabulary as the top-level error `type`. New categories may be added over time, so treat unrecognized values as a generic failure.',
+            description="Machine-readable error category for this entry, such as `validation_error` or `conflict_error`, in the same vocabulary as the top-level error `type`. New categories may be added over time, so treat unrecognized values as a generic failure.",
             min_length=1,
         ),
     ]
     message: Annotated[
         str,
         Field(
-            description='Human-readable explanation of why this entry failed.',
+            description="Human-readable explanation of why this entry failed.",
             min_length=1,
         ),
     ]
 
 
 class Status1(str, Enum):
-    created = 'created'
-    updated = 'updated'
-    failed = 'failed'
+    created = "created"
+    updated = "updated"
+    failed = "failed"
 
 
 class ContactUpsertResultItem(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email: Annotated[
         str,
         Field(
-            description='Email address this entry refers to, in the normalized (trimmed and lowercased) form it was matched and stored as.',
+            description="Email address this entry refers to, in the normalized (trimmed and lowercased) form it was matched and stored as.",
             min_length=1,
         ),
     ]
     status: Annotated[
         Status1,
         Field(
-            description='What happened to this contact. `created` means a new contact was created for the address; `updated` means an existing contact with the address was updated; `failed` means the entry was rejected and `error` explains why. A failed entry does not affect the other entries in the request.'
+            description="What happened to this contact. `created` means a new contact was created for the address; `updated` means an existing contact with the address was updated; `failed` means the entry was rejected and `error` explains why. A failed entry does not affect the other entries in the request."
         ),
     ]
     contact_id: Annotated[
         str | None,
         Field(
-            description='ID of the created or updated contact. Absent when the entry failed.',
-            examples=['con_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the created or updated contact. Absent when the entry failed.",
+            examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^con_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
     error: Annotated[
         ContactUpsertError | None,
-        Field(description='Why this entry failed. Absent for successful entries.'),
+        Field(description="Why this entry failed. Absent for successful entries."),
     ] = None
 
 
 class ContactUpsertResult(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[ContactUpsertResultItem],
-        Field(description='One entry per contact in the request, in submission order.'),
+        Field(description="One entry per contact in the request, in submission order."),
     ]
 
 
 class ContactUpdateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email: Annotated[
         str | None,
@@ -1485,7 +1480,7 @@ class ContactUpdateRequest(BaseModel):
     external_id: Annotated[
         str | None,
         Field(
-            description='Your own identifier for this contact. Unique within the workspace when set. Set to null to clear.',
+            description="Your own identifier for this contact. Unique within the workspace when set. Set to null to clear.",
             max_length=254,
         ),
     ] = None
@@ -1498,34 +1493,34 @@ class ContactUpdateRequest(BaseModel):
 
 
 class Type1(str, Enum):
-    AudienceTypeStatic = 'static'
-    AudienceTypeDynamic = 'dynamic'
-    AudienceTypeExternal = 'external'
+    AudienceTypeStatic = "static"
+    AudienceTypeDynamic = "dynamic"
+    AudienceTypeExternal = "external"
 
 
 class Audience(Timestamps):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='ID of the audience (`adn_`-prefixed), accepted by every operation that takes an `audience_id`.',
-            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the audience (`adn_`-prefixed), accepted by every operation that takes an `audience_id`.",
+            examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     name: Annotated[
         str,
         Field(
-            description='Display name for the audience.', max_length=100, min_length=1
+            description="Display name for the audience.", max_length=100, min_length=1
         ),
     ]
     description: Annotated[
         str | None,
         Field(
-            description='Longer description of who this audience is.', max_length=500
+            description="Longer description of who this audience is.", max_length=500
         ),
     ] = None
     type: Annotated[
@@ -1540,51 +1535,51 @@ class Audience(Timestamps):
 
 class AudienceList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    data: Annotated[list[Audience], Field(description='Page of audience objects.')]
+    data: Annotated[list[Audience], Field(description="Page of audience objects.")]
 
 
 class ContactPropertyType(str, Enum):
-    ContactPropertyTypeString = 'string'
-    ContactPropertyTypeNumber = 'number'
-    ContactPropertyTypeBoolean = 'boolean'
+    ContactPropertyTypeString = "string"
+    ContactPropertyTypeNumber = "number"
+    ContactPropertyTypeBoolean = "boolean"
 
 
 class ContactProperty(Timestamps):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='ID of the property (`prp_`-prefixed), accepted by every operation that takes a `property_id`.',
-            examples=['prp_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the property (`prp_`-prefixed), accepted by every operation that takes a `property_id`.",
+            examples=["prp_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^prp_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^prp_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     key: Annotated[
         str,
         Field(
-            description='The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.',
+            description="The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
             max_length=50,
             min_length=1,
-            pattern='^[a-z][a-z0-9_]*$',
+            pattern="^[a-z][a-z0-9_]*$",
         ),
     ]
     type: ContactPropertyType
     fallback_value: Annotated[
         Any | None,
         Field(
-            description='Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null when no fallback is set.',
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null when no fallback is set.",
             max_length=500,
         ),
     ] = None
     archived: Annotated[
         bool | None,
         Field(
-            description='Whether the property is archived. An archived property is rejected in new contact writes and stops rendering in templates, but every value already stored on contacts is preserved. Reactivate it with unarchive.'
+            description="Whether the property is archived. An archived property is rejected in new contact writes and stops rendering in templates, but every value already stored on contacts is preserved. Reactivate it with unarchive."
         ),
     ] = None
     created_at: str
@@ -1593,31 +1588,31 @@ class ContactProperty(Timestamps):
 
 class ContactPropertyList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
-        list[ContactProperty], Field(description='Page of contact property objects.')
+        list[ContactProperty], Field(description="Page of contact property objects.")
     ]
 
 
 class ContactPropertyCreateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     key: Annotated[
         str,
         Field(
-            description='The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.',
+            description="The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
             max_length=50,
             min_length=1,
-            pattern='^[a-z][a-z0-9_]*$',
+            pattern="^[a-z][a-z0-9_]*$",
         ),
     ]
     type: ContactPropertyType
     fallback_value: Annotated[
         Any | None,
         Field(
-            description='Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null for no fallback; a value of another type returns a validation error.',
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null for no fallback; a value of another type returns a validation error.",
             max_length=500,
         ),
     ] = None
@@ -1625,12 +1620,12 @@ class ContactPropertyCreateRequest(BaseModel):
 
 class ContactPropertyUpdateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     fallback_value: Annotated[
         Any | None,
         Field(
-            description='Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters); a value of another type returns a validation error. Set to null to remove the fallback.',
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters); a value of another type returns a validation error. Set to null to remove the fallback.",
             max_length=500,
         ),
     ] = None
@@ -1638,18 +1633,18 @@ class ContactPropertyUpdateRequest(BaseModel):
 
 class AudienceCreateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str,
         Field(
-            description='Display name for the audience.', max_length=100, min_length=1
+            description="Display name for the audience.", max_length=100, min_length=1
         ),
     ]
     description: Annotated[
         str | None,
         Field(
-            description='Longer description of who this audience is.', max_length=500
+            description="Longer description of who this audience is.", max_length=500
         ),
     ] = None
     type: Annotated[
@@ -1657,17 +1652,17 @@ class AudienceCreateRequest(BaseModel):
         Field(
             description="How the audience's recipients are determined. `static` (the default) is an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable; creating an audience with either returns a validation error.\n"
         ),
-    ] = 'static'
+    ] = "static"
 
 
 class AudienceUpdateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str | None,
         Field(
-            description='New display name for the audience. Omit to keep the current name; the name cannot be cleared, and a whitespace-only value returns a validation error.',
+            description="New display name for the audience. Omit to keep the current name; the name cannot be cleared, and a whitespace-only value returns a validation error.",
             max_length=100,
             min_length=1,
         ),
@@ -1675,7 +1670,7 @@ class AudienceUpdateRequest(BaseModel):
     description: Annotated[
         str | None,
         Field(
-            description='Longer description of who this audience is. Set to null to clear.',
+            description="Longer description of who this audience is. Set to null to clear.",
             max_length=500,
         ),
     ] = None
@@ -1683,15 +1678,15 @@ class AudienceUpdateRequest(BaseModel):
 
 class AudienceRef(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='ID of the referenced audience (`adn_`-prefixed).',
-            examples=['adn_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the referenced audience (`adn_`-prefixed).",
+            examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^adn_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     name: Annotated[
@@ -1702,44 +1697,44 @@ class AudienceRef(BaseModel):
 
 class AudienceMember(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     contact: Contact
     joined_at: Annotated[
         str,
         Field(
-            description='When this contact joined the audience. Members are listed in join order, most recent first.',
+            description="When this contact joined the audience. Members are listed in join order, most recent first.",
             min_length=1,
         ),
     ]
     audiences: Annotated[
         list[AudienceRef] | None,
         Field(
-            description='The audiences this contact belongs to, including the one being listed, most-recently-joined first.'
+            description="The audiences this contact belongs to, including the one being listed, most-recently-joined first."
         ),
     ] = None
 
 
 class AudienceMemberList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[AudienceMember],
         Field(
-            description='Page of audience members, each a contact paired with the time it joined the audience.'
+            description="Page of audience members, each a contact paired with the time it joined the audience."
         ),
     ]
 
 
 class AudienceContactsAddRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     contact_ids: Annotated[
         list[ContactID],
         Field(
-            description='Contacts to add to the audience. Adding a contact that is already a member has no effect and keeps its original join time; duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no contacts are added.',
+            description="Contacts to add to the audience. Adding a contact that is already a member has no effect and keeps its original join time; duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no contacts are added.",
             max_length=1000,
             min_length=1,
         ),
@@ -1748,12 +1743,12 @@ class AudienceContactsAddRequest(BaseModel):
 
 class AudienceContactsRemoveRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     contact_ids: Annotated[
         list[ContactID],
         Field(
-            description='Contacts to remove from the audience. Removing a contact that is not a member has no effect; duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no memberships are removed.',
+            description="Contacts to remove from the audience. Removing a contact that is not a member has no effect; duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no memberships are removed.",
             max_length=1000,
             min_length=1,
         ),
@@ -1761,78 +1756,78 @@ class AudienceContactsRemoveRequest(BaseModel):
 
 
 class MessageDirection(str, Enum):
-    outbound = 'outbound'
-    inbound = 'inbound'
+    outbound = "outbound"
+    inbound = "inbound"
 
 
 class SMSMessageCategory(str, Enum):
-    transactional = 'transactional'
-    marketing = 'marketing'
-    authentication = 'authentication'
-    service = 'service'
+    transactional = "transactional"
+    marketing = "marketing"
+    authentication = "authentication"
+    service = "service"
 
 
 class SMSMessageStatus(str, Enum):
-    scheduled = 'scheduled'
-    accepted = 'accepted'
-    sent = 'sent'
-    delivered = 'delivered'
-    undelivered = 'undelivered'
-    failed = 'failed'
-    rejected = 'rejected'
-    canceled = 'canceled'
-    expired = 'expired'
-    received = 'received'
+    scheduled = "scheduled"
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    undelivered = "undelivered"
+    failed = "failed"
+    rejected = "rejected"
+    canceled = "canceled"
+    expired = "expired"
+    received = "received"
 
 
 class Encoding(str, Enum):
-    GSM_7BIT = 'GSM_7BIT'
-    UCS2 = 'UCS2'
+    GSM_7BIT = "GSM_7BIT"
+    UCS2 = "UCS2"
 
 
 class SMSSegments(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     count: Annotated[
         int,
         Field(
-            description='Number of segments the body is split into. Each segment is a billable unit.',
+            description="Number of segments the body is split into. Each segment is a billable unit.",
             ge=1,
         ),
     ]
     encoding: Annotated[
         Encoding,
         Field(
-            description='Encoding used for the body. `GSM_7BIT` fits 160 characters in a single segment (153 per part when multi-segment); `UCS2` is used when the body contains any character outside the GSM 03.38 alphabet (emoji, CJK, some accented characters) and fits 70 characters in a single segment (67 per part when multi-segment).\n'
+            description="Encoding used for the body. `GSM_7BIT` fits 160 characters in a single segment (153 per part when multi-segment); `UCS2` is used when the body contains any character outside the GSM 03.38 alphabet (emoji, CJK, some accented characters) and fits 70 characters in a single segment (67 per part when multi-segment).\n"
         ),
     ]
     characters: Annotated[
         int,
         Field(
-            description='Character count of the body under the selected encoding.', ge=0
+            description="Character count of the body under the selected encoding.", ge=0
         ),
     ]
 
 
 class SMSCostBreakdown(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     per_segment: Annotated[
         str,
         Field(
-            description='Per-segment price as a decimal string.',
-            examples=['0.0079'],
+            description="Per-segment price as a decimal string.",
+            examples=["0.0079"],
             min_length=1,
         ),
     ]
-    segments: Annotated[int, Field(description='Number of billable segments.', ge=1)]
+    segments: Annotated[int, Field(description="Number of billable segments.", ge=1)]
     country_code: Annotated[
         str,
         Field(
-            description='ISO 3166-1 alpha-2 destination country the price was resolved for.',
-            examples=['US'],
+            description="ISO 3166-1 alpha-2 destination country the price was resolved for.",
+            examples=["US"],
             max_length=2,
             min_length=2,
         ),
@@ -1840,8 +1835,8 @@ class SMSCostBreakdown(BaseModel):
     carrier_surcharge: Annotated[
         str,
         Field(
-            description='Carrier surcharge component as a decimal string (for example US 10DLC fees). `0.0000` when none applies.',
-            examples=['0.0000'],
+            description="Carrier surcharge component as a decimal string (for example US 10DLC fees). `0.0000` when none applies.",
+            examples=["0.0000"],
             min_length=1,
         ),
     ]
@@ -1849,231 +1844,231 @@ class SMSCostBreakdown(BaseModel):
 
 class SMSCost(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     currency_code: Annotated[
         str | None,
         Field(
-            description='ISO 4217 currency code for the cost amount. Omitted when the cost is not denominated in a currency (for example a zero-priced internal send).',
-            examples=['USD'],
+            description="ISO 4217 currency code for the cost amount. Omitted when the cost is not denominated in a currency (for example a zero-priced internal send).",
+            examples=["USD"],
             max_length=3,
             min_length=3,
-            pattern='^[A-Z]{3}$',
+            pattern="^[A-Z]{3}$",
         ),
     ] = None
     amount: Annotated[
         str,
         Field(
-            description='Total cost as a decimal string: the per-segment rate multiplied by the segment count, plus any surcharges.',
-            examples=['0.0079'],
+            description="Total cost as a decimal string: the per-segment rate multiplied by the segment count, plus any surcharges.",
+            examples=["0.0079"],
             min_length=1,
         ),
     ]
     breakdown: Annotated[
         SMSCostBreakdown | None,
         Field(
-            description='Per-component cost breakdown. Returned on single-message reads; omitted from list rows.'
+            description="Per-component cost breakdown. Returned on single-message reads; omitted from list rows."
         ),
     ] = None
 
 
 class SMSErrorCode(str, Enum):
-    invalid_destination = 'invalid_destination'
-    unreachable = 'unreachable'
-    blocked_by_carrier = 'blocked_by_carrier'
-    blocked_by_recipient = 'blocked_by_recipient'
-    landline_unreachable = 'landline_unreachable'
-    content_rejected = 'content_rejected'
-    sender_unregistered = 'sender_unregistered'
-    recipient_opted_out = 'recipient_opted_out'
-    provider_unavailable = 'provider_unavailable'
-    insufficient_balance = 'insufficient_balance'
-    unknown = 'unknown'
+    invalid_destination = "invalid_destination"
+    unreachable = "unreachable"
+    blocked_by_carrier = "blocked_by_carrier"
+    blocked_by_recipient = "blocked_by_recipient"
+    landline_unreachable = "landline_unreachable"
+    content_rejected = "content_rejected"
+    sender_unregistered = "sender_unregistered"
+    recipient_opted_out = "recipient_opted_out"
+    provider_unavailable = "provider_unavailable"
+    insufficient_balance = "insufficient_balance"
+    unknown = "unknown"
 
 
 class SMSError(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     code: SMSErrorCode
     description: Annotated[
         str,
         Field(
-            description='Human-readable explanation of the failure.',
-            examples=['Carrier filtered as spam'],
+            description="Human-readable explanation of the failure.",
+            examples=["Carrier filtered as spam"],
             min_length=1,
         ),
     ]
     carrier_error_code: Annotated[
         str | None,
         Field(
-            description='Raw carrier-supplied error code, when available, for low-level debugging.',
-            examples=['30007'],
+            description="Raw carrier-supplied error code, when available, for low-level debugging.",
+            examples=["30007"],
         ),
     ] = None
     occurred_at: Annotated[
-        str, Field(description='When the failure occurred.', min_length=1)
+        str, Field(description="When the failure occurred.", min_length=1)
     ]
 
 
 class Direction(str, Enum):
-    outbound = 'outbound'
-    inbound = 'inbound'
+    outbound = "outbound"
+    inbound = "inbound"
 
 
 class SMSMessage(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='ID of the message (`sms_`-prefixed), assigned when the send is accepted. Pass it as `message_id` to the get-message endpoint.\n',
-            examples=['sms_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the message (`sms_`-prefixed), assigned when the send is accepted. Pass it as `message_id` to the get-message endpoint.\n",
+            examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^sms_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     direction: Annotated[
         Direction,
         Field(
-            description='Whether the message was sent from a Bird sender (`outbound`) or received from a subscriber (`inbound`).'
+            description="Whether the message was sent from a Bird sender (`outbound`) or received from a subscriber (`inbound`)."
         ),
     ]
     status: SMSMessageStatus
     to: Annotated[
         str,
         Field(
-            description='Recipient phone number in E.164 format.',
-            examples=['+15551234567'],
+            description="Recipient phone number in E.164 format.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Sender the message was sent from: an E.164 number, an alphanumeric sender ID, or a short code.',
-            examples=['+15557654321'],
+            alias="from",
+            description="Sender the message was sent from: an E.164 number, an alphanumeric sender ID, or a short code.",
+            examples=["+15557654321"],
             min_length=1,
         ),
     ]
     text: Annotated[
         str,
         Field(
-            description='The message body as sent. For a template send, this is the rendered text after parameter substitution.\n',
-            examples=['Your verification code is 123456.'],
+            description="The message body as sent. For a template send, this is the rendered text after parameter substitution.\n",
+            examples=["Your verification code is 123456."],
             min_length=1,
         ),
     ]
     category: Annotated[
         SMSMessageCategory | None,
         Field(
-            description='Content classification supplied on the send. Null for inbound messages.'
+            description="Content classification supplied on the send. Null for inbound messages."
         ),
     ] = None
     segments: Annotated[
-        SMSSegments, Field(description='Segment breakdown for the body.')
+        SMSSegments, Field(description="Segment breakdown for the body.")
     ]
     cost: Annotated[
         SMSCost | None,
         Field(
-            description='Cost of the message. Null until the message has been priced.'
+            description="Cost of the message. Null until the message has been priced."
         ),
     ] = None
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` filter labels applied to this message.'
+            description="Structured `{name, value}` filter labels applied to this message."
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON metadata stored on the message and echoed in webhook payloads.'
+            description="Arbitrary JSON metadata stored on the message and echoed in webhook payloads."
         ),
     ] = None
     validity_period: Annotated[
         int | None,
         Field(
-            description='How long, in seconds, Bird keeps trying to deliver before the message transitions to `expired`.'
+            description="How long, in seconds, Bird keeps trying to deliver before the message transitions to `expired`."
         ),
     ] = None
     carrier: Annotated[
         str | None,
         Field(
-            description='Carrier that handled the message, when known. Populated once a delivery receipt identifies it.',
-            examples=['Verizon'],
+            description="Carrier that handled the message, when known. Populated once a delivery receipt identifies it.",
+            examples=["Verizon"],
         ),
     ] = None
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description='Mobile country code and mobile network code of the carrier, when known.',
-            examples=['311480'],
+            description="Mobile country code and mobile network code of the carrier, when known.",
+            examples=["311480"],
         ),
     ] = None
     last_error: Annotated[
         SMSError | None,
         Field(
-            description='Failure detail on a terminally failed or rejected message. Present only when the message failed.'
+            description="Failure detail on a terminally failed or rejected message. Present only when the message failed."
         ),
     ] = None
     created_at: Annotated[
         str,
         Field(
-            description='When the message was accepted (outbound) or received (inbound).',
+            description="When the message was accepted (outbound) or received (inbound).",
             min_length=1,
         ),
     ]
     sent_at: Annotated[
         str | None,
         Field(
-            description='When the message was handed to the carrier. Null until then.'
+            description="When the message was handed to the carrier. Null until then."
         ),
     ] = None
     delivered_at: Annotated[
-        str | None, Field(description='When delivery was confirmed. Null until then.')
+        str | None, Field(description="When delivery was confirmed. Null until then.")
     ] = None
 
 
 class SMSMessageList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
-        list[SMSMessage], Field(description='Page of SMS messages, newest first.')
+        list[SMSMessage], Field(description="Page of SMS messages, newest first.")
     ]
 
 
 class SMSTemplateSend1(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='The template to send, by its id.',
-            examples=['smt_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The template to send, by its id.",
+            examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     name: Annotated[
         str | None,
         Field(
-            description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
-            examples=['bird_otp_verification_ttl'],
+            description="The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
+            examples=["bird_otp_verification_ttl"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ] = None
     language: Annotated[
         str | None,
         Field(
-            description='Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n',
-            examples=['fr'],
+            description="Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
+            examples=["fr"],
             min_length=2,
         ),
     ] = None
@@ -2081,39 +2076,39 @@ class SMSTemplateSend1(BaseModel):
         dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.\n",
-            examples=[{'code': '493021', 'ttl': '10'}],
+            examples=[{"code": "493021", "ttl": "10"}],
         ),
     ] = None
 
 
 class SMSTemplateSend2(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str | None,
         Field(
-            description='The template to send, by its id.',
-            examples=['smt_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The template to send, by its id.",
+            examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
     name: Annotated[
         str,
         Field(
-            description='The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n',
-            examples=['bird_otp_verification_ttl'],
+            description="The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
+            examples=["bird_otp_verification_ttl"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
     language: Annotated[
         str | None,
         Field(
-            description='Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n',
-            examples=['fr'],
+            description="Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
+            examples=["fr"],
             min_length=2,
         ),
     ] = None
@@ -2121,37 +2116,37 @@ class SMSTemplateSend2(BaseModel):
         dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.\n",
-            examples=[{'code': '493021', 'ttl': '10'}],
+            examples=[{"code": "493021", "ttl": "10"}],
         ),
     ] = None
 
 
 class SMSMessageSendRequest1(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     to: Annotated[
         str,
         Field(
-            description='Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.',
-            examples=['+15551234567'],
+            description="Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     from_: Annotated[
         str | None,
         Field(
-            alias='from',
-            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n',
-            examples=['+15557654321'],
+            alias="from",
+            description="Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n",
+            examples=["+15557654321"],
             min_length=1,
         ),
     ] = None
     text: Annotated[
         str,
         Field(
-            description='Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n',
-            examples=['Your verification code is 123456.'],
+            description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n",
+            examples=["Your verification code is 123456."],
             min_length=1,
         ),
     ]
@@ -2164,7 +2159,7 @@ class SMSMessageSendRequest1(BaseModel):
     validity_period: Annotated[
         int | None,
         Field(
-            description='Preview feature: how long, in seconds (60-172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n',
+            description="Preview feature: how long, in seconds (60-172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n",
             ge=60,
             le=172800,
         ),
@@ -2172,116 +2167,116 @@ class SMSMessageSendRequest1(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n',
+            description="Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n'
+            description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
     media_urls: Annotated[
         list[str] | None,
         Field(
-            description='Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     messaging_profile_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     scheduled_at: Annotated[
         str | None,
         Field(
-            description='Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     template: Annotated[
         SMSTemplateSend1 | SMSTemplateSend2 | None,
         Field(
-            description='Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n'
+            description="Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n"
         ),
     ] = None
     broadcast_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     campaign_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     audience_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     contact_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     topic_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     max_price_per_segment: Annotated[
         float | None,
         Field(
-            description='Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     personalization: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     track_clicks: Annotated[
         bool | None,
         Field(
-            description='Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
 
 
 class SMSMessageSendRequest2(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     to: Annotated[
         str,
         Field(
-            description='Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.',
-            examples=['+15551234567'],
+            description="Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     from_: Annotated[
         str | None,
         Field(
-            alias='from',
-            description='Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n',
-            examples=['+15557654321'],
+            alias="from",
+            description="Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n",
+            examples=["+15557654321"],
             min_length=1,
         ),
     ] = None
     text: Annotated[
         str | None,
         Field(
-            description='Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n',
-            examples=['Your verification code is 123456.'],
+            description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n",
+            examples=["Your verification code is 123456."],
             min_length=1,
         ),
     ] = None
@@ -2294,7 +2289,7 @@ class SMSMessageSendRequest2(BaseModel):
     validity_period: Annotated[
         int | None,
         Field(
-            description='Preview feature: how long, in seconds (60-172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n',
+            description="Preview feature: how long, in seconds (60-172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n",
             ge=60,
             le=172800,
         ),
@@ -2302,86 +2297,86 @@ class SMSMessageSendRequest2(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n',
+            description="Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n'
+            description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
     media_urls: Annotated[
         list[str] | None,
         Field(
-            description='Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     messaging_profile_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     scheduled_at: Annotated[
         str | None,
         Field(
-            description='Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     template: Annotated[
         SMSTemplateSend1 | SMSTemplateSend2,
         Field(
-            description='Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n'
+            description="Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n"
         ),
     ]
     broadcast_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     campaign_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     audience_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     contact_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     topic_id: Annotated[
         str | None,
         Field(
-            description='Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     max_price_per_segment: Annotated[
         float | None,
         Field(
-            description='Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     personalization: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
     track_clicks: Annotated[
         bool | None,
         Field(
-            description='Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`.'
+            description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
 
@@ -2392,7 +2387,7 @@ class SMSMessageBatchRequest(
     root: Annotated[
         list[SMSMessageSendRequest1 | SMSMessageSendRequest2],
         Field(
-            description='Batch of SMS message send requests. All items are validated before any are queued.',
+            description="Batch of SMS message send requests. All items are validated before any are queued.",
             max_length=100,
             min_length=1,
         ),
@@ -2401,12 +2396,12 @@ class SMSMessageBatchRequest(
 
 class SMSBatchSummary(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     accepted_count: Annotated[
         int,
         Field(
-            description='Number of messages accepted in the batch. Acceptance is all-or-nothing, so this equals the number of messages submitted.\n',
+            description="Number of messages accepted in the batch. Acceptance is all-or-nothing, so this equals the number of messages submitted.\n",
             ge=0,
         ),
     ]
@@ -2414,47 +2409,47 @@ class SMSBatchSummary(BaseModel):
 
 class SMSMessageBatchResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[SMSMessage],
-        Field(description='One entry per message in the batch, in submission order.'),
+        Field(description="One entry per message in the batch, in submission order."),
     ]
     summary: Annotated[
-        SMSBatchSummary, Field(description='Aggregate result for the batch.')
+        SMSBatchSummary, Field(description="Aggregate result for the batch.")
     ]
 
 
 class TemplateScope(str, Enum):
-    system = 'system'
-    workspace = 'workspace'
+    system = "system"
+    workspace = "workspace"
 
 
 class TemplateVariable(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     key: Annotated[
         str,
-        Field(description='The parameters key this slot is filled with.', min_length=1),
+        Field(description="The parameters key this slot is filled with.", min_length=1),
     ]
     type: Annotated[
         str,
         Field(
-            description='The value type this slot accepts. Open enum — treat any unrecognized value as a future type rather than an error. SMS templates use the typed slots (`code`, `amount`, …); email templates use `text`.\n',
+            description="The value type this slot accepts. Open enum — treat any unrecognized value as a future type rather than an error. SMS templates use the typed slots (`code`, `amount`, …); email templates use `text`.\n",
             min_length=1,
         ),
     ]
     required: Annotated[
         bool,
         Field(
-            description='Whether the slot must be supplied when sending. Advisory for email templates, where a missing value renders as empty rather than rejecting the send.\n'
+            description="Whether the slot must be supplied when sending. Advisory for email templates, where a missing value renders as empty rather than rejecting the send.\n"
         ),
     ]
     constraint: Annotated[
         str,
         Field(
-            description='A human-readable description of the accepted values.',
+            description="A human-readable description of the accepted values.",
             min_length=1,
         ),
     ]
@@ -2464,49 +2459,49 @@ class SMSTemplateVersionID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['smv_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^smv_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class Status2(str, Enum):
-    active = 'active'
-    draft = 'draft'
-    pending = 'pending'
-    approved = 'approved'
-    rejected = 'rejected'
+    active = "active"
+    draft = "draft"
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
 
 
 class SMSTemplate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Unique identifier for the template.',
-            examples=['smt_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Unique identifier for the template.",
+            examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^smt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     name: Annotated[
         str,
         Field(
             description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
-            examples=['bird_otp_verification'],
+            examples=["bird_otp_verification"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
     description: Annotated[
         str,
         Field(
-            description='Human-readable description of what the template is for.',
-            examples=['One-time passcode verification'],
+            description="Human-readable description of what the template is for.",
+            examples=["One-time passcode verification"],
             min_length=1,
         ),
     ]
@@ -2514,28 +2509,28 @@ class SMSTemplate(BaseModel):
     category: Annotated[
         SMSMessageCategory,
         Field(
-            description='Content classification applied to messages sent from this template.'
+            description="Content classification applied to messages sent from this template."
         ),
     ]
     body: Annotated[
         str,
         Field(
-            description='The template body in its default language, shown for preview. Variable placeholders appear inline (for example `{{ code }}`).\n',
-            examples=['Your verification code is {{ code }}.'],
+            description="The template body in its default language, shown for preview. Variable placeholders appear inline (for example `{{ code }}`).\n",
+            examples=["Your verification code is {{ code }}."],
             min_length=1,
         ),
     ]
     variables: Annotated[
         list[TemplateVariable],
         Field(
-            description='The typed slots this template fills in from the values you supply when sending.'
+            description="The typed slots this template fills in from the values you supply when sending."
         ),
     ]
     available_languages: Annotated[
         list[str],
         Field(
-            description='The languages this template is available in, as BCP-47 tags.',
-            examples=[['en']],
+            description="The languages this template is available in, as BCP-47 tags.",
+            examples=[["en"]],
         ),
     ]
     status: Annotated[
@@ -2547,13 +2542,13 @@ class SMSTemplate(BaseModel):
     draft_version_id: Annotated[
         SMSTemplateVersionID | None,
         Field(
-            description='The current editable draft version. Always null today: SMS templates are not yet versioned; present for parity with email templates.'
+            description="The current editable draft version. Always null today: SMS templates are not yet versioned; present for parity with email templates."
         ),
     ]
     published_version_id: Annotated[
         SMSTemplateVersionID | None,
         Field(
-            description='The currently published version, or null if the template has never been published. Always null today: SMS templates are not yet versioned; present for parity with email templates.'
+            description="The currently published version, or null if the template has never been published. Always null today: SMS templates are not yet versioned; present for parity with email templates."
         ),
     ] = None
     revision: Annotated[
@@ -2566,58 +2561,53 @@ class SMSTemplate(BaseModel):
     created_at: Annotated[
         str | None,
         Field(
-            description='When the template was created. Null for built-in templates.'
+            description="When the template was created. Null for built-in templates."
         ),
     ]
     updated_at: Annotated[
         str | None,
         Field(
-            description='When the template was last updated. Null for built-in templates.'
+            description="When the template was last updated. Null for built-in templates."
         ),
     ]
 
 
 class SMSTemplateList(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[SMSTemplate],
         Field(
-            description='The templates available to your workspace. The catalogue is small and returned in full; this list is not paginated.'
+            description="The templates available to your workspace. The catalogue is small and returned in full; this list is not paginated."
         ),
     ]
 
 
 class StatsGrain(str, Enum):
-    day = 'day'
-    hour = 'hour'
+    day = "day"
+    hour = "hour"
 
 
 class StatsTrendGrain(str, Enum):
-    daily = 'daily'
-    hourly = 'hourly'
+    daily = "daily"
+    hourly = "hourly"
 
 
-class VerificationTerminalReason(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='Why a verification session reached its final state without succeeding: `attempts_exhausted` (too many incorrect passcodes) or `ttl_elapsed` (the time window elapsed before a correct passcode). Open enum — new reasons may be added over time, so treat any unrecognized value as a future reason rather than an error.',
-            min_length=1,
-        ),
-    ]
+class VerificationTerminalReason(str, Enum):
+    attempts_exhausted = "attempts_exhausted"
+    ttl_elapsed = "ttl_elapsed"
 
 
 class VerificationTo(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email_address: Annotated[
         str | None,
         Field(
             description="The recipient's email address. Case does not matter; the address is lowercased before use.",
-            examples=['user@example.com'],
+            examples=["user@example.com"],
             min_length=1,
         ),
     ] = None
@@ -2625,78 +2615,85 @@ class VerificationTo(BaseModel):
         str | None,
         Field(
             description="The recipient's phone number in E.164 format, with the leading `+` and country code (for example `+15551234567`). A number in any other format is rejected as an invalid recipient (`422`).",
-            examples=['+15551234567'],
+            examples=["+15551234567"],
             min_length=1,
         ),
     ] = None
 
 
-class VerificationChannel(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='The channel a passcode is delivered over. Open enum — new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.',
-            min_length=1,
-        ),
-    ]
+class VerificationChannel(str, Enum):
+    email = "email"
+    sms = "sms"
+    whatsapp = "whatsapp"
 
 
 class VerificationChannelEntry(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     channel: Annotated[
-        str,
-        Field(
-            description='The channel a passcode is delivered over. Open enum — new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.',
-            min_length=1,
-        ),
+        Union[VerificationChannel, str], Field(union_mode="left_to_right")
     ]
 
 
 class Money(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     amount: Annotated[
         str,
         Field(
-            description='Decimal amount as a string, in major currency units.',
-            examples=['0.00995'],
+            description="Decimal amount as a string, in major currency units.",
+            examples=["0.00995"],
             min_length=1,
         ),
     ]
     currency_code: Annotated[
         str,
         Field(
-            description='ISO 4217 currency code.',
-            examples=['USD'],
+            description="ISO 4217 currency code.",
+            examples=["USD"],
             max_length=3,
             min_length=3,
-            pattern='^[A-Z]{3}$',
+            pattern="^[A-Z]{3}$",
         ),
     ]
 
 
+class VerificationAttemptFailureReason(str, Enum):
+    carrier_rejected = "carrier_rejected"
+    hard_bounce = "hard_bounce"
+    soft_bounce = "soft_bounce"
+    undelivered = "undelivered"
+    channel_unavailable = "channel_unavailable"
+    channel_disabled = "channel_disabled"
+
+
+class WhatsAppTemplateCategory(str, Enum):
+    authentication = "authentication"
+    utility = "utility"
+    marketing = "marketing"
+
+
 class Status3(str, Enum):
-    pending = 'pending'
-    verified = 'verified'
-    failed = 'failed'
-    expired = 'expired'
-    canceled = 'canceled'
-    blocked = 'blocked'
+    pending = "pending"
+    verified = "verified"
+    failed = "failed"
+    expired = "expired"
+    canceled = "canceled"
+    blocked = "blocked"
 
 
 class Verification(Timestamps):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            examples=['vrf_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^vrf_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^vrf_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     status: Annotated[
@@ -2706,41 +2703,44 @@ class Verification(Timestamps):
         ),
     ]
     reason: Annotated[
-        VerificationTerminalReason | None,
+        Annotated[
+            Union[VerificationTerminalReason, str], Field(union_mode="left_to_right")
+        ]
+        | None,
         Field(
-            description='Why the verification reached its final state, or null while `pending` and once `verified`. See the enum for the values it can take.'
+            description="Why the verification reached its final state, or null while `pending` and once `verified`. See the enum for the values it can take."
         ),
     ] = None
     to: VerificationTo
     channels: Annotated[
         list[VerificationChannelEntry],
         Field(
-            description='The channels this verification uses to deliver the passcode, in attempt order: the first entry is tried first and later entries are fallbacks. An email recipient is verified over email; a phone recipient is verified over SMS.',
+            description="The channels this verification uses to deliver the passcode, in attempt order: the first entry is tried first and later entries are fallbacks. An email recipient is verified over email; a phone recipient is verified over SMS.",
             min_length=1,
         ),
     ]
     last_channel: Annotated[
         str | None,
         Field(
-            description='The channel the most recent passcode was sent on, or null before the first send. Open enum; new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.'
+            description="The channel the most recent passcode was sent on, or null before the first send. Open enum; new channels may be added over time, so treat any unrecognized value as a future channel rather than an error."
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The key/value pairs attached when the verification was created.'
+            description="The key/value pairs attached when the verification was created."
         ),
     ] = None
     expires_at: Annotated[
         str,
         Field(
-            description='When the verification expires if no correct passcode is submitted first. After this time its status reports `expired`.'
+            description="When the verification expires if no correct passcode is submitted first. After this time its status reports `expired`."
         ),
     ]
     verified_at: Annotated[
         str | None,
         Field(
-            description='When the verification was completed, or null if it is not yet verified.'
+            description="When the verification was completed, or null if it is not yet verified."
         ),
     ] = None
     created_at: str
@@ -2749,48 +2749,53 @@ class Verification(Timestamps):
 
 class VerificationOptions(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     code_length: Annotated[
         int | None,
         Field(
-            description='Passcode length for this verification. Omit to use the configured length.',
+            description="Passcode length for this verification. Omit to use the configured length.",
             ge=4,
             le=8,
         ),
     ] = None
     channels: Annotated[
-        list[VerificationChannel] | None,
+        list[
+            Annotated[
+                Union[VerificationChannel, str], Field(union_mode="left_to_right")
+            ]
+        ]
+        | None,
         Field(
-            description='Reorder or narrow the delivery channels for this request. List channel names in the order to try them; a channel you omit is not used for this request, and a channel not already enabled for the recipient is ignored. A list that leaves no usable channel fails the request with `422`. Omit the field to use the configured order.'
+            description="Reorder or narrow the delivery channels for this request. List channel names in the order to try them; a channel you omit is not used for this request, and a channel not already enabled for the recipient is ignored. A list that leaves no usable channel fails the request with `422`. Omit the field to use the configured order."
         ),
     ] = None
 
 
 class VerificationCreateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     to: VerificationTo
     options: VerificationOptions | None = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification.'
+            description="Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification."
         ),
     ] = None
 
 
 class VerificationCheckRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     to: VerificationTo
     code: Annotated[
         str,
         Field(
-            description='The passcode the recipient received. Passcodes are numeric; submit the digits exactly as delivered. An incorrect value is a normal `200` outcome with `success: false`, not an error.',
-            examples=['123456'],
+            description="The passcode the recipient received. Passcodes are numeric; submit the digits exactly as delivered. An incorrect value is a normal `200` outcome with `success: false`, not an error.",
+            examples=["123456"],
             max_length=12,
             min_length=4,
         ),
@@ -2799,50 +2804,50 @@ class VerificationCheckRequest(BaseModel):
 
 class VerificationCheckResult(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     success: Annotated[
         bool,
         Field(
-            description='Whether the submitted passcode verified this verification. `true` means the passcode was correct and the verification is now complete; `false` means it did not verify, and `reason` says why. A verification that has already reached a final state is no longer checkable and returns `404`.'
+            description="Whether the submitted passcode verified this verification. `true` means the passcode was correct and the verification is now complete; `false` means it did not verify, and `reason` says why. A verification that has already reached a final state is no longer checkable and returns `404`."
         ),
     ]
     reason: Annotated[
         str | None,
         Field(
-            description='Why the check did not succeed, or null when `success` is true: `incorrect_code` means the passcode was wrong and attempts remain; `expired` means the time window elapsed; `attempts_exhausted` means too many incorrect attempts. Open enum; treat any unrecognized value as a future reason.'
+            description="Why the check did not succeed, or null when `success` is true: `incorrect_code` means the passcode was wrong and attempts remain; `expired` means the time window elapsed; `attempts_exhausted` means too many incorrect attempts. Open enum; treat any unrecognized value as a future reason."
         ),
     ] = None
     verification: Verification
     attempts_remaining: Annotated[
         int | None,
         Field(
-            description='The number of check attempts left while the verification is still pending, or null once it has reached a final state.',
+            description="The number of check attempts left while the verification is still pending, or null once it has reached a final state.",
             ge=0,
         ),
     ] = None
 
 
 class WhatsAppMessageStatus(str, Enum):
-    scheduled = 'scheduled'
-    accepted = 'accepted'
-    sent = 'sent'
-    delivered = 'delivered'
-    failed = 'failed'
-    rejected = 'rejected'
-    canceled = 'canceled'
-    received = 'received'
+    scheduled = "scheduled"
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    failed = "failed"
+    rejected = "rejected"
+    canceled = "canceled"
+    received = "received"
 
 
 class WhatsAppAddress(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     phone_number: Annotated[
         str | None,
         Field(
-            description='Phone number in E.164 format, when known.',
-            examples=['+15550001111'],
+            description="Phone number in E.164 format, when known.",
+            examples=["+15550001111"],
             min_length=1,
         ),
     ] = None
@@ -2850,34 +2855,39 @@ class WhatsAppAddress(BaseModel):
         str | None,
         Field(
             description="Business-scoped user ID, Meta's identifier for the WhatsApp user. Present only on the WhatsApp-user side of the message.\n",
-            examples=['NL.xxxx'],
+            examples=["NL.xxxx"],
             min_length=1,
         ),
     ] = None
 
 
+class WhatsAppTemplateParameterType(str, Enum):
+    text = "text"
+
+
 class WhatsAppMessageTemplateComponentParameter(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        str,
+        Annotated[
+            Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")
+        ],
         Field(
-            description='The kind of value this parameter carries. `text` is the only kind today.',
-            min_length=1,
+            description="The kind of value this parameter carries. `text` is the only kind today."
         ),
     ]
     text: Annotated[
         str,
         Field(
-            description='The value substituted into the placeholder, as a plain string.',
+            description="The value substituted into the placeholder, as a plain string.",
             min_length=1,
         ),
     ]
     name: Annotated[
         str | None,
         Field(
-            description='For named-parameter templates: the placeholder this value fills (for example `first_name`). Omit for positional templates.',
+            description="For named-parameter templates: the placeholder this value fills (for example `first_name`). Omit for positional templates.",
             min_length=1,
         ),
     ] = None
@@ -2885,7 +2895,7 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
 
 class WhatsAppMessageTemplateComponent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
         str,
@@ -2904,30 +2914,31 @@ class WhatsAppMessageTemplateComponent(BaseModel):
 
 class WhatsAppMessageTemplate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     slug: Annotated[
         str,
         Field(
             description="The template's stable handle (for example `bird_otp`).",
-            examples=['bird_otp'],
+            examples=["bird_otp"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
     category: Annotated[
-        str,
+        Annotated[
+            Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")
+        ],
         Field(
-            description='Content classification applied to messages sent from this template.',
-            min_length=1,
+            description="Content classification applied to messages sent from this template."
         ),
     ]
     language: Annotated[
         str,
         Field(
-            description='The language code of the template variant that was sent (for example `en`).',
-            examples=['en'],
+            description="The language code of the template variant that was sent (for example `en`).",
+            examples=["en"],
             min_length=1,
         ),
     ]
@@ -2939,99 +2950,103 @@ class WhatsAppMessageTemplate(BaseModel):
     ]
 
 
+class WhatsAppErrorCode(str, Enum):
+    insufficient_balance = "insufficient_balance"
+    price_not_found = "price_not_found"
+    internal_error = "internal_error"
+    undeliverable = "undeliverable"
+    service_window_expired = "service_window_expired"
+    rate_limited = "rate_limited"
+    recipient_suppressed = "recipient_suppressed"
+
+
 class WhatsAppError(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    code: Annotated[
-        str,
-        Field(
-            description="Failure reason, uniform whether the failure happened internally or was reported by the WhatsApp network. `insufficient_balance`: the workspace could not afford the send. `price_not_found`: no price was configured for this destination/template combination. `internal_error`: an unexpected Bird-side failure. `undeliverable`: the recipient could not be reached (for example not on WhatsApp, or the number is invalid). `service_window_expired`: the 24-hour customer care window has closed and a free-form message cannot be sent; send a template instead. `rate_limited`: the send was throttled. `recipient_suppressed`: the recipient is on the workspace's suppression list; the message was rejected before sending. Open enum: new codes may be added over time, so treat any unrecognized value as a future code rather than an error.\n",
-            min_length=1,
-        ),
-    ]
+    code: Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")]
     description: Annotated[
         str,
         Field(
-            description='Human-readable explanation of the failure.',
-            examples=['Message could not be delivered.'],
+            description="Human-readable explanation of the failure.",
+            examples=["Message could not be delivered."],
             min_length=1,
         ),
     ]
     meta_error_code: Annotated[
         str | None,
         Field(
-            description='Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.',
-            examples=['131026'],
+            description="Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.",
+            examples=["131026"],
         ),
     ] = None
     occurred_at: Annotated[
-        str, Field(description='When the failure occurred.', min_length=1)
+        str, Field(description="When the failure occurred.", min_length=1)
     ]
 
 
 class WhatsAppMessage(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='ID of the message (`wam_`-prefixed), assigned when the send is accepted. Pass it as `message_id` to the get-message and list-events endpoints.\n',
-            examples=['wam_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the message (`wam_`-prefixed), assigned when the send is accepted. Pass it as `message_id` to the get-message and list-events endpoints.\n",
+            examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^wam_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     direction: Annotated[
         Direction,
         Field(
-            description='Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).'
+            description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`)."
         ),
     ]
     from_: Annotated[
         WhatsAppAddress,
         Field(
-            alias='from',
-            description='Sender of the message. On outbound messages, the business number it was sent from; on inbound, the WhatsApp contact.',
+            alias="from",
+            description="Sender of the message. On outbound messages, the business number it was sent from; on inbound, the WhatsApp contact.",
         ),
     ]
     to: Annotated[
         WhatsAppAddress,
         Field(
-            description='Recipient of the message. On outbound messages, the WhatsApp contact; on inbound, the business number.'
+            description="Recipient of the message. On outbound messages, the WhatsApp contact; on inbound, the business number."
         ),
     ]
     template: Annotated[
         WhatsAppMessageTemplate | None,
         Field(
-            description='The template the message was sent from. For authentication templates the filled-in values are not returned.'
+            description="The template the message was sent from. For authentication templates the filled-in values are not returned."
         ),
     ] = None
     status: WhatsAppMessageStatus
     last_error: Annotated[
         WhatsAppError | None,
         Field(
-            description='Failure detail for a message that did not reach the recipient. Present only when the message failed.'
+            description="Failure detail for a message that did not reach the recipient. Present only when the message failed."
         ),
     ] = None
     created_at: Annotated[
         str,
-        Field(description='When the message was accepted for delivery.', min_length=1),
+        Field(description="When the message was accepted for delivery.", min_length=1),
     ]
     sent_at: Annotated[
         str | None,
         Field(
-            description='When the message was handed to the WhatsApp network. Null until then.'
+            description="When the message was handed to the WhatsApp network. Null until then."
         ),
     ] = None
     delivered_at: Annotated[
-        str | None, Field(description='When delivery was confirmed. Null until then.')
+        str | None, Field(description="When delivery was confirmed. Null until then.")
     ] = None
     read_at: Annotated[
         str | None,
         Field(
-            description='When the message was read by the recipient. Null until then.'
+            description="When the message was read by the recipient. Null until then."
         ),
     ] = None
     cost: Annotated[
@@ -3043,44 +3058,44 @@ class WhatsAppMessage(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` filter labels applied to this message.'
+            description="Structured `{name, value}` filter labels applied to this message."
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
-        Field(description='Arbitrary JSON metadata stored on the message.'),
+        Field(description="Arbitrary JSON metadata stored on the message."),
     ] = None
 
 
 class WhatsAppMessageList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[WhatsAppMessage],
-        Field(description='Page of WhatsApp messages, newest first.'),
+        Field(description="Page of WhatsApp messages, newest first."),
     ]
 
 
 class WhatsAppTemplateSend(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     slug: Annotated[
         str,
         Field(
-            description='The template to send, by its slug (for example `bird_otp`).',
-            examples=['bird_otp'],
+            description="The template to send, by its slug (for example `bird_otp`).",
+            examples=["bird_otp"],
             max_length=63,
             min_length=1,
-            pattern='^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$',
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
     language: Annotated[
         str | None,
         Field(
-            description='Language code of the template variant to send (for example `en` or `pt_BR`). May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available codes. The accepted message echoes the resolved language.\n',
-            examples=['en'],
+            description="Language code of the template variant to send (for example `en` or `pt_BR`). May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available codes. The accepted message echoes the resolved language.\n",
+            examples=["en"],
             min_length=1,
         ),
     ] = None
@@ -3094,13 +3109,13 @@ class WhatsAppTemplateSend(BaseModel):
 
 class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     to: Annotated[
         str,
         Field(
             description="The message recipient's phone number in E.164 format (for example `+31612345678`). A value that is not a valid phone number returns a `422` `WhatsAppInvalidRecipient`.\n",
-            examples=['+31612345678'],
+            examples=["+31612345678"],
             min_length=1,
         ),
     ]
@@ -3113,101 +3128,101 @@ class WhatsAppMessageSendRequest(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n',
+            description="Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON object stored on the message and returned on API reads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n'
+            description="Arbitrary JSON object stored on the message and returned on API reads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
 
 
 class WhatsAppEvent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
             description="ID of the event (`ev_`-prefixed), unique within the message's timeline.",
-            examples=['ev_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["ev_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ev_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     type: Annotated[
         str,
         Field(
             description="Lifecycle event type. `whatsapp.accepted`: Bird accepted the request. `whatsapp.sent`: handed to the WhatsApp network. `whatsapp.delivered`: delivery confirmed to the recipient's device. `whatsapp.read`: the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed`: terminal permanent failure. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
-            examples=['whatsapp.delivered'],
+            examples=["whatsapp.delivered"],
             min_length=1,
         ),
     ]
     occurred_at: Annotated[
-        str, Field(description='When this event occurred.', min_length=1)
+        str, Field(description="When this event occurred.", min_length=1)
     ]
     error: Annotated[
         WhatsAppError | None,
-        Field(description='Failure detail. Present only on `whatsapp.failed` events.'),
+        Field(description="Failure detail. Present only on `whatsapp.failed` events."),
     ] = None
 
 
 class WhatsAppEventList(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[WhatsAppEvent],
         Field(
-            description='Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full; this list is not paginated.'
+            description="Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full; this list is not paginated."
         ),
     ]
 
 
 class EmailStatsSeriesPeriod(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Inclusive start of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain; on the hour grain, an RFC 3339 UTC instant marking the start of the first hour bucket, which falls on a local hour boundary when `timezone` is set.',
-            examples=['2026-05-01'],
+            alias="from",
+            description="Inclusive start of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain; on the hour grain, an RFC 3339 UTC instant marking the start of the first hour bucket, which falls on a local hour boundary when `timezone` is set.",
+            examples=["2026-05-01"],
             min_length=1,
-            pattern='^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$',
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
         ),
     ]
     to: Annotated[
         str,
         Field(
-            description='Inclusive end of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain; on the hour grain, an RFC 3339 UTC instant marking the start of the last hour bucket, which falls on a local hour boundary when `timezone` is set.',
-            examples=['2026-05-31'],
+            description="Inclusive end of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain; on the hour grain, an RFC 3339 UTC instant marking the start of the last hour bucket, which falls on a local hour boundary when `timezone` is set.",
+            examples=["2026-05-31"],
             min_length=1,
-            pattern='^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$',
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
         ),
     ]
     grain: StatsGrain
     data_as_of: Annotated[
         str | None,
         Field(
-            description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
-            examples=['2026-05-25 14:03:10+00:00'],
+            description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n",
+            examples=["2026-05-25 14:03:10+00:00"],
         ),
     ] = None
 
 
 class EmailBounceStatsWithRates(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     hard: Annotated[
         int,
         Field(
-            description='Distinct recipients with a permanent delivery failure (invalid address or non-existent domain).',
+            description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain).",
             examples=[12410],
             ge=0,
         ),
@@ -3215,7 +3230,7 @@ class EmailBounceStatsWithRates(BaseModel):
     soft: Annotated[
         int,
         Field(
-            description='Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable).',
+            description="Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable).",
             examples=[14290],
             ge=0,
         ),
@@ -3223,7 +3238,7 @@ class EmailBounceStatsWithRates(BaseModel):
     admin: Annotated[
         int,
         Field(
-            description='Distinct recipients bounced by an upstream policy block (relaying denied, blocklisted domain).',
+            description="Distinct recipients bounced by an upstream policy block (relaying denied, blocklisted domain).",
             examples=[410],
             ge=0,
         ),
@@ -3231,7 +3246,7 @@ class EmailBounceStatsWithRates(BaseModel):
     block: Annotated[
         int,
         Field(
-            description='Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons.',
+            description="Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons.",
             examples=[920],
             ge=0,
         ),
@@ -3247,7 +3262,7 @@ class EmailBounceStatsWithRates(BaseModel):
     hard_rate: Annotated[
         float | None,
         Field(
-            description='Fraction of bounced recipients that hard bounced, computed as `hard / bounced`. Null when `bounced` is zero.\n',
+            description="Fraction of bounced recipients that hard bounced, computed as `hard / bounced`. Null when `bounced` is zero.\n",
             examples=[0.454],
             ge=0.0,
             le=1.0,
@@ -3256,7 +3271,7 @@ class EmailBounceStatsWithRates(BaseModel):
     soft_rate: Annotated[
         float | None,
         Field(
-            description='Fraction of bounced recipients that soft bounced, computed as `soft / bounced`. Null when `bounced` is zero.\n',
+            description="Fraction of bounced recipients that soft bounced, computed as `soft / bounced`. Null when `bounced` is zero.\n",
             examples=[0.523],
             ge=0.0,
             le=1.0,
@@ -3265,7 +3280,7 @@ class EmailBounceStatsWithRates(BaseModel):
     admin_rate: Annotated[
         float | None,
         Field(
-            description='Fraction of bounced recipients that admin bounced, computed as `admin / bounced`. Null when `bounced` is zero.\n',
+            description="Fraction of bounced recipients that admin bounced, computed as `admin / bounced`. Null when `bounced` is zero.\n",
             examples=[0.015],
             ge=0.0,
             le=1.0,
@@ -3274,7 +3289,7 @@ class EmailBounceStatsWithRates(BaseModel):
     block_rate: Annotated[
         float | None,
         Field(
-            description='Fraction of bounced recipients that block bounced, computed as `block / bounced`. Null when `bounced` is zero.\n',
+            description="Fraction of bounced recipients that block bounced, computed as `block / bounced`. Null when `bounced` is zero.\n",
             examples=[0.0337],
             ge=0.0,
             le=1.0,
@@ -3283,7 +3298,7 @@ class EmailBounceStatsWithRates(BaseModel):
     undetermined_rate: Annotated[
         float | None,
         Field(
-            description='Fraction of bounced recipients with undetermined classification, computed as `undetermined / bounced`. Null when `bounced` is zero.\n',
+            description="Fraction of bounced recipients with undetermined classification, computed as `undetermined / bounced`. Null when `bounced` is zero.\n",
             examples=[0.0029],
             ge=0.0,
             le=1.0,
@@ -3293,12 +3308,12 @@ class EmailBounceStatsWithRates(BaseModel):
 
 class EmailDeliveryStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     accepted: Annotated[
         int | None,
         Field(
-            description='Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary; omitted on breakdown rows, whose rollups do not carry it.',
+            description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary; omitted on breakdown rows, whose rollups do not carry it.",
             examples=[14820],
             ge=0,
         ),
@@ -3306,7 +3321,7 @@ class EmailDeliveryStats(BaseModel):
     processed: Annotated[
         int,
         Field(
-            description='Distinct recipients whose message was processed and handed off for delivery.',
+            description="Distinct recipients whose message was processed and handed off for delivery.",
             examples=[14810],
             ge=0,
         ),
@@ -3314,7 +3329,7 @@ class EmailDeliveryStats(BaseModel):
     delivered: Annotated[
         int,
         Field(
-            description='Distinct recipients whose message the receiving mail server accepted.',
+            description="Distinct recipients whose message the receiving mail server accepted.",
             examples=[14720],
             ge=0,
         ),
@@ -3322,7 +3337,7 @@ class EmailDeliveryStats(BaseModel):
     bounced: Annotated[
         int,
         Field(
-            description='Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.\n',
+            description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.\n",
             examples=[90],
             ge=0,
         ),
@@ -3331,7 +3346,7 @@ class EmailDeliveryStats(BaseModel):
     complained: Annotated[
         int,
         Field(
-            description='Distinct recipients who reported the message as spam via a feedback loop.',
+            description="Distinct recipients who reported the message as spam via a feedback loop.",
             examples=[3],
             ge=0,
         ),
@@ -3339,7 +3354,7 @@ class EmailDeliveryStats(BaseModel):
     deferred: Annotated[
         int,
         Field(
-            description='Distinct recipients whose delivery the receiving server temporarily delayed and is still being retried.\n',
+            description="Distinct recipients whose delivery the receiving server temporarily delayed and is still being retried.\n",
             examples=[14],
             ge=0,
         ),
@@ -3347,7 +3362,7 @@ class EmailDeliveryStats(BaseModel):
     rejected: Annotated[
         int,
         Field(
-            description='Distinct recipients rejected before any delivery attempt. Includes recipients on the workspace suppression list, transmissions that could not be completed, message-generation failures, and recipients refused by sending policy. The per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` surfaces the specific cause.\n',
+            description="Distinct recipients rejected before any delivery attempt. Includes recipients on the workspace suppression list, transmissions that could not be completed, message-generation failures, and recipients refused by sending policy. The per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` surfaces the specific cause.\n",
             examples=[10],
             ge=0,
         ),
@@ -3355,7 +3370,7 @@ class EmailDeliveryStats(BaseModel):
     oob_bounces: Annotated[
         int,
         Field(
-            description='Out-of-band bounce events: distinct failure notifications received after the receiving server had initially confirmed delivery. Counted as deduplicated events, not unique recipients.\n',
+            description="Out-of-band bounce events: distinct failure notifications received after the receiving server had initially confirmed delivery. Counted as deduplicated events, not unique recipients.\n",
             examples=[2],
             ge=0,
         ),
@@ -3363,7 +3378,7 @@ class EmailDeliveryStats(BaseModel):
     effective_delivered: Annotated[
         int,
         Field(
-            description='Recipients who remain in-inbox in this scope after all bounce signals resolve, computed as `delivered - oob_bounces`. Use this as the base for engagement-rate denominators. Clamped to 0 when `oob_bounces` exceeds `delivered`.',
+            description="Recipients who remain in-inbox in this scope after all bounce signals resolve, computed as `delivered - oob_bounces`. Use this as the base for engagement-rate denominators. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
             examples=[14718],
             ge=0,
         ),
@@ -3371,7 +3386,7 @@ class EmailDeliveryStats(BaseModel):
     all_bounces: Annotated[
         int,
         Field(
-            description='Total recipients in this scope who did not receive the message, computed as `bounced + oob_bounces`.',
+            description="Total recipients in this scope who did not receive the message, computed as `bounced + oob_bounces`.",
             examples=[92],
             ge=0,
         ),
@@ -3406,7 +3421,7 @@ class EmailDeliveryStats(BaseModel):
     complaint_rate: Annotated[
         float | None,
         Field(
-            description='Spam complaints in this scope relative to effectively delivered recipients, computed as `complained / effective_delivered`. Complaints are attributed by event time, so a scope can record more of them than it effectively delivered, pushing the rate above 1. Null when `effective_delivered` is zero.\n',
+            description="Spam complaints in this scope relative to effectively delivered recipients, computed as `complained / effective_delivered`. Complaints are attributed by event time, so a scope can record more of them than it effectively delivered, pushing the rate above 1. Null when `effective_delivered` is zero.\n",
             examples=[0.0002],
             ge=0.0,
         ),
@@ -3415,12 +3430,12 @@ class EmailDeliveryStats(BaseModel):
 
 class EmailEngagementStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     opens: Annotated[
         int,
         Field(
-            description='Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).\n',
+            description="Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).\n",
             examples=[5420],
             ge=0,
         ),
@@ -3428,7 +3443,7 @@ class EmailEngagementStats(BaseModel):
     opens_non_prefetched: Annotated[
         int,
         Field(
-            description='Distinct open events excluding those auto-fetched by inbox privacy features. Same event-counting semantics as `opens` (repeat opens from the same recipient count separately), with prefetched opens removed.\n',
+            description="Distinct open events excluding those auto-fetched by inbox privacy features. Same event-counting semantics as `opens` (repeat opens from the same recipient count separately), with prefetched opens removed.\n",
             examples=[3210],
             ge=0,
         ),
@@ -3436,7 +3451,7 @@ class EmailEngagementStats(BaseModel):
     unique_opens: Annotated[
         int,
         Field(
-            description='Distinct recipients who opened at least once, including opens auto-fetched by inbox privacy features.',
+            description="Distinct recipients who opened at least once, including opens auto-fetched by inbox privacy features.",
             examples=[3640],
             ge=0,
         ),
@@ -3444,7 +3459,7 @@ class EmailEngagementStats(BaseModel):
     unique_opens_non_prefetched: Annotated[
         int,
         Field(
-            description='Distinct recipients who opened at least once, excluding opens auto-fetched by inbox privacy features. This is the numerator used for open rate, so iOS-heavy audiences (Apple Mail Privacy Protection and similar) do not inflate it.\n',
+            description="Distinct recipients who opened at least once, excluding opens auto-fetched by inbox privacy features. This is the numerator used for open rate, so iOS-heavy audiences (Apple Mail Privacy Protection and similar) do not inflate it.\n",
             examples=[2480],
             ge=0,
         ),
@@ -3452,7 +3467,7 @@ class EmailEngagementStats(BaseModel):
     clicks: Annotated[
         int,
         Field(
-            description='Distinct click events, counting repeat clicks from the same recipient.',
+            description="Distinct click events, counting repeat clicks from the same recipient.",
             examples=[924],
             ge=0,
         ),
@@ -3460,7 +3475,7 @@ class EmailEngagementStats(BaseModel):
     unique_clicks: Annotated[
         int,
         Field(
-            description='Distinct recipients who clicked at least once.',
+            description="Distinct recipients who clicked at least once.",
             examples=[621],
             ge=0,
         ),
@@ -3468,7 +3483,7 @@ class EmailEngagementStats(BaseModel):
     unsubscribes: Annotated[
         int,
         Field(
-            description='Distinct unsubscribe events, recorded via the list-unsubscribe header or the footer link.',
+            description="Distinct unsubscribe events, recorded via the list-unsubscribe header or the footer link.",
             examples=[12],
             ge=0,
         ),
@@ -3476,7 +3491,7 @@ class EmailEngagementStats(BaseModel):
     open_rate: Annotated[
         float | None,
         Field(
-            description='Distinct non-prefetched openers relative to effectively delivered recipients in the same scope, computed as `unique_opens_non_prefetched / delivery.effective_delivered`; on rows without an `effective_delivered` field (the mailbox-provider breakdowns) the denominator equals `delivery.delivered`. The numerator excludes opens auto-fetched by inbox privacy features. Opens are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.\n',
+            description="Distinct non-prefetched openers relative to effectively delivered recipients in the same scope, computed as `unique_opens_non_prefetched / delivery.effective_delivered`; on rows without an `effective_delivered` field (the mailbox-provider breakdowns) the denominator equals `delivery.delivered`. The numerator excludes opens auto-fetched by inbox privacy features. Opens are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.\n",
             examples=[0.1683],
             ge=0.0,
         ),
@@ -3484,7 +3499,7 @@ class EmailEngagementStats(BaseModel):
     click_rate: Annotated[
         float | None,
         Field(
-            description='Distinct clickers relative to effectively delivered recipients in the same scope, computed as `unique_clicks / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Clicks are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.\n',
+            description="Distinct clickers relative to effectively delivered recipients in the same scope, computed as `unique_clicks / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Clicks are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.\n",
             examples=[0.0422],
             ge=0.0,
         ),
@@ -3492,7 +3507,7 @@ class EmailEngagementStats(BaseModel):
     unsubscribe_rate: Annotated[
         float | None,
         Field(
-            description='Unsubscribe events relative to effectively delivered recipients in the same scope, computed as `unsubscribes / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Unsubscribes are attributed by event time, so the rate can exceed 1. Null when the denominator is zero.\n',
+            description="Unsubscribe events relative to effectively delivered recipients in the same scope, computed as `unsubscribes / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Unsubscribes are attributed by event time, so the rate can exceed 1. Null when the denominator is zero.\n",
             examples=[0.0009],
             ge=0.0,
         ),
@@ -3501,12 +3516,12 @@ class EmailEngagementStats(BaseModel):
 
 class EmailLatencyQuantiles(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     p50_ms: Annotated[
         int | None,
         Field(
-            description='Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.',
+            description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
             examples=[420],
             ge=0,
         ),
@@ -3514,7 +3529,7 @@ class EmailLatencyQuantiles(BaseModel):
     p95_ms: Annotated[
         int | None,
         Field(
-            description='95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.',
+            description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
             examples=[1820],
             ge=0,
         ),
@@ -3522,7 +3537,7 @@ class EmailLatencyQuantiles(BaseModel):
     p99_ms: Annotated[
         int | None,
         Field(
-            description='99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.',
+            description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
             examples=[4920],
             ge=0,
         ),
@@ -3531,7 +3546,7 @@ class EmailLatencyQuantiles(BaseModel):
 
 class EmailLatencyStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     processing: EmailLatencyQuantiles | None = None
     delivery: EmailLatencyQuantiles | None = None
@@ -3540,20 +3555,20 @@ class EmailLatencyStats(BaseModel):
 
 class EmailStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     bucket: Annotated[
         str,
         Field(
             description="The day (YYYY-MM-DD, in the requested `timezone`) or hour this point covers, matching the period's grain. An hour bucket is an RFC 3339 UTC instant marking the start of the hour; it falls on a local hour boundary when `timezone` is set, which is on the UTC hour only for whole-hour offsets.",
-            examples=['2026-05-25'],
+            examples=["2026-05-25"],
             min_length=1,
         ),
     ]
     sends_accepted: Annotated[
         int,
         Field(
-            description='Distinct email messages accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other metric in `delivery` and `engagement` is recipient-level or event-level.\n',
+            description="Distinct email messages accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other metric in `delivery` and `engagement` is recipient-level or event-level.\n",
             examples=[412],
             ge=0,
         ),
@@ -3565,68 +3580,68 @@ class EmailStatsPoint(BaseModel):
 
 class EmailStatsResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: EmailStatsSeriesPeriod
     data: Annotated[
         list[EmailStatsPoint],
         Field(
-            description='One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with zero counts.'
+            description="One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with zero counts."
         ),
     ]
 
 
 class EmailStatsSortMetric(str, Enum):
-    processed = 'processed'
-    delivered = 'delivered'
-    bounced = 'bounced'
-    complained = 'complained'
-    deferred = 'deferred'
-    rejected = 'rejected'
-    oob_bounces = 'oob_bounces'
-    bounces_hard = 'bounces.hard'
-    bounces_soft = 'bounces.soft'
-    bounces_admin = 'bounces.admin'
-    bounces_block = 'bounces.block'
-    bounces_undetermined = 'bounces.undetermined'
-    opens = 'opens'
-    opens_non_prefetched = 'opens_non_prefetched'
-    unique_opens = 'unique_opens'
-    unique_opens_non_prefetched = 'unique_opens_non_prefetched'
-    clicks = 'clicks'
-    unique_clicks = 'unique_clicks'
-    unsubscribes = 'unsubscribes'
-    delivery_rate = 'delivery_rate'
-    bounce_rate = 'bounce_rate'
-    complaint_rate = 'complaint_rate'
-    open_rate = 'open_rate'
-    click_rate = 'click_rate'
-    unsubscribe_rate = 'unsubscribe_rate'
-    bounces_hard_rate = 'bounces.hard_rate'
-    bounces_soft_rate = 'bounces.soft_rate'
-    bounces_admin_rate = 'bounces.admin_rate'
-    bounces_block_rate = 'bounces.block_rate'
-    bounces_undetermined_rate = 'bounces.undetermined_rate'
+    processed = "processed"
+    delivered = "delivered"
+    bounced = "bounced"
+    complained = "complained"
+    deferred = "deferred"
+    rejected = "rejected"
+    oob_bounces = "oob_bounces"
+    bounces_hard = "bounces.hard"
+    bounces_soft = "bounces.soft"
+    bounces_admin = "bounces.admin"
+    bounces_block = "bounces.block"
+    bounces_undetermined = "bounces.undetermined"
+    opens = "opens"
+    opens_non_prefetched = "opens_non_prefetched"
+    unique_opens = "unique_opens"
+    unique_opens_non_prefetched = "unique_opens_non_prefetched"
+    clicks = "clicks"
+    unique_clicks = "unique_clicks"
+    unsubscribes = "unsubscribes"
+    delivery_rate = "delivery_rate"
+    bounce_rate = "bounce_rate"
+    complaint_rate = "complaint_rate"
+    open_rate = "open_rate"
+    click_rate = "click_rate"
+    unsubscribe_rate = "unsubscribe_rate"
+    bounces_hard_rate = "bounces.hard_rate"
+    bounces_soft_rate = "bounces.soft_rate"
+    bounces_admin_rate = "bounces.admin_rate"
+    bounces_block_rate = "bounces.block_rate"
+    bounces_undetermined_rate = "bounces.undetermined_rate"
 
 
 class EmailStatsPeriod(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Inclusive start date the response covers (YYYY-MM-DD).',
-            examples=['2026-05-01'],
+            alias="from",
+            description="Inclusive start date the response covers (YYYY-MM-DD).",
+            examples=["2026-05-01"],
             min_length=1,
         ),
     ]
     to: Annotated[
         str,
         Field(
-            description='Inclusive end date the response covers (YYYY-MM-DD).',
-            examples=['2026-05-25'],
+            description="Inclusive end date the response covers (YYYY-MM-DD).",
+            examples=["2026-05-25"],
             min_length=1,
         ),
     ]
@@ -3634,33 +3649,33 @@ class EmailStatsPeriod(BaseModel):
         str | None,
         Field(
             description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
-            examples=['2026-05-25 14:03:10+00:00'],
+            examples=["2026-05-25 14:03:10+00:00"],
         ),
     ] = None
 
 
 class EmailStatsSeriesPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     bucket: Annotated[
         str,
         Field(
-            description='The day (YYYY-MM-DD) or hour (ISO 8601, on the hour) this point covers, matching the requested `trend_grain`.',
-            examples=['2026-05-12'],
+            description="The day (YYYY-MM-DD) or hour (ISO 8601, on the hour) this point covers, matching the requested `trend_grain`.",
+            examples=["2026-05-12"],
             min_length=1,
         ),
     ]
     delivered: Annotated[
-        int, Field(description='Delivered recipients in this bucket.', ge=0)
+        int, Field(description="Delivered recipients in this bucket.", ge=0)
     ]
     bounced: Annotated[
-        int, Field(description='Bounced recipients in this bucket.', ge=0)
+        int, Field(description="Bounced recipients in this bucket.", ge=0)
     ]
     delivery_rate: Annotated[
         float | None,
         Field(
-            description='Delivery rate for this bucket, as a fraction. Null when nothing was delivered or bounced.',
+            description="Delivery rate for this bucket, as a fraction. Null when nothing was delivered or bounced.",
             ge=0.0,
             le=1.0,
         ),
@@ -3668,7 +3683,7 @@ class EmailStatsSeriesPoint(BaseModel):
     bounce_rate: Annotated[
         float | None,
         Field(
-            description='Bounce rate for this bucket, as a fraction. Null when nothing was delivered or bounced.',
+            description="Bounce rate for this bucket, as a fraction. Null when nothing was delivered or bounced.",
             ge=0.0,
             le=1.0,
         ),
@@ -3698,13 +3713,13 @@ class EmailStatsSeriesPoint(BaseModel):
 
 class EmailTagStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     tag: Annotated[
         str,
         Field(
-            description='The tag this row aggregates, formatted as `name:value` from the tag set at send time (for example `campaign:welcome-series`). Each distinct name-and-value pair is its own row.\n',
-            examples=['campaign:welcome-series'],
+            description="The tag this row aggregates, formatted as `name:value` from the tag set at send time (for example `campaign:welcome-series`). Each distinct name-and-value pair is its own row.\n",
+            examples=["campaign:welcome-series"],
             min_length=1,
         ),
     ]
@@ -3714,31 +3729,31 @@ class EmailTagStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this tag over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this tag over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsTagsResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailTagStatsPoint],
         Field(
-            description='Tag breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no tagged sends occurred in the period.'
+            description="Tag breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no tagged sends occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[173],
             ge=0,
         ),
@@ -3747,72 +3762,72 @@ class EmailStatsTagsResponse(BaseModel):
 
 class EmailStatsSummaryPeriod(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Inclusive start of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows; for hour windows, an RFC 3339 UTC instant marking the start of the first hour, which falls on a local hour boundary when `timezone` is set.',
-            examples=['2026-05-01'],
+            alias="from",
+            description="Inclusive start of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows; for hour windows, an RFC 3339 UTC instant marking the start of the first hour, which falls on a local hour boundary when `timezone` is set.",
+            examples=["2026-05-01"],
             min_length=1,
-            pattern='^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$',
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
         ),
     ]
     to: Annotated[
         str,
         Field(
-            description='Inclusive end of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows; for hour windows, an RFC 3339 UTC instant marking the start of the last hour, which falls on a local hour boundary when `timezone` is set.',
-            examples=['2026-05-25'],
+            description="Inclusive end of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows; for hour windows, an RFC 3339 UTC instant marking the start of the last hour, which falls on a local hour boundary when `timezone` is set.",
+            examples=["2026-05-25"],
             min_length=1,
-            pattern='^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$',
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
         ),
     ]
     data_as_of: Annotated[
         str | None,
         Field(
             description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
-            examples=['2026-05-25 14:03:10+00:00'],
+            examples=["2026-05-25 14:03:10+00:00"],
         ),
     ] = None
 
 
 class EmailStatsComparisonDelta(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     sends_accepted_pct_change: Annotated[
         float | None,
         Field(
-            description='Relative change in accepted messages (the `sends_accepted` count) versus the previous period, as a signed fraction. Null when the previous period accepted none.',
+            description="Relative change in accepted messages (the `sends_accepted` count) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
             examples=[0.508],
         ),
     ]
     delivered_pct_change: Annotated[
         float | None,
         Field(
-            description='Relative change in effectively delivered recipients (`delivery.effective_delivered`, the delivery-rate numerator) versus the previous period, as a signed fraction. Null when the previous period effectively delivered none.',
+            description="Relative change in effectively delivered recipients (`delivery.effective_delivered`, the delivery-rate numerator) versus the previous period, as a signed fraction. Null when the previous period effectively delivered none.",
             examples=[0.122],
         ),
     ]
     bounced_pct_change: Annotated[
         float | None,
         Field(
-            description='Relative change in total bounces including out-of-band (`delivery.all_bounces`, the bounce-rate numerator) versus the previous period, as a signed fraction. Null when the previous period had none.',
+            description="Relative change in total bounces including out-of-band (`delivery.all_bounces`, the bounce-rate numerator) versus the previous period, as a signed fraction. Null when the previous period had none.",
             examples=[-0.031],
         ),
     ]
     complained_pct_change: Annotated[
         float | None,
         Field(
-            description='Relative change in spam complaints (`delivery.complained`) versus the previous period, as a signed fraction. Null when the previous period had none.',
+            description="Relative change in spam complaints (`delivery.complained`) versus the previous period, as a signed fraction. Null when the previous period had none.",
             examples=[0.018],
         ),
     ]
     opened_pct_change: Annotated[
         float | None,
         Field(
-            description='Relative change in unique non-prefetched opens (`engagement.unique_opens_non_prefetched`, the same count the open rate uses) versus the previous period, as a signed fraction. Null when the previous period had none.',
+            description="Relative change in unique non-prefetched opens (`engagement.unique_opens_non_prefetched`, the same count the open rate uses) versus the previous period, as a signed fraction. Null when the previous period had none.",
             examples=[-0.046],
         ),
     ]
@@ -3866,18 +3881,18 @@ class EmailStatsComparisonDelta(BaseModel):
 
 class EmailStatsComparison(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsSummaryPeriod,
         Field(
-            description='The preceding window these comparison figures cover, the equal-length window ending immediately before the requested start (the prior day for day windows, the prior hour for hour windows). For a request covering 2026-05-01 to 2026-05-31, this is 2026-03-31 to 2026-04-30, both inclusive.'
+            description="The preceding window these comparison figures cover, the equal-length window ending immediately before the requested start (the prior day for day windows, the prior hour for hour windows). For a request covering 2026-05-01 to 2026-05-31, this is 2026-03-31 to 2026-04-30, both inclusive."
         ),
     ]
     sends_accepted: Annotated[
         int,
         Field(
-            description='Distinct email messages accepted in the preceding period, counted at the message level.',
+            description="Distinct email messages accepted in the preceding period, counted at the message level.",
             examples=[8230],
             ge=0,
         ),
@@ -3890,18 +3905,18 @@ class EmailStatsComparison(BaseModel):
 
 class EmailStatsSummary(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsSummaryPeriod,
         Field(
-            description='The window the response covers (echoed back from the request, day or hour grain), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The window the response covers (echoed back from the request, day or hour grain), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     sends_accepted: Annotated[
         int,
         Field(
-            description='Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) and summed per bucket across the period. This counts messages, not recipients, so it is not comparable to `delivery.accepted`, which counts recipients (a single message to 500 recipients is 1 here and up to 500 there).',
+            description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) and summed per bucket across the period. This counts messages, not recipients, so it is not comparable to `delivery.accepted`, which counts recipients (a single message to 500 recipients is 1 here and up to 500 there).",
             examples=[12410],
             ge=0,
         ),
@@ -3916,21 +3931,21 @@ class IPPoolID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['ipp_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["ipp_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ipp_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ipp_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class EmailSendingIpDeliveryStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     delivered: Annotated[
         int,
         Field(
-            description='Distinct recipients whose message the receiving mail server accepted.',
+            description="Distinct recipients whose message the receiving mail server accepted.",
             examples=[8290],
             ge=0,
         ),
@@ -3938,7 +3953,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     bounced: Annotated[
         int,
         Field(
-            description='Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.',
+            description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.",
             examples=[131],
             ge=0,
         ),
@@ -3946,7 +3961,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     complained: Annotated[
         int,
         Field(
-            description='Distinct recipients who reported the message as spam. Complaints are not attributed to a sending IP, so this reads 0 on this breakdown; read complaint counts from the summary or time-series statistics instead.',
+            description="Distinct recipients who reported the message as spam. Complaints are not attributed to a sending IP, so this reads 0 on this breakdown; read complaint counts from the summary or time-series statistics instead.",
             examples=[8],
             ge=0,
         ),
@@ -3954,7 +3969,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     deferred: Annotated[
         int,
         Field(
-            description='Distinct recipients in transient delivery deferral that is still being retried.',
+            description="Distinct recipients in transient delivery deferral that is still being retried.",
             examples=[4],
             ge=0,
         ),
@@ -3962,7 +3977,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     oob_bounces: Annotated[
         int,
         Field(
-            description='Out-of-band bounce events: failure notifications received after the receiving server had initially confirmed delivery. Not attributed to a sending IP on this breakdown, so this reads 0; workspace-wide out-of-band counts are on the summary and time-series statistics.\n',
+            description="Out-of-band bounce events: failure notifications received after the receiving server had initially confirmed delivery. Not attributed to a sending IP on this breakdown, so this reads 0; workspace-wide out-of-band counts are on the summary and time-series statistics.\n",
             examples=[3],
             ge=0,
         ),
@@ -3970,7 +3985,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     effective_delivered: Annotated[
         int,
         Field(
-            description='Recipients on this IP who remain in-inbox after all bounce signals resolve, computed as `delivered - oob_bounces`. Clamped to 0 when `oob_bounces` exceeds `delivered`.',
+            description="Recipients on this IP who remain in-inbox after all bounce signals resolve, computed as `delivered - oob_bounces`. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
             examples=[8287],
             ge=0,
         ),
@@ -3978,7 +3993,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     all_bounces: Annotated[
         int,
         Field(
-            description='Total recipients on this IP who did not receive the message, computed as `bounced + oob_bounces`.',
+            description="Total recipients on this IP who did not receive the message, computed as `bounced + oob_bounces`.",
             examples=[134],
             ge=0,
         ),
@@ -4014,7 +4029,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     complaint_rate: Annotated[
         float | None,
         Field(
-            description='Share of effectively delivered recipients on this IP who reported the message as spam, computed as `complained / effective_delivered`. Null when `effective_delivered` is zero.\n',
+            description="Share of effectively delivered recipients on this IP who reported the message as spam, computed as `complained / effective_delivered`. Null when `effective_delivered` is zero.\n",
             examples=[0.00096],
             ge=0.0,
         ),
@@ -4023,7 +4038,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
 
 class EmailDeliveryLatencyStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     delivery: EmailLatencyQuantiles
     total: EmailLatencyQuantiles
@@ -4031,20 +4046,20 @@ class EmailDeliveryLatencyStats(BaseModel):
 
 class EmailSendingIpStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     sending_ip: Annotated[
         str,
         Field(
-            description='The IP address used to send messages aggregated in this row.',
-            examples=['192.0.2.55'],
+            description="The IP address used to send messages aggregated in this row.",
+            examples=["192.0.2.55"],
             min_length=1,
         ),
     ]
     ip_pool_id: Annotated[
         IPPoolID | None,
         Field(
-            description='The dedicated IP pool this address sent through, or null when the messages went through the shared pool. Recorded when each message was sent, so it reflects the pool used at send time even if the IP has since moved between pools or been released.\n'
+            description="The dedicated IP pool this address sent through, or null when the messages went through the shared pool. Recorded when each message was sent, so it reflects the pool used at send time even if the IP has since moved between pools or been released.\n"
         ),
     ] = None
     delivery: EmailSendingIpDeliveryStats
@@ -4059,24 +4074,24 @@ class EmailSendingIpStatsPoint(BaseModel):
 
 class EmailStatsBySendingIpResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailSendingIpStatsPoint],
         Field(
-            description='Sending-IP breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no per-IP-attributable activity (delivery, bounce, deferral, or late bounce) occurred in the period.'
+            description="Sending-IP breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no per-IP-attributable activity (delivery, bounce, deferral, or late bounce) occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct sending IP addresses with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct sending IP addresses with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[6],
             ge=0,
         ),
@@ -4085,13 +4100,13 @@ class EmailStatsBySendingIpResponse(BaseModel):
 
 class EmailSendingDomainStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     sending_domain: Annotated[
         str,
         Field(
-            description='The sending domain (the portion of the `From` address after the `@`), normalized to lowercase.',
-            examples=['mail.acme.com'],
+            description="The sending domain (the portion of the `From` address after the `@`), normalized to lowercase.",
+            examples=["mail.acme.com"],
             min_length=1,
         ),
     ]
@@ -4101,31 +4116,31 @@ class EmailSendingDomainStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this sending domain over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this sending domain over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsBySendingDomainResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailSendingDomainStatsPoint],
         Field(
-            description='Sending-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period.'
+            description="Sending-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct sending domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct sending domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[12],
             ge=0,
         ),
@@ -4134,13 +4149,13 @@ class EmailStatsBySendingDomainResponse(BaseModel):
 
 class EmailCategoryStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     category: Annotated[
         str,
         Field(
-            description='The category this row aggregates, as set at send time. `transactional` is one-to-one mail triggered by a user action; `marketing` is bulk sending. New categories may be added over time.',
-            examples=['transactional'],
+            description="The category this row aggregates, as set at send time. `transactional` is one-to-one mail triggered by a user action; `marketing` is bulk sending. New categories may be added over time.",
+            examples=["transactional"],
             min_length=1,
         ),
     ]
@@ -4150,31 +4165,31 @@ class EmailCategoryStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this category over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this category over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsByCategoryResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailCategoryStatsPoint],
         Field(
-            description='Category breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no sends occurred in the period.'
+            description="Category breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no sends occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[2],
             ge=0,
         ),
@@ -4182,43 +4197,43 @@ class EmailStatsByCategoryResponse(BaseModel):
 
 
 class EmailMailboxProviderSortMetric(str, Enum):
-    delivered = 'delivered'
-    bounced = 'bounced'
-    complained = 'complained'
-    deferred = 'deferred'
-    bounces_hard = 'bounces.hard'
-    bounces_soft = 'bounces.soft'
-    bounces_admin = 'bounces.admin'
-    bounces_block = 'bounces.block'
-    bounces_undetermined = 'bounces.undetermined'
-    opens = 'opens'
-    opens_non_prefetched = 'opens_non_prefetched'
-    unique_opens = 'unique_opens'
-    unique_opens_non_prefetched = 'unique_opens_non_prefetched'
-    clicks = 'clicks'
-    unique_clicks = 'unique_clicks'
-    unsubscribes = 'unsubscribes'
-    delivery_rate = 'delivery_rate'
-    bounce_rate = 'bounce_rate'
-    complaint_rate = 'complaint_rate'
-    open_rate = 'open_rate'
-    click_rate = 'click_rate'
-    unsubscribe_rate = 'unsubscribe_rate'
-    bounces_hard_rate = 'bounces.hard_rate'
-    bounces_soft_rate = 'bounces.soft_rate'
-    bounces_admin_rate = 'bounces.admin_rate'
-    bounces_block_rate = 'bounces.block_rate'
-    bounces_undetermined_rate = 'bounces.undetermined_rate'
+    delivered = "delivered"
+    bounced = "bounced"
+    complained = "complained"
+    deferred = "deferred"
+    bounces_hard = "bounces.hard"
+    bounces_soft = "bounces.soft"
+    bounces_admin = "bounces.admin"
+    bounces_block = "bounces.block"
+    bounces_undetermined = "bounces.undetermined"
+    opens = "opens"
+    opens_non_prefetched = "opens_non_prefetched"
+    unique_opens = "unique_opens"
+    unique_opens_non_prefetched = "unique_opens_non_prefetched"
+    clicks = "clicks"
+    unique_clicks = "unique_clicks"
+    unsubscribes = "unsubscribes"
+    delivery_rate = "delivery_rate"
+    bounce_rate = "bounce_rate"
+    complaint_rate = "complaint_rate"
+    open_rate = "open_rate"
+    click_rate = "click_rate"
+    unsubscribe_rate = "unsubscribe_rate"
+    bounces_hard_rate = "bounces.hard_rate"
+    bounces_soft_rate = "bounces.soft_rate"
+    bounces_admin_rate = "bounces.admin_rate"
+    bounces_block_rate = "bounces.block_rate"
+    bounces_undetermined_rate = "bounces.undetermined_rate"
 
 
 class EmailMailboxProviderDeliveryStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     delivered: Annotated[
         int,
         Field(
-            description='Distinct recipients whose message the receiving mail server accepted.',
+            description="Distinct recipients whose message the receiving mail server accepted.",
             examples=[8290],
             ge=0,
         ),
@@ -4226,7 +4241,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
     bounced: Annotated[
         int,
         Field(
-            description='Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.',
+            description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.",
             examples=[131],
             ge=0,
         ),
@@ -4234,7 +4249,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
     complained: Annotated[
         int,
         Field(
-            description='Distinct recipients who reported the message as spam.',
+            description="Distinct recipients who reported the message as spam.",
             examples=[8],
             ge=0,
         ),
@@ -4242,7 +4257,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
     deferred: Annotated[
         int,
         Field(
-            description='Distinct recipients in transient delivery deferral that is still being retried.',
+            description="Distinct recipients in transient delivery deferral that is still being retried.",
             examples=[4],
             ge=0,
         ),
@@ -4251,7 +4266,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
     delivery_rate: Annotated[
         float | None,
         Field(
-            description='Share of attempted recipients on this mailbox provider that were delivered, computed as `delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).\n',
+            description="Share of attempted recipients on this mailbox provider that were delivered, computed as `delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).\n",
             examples=[0.9844],
             ge=0.0,
             le=1.0,
@@ -4260,7 +4275,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
     bounce_rate: Annotated[
         float | None,
         Field(
-            description='Share of attempted recipients on this mailbox provider that bounced, computed as `bounced / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).\n',
+            description="Share of attempted recipients on this mailbox provider that bounced, computed as `bounced / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).\n",
             examples=[0.0156],
             ge=0.0,
             le=1.0,
@@ -4269,7 +4284,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
     complaint_rate: Annotated[
         float | None,
         Field(
-            description='Share of delivered recipients on this mailbox provider who reported the message as spam, computed as `complained / delivered`. Null when `delivered` is zero.\n',
+            description="Share of delivered recipients on this mailbox provider who reported the message as spam, computed as `complained / delivered`. Null when `delivered` is zero.\n",
             examples=[0.00096],
             ge=0.0,
             le=1.0,
@@ -4279,13 +4294,13 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
 
 class EmailMailboxProviderStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     mailbox_provider: Annotated[
         str,
         Field(
-            description='The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`). The set is open and grows as new providers are categorised.',
-            examples=['gmail'],
+            description="The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`). The set is open and grows as new providers are categorised.",
+            examples=["gmail"],
             min_length=1,
         ),
     ]
@@ -4295,31 +4310,31 @@ class EmailMailboxProviderStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this mailbox provider over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this mailbox provider over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsByMailboxProviderResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailMailboxProviderStatsPoint],
         Field(
-            description='Mailbox-provider breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no eligible activity occurred in the period.'
+            description="Mailbox-provider breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no eligible activity occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct mailbox providers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[14],
             ge=0,
         ),
@@ -4328,21 +4343,21 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
 
 class EmailMailboxProviderRegionStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     mailbox_provider: Annotated[
         str,
         Field(
-            description='The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`).',
-            examples=['gmail'],
+            description="The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`).",
+            examples=["gmail"],
             min_length=1,
         ),
     ]
     mailbox_provider_region: Annotated[
         str,
         Field(
-            description='The provider region this row aggregates, as reported by the receiving mail system (for example `NA`, `EU`, `APAC`). The set is open and provider-specific.',
-            examples=['NA'],
+            description="The provider region this row aggregates, as reported by the receiving mail system (for example `NA`, `EU`, `APAC`). The set is open and provider-specific.",
+            examples=["NA"],
             min_length=1,
         ),
     ]
@@ -4352,31 +4367,31 @@ class EmailMailboxProviderRegionStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this provider region over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this provider region over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsByMailboxProviderRegionResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailMailboxProviderRegionStatsPoint],
         Field(
-            description='Provider-region breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no deliveries occurred in the period.'
+            description="Provider-region breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no deliveries occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[31],
             ge=0,
         ),
@@ -4385,13 +4400,13 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
 
 class EmailRecipientDomainStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     recipient_domain: Annotated[
         str,
         Field(
-            description='The recipient mailbox domain this row aggregates (the part of the recipient address after the `@`), normalized to lowercase.',
-            examples=['gmail.com'],
+            description="The recipient mailbox domain this row aggregates (the part of the recipient address after the `@`), normalized to lowercase.",
+            examples=["gmail.com"],
             min_length=1,
         ),
     ]
@@ -4401,31 +4416,31 @@ class EmailRecipientDomainStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this recipient domain over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this recipient domain over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsByRecipientDomainResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailRecipientDomainStatsPoint],
         Field(
-            description='Recipient-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period.'
+            description="Recipient-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct recipient domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[412],
             ge=0,
         ),
@@ -4434,15 +4449,15 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
 
 class EmailTemplateStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     template_id: Annotated[
         str,
         Field(
-            description='The template this row aggregates, the same identifier returned by the email-template endpoints. Only messages sent with a template appear in this breakdown; a template deleted after sending still appears by its ID.',
-            examples=['emt_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The template this row aggregates, the same identifier returned by the email-template endpoints. Only messages sent with a template appear in this breakdown; a template deleted after sending still appears by its ID.",
+            examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^emt_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     delivery: EmailDeliveryStats
@@ -4451,31 +4466,31 @@ class EmailTemplateStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this template over the window. Present only when `include_trend=true`.'
+            description="Per-bucket rate series for this template over the window. Present only when `include_trend=true`."
         ),
     ] = None
 
 
 class EmailStatsByTemplateResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailTemplateStatsPoint],
         Field(
-            description='Template breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no templated messages were active in the period.'
+            description="Template breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no templated messages were active in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct templates with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct templates with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[42],
             ge=0,
         ),
@@ -4483,22 +4498,22 @@ class EmailStatsByTemplateResponse(BaseModel):
 
 
 class EmailEngagementSortMetric(str, Enum):
-    opens = 'opens'
-    opens_non_prefetched = 'opens_non_prefetched'
-    unique_opens = 'unique_opens'
-    unique_opens_non_prefetched = 'unique_opens_non_prefetched'
-    clicks = 'clicks'
-    unique_clicks = 'unique_clicks'
+    opens = "opens"
+    opens_non_prefetched = "opens_non_prefetched"
+    unique_opens = "unique_opens"
+    unique_opens_non_prefetched = "unique_opens_non_prefetched"
+    clicks = "clicks"
+    unique_clicks = "unique_clicks"
 
 
 class EmailEngagementCounts(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     opens: Annotated[
         int,
         Field(
-            description='Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).\n',
+            description="Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).\n",
             examples=[5420],
             ge=0,
         ),
@@ -4506,7 +4521,7 @@ class EmailEngagementCounts(BaseModel):
     opens_non_prefetched: Annotated[
         int,
         Field(
-            description='Distinct open events excluding those auto-fetched by inbox privacy features. Same event-counting semantics as `opens`, with prefetched opens removed.\n',
+            description="Distinct open events excluding those auto-fetched by inbox privacy features. Same event-counting semantics as `opens`, with prefetched opens removed.\n",
             examples=[3210],
             ge=0,
         ),
@@ -4514,7 +4529,7 @@ class EmailEngagementCounts(BaseModel):
     unique_opens: Annotated[
         int,
         Field(
-            description='Distinct recipients who opened at least once, including opens auto-fetched by inbox privacy features.',
+            description="Distinct recipients who opened at least once, including opens auto-fetched by inbox privacy features.",
             examples=[3640],
             ge=0,
         ),
@@ -4522,7 +4537,7 @@ class EmailEngagementCounts(BaseModel):
     unique_opens_non_prefetched: Annotated[
         int,
         Field(
-            description='Distinct recipients who opened at least once, excluding opens auto-fetched by inbox privacy features.',
+            description="Distinct recipients who opened at least once, excluding opens auto-fetched by inbox privacy features.",
             examples=[2480],
             ge=0,
         ),
@@ -4530,7 +4545,7 @@ class EmailEngagementCounts(BaseModel):
     clicks: Annotated[
         int,
         Field(
-            description='Distinct click events, counting repeat clicks from the same recipient.',
+            description="Distinct click events, counting repeat clicks from the same recipient.",
             examples=[924],
             ge=0,
         ),
@@ -4538,7 +4553,7 @@ class EmailEngagementCounts(BaseModel):
     unique_clicks: Annotated[
         int,
         Field(
-            description='Distinct recipients who clicked at least once.',
+            description="Distinct recipients who clicked at least once.",
             examples=[621],
             ge=0,
         ),
@@ -4547,28 +4562,28 @@ class EmailEngagementCounts(BaseModel):
 
 class EmailLocationStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     country: Annotated[
         str,
         Field(
-            description='The country this row aggregates, as a two-letter country code (ISO 3166-1 alpha-2) resolved from the open or click event. Always present.',
-            examples=['US'],
+            description="The country this row aggregates, as a two-letter country code (ISO 3166-1 alpha-2) resolved from the open or click event. Always present.",
+            examples=["US"],
             min_length=1,
         ),
     ]
     region: Annotated[
         str | None,
         Field(
-            description='The region (state or province) within the country. Populated when `group_by` is `region` or `city`; null at coarser groupings.',
-            examples=['California'],
+            description="The region (state or province) within the country. Populated when `group_by` is `region` or `city`; null at coarser groupings.",
+            examples=["California"],
         ),
     ]
     city: Annotated[
         str | None,
         Field(
-            description='The city within the region. Populated when `group_by` is `city`; null at coarser groupings.',
-            examples=['San Francisco'],
+            description="The city within the region. Populated when `group_by` is `city`; null at coarser groupings.",
+            examples=["San Francisco"],
         ),
     ]
     engagement: EmailEngagementCounts
@@ -4576,24 +4591,24 @@ class EmailLocationStatsPoint(BaseModel):
 
 class EmailStatsByLocationResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailLocationStatsPoint],
         Field(
-            description='Location breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a resolved location occurred in the period.'
+            description="Location breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a resolved location occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct locations at the requested `group_by` level with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct locations at the requested `group_by` level with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[86],
             ge=0,
         ),
@@ -4602,27 +4617,27 @@ class EmailStatsByLocationResponse(BaseModel):
 
 class EmailClientStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email_client: Annotated[
         str | None,
         Field(
-            description='The mail client this row aggregates (for example `Gmail`, `Apple Mail`, `Outlook`). Populated only when `group_by=email_client`; null otherwise.',
-            examples=['Apple Mail'],
+            description="The mail client this row aggregates (for example `Gmail`, `Apple Mail`, `Outlook`). Populated only when `group_by=email_client`; null otherwise.",
+            examples=["Apple Mail"],
         ),
     ]
     os: Annotated[
         str | None,
         Field(
-            description='The operating system this row aggregates (for example `iOS`, `Android`, `Windows`, `macOS`). Populated only when `group_by=os`; null otherwise.',
-            examples=['iOS'],
+            description="The operating system this row aggregates (for example `iOS`, `Android`, `Windows`, `macOS`). Populated only when `group_by=os`; null otherwise.",
+            examples=["iOS"],
         ),
     ]
     device_type: Annotated[
         str | None,
         Field(
-            description='The device type this row aggregates (for example `mobile`, `desktop`, `tablet`). Populated only when `group_by=device_type`; null otherwise.',
-            examples=['mobile'],
+            description="The device type this row aggregates (for example `mobile`, `desktop`, `tablet`). Populated only when `group_by=device_type`; null otherwise.",
+            examples=["mobile"],
         ),
     ]
     engagement: EmailEngagementCounts
@@ -4630,24 +4645,24 @@ class EmailClientStatsPoint(BaseModel):
 
 class EmailStatsByClientResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailClientStatsPoint],
         Field(
-            description='Client breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a detected client occurred in the period.'
+            description="Client breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a detected client occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[9],
             ge=0,
         ),
@@ -4656,12 +4671,12 @@ class EmailStatsByClientResponse(BaseModel):
 
 class EmailBounceStats(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     hard: Annotated[
         int,
         Field(
-            description='Distinct recipients with a permanent delivery failure (invalid address or non-existent domain). The address is automatically added to the suppression list.\n',
+            description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain). The address is automatically added to the suppression list.\n",
             examples=[42],
             ge=0,
         ),
@@ -4669,7 +4684,7 @@ class EmailBounceStats(BaseModel):
     soft: Annotated[
         int,
         Field(
-            description='Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable). Delivery was retried.\n',
+            description="Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable). Delivery was retried.\n",
             examples=[48],
             ge=0,
         ),
@@ -4677,7 +4692,7 @@ class EmailBounceStats(BaseModel):
     admin: Annotated[
         int,
         Field(
-            description='Distinct recipients bounced by an upstream policy block (relaying denied, blocklisted domain). Triage usually focuses on content or sender configuration rather than recipient cleanup.\n',
+            description="Distinct recipients bounced by an upstream policy block (relaying denied, blocklisted domain). Triage usually focuses on content or sender configuration rather than recipient cleanup.\n",
             examples=[4],
             ge=0,
         ),
@@ -4685,7 +4700,7 @@ class EmailBounceStats(BaseModel):
     block: Annotated[
         int,
         Field(
-            description='Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons (mail block, spam block, spam content). Triage usually focuses on IP reputation and sending volume.\n',
+            description="Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons (mail block, spam block, spam content). Triage usually focuses on IP reputation and sending volume.\n",
             examples=[6],
             ge=0,
         ),
@@ -4702,20 +4717,20 @@ class EmailBounceStats(BaseModel):
 
 class EmailBounceCodeStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     smtp_error_code: Annotated[
         str,
         Field(
-            description='The SMTP error code the receiving mail server returned for these bounces, as reported by that server (for example `5.1.1` for an unknown recipient, `4.2.2` for a full mailbox). The form varies by server, and the set of codes is open.',
-            examples=['5.1.1'],
+            description="The SMTP error code the receiving mail server returned for these bounces, as reported by that server (for example `5.1.1` for an unknown recipient, `4.2.2` for a full mailbox). The form varies by server, and the set of codes is open.",
+            examples=["5.1.1"],
             min_length=1,
         ),
     ]
     bounced: Annotated[
         int,
         Field(
-            description='Distinct recipients whose delivery failed with this SMTP status code. Approximately the sum of the five `bounces.*` sub-counts; the totals are computed independently so they may differ slightly at the approximation error.',
+            description="Distinct recipients whose delivery failed with this SMTP status code. Approximately the sum of the five `bounces.*` sub-counts; the totals are computed independently so they may differ slightly at the approximation error.",
             examples=[1240],
             ge=0,
         ),
@@ -4725,24 +4740,24 @@ class EmailBounceCodeStatsPoint(BaseModel):
 
 class EmailStatsByBounceCodeResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailBounceCodeStatsPoint],
         Field(
-            description='Bounce-code breakdown rows, ranked by the `sort` metric (default `bounced`) descending. Empty when no bounces occurred in the period.'
+            description="Bounce-code breakdown rows, ranked by the `sort` metric (default `bounced`) descending. Empty when no bounces occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[17],
             ge=0,
         ),
@@ -4751,20 +4766,20 @@ class EmailStatsByBounceCodeResponse(BaseModel):
 
 class EmailComplaintTypeStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     feedback_type: Annotated[
         str,
         Field(
             description="The complaint classification reported by the mailbox provider's feedback loop, in the abuse-reporting-format vocabulary (for example `abuse`, `fraud`, `virus`, `other`). The set is open.",
-            examples=['abuse'],
+            examples=["abuse"],
             min_length=1,
         ),
     ]
     complained: Annotated[
         int,
         Field(
-            description='Distinct recipients who reported a message as spam with this complaint type at any point in the period.',
+            description="Distinct recipients who reported a message as spam with this complaint type at any point in the period.",
             examples=[47],
             ge=0,
         ),
@@ -4773,24 +4788,24 @@ class EmailComplaintTypeStatsPoint(BaseModel):
 
 class EmailStatsByComplaintTypeResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailComplaintTypeStatsPoint],
         Field(
-            description='Complaint-type breakdown rows, ranked by `complained` descending. Empty when no complaints occurred in the period.'
+            description="Complaint-type breakdown rows, ranked by `complained` descending. Empty when no complaints occurred in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct feedback types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct feedback types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[4],
             ge=0,
         ),
@@ -4799,15 +4814,15 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
 
 class EmailBroadcastStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     broadcast_id: Annotated[
         str,
         Field(
-            description='The broadcast this row aggregates, the same identifier returned by the broadcast endpoints. Only messages sent as part of a broadcast carry a broadcast identifier; one-off and transactional sends are not included in this breakdown.',
-            examples=['eb_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The broadcast this row aggregates, the same identifier returned by the broadcast endpoints. Only messages sent as part of a broadcast carry a broadcast identifier; one-off and transactional sends are not included in this breakdown.",
+            examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^eb_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     delivery: EmailDeliveryStats
@@ -4816,31 +4831,31 @@ class EmailBroadcastStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description='Per-bucket rate series for this broadcast over the window. Never returned today, because `include_trend` is not available for the broadcast breakdown (supplying it returns 422).'
+            description="Per-bucket rate series for this broadcast over the window. Never returned today, because `include_trend` is not available for the broadcast breakdown (supplying it returns 422)."
         ),
     ] = None
 
 
 class EmailStatsByBroadcastResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description='The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to.'
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailBroadcastStatsPoint],
         Field(
-            description='Broadcast breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no broadcast messages were active in the period.'
+            description="Broadcast breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no broadcast messages were active in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description='Total number of distinct broadcasts with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n',
+            description="Total number of distinct broadcasts with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[57],
             ge=0,
         ),
@@ -4849,180 +4864,180 @@ class EmailStatsByBroadcastResponse(BaseModel):
 
 class DomainSettings(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     click_tracking: Annotated[
         bool | None,
         Field(
-            description='Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n'
+            description="Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n"
         ),
     ] = False
     open_tracking: Annotated[
         bool | None,
         Field(
-            description='Insert a tracking pixel in HTML email to record opens. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n'
+            description="Insert a tracking pixel in HTML email to record opens. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n"
         ),
     ] = False
 
 
 class Mode(str, Enum):
-    txt = 'txt'
-    delegated = 'delegated'
+    txt = "txt"
+    delegated = "delegated"
 
 
 class DomainDKIM(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     mode: Annotated[
         Mode,
         Field(
-            description='How the DKIM public key is published in your DNS. `txt` — you publish the key as a TXT record. `delegated` — you publish a single CNAME and Bird hosts and rotates the key.\n'
+            description="How the DKIM public key is published in your DNS. `txt` — you publish the key as a TXT record. `delegated` — you publish a single CNAME and Bird hosts and rotates the key.\n"
         ),
     ]
     selector: Annotated[
         str,
         Field(
-            description='DKIM selector used to sign mail from this domain.',
-            examples=['bird1'],
+            description="DKIM selector used to sign mail from this domain.",
+            examples=["bird1"],
             min_length=1,
         ),
     ]
     key_size: Annotated[
-        int, Field(description='RSA key size in bits.', examples=[2048])
+        int, Field(description="RSA key size in bits.", examples=[2048])
     ]
 
 
 class Status4(str, Enum):
-    pending = 'pending'
-    failed = 'failed'
-    temporary_failure = 'temporary_failure'
+    pending = "pending"
+    failed = "failed"
+    temporary_failure = "temporary_failure"
 
 
 class DomainCapabilityPending(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     domain: Annotated[
         str,
         Field(
-            description='Hostname the capability will use once the staged change verifies.',
-            examples=['rp.mail.acme.com'],
+            description="Hostname the capability will use once the staged change verifies.",
+            examples=["rp.mail.acme.com"],
             min_length=1,
         ),
     ]
     status: Annotated[
         Status4,
         Field(
-            description='Verification status of the staged change. `pending` — waiting for the DNS records to be detected. `failed` — the records resolved with wrong values; correct them or submit a different change. `temporary_failure` — DNS lookup failed transiently and will be retried.\n',
-            examples=['pending'],
+            description="Verification status of the staged change. `pending` — waiting for the DNS records to be detected. `failed` — the records resolved with wrong values; correct them or submit a different change. `temporary_failure` — DNS lookup failed transiently and will be retried.\n",
+            examples=["pending"],
         ),
     ]
 
 
 class Status5(str, Enum):
-    pending = 'pending'
-    verified = 'verified'
-    warning = 'warning'
-    failed = 'failed'
-    temporary_failure = 'temporary_failure'
-    not_configured = 'not_configured'
+    pending = "pending"
+    verified = "verified"
+    warning = "warning"
+    failed = "failed"
+    temporary_failure = "temporary_failure"
+    not_configured = "not_configured"
 
 
 class DomainCapability(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     status: Annotated[
         Status5,
         Field(
             description="Capability verification status.\n- `pending` — verification has not run, or is currently running. - `verified` — all DNS records for this capability resolved with the\n  expected values.\n- `warning` — a record for this capability verified before and a recent\n  check no longer matches, but it is still within the grace period.\n  Sending is not yet affected; fix it before the grace period ends.\n- `failed` — DNS records resolved but at least one value is wrong.\n  Update your DNS to recover.\n- `temporary_failure` — DNS lookup failed transiently. Verification is\n  queued for retry; don't change DNS records yet.\n- `not_configured` — the capability is not set up on this domain\n  (e.g. no tracking domain configured).\n",
-            examples=['verified'],
+            examples=["verified"],
         ),
     ]
     domain: Annotated[
         str | None,
         Field(
-            description='Hostname this capability is configured with — the return-path domain, the tracking domain, or the domain where the DMARC policy was found. Null when not applicable or not configured.\n'
+            description="Hostname this capability is configured with — the return-path domain, the tracking domain, or the domain where the DMARC policy was found. Null when not applicable or not configured.\n"
         ),
     ] = None
     pending: DomainCapabilityPending | None = None
     reason: Annotated[
         str | None,
         Field(
-            description='Machine-readable reason code for a failed capability status. Only set when `status` is `failed`. Use this to display a specific message to users rather than a generic failure message.\n- `tracking_domain_in_use` — the link tracking subdomain is already claimed\n  by another organization.\n'
+            description="Machine-readable reason code for a failed capability status. Only set when `status` is `failed`. Use this to display a specific message to users rather than a generic failure message.\n- `tracking_domain_in_use` — the link tracking subdomain is already claimed\n  by another organization.\n"
         ),
     ] = None
 
 
 class DomainCapabilities(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     sending: Annotated[
         DomainCapability,
         Field(
-            description='Overall authorization to send from this domain. Verified when the DKIM record, the return-path CNAME, and a DMARC policy are all in place. Required for live sends.\n'
+            description="Overall authorization to send from this domain. Verified when the DKIM record, the return-path CNAME, and a DMARC policy are all in place. Required for live sends.\n"
         ),
     ]
     return_path: Annotated[
         DomainCapability,
         Field(
-            description='Return-path (bounce) CNAME verification. The return-path domain receives bounce and complaint notifications and is what mailbox providers check for SPF — no separate SPF record is needed.\n'
+            description="Return-path (bounce) CNAME verification. The return-path domain receives bounce and complaint notifications and is what mailbox providers check for SPF — no separate SPF record is needed.\n"
         ),
     ]
     dmarc: Annotated[
         DomainCapability,
         Field(
-            description='DMARC policy check. Satisfied by any valid DMARC record covering the sending domain — on the domain itself or on its registered (organizational) domain; `domain` reports where the policy was found. A minimal policy of `p=none` is sufficient.\n'
+            description="DMARC policy check. Satisfied by any valid DMARC record covering the sending domain — on the domain itself or on its registered (organizational) domain; `domain` reports where the policy was found. A minimal policy of `p=none` is sufficient.\n"
         ),
     ]
     tracking: Annotated[
         DomainCapability,
         Field(
-            description='Branded open/click tracking domain. `not_configured` until a tracking domain is set. Tracked links are served over HTTPS once the CNAME verifies.\n'
+            description="Branded open/click tracking domain. `not_configured` until a tracking domain is set. Tracked links are served over HTTPS once the CNAME verifies.\n"
         ),
     ]
     inbound: Annotated[
         DomainCapability | None,
         Field(
-            description='Inbound mail receiving. `not_configured` until receiving is enabled on this domain (see `DomainUpdate.inbound`), then `pending` while the published MX records are checked, and `verified` once they resolve to Bird. The MX records to publish are always listed under `dns_records` (`purpose: inbound_mx`) as a regional reference, even while this is `not_configured` — enabling is what actually starts delivery.\n'
+            description="Inbound mail receiving. `not_configured` until receiving is enabled on this domain (see `DomainUpdate.inbound`), then `pending` while the published MX records are checked, and `verified` once they resolve to Bird. The MX records to publish are always listed under `dns_records` (`purpose: inbound_mx`) as a regional reference, even while this is `not_configured` — enabling is what actually starts delivery.\n"
         ),
     ] = None
 
 
-class Type3(str, Enum):
-    TXT = 'TXT'
-    CNAME = 'CNAME'
-    MX = 'MX'
+class Type4(str, Enum):
+    TXT = "TXT"
+    CNAME = "CNAME"
+    MX = "MX"
 
 
 class Purpose(str, Enum):
-    dkim = 'dkim'
-    return_path = 'return_path'
-    tracking = 'tracking'
-    inbound_mx = 'inbound_mx'
-    dmarc = 'dmarc'
+    dkim = "dkim"
+    return_path = "return_path"
+    tracking = "tracking"
+    inbound_mx = "inbound_mx"
+    dmarc = "dmarc"
 
 
 class State(str, Enum):
-    active = 'active'
-    pending = 'pending'
-    deprecated = 'deprecated'
+    active = "active"
+    pending = "pending"
+    deprecated = "deprecated"
 
 
 class Status6(str, Enum):
-    pending = 'pending'
-    verified = 'verified'
-    warning = 'warning'
-    failed = 'failed'
+    pending = "pending"
+    verified = "verified"
+    warning = "warning"
+    failed = "failed"
 
 
 class DNSRecord(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    type: Type3
+    type: Type4
     name: Annotated[
         str,
         Field(
@@ -5033,7 +5048,7 @@ class DNSRecord(BaseModel):
     host: Annotated[
         str,
         Field(
-            description='The fully qualified hostname for this record (e.g. `bird1._domainkey.mail.acme.com`).\n',
+            description="The fully qualified hostname for this record (e.g. `bird1._domainkey.mail.acme.com`).\n",
             min_length=1,
         ),
     ]
@@ -5047,7 +5062,7 @@ class DNSRecord(BaseModel):
     purpose: Annotated[
         Purpose,
         Field(
-            description='What this record is for.\n- `dkim` — signs outbound mail and proves domain ownership. - `return_path` — return-path (bounce) CNAME for sending. - `tracking` — branded open/click tracking CNAME (optional). - `dmarc` — advisory DMARC policy record. - `inbound_mx` — MX record routing mail to Bird for receiving. Always\n  present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own — see `DomainUpdate.inbound`.\n'
+            description="What this record is for.\n- `dkim` — signs outbound mail and proves domain ownership. - `return_path` — return-path (bounce) CNAME for sending. - `tracking` — branded open/click tracking CNAME (optional). - `dmarc` — advisory DMARC policy record. - `inbound_mx` — MX record routing mail to Bird for receiving. Always\n  present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own — see `DomainUpdate.inbound`.\n"
         ),
     ]
     state: Annotated[
@@ -5059,7 +5074,7 @@ class DNSRecord(BaseModel):
     optional: Annotated[
         bool,
         Field(
-            description='Whether this record can be skipped. Optional records enable extra functionality (e.g. tracking) but are not required for sending.\n'
+            description="Whether this record can be skipped. Optional records enable extra functionality (e.g. tracking) but are not required for sending.\n"
         ),
     ]
     status: Annotated[
@@ -5071,75 +5086,75 @@ class DNSRecord(BaseModel):
     error: Annotated[
         str | None,
         Field(
-            description='Human-readable detail for a failed check on this record — what was found in DNS and why it did not match. Null when the record is verified or not yet checked.\n'
+            description="Human-readable detail for a failed check on this record — what was found in DNS and why it did not match. Null when the record is verified or not yet checked.\n"
         ),
     ] = None
     safe_to_remove: Annotated[
         bool | None,
         Field(
-            description='Only set on `deprecated` records: `true` once the record is no longer referenced by in-flight mail or live tracked links and can be deleted from your DNS. Null on `active` and `pending` records.\n'
+            description="Only set on `deprecated` records: `true` once the record is no longer referenced by in-flight mail or live tracked links and can be deleted from your DNS. Null on `active` and `pending` records.\n"
         ),
     ] = None
 
 
 class Vendor(str, Enum):
-    other = 'other'
-    cloudflare = 'cloudflare'
-    route53 = 'route53'
-    godaddy = 'godaddy'
-    namecheap = 'namecheap'
-    google = 'google'
-    azure = 'azure'
-    digitalocean = 'digitalocean'
-    squarespace = 'squarespace'
+    other = "other"
+    cloudflare = "cloudflare"
+    route53 = "route53"
+    godaddy = "godaddy"
+    namecheap = "namecheap"
+    google = "google"
+    azure = "azure"
+    digitalocean = "digitalocean"
+    squarespace = "squarespace"
 
 
 class Status7(str, Enum):
-    pending = 'pending'
-    verified = 'verified'
-    failed = 'failed'
-    temporary_failure = 'temporary_failure'
-    rejected = 'rejected'
+    pending = "pending"
+    verified = "verified"
+    failed = "failed"
+    temporary_failure = "temporary_failure"
+    rejected = "rejected"
 
 
 class Domain(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            examples=['dom_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["dom_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^dom_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^dom_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     domain: Annotated[
         str,
         Field(
-            description='The sending domain name. Set at creation and immutable.',
-            examples=['mail.acme.com'],
+            description="The sending domain name. Set at creation and immutable.",
+            examples=["mail.acme.com"],
             min_length=1,
         ),
     ]
     vendor: Annotated[
         Vendor,
         Field(
-            description='The DNS provider hosting this domain\'s nameservers, so you know which provider\'s dashboard to manage the required DNS records in. Returns "other" when the provider has not been detected or is not recognized.\n'
+            description="The DNS provider hosting this domain's nameservers, so you know which provider's dashboard to manage the required DNS records in. Returns \"other\" when the provider has not been detected or is not recognized.\n"
         ),
     ]
     status: Annotated[
         Status7,
         Field(
-            description='Domain ownership verification, proven by the DKIM record. Readiness to send or track is reported separately per capability under `capabilities.*.status`.\n- `pending` — the DKIM record has not been published yet. - `verified` — the DKIM record is in place; ownership is confirmed. - `failed` — a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure` — DNS resolution failed transiently (timeout,\n  unreachable nameserver). Verification is queued for retry on a 72h\n  cadence; customer should not edit DNS records before the retry runs.\n- `rejected` — the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n'
+            description="Domain ownership verification, proven by the DKIM record. Readiness to send or track is reported separately per capability under `capabilities.*.status`.\n- `pending` — the DKIM record has not been published yet. - `verified` — the DKIM record is in place; ownership is confirmed. - `failed` — a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure` — DNS resolution failed transiently (timeout,\n  unreachable nameserver). Verification is queued for retry on a 72h\n  cadence; customer should not edit DNS records before the retry runs.\n- `rejected` — the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n"
         ),
     ]
     settings: DomainSettings
@@ -5163,7 +5178,7 @@ class Domain(BaseModel):
             description="When the domain's ownership was confirmed — the moment `status` became `verified` via the DKIM record. Unchanged by later re-checks while it stays verified. Null if the domain has never been verified.\n"
         ),
     ] = None
-    created_at: Annotated[str, Field(description='When the domain was added.')]
+    created_at: Annotated[str, Field(description="When the domain was added.")]
     updated_at: Annotated[
         str,
         Field(
@@ -5174,69 +5189,69 @@ class Domain(BaseModel):
 
 class DomainList(FieldListEnvelopeWithTotal):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: Annotated[
         list[Domain],
-        Field(description='Page of sending domains, newest first by default.'),
+        Field(description="Page of sending domains, newest first by default."),
     ]
 
 
 class DomainReturnPathConfig(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str,
         Field(
-            description='Name part to use for the return-path domain. For example, `send` on `mail.acme.com` becomes `send.mail.acme.com`. Defaults to `send` when omitted at creation.\n',
-            examples=['send'],
+            description="Name part to use for the return-path domain. For example, `send` on `mail.acme.com` becomes `send.mail.acme.com`. Defaults to `send` when omitted at creation.\n",
+            examples=["send"],
             max_length=63,
             min_length=1,
-            pattern='^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$',
+            pattern="^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$",
         ),
     ]
 
 
 class DomainTrackingConfig(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str,
         Field(
-            description='Name part to use for branded open and click tracking URLs. For example, `links` on `mail.acme.com` becomes `links.mail.acme.com`.\n',
-            examples=['links'],
+            description="Name part to use for branded open and click tracking URLs. For example, `links` on `mail.acme.com` becomes `links.mail.acme.com`.\n",
+            examples=["links"],
             max_length=63,
             min_length=1,
-            pattern='^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$',
+            pattern="^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$",
         ),
     ]
 
 
 class DomainDKIMConfig(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     mode: Annotated[
         Mode | None,
         Field(
-            description='How the DKIM public key is published in your DNS.\n- `txt` — you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated` — preview, currently unavailable; supplying it returns\n  `422`. When available, you publish a single CNAME and Bird hosts\n  and rotates the key with no further DNS changes on your side.\n'
+            description="How the DKIM public key is published in your DNS.\n- `txt` — you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated` — preview, currently unavailable; supplying it returns\n  `422`. When available, you publish a single CNAME and Bird hosts\n  and rotates the key with no further DNS changes on your side.\n"
         ),
-    ] = 'txt'
+    ] = "txt"
 
 
 class DomainCreate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     domain: Annotated[
         str,
         Field(
-            description='The domain you will send from — the domain of your `from` addresses. Use a dedicated subdomain (e.g. `mail.acme.com`) rather than your registered domain so sending reputation stays separate from other services on the domain.\n',
-            examples=['mail.acme.com'],
+            description="The domain you will send from — the domain of your `from` addresses. Use a dedicated subdomain (e.g. `mail.acme.com`) rather than your registered domain so sending reputation stays separate from other services on the domain.\n",
+            examples=["mail.acme.com"],
             min_length=1,
-            pattern='^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]{0,61}[A-Za-z0-9])$',
+            pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]{0,61}[A-Za-z0-9])$",
         ),
     ]
     return_path: DomainReturnPathConfig | None = None
@@ -5247,12 +5262,12 @@ class DomainCreate(BaseModel):
 
 class DomainInboundConfig(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     enabled: Annotated[
         bool,
         Field(
-            description='Set `true` to enable receiving on this domain, `false` to disable it. Disabling tears receiving down and removes the MX records from `dns_records`; this is immediate in the normal case, and if a step needs retrying the capability clears as soon as teardown finishes.\n',
+            description="Set `true` to enable receiving on this domain, `false` to disable it. Disabling tears receiving down and removes the MX records from `dns_records`; this is immediate in the normal case, and if a step needs retrying the capability clears as soon as teardown finishes.\n",
             examples=[True],
         ),
     ]
@@ -5260,25 +5275,25 @@ class DomainInboundConfig(BaseModel):
 
 class DomainUpdate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     settings: DomainSettings | None = None
     return_path: Annotated[
         DomainReturnPathConfig | None,
         Field(
-            description='Change the return-path name part. Cannot be removed — the return-path is required for sending.\n'
+            description="Change the return-path name part. Cannot be removed — the return-path is required for sending.\n"
         ),
     ] = None
     tracking: Annotated[
         DomainTrackingConfig | None,
         Field(
-            description='Set or change the tracking name part, or remove tracking by passing null. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.\n'
+            description="Set or change the tracking name part, or remove tracking by passing null. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.\n"
         ),
     ] = None
     dkim: Annotated[
         DomainDKIMConfig | None,
         Field(
-            description='Change how the DKIM key is published. The current key keeps signing until the new configuration verifies, so mail is never sent unsigned during the transition.\n'
+            description="Change how the DKIM key is published. The current key keeps signing until the new configuration verifies, so mail is never sent unsigned during the transition.\n"
         ),
     ] = None
     inbound: Annotated[
@@ -5289,129 +5304,129 @@ class DomainUpdate(BaseModel):
     ] = None
 
 
-class Type4(str, Enum):
-    workspace = 'workspace'
+class Type5(str, Enum):
+    workspace = "workspace"
 
 
 class MailboxOwner(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    type: Annotated[Type4, Field(description='Owner principal type.')]
+    type: Annotated[Type5, Field(description="Owner principal type.")]
     id: Annotated[
         str,
         Field(
-            description='Owner principal ID.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Owner principal ID.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class ReceivePolicy(str, Enum):
-    open = 'open'
-    replies_only = 'replies_only'
-    allowlist = 'allowlist'
-    drop = 'drop'
+    open = "open"
+    replies_only = "replies_only"
+    allowlist = "allowlist"
+    drop = "drop"
 
 
 class State1(str, Enum):
-    active = 'active'
-    suspended = 'suspended'
+    active = "active"
+    suspended = "suspended"
 
 
 class Channel(str, Enum):
-    email = 'email'
+    email = "email"
 
 
 class RetentionTier(str, Enum):
-    field_30d = '30d'
-    field_90d = '90d'
-    field_1y = '1y'
+    field_30d = "30d"
+    field_90d = "90d"
+    field_1y = "1y"
 
 
 class Mailbox(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Mailbox ID.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Mailbox ID.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     address: Annotated[
         str,
         Field(
             description="The mailbox's email address. Immutable once created.",
-            examples=['concierge@inbox.ai'],
+            examples=["concierge@inbox.ai"],
             min_length=5,
         ),
     ]
     display_name: Annotated[
         str | None,
         Field(
-            description='Display name used as the sender name on mail from this mailbox. Null when unset.',
-            examples=['Acme Concierge'],
+            description="Display name used as the sender name on mail from this mailbox. Null when unset.",
+            examples=["Acme Concierge"],
             max_length=255,
         ),
     ]
     default_reply_to: Annotated[
         str | None,
         Field(
-            description='Default Reply-To address stamped on mail sent from this mailbox. Null when unset.'
+            description="Default Reply-To address stamped on mail sent from this mailbox. Null when unset."
         ),
     ]
     receive_policy: Annotated[
         ReceivePolicy,
         Field(
-            description='Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule (replies to prior outbound are always admitted unless blocked); `drop` stores nothing.'
+            description="Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule (replies to prior outbound are always admitted unless blocked); `drop` stores nothing."
         ),
     ]
     state: Annotated[
         State1,
         Field(
-            description='Lifecycle state. Suspended mailboxes stop emitting events; inbound mail is retained as blocked.'
+            description="Lifecycle state. Suspended mailboxes stop emitting events; inbound mail is retained as blocked."
         ),
     ]
     channel: Annotated[
         Channel,
-        Field(description='The channel this mailbox receives on. Always `email`.'),
+        Field(description="The channel this mailbox receives on. Always `email`."),
     ]
     owner: MailboxOwner
     inbound_address_id: Annotated[
         str,
         Field(
             description="The underlying inbound address that receives this mailbox's mail.",
-            examples=['ina_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["ina_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ina_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ina_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     retention_tier: Annotated[
         RetentionTier,
         Field(
-            description='How long the mailbox remembers message metadata and extracted text. Original rendered source (HTML, raw message, attachments) is always available for 30 days regardless of tier. `3y` and `10y` are reserved future tiers.'
+            description="How long the mailbox remembers message metadata and extracted text. Original rendered source (HTML, raw message, attachments) is always available for 30 days regardless of tier. `3y` and `10y` are reserved future tiers."
         ),
     ]
     message_count: Annotated[
-        int, Field(description='Number of retained messages across all threads.')
+        int, Field(description="Number of retained messages across all threads.")
     ]
-    thread_count: Annotated[int, Field(description='Number of retained threads.')]
+    thread_count: Annotated[int, Field(description="Number of retained threads.")]
     unread_thread_count: Annotated[
         int | None,
         Field(
-            description='Number of threads with unread messages in this mailbox, excluding trash. Null on create/update responses.\n'
+            description="Number of threads with unread messages in this mailbox, excluding trash. Null on create/update responses.\n"
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any],
         Field(
-            description='Your own key/value data attached to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved.'
+            description="Your own key/value data attached to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved."
         ),
     ]
     local_part_generated: Annotated[
@@ -5421,58 +5436,58 @@ class Mailbox(BaseModel):
         ),
     ] = None
     created_at: Annotated[
-        str, Field(description='When the mailbox was created.', min_length=1)
+        str, Field(description="When the mailbox was created.", min_length=1)
     ]
     updated_at: Annotated[
-        str, Field(description='When the mailbox was last updated.', min_length=1)
+        str, Field(description="When the mailbox was last updated.", min_length=1)
     ]
     deleted_at: Annotated[
         str | None,
         Field(
-            description='When the mailbox was deleted, or null if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and its remembered messages are permanently removed.'
+            description="When the mailbox was deleted, or null if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and its remembered messages are permanently removed."
         ),
     ] = None
 
 
 class MailboxList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: list[Mailbox]
 
 
 class RetentionTier1(str, Enum):
-    field_30d = '30d'
+    field_30d = "30d"
 
 
 class MailboxCreate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     local_part: Annotated[
         str | None,
         Field(
             description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens; stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits (no leading, trailing, or repeated separators), reserved names such as `postmaster` or `abuse` are unavailable, and choosing your own local part uses one of your plan's custom-handle allowance slots (generated addresses are always available). Omit to have Bird generate a random local part.",
-            examples=['concierge'],
+            examples=["concierge"],
             max_length=64,
             min_length=1,
-            pattern='^[A-Za-z0-9._-]+$',
+            pattern="^[A-Za-z0-9._-]+$",
         ),
     ] = None
     domain: Annotated[
         str | None,
         Field(
             description="The domain the address lives under. Defaults to `inbox.ai`, Bird's shared mailbox domain, where creating the mailbox claims the address for your organization: first come, first served, and permanently reserved to your organization even after the mailbox is deleted. May instead name one of your own domains that is enabled for receiving email.",
-            examples=['mail.acme.com'],
+            examples=["mail.acme.com"],
             max_length=255,
             min_length=1,
         ),
-    ] = 'inbox.ai'
+    ] = "inbox.ai"
     display_name: Annotated[
         str | None,
         Field(
-            description='Display name used as the sender name on mail from this mailbox.',
-            examples=['Acme Concierge'],
+            description="Display name used as the sender name on mail from this mailbox.",
+            examples=["Acme Concierge"],
             max_length=255,
             min_length=1,
         ),
@@ -5480,57 +5495,57 @@ class MailboxCreate(BaseModel):
     default_reply_to: Annotated[
         str | None,
         Field(
-            description='Default Reply-To address stamped on mail sent from this mailbox.',
+            description="Default Reply-To address stamped on mail sent from this mailbox.",
             min_length=5,
         ),
     ] = None
     receive_policy: Annotated[
         ReceivePolicy | None,
         Field(
-            description='Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule; `drop` stores nothing.'
+            description="Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule; `drop` stores nothing."
         ),
-    ] = 'open'
+    ] = "open"
     retention_tier: Annotated[
         RetentionTier1 | None,
         Field(
-            description='How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon.'
+            description="How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon."
         ),
-    ] = '30d'
+    ] = "30d"
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Your own key/value data to attach to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved.'
+            description="Your own key/value data to attach to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved."
         ),
     ] = None
 
 
 class MailboxUpdate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     display_name: Annotated[
         str | None,
         Field(
-            description='Display name used as the sender name on mail from this mailbox. Null clears it.',
+            description="Display name used as the sender name on mail from this mailbox. Null clears it.",
             max_length=255,
         ),
     ] = None
     default_reply_to: Annotated[
         str | None,
         Field(
-            description='Default Reply-To address stamped on mail sent from this mailbox. Null clears it.'
+            description="Default Reply-To address stamped on mail sent from this mailbox. Null clears it."
         ),
     ] = None
     receive_policy: Annotated[
         ReceivePolicy | None,
-        Field(description='Which inbound mail the mailbox accepts.'),
+        Field(description="Which inbound mail the mailbox accepts."),
     ] = None
     retention_tier: Annotated[
         RetentionTier1 | None,
         Field(
-            description='How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes memory older than the new horizon and requires `confirm=true` when messages older than the new horizon would be deleted. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon.'
+            description="How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes memory older than the new horizon and requires `confirm=true` when messages older than the new horizon would be deleted. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon."
         ),
-    ] = '30d'
+    ] = "30d"
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
@@ -5541,12 +5556,12 @@ class MailboxUpdate(BaseModel):
 
 class MailboxStatsSummary(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     sends_accepted: Annotated[
         int,
         Field(
-            description='Distinct email messages the mailbox sent that were accepted, counted at the message level and summed per bucket across the period.',
+            description="Distinct email messages the mailbox sent that were accepted, counted at the message level and summed per bucket across the period.",
             examples=[231],
             ge=0,
         ),
@@ -5557,7 +5572,7 @@ class MailboxStatsSummary(BaseModel):
     received: Annotated[
         int,
         Field(
-            description='Distinct emails the mailbox received, summed per bucket across the period.',
+            description="Distinct emails the mailbox received, summed per bucket across the period.",
             examples=[519],
             ge=0,
         ),
@@ -5566,20 +5581,20 @@ class MailboxStatsSummary(BaseModel):
 
 class MailboxStatsPoint(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     bucket: Annotated[
         str,
         Field(
             description="The day (YYYY-MM-DD) or instant (RFC 3339, on the bucket boundary) this point covers, matching the period's grain.",
-            examples=['2026-07-21'],
+            examples=["2026-07-21"],
             min_length=1,
         ),
     ]
     sends_accepted: Annotated[
         int,
         Field(
-            description='Distinct email messages the mailbox sent that were accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other sent-mail metric in `delivery` and `engagement` is recipient-level or event-level.\n',
+            description="Distinct email messages the mailbox sent that were accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other sent-mail metric in `delivery` and `engagement` is recipient-level or event-level.\n",
             examples=[12],
             ge=0,
         ),
@@ -5590,7 +5605,7 @@ class MailboxStatsPoint(BaseModel):
     received: Annotated[
         int,
         Field(
-            description='Distinct emails the mailbox received in this bucket.',
+            description="Distinct emails the mailbox received in this bucket.",
             examples=[34],
             ge=0,
         ),
@@ -5599,90 +5614,90 @@ class MailboxStatsPoint(BaseModel):
 
 class MailboxStatsResponse(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     period: EmailStatsSeriesPeriod
     summary: MailboxStatsSummary
     data: Annotated[
         list[MailboxStatsPoint],
         Field(
-            description='One row per bucket in the period, in chronological order. Buckets with no activity are included with zero counts.'
+            description="One row per bucket in the period, in chronological order. Buckets with no activity are included with zero counts."
         ),
     ]
 
 
 class Action(str, Enum):
-    allow = 'allow'
-    block = 'block'
+    allow = "allow"
+    block = "block"
 
 
 class EntryType(str, Enum):
-    address = 'address'
-    domain = 'domain'
+    address = "address"
+    domain = "domain"
 
 
 class ReceiveRule(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Receive rule ID.',
-            examples=['erl_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Receive rule ID.",
+            examples=["erl_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^erl_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^erl_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='The mailbox the rule applies to.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The mailbox the rule applies to.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     action: Annotated[
         Action,
         Field(
-            description='What the rule does when it matches. Block rules always win — over allow rules and over the reply admission on allowlist mailboxes.'
+            description="What the rule does when it matches. Block rules always win — over allow rules and over the reply admission on allowlist mailboxes."
         ),
     ]
     entry: Annotated[
         str,
         Field(
-            description='The sender address or domain the rule matches. Domains also match their subdomains.',
-            examples=['partner.example.com'],
+            description="The sender address or domain the rule matches. Domains also match their subdomains.",
+            examples=["partner.example.com"],
             max_length=255,
             min_length=1,
         ),
     ]
     entry_type: Annotated[
-        EntryType, Field(description='Whether the entry is a full address or a domain.')
+        EntryType, Field(description="Whether the entry is a full address or a domain.")
     ]
     note: Annotated[
         str | None,
         Field(
-            description='Your own note about why the rule exists. Null when unset.',
+            description="Your own note about why the rule exists. Null when unset.",
             max_length=512,
         ),
     ]
     created_at: Annotated[
-        str, Field(description='When the rule was created.', min_length=1)
+        str, Field(description="When the rule was created.", min_length=1)
     ]
 
 
 class ReceiveRuleList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: list[ReceiveRule]
 
 
 class ReceiveRuleCreate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     action: Annotated[
         Action,
@@ -5693,8 +5708,8 @@ class ReceiveRuleCreate(BaseModel):
     entry: Annotated[
         str,
         Field(
-            description='The sender address (`alice@example.com`) or domain (`example.com`) to match. Domains also match their subdomains. Stored lowercase.',
-            examples=['partner.example.com'],
+            description="The sender address (`alice@example.com`) or domain (`example.com`) to match. Domains also match their subdomains. Stored lowercase.",
+            examples=["partner.example.com"],
             max_length=255,
             min_length=1,
         ),
@@ -5702,7 +5717,7 @@ class ReceiveRuleCreate(BaseModel):
     note: Annotated[
         str | None,
         Field(
-            description='Your own note about why the rule exists.',
+            description="Your own note about why the rule exists.",
             max_length=512,
             min_length=1,
         ),
@@ -5719,27 +5734,27 @@ class TextItem(RootModel[str]):
 
 class EmailThreadHighlights(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     subject: Annotated[
         list[SubjectItem] | None,
         Field(
             description="Matched fragments from the conversation's subject.",
-            examples=[['Re: your **order** **4821**']],
+            examples=[["Re: your **order** **4821**"]],
         ),
     ] = None
     text: Annotated[
         list[TextItem] | None,
         Field(
             description="Matched fragments from a message's body text.",
-            examples=[['confirming your **order** **4821** shipped']],
+            examples=[["confirming your **order** **4821** shipped"]],
         ),
     ] = None
 
 
 class LastDirection(str, Enum):
-    inbound = 'inbound'
-    outbound = 'outbound'
+    inbound = "inbound"
+    outbound = "outbound"
 
 
 class Label(RootModel[str]):
@@ -5748,45 +5763,45 @@ class Label(RootModel[str]):
 
 class EmailThread(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Thread ID.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Thread ID.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='Mailbox this conversation belongs to.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Mailbox this conversation belongs to.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     channel: Annotated[
         str,
         Field(
-            description='Channel this conversation lives on. Always `email`.',
-            examples=['email'],
+            description="Channel this conversation lives on. Always `email`.",
+            examples=["email"],
             min_length=1,
         ),
     ]
     contact_id: Annotated[
         ContactID | None,
         Field(
-            description='Contact linked to this conversation, or null when none is linked.'
+            description="Contact linked to this conversation, or null when none is linked."
         ),
     ]
     subject: Annotated[
         str | None,
         Field(
-            description='Subject of the conversation, taken from its first message. Null when that message had no subject.',
-            examples=['Re: Your order'],
+            description="Subject of the conversation, taken from its first message. Null when that message had no subject.",
+            examples=["Re: Your order"],
         ),
     ]
     participants: Annotated[
@@ -5798,154 +5813,154 @@ class EmailThread(BaseModel):
     message_count: Annotated[
         int,
         Field(
-            description='Number of retained messages in this conversation, both directions.',
+            description="Number of retained messages in this conversation, both directions.",
             ge=0,
         ),
     ]
     unread_count: Annotated[
         int,
         Field(
-            description='Number of retained received messages that are still unread. Spam and blocked mail is not counted.',
+            description="Number of retained received messages that are still unread. Spam and blocked mail is not counted.",
             ge=0,
         ),
     ]
     last_message_at: Annotated[
         str,
         Field(
-            description='When the most recent retained message in this conversation was received or sent.',
+            description="When the most recent retained message in this conversation was received or sent.",
             min_length=1,
         ),
     ]
     last_direction: Annotated[
         LastDirection,
         Field(
-            description='Direction of the most recent message — `inbound` for a received message, `outbound` for a sent one.'
+            description="Direction of the most recent message — `inbound` for a received message, `outbound` for a sent one."
         ),
     ]
     labels: Annotated[
         list[Label],
         Field(
             description="Labels on this conversation. Exactly one system placement label is always present — `inbox`, `archive` (filed away, done for now), `spam` (the opening message failed sender authentication), or `blocked` (rejected by the mailbox's receive policy or rules) — set by the message that started the conversation. Move a conversation by updating its labels: add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox` — or remove `spam`, `blocked`, or `archive` — to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list; a conversation carries at most 20.\n",
-            examples=[['inbox', 'urgent']],
+            examples=[["inbox", "urgent"]],
             max_length=20,
         ),
     ]
     created_at: Annotated[
-        str, Field(description='When the thread was created.', min_length=1)
+        str, Field(description="When the thread was created.", min_length=1)
     ]
     updated_at: Annotated[
-        str, Field(description='When the thread last changed.', min_length=1)
+        str, Field(description="When the thread last changed.", min_length=1)
     ]
     highlights: Annotated[
         EmailThreadHighlights | None,
         Field(
-            description='Matched search fragments, keyed by the field that matched. Returned only by thread search; omitted when listing threads.\n'
+            description="Matched search fragments, keyed by the field that matched. Returned only by thread search; omitted when listing threads.\n"
         ),
     ] = None
 
 
 class EmailThreadList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: list[EmailThread]
 
 
 class AddItem(RootModel[str]):
     root: Annotated[
-        str, Field(max_length=64, min_length=1, pattern='^[^,\\s](?:[^,]*[^,\\s])?$')
+        str, Field(max_length=64, min_length=1, pattern="^[^,\\s](?:[^,]*[^,\\s])?$")
     ]
 
 
 class RemoveItem(RootModel[str]):
     root: Annotated[
-        str, Field(max_length=64, min_length=1, pattern='^[^,\\s](?:[^,]*[^,\\s])?$')
+        str, Field(max_length=64, min_length=1, pattern="^[^,\\s](?:[^,]*[^,\\s])?$")
     ]
 
 
 class EmailLabelsUpdate(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     add: Annotated[
         list[AddItem] | None,
-        Field(description='Labels to apply.', examples=[['urgent']], max_length=20),
+        Field(description="Labels to apply.", examples=[["urgent"]], max_length=20),
     ] = None
     remove: Annotated[
         list[RemoveItem] | None,
-        Field(description='Labels to take off.', examples=[['pending']], max_length=20),
+        Field(description="Labels to take off.", examples=[["pending"]], max_length=20),
     ] = None
 
 
 class EmailThreadUpdateRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     labels: EmailLabelsUpdate | None = None
     contact_id: Annotated[
         ContactID | None,
         Field(
-            description='Contact to link this conversation to, or null to unlink the current contact.'
+            description="Contact to link this conversation to, or null to unlink the current contact."
         ),
     ] = None
 
 
 class Status8(str, Enum):
-    delivered = 'delivered'
-    failed = 'failed'
+    delivered = "delivered"
+    failed = "failed"
 
 
 class EmailThreadMessageRecipient(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
-    address: Annotated[str, Field(description='Recipient address.', min_length=1)]
+    address: Annotated[str, Field(description="Recipient address.", min_length=1)]
     status: Annotated[
         Status8,
         Field(
-            description='Terminal outcome: `delivered`, or `failed` (bounce or provider rejection).'
+            description="Terminal outcome: `delivered`, or `failed` (bounce or provider rejection)."
         ),
     ]
 
 
 class EmailThreadMessageAttachment(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Attachment ID, used to download the attachment bytes.',
-            examples=['rea_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Attachment ID, used to download the attachment bytes.",
+            examples=["rea_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
         ),
     ]
     filename: Annotated[
         str | None,
         Field(
-            description='Original filename, or null when the attachment had none.',
-            examples=['invoice.pdf'],
+            description="Original filename, or null when the attachment had none.",
+            examples=["invoice.pdf"],
         ),
     ]
     content_type: Annotated[
         str | None,
         Field(
-            description='MIME content type, or null when it could not be determined.',
-            examples=['application/pdf'],
+            description="MIME content type, or null when it could not be determined.",
+            examples=["application/pdf"],
         ),
     ]
-    size: Annotated[int, Field(description='Attachment size in bytes.', ge=0)]
+    size: Annotated[int, Field(description="Attachment size in bytes.", ge=0)]
 
 
 class EmailThreadMessageSource(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     resource: Annotated[
         str,
         Field(
-            description='API path of the log entry for this message.',
-            examples=['/v1/email/inbound-messages/rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="API path of the log entry for this message.",
+            examples=["/v1/email/inbound-messages/rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
         ),
     ]
@@ -5959,78 +5974,78 @@ class EmailThreadMessageSource(BaseModel):
 
 
 class Direction2(str, Enum):
-    inbound = 'inbound'
-    outbound = 'outbound'
+    inbound = "inbound"
+    outbound = "outbound"
 
 
 class Authentication(Enum):
-    pass_ = 'pass'
-    fail = 'fail'
-    unknown = 'unknown'
+    pass_ = "pass"
+    fail = "fail"
+    unknown = "unknown"
     NoneType_None = None
 
 
 class EmailThreadMessage(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     id: Annotated[
         str,
         Field(
-            description='Message ID. Received messages carry a `rem_` ID, sent messages an `em_` ID — the same IDs used by the received-message and sent-message logs.\n',
-            examples=['rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Message ID. Received messages carry a `rem_` ID, sent messages an `em_` ID — the same IDs used by the received-message and sent-message logs.\n",
+            examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^(rem|em)_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^(rem|em)_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     direction: Annotated[
         Direction2,
         Field(
-            description='Direction of the message — `inbound` for a received message, `outbound` for a sent one.'
+            description="Direction of the message — `inbound` for a received message, `outbound` for a sent one."
         ),
     ]
     channel: Annotated[
         str,
         Field(
-            description='Channel this message was carried on. Always `email`.',
-            examples=['email'],
+            description="Channel this message was carried on. Always `email`.",
+            examples=["email"],
             min_length=1,
         ),
     ]
     thread_id: Annotated[
         str,
         Field(
-            description='Conversation this message belongs to.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="Conversation this message belongs to.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     from_: Annotated[
-        str, Field(alias='from', description='Sender address.', min_length=1)
+        str, Field(alias="from", description="Sender address.", min_length=1)
     ]
-    to: Annotated[list[str], Field(description='Recipient addresses on the To line.')]
+    to: Annotated[list[str], Field(description="Recipient addresses on the To line.")]
     cc: Annotated[
         list[str],
         Field(
-            description='Recipient addresses on the Cc line. Empty when the message had none.'
+            description="Recipient addresses on the Cc line. Empty when the message had none."
         ),
     ]
     delivered_to: Annotated[
         str | None,
         Field(
-            description='Address the message was actually delivered to, when it differs from the mailbox address (for example mail routed in from another address). Null for sent messages and for mail addressed directly to the mailbox.\n'
+            description="Address the message was actually delivered to, when it differs from the mailbox address (for example mail routed in from another address). Null for sent messages and for mail addressed directly to the mailbox.\n"
         ),
     ]
     subject: Annotated[
         str | None,
         Field(
-            description='Message subject. Null when the message had no subject.',
-            examples=['Re: Your order'],
+            description="Message subject. Null when the message had no subject.",
+            examples=["Re: Your order"],
         ),
     ]
     preview: Annotated[
-        str | None, Field(description='Short plain-text preview of the message body.')
+        str | None, Field(description="Short plain-text preview of the message body.")
     ]
     extracted_text: Annotated[
         str | None,
@@ -6042,14 +6057,14 @@ class EmailThreadMessage(BaseModel):
         list[Label],
         Field(
             description="Labels on this message. System labels carry its state: a received message holds exactly one placement label — `inbox` for accepted mail, `archive` when its conversation was filed away, `spam` (failed sender authentication), or `blocked` (rejected by the mailbox's receive policy or rules) — plus `unread` until it is read. `trash` marks a message in the trash, either direction. Custom labels share the same list; a message carries at most 20.\n",
-            examples=[['inbox', 'unread']],
+            examples=[["inbox", "unread"]],
             max_length=20,
         ),
     ]
     status: Annotated[
         str | None,
         Field(
-            description='Folded delivery status of a sent message: `accepted`, `sent` (provider handoff), `delivered` (all attempted recipients delivered), or `failed` (terminal failure). Null for received messages.\n'
+            description="Folded delivery status of a sent message: `accepted`, `sent` (provider handoff), `delivered` (all attempted recipients delivered), or `failed` (terminal failure). Null for received messages.\n"
         ),
     ]
     recipients: Annotated[
@@ -6090,7 +6105,7 @@ class EmailThreadMessage(BaseModel):
         ),
     ]
     attachment_count: Annotated[
-        int, Field(description='Number of attachments on the message.', ge=0)
+        int, Field(description="Number of attachments on the message.", ge=0)
     ]
     attachment_manifest: Annotated[
         list[EmailThreadMessageAttachment],
@@ -6101,20 +6116,20 @@ class EmailThreadMessage(BaseModel):
     reference_ids: Annotated[
         list[str],
         Field(
-            description='RFC 5322 References header entries used to thread the conversation.'
+            description="RFC 5322 References header entries used to thread the conversation."
         ),
     ]
     contact_id: Annotated[
         ContactID | None,
         Field(
-            description='Contact linked to this message, or null when none is linked.'
+            description="Contact linked to this message, or null when none is linked."
         ),
     ]
     source: EmailThreadMessageSource
     occurred_at: Annotated[
         str,
         Field(
-            description='When the message was received or accepted for sending.',
+            description="When the message was received or accepted for sending.",
             min_length=1,
         ),
     ]
@@ -6122,51 +6137,51 @@ class EmailThreadMessage(BaseModel):
 
 class EmailThreadMessageList(FieldListEnvelope):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: list[EmailThreadMessage]
 
 
 class EmailThreadMessageBody(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     html: Annotated[
         str | None,
         Field(
-            description='The HTML body of the message, or null when the message had no HTML part.'
+            description="The HTML body of the message, or null when the message had no HTML part."
         ),
     ]
     text: Annotated[
         str | None,
         Field(
-            description='The plain-text body of the message, or null when the message had no text part.'
+            description="The plain-text body of the message, or null when the message had no text part."
         ),
     ]
 
 
 class EmailThreadMessageAttachmentList(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: list[EmailThreadMessageAttachment]
 
 
 class EmailThreadMessageReplyRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     html: Annotated[
         str | None,
         Field(
-            description='HTML body of the reply. At least one of html or text must be provided.',
+            description="HTML body of the reply. At least one of html or text must be provided.",
             max_length=524288,
         ),
     ] = None
     text: Annotated[
         str | None,
         Field(
-            description='Plain-text body of the reply. At least one of html or text must be provided.',
+            description="Plain-text body of the reply. At least one of html or text must be provided.",
             max_length=524288,
         ),
     ] = None
@@ -6179,17 +6194,17 @@ class EmailThreadMessageReplyRequest(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n',
+            description="Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n'
+            description="Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n"
         ),
     ] = None
-    category: EmailMessageCategory | None = 'transactional'
+    category: EmailMessageCategory | None = "transactional"
     attachments: Annotated[
         list[EmailAttachment] | None,
         Field(
@@ -6201,12 +6216,12 @@ class EmailThreadMessageReplyRequest(BaseModel):
 
 class EmailMailboxComposeRequest(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     to: Annotated[
         list[EmailAddressInput1 | EmailAddress],
         Field(
-            description='Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
             max_length=50,
             min_length=1,
         ),
@@ -6214,31 +6229,31 @@ class EmailMailboxComposeRequest(BaseModel):
     cc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description='CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     bcc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description='BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.',
+            description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     subject: Annotated[
-        str, Field(description='Message subject line.', max_length=998, min_length=1)
+        str, Field(description="Message subject line.", max_length=998, min_length=1)
     ]
     html: Annotated[
         str | None,
         Field(
-            description='HTML body. At least one of html or text must be provided.',
+            description="HTML body. At least one of html or text must be provided.",
             max_length=524288,
         ),
     ] = None
     text: Annotated[
         str | None,
         Field(
-            description='Plain-text body. At least one of html or text must be provided.',
+            description="Plain-text body. At least one of html or text must be provided.",
             max_length=524288,
         ),
     ] = None
@@ -6260,39 +6275,39 @@ class EmailMailboxComposeRequest(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n',
+            description="Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n'
+            description="Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n"
         ),
     ] = None
-    category: EmailMessageCategory | None = 'transactional'
+    category: EmailMessageCategory | None = "transactional"
 
 
-class Type5(str, Enum):
-    system = 'system'
-    custom = 'custom'
+class Type6(str, Enum):
+    system = "system"
+    custom = "custom"
 
 
 class EmailMailboxLabel(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     name: Annotated[
         str,
         Field(
-            description='The label name, as it appears on conversations and messages.',
-            examples=['inbox'],
+            description="The label name, as it appears on conversations and messages.",
+            examples=["inbox"],
             max_length=64,
             min_length=1,
         ),
     ]
     type: Annotated[
-        Type5,
+        Type6,
         Field(
             description="`system` labels are built in and carry state — the placements `inbox`, `archive`, `spam`, `blocked`, and `sent`, plus `trash` and `unread`. `custom` labels are the workspace's own tags."
         ),
@@ -6301,77 +6316,119 @@ class EmailMailboxLabel(BaseModel):
 
 class EmailMailboxLabelList(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     data: list[EmailMailboxLabel]
 
 
-class WebhookEventType(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            description='Webhook event type. Open enum: new event types may be added over time, so treat any unrecognized value in a delivery as a future event rather than an error. Subscribing to a type that is not in the catalog returns a `422`. The values below are the types known at this version.\n',
-            min_length=1,
-        ),
-    ]
+class WebhookEventType(str, Enum):
+    domain_failed = "domain.failed"
+    domain_verified = "domain.verified"
+    email_accepted = "email.accepted"
+    email_bounced = "email.bounced"
+    email_canceled = "email.canceled"
+    email_clicked = "email.clicked"
+    email_complained = "email.complained"
+    email_deferred = "email.deferred"
+    email_delivered = "email.delivered"
+    email_list_unsubscribed = "email.list_unsubscribed"
+    email_opened = "email.opened"
+    email_out_of_band_bounce = "email.out_of_band_bounce"
+    email_processed = "email.processed"
+    email_received = "email.received"
+    email_rejected = "email.rejected"
+    email_scheduled = "email.scheduled"
+    email_unsubscribed = "email.unsubscribed"
+    email_mailbox_message_delivered = "email_mailbox.message_delivered"
+    email_mailbox_message_failed = "email_mailbox.message_failed"
+    email_mailbox_message_received = "email_mailbox.message_received"
+    email_mailbox_message_sent = "email_mailbox.message_sent"
+    email_mailbox_suspended = "email_mailbox.suspended"
+    email_mailbox_thread_created = "email_mailbox.thread_created"
+    email_suppression_created = "email_suppression.created"
+    sms_accepted = "sms.accepted"
+    sms_delivered = "sms.delivered"
+    sms_expired = "sms.expired"
+    sms_failed = "sms.failed"
+    sms_rejected = "sms.rejected"
+    sms_sent = "sms.sent"
+    sms_tfn_verification_approved = "sms.tfn_verification.approved"
+    sms_tfn_verification_info_requested = "sms.tfn_verification.info_requested"
+    sms_tfn_verification_rejected = "sms.tfn_verification.rejected"
+    sms_tfn_verification_submitted = "sms.tfn_verification.submitted"
+    sms_undelivered = "sms.undelivered"
+    verify_attempt_delivered = "verify.attempt.delivered"
+    verify_attempt_sent = "verify.attempt.sent"
+    verify_attempt_undelivered = "verify.attempt.undelivered"
+    verify_verification_created = "verify.verification.created"
+    verify_verification_verified = "verify.verification.verified"
+    voice_call_answered = "voice_call.answered"
+    voice_call_ended = "voice_call.ended"
+    voice_call_initiated = "voice_call.initiated"
+    whatsapp_accepted = "whatsapp.accepted"
+    whatsapp_delivered = "whatsapp.delivered"
+    whatsapp_failed = "whatsapp.failed"
+    whatsapp_read = "whatsapp.read"
+    whatsapp_rejected = "whatsapp.rejected"
+    whatsapp_sent = "whatsapp.sent"
 
 
 class EventDomainFailedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     domain_id: Annotated[
         str,
         Field(
-            description='The sending domain resource whose verification failed.',
-            examples=['dom_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The sending domain resource whose verification failed.",
+            examples=["dom_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^dom_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^dom_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     domain: Annotated[
         str,
         Field(
-            description='The sending domain hostname.',
-            examples=['mail.example.com'],
+            description="The sending domain hostname.",
+            examples=["mail.example.com"],
             min_length=1,
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='The workspace the domain is assigned to.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The workspace the domain is assigned to.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     failure_reason: Annotated[
         str | None,
         Field(
-            description='Why verification failed, when a specific reason is available (for example, the DKIM record was not found at the expected selector).',
-            examples=['DKIM record not found at the expected selector.'],
+            description="Why verification failed, when a specific reason is available (for example, the DKIM record was not found at the expected selector).",
+            examples=["DKIM record not found at the expected selector."],
         ),
     ] = None
 
 
-class Type6(str, Enum):
-    domain_failed = 'domain.failed'
+class Type7(str, Enum):
+    domain_failed = "domain.failed"
 
 
 class EventDomainFailed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['domain.failed'],
-        Field(description='Event type.', examples=['domain.failed']),
+        Literal["domain.failed"],
+        Field(description="Event type.", examples=["domain.failed"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6380,53 +6437,53 @@ class EventDomainFailed(BaseModel):
 
 class EventDomainVerifiedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     domain_id: Annotated[
         str,
         Field(
-            description='The sending domain resource that verified.',
-            examples=['dom_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The sending domain resource that verified.",
+            examples=["dom_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^dom_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^dom_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     domain: Annotated[
         str,
         Field(
-            description='The sending domain hostname.',
-            examples=['mail.example.com'],
+            description="The sending domain hostname.",
+            examples=["mail.example.com"],
             min_length=1,
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='The workspace the domain is assigned to.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The workspace the domain is assigned to.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
-class Type7(str, Enum):
-    domain_verified = 'domain.verified'
+class Type8(str, Enum):
+    domain_verified = "domain.verified"
 
 
 class EventDomainVerified(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['domain.verified'],
-        Field(description='Event type.', examples=['domain.verified']),
+        Literal["domain.verified"],
+        Field(description="Event type.", examples=["domain.verified"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6435,84 +6492,84 @@ class EventDomainVerified(BaseModel):
 
 class EventEmailBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email_id: Annotated[
         str,
         Field(
-            description='ID of the email send.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the email send.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     recipient_id: Annotated[
         str,
         Field(
-            description='ID of the recipient.',
-            examples=['er_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the recipient.",
+            examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^er_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     recipient: Annotated[
         str,
         Field(
-            description='Recipient address as it appeared on the envelope.',
-            examples=['alice@bird.com'],
+            description="Recipient address as it appeared on the envelope.",
+            examples=["alice@bird.com"],
             min_length=1,
         ),
     ]
     recipient_role: Annotated[
-        RecipientRole, Field(description='Envelope position of the recipient.')
+        RecipientRole, Field(description="Envelope position of the recipient.")
     ]
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Tags provided on the send request, echoed on every event for the send so you can route and correlate without an extra lookup. Null when the send carried no tags.\n'
+            description="Tags provided on the send request, echoed on every event for the send so you can route and correlate without an extra lookup. Null when the send carried no tags.\n"
         ),
     ]
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.\n',
-            examples=[{'order_id': 'ord_123'}],
+            description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.\n",
+            examples=[{"order_id": "ord_123"}],
         ),
     ]
 
 
 class EventEmailAcceptedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type8(str, Enum):
-    email_accepted = 'email.accepted'
+class Type9(str, Enum):
+    email_accepted = "email.accepted"
 
 
 class EventEmailAccepted(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.accepted'],
-        Field(description='Event type.', examples=['email.accepted']),
+        Literal["email.accepted"],
+        Field(description="Event type.", examples=["email.accepted"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time Bird accepted the send.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time Bird accepted the send.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6520,16 +6577,16 @@ class EventEmailAccepted(BaseModel):
 
 
 class EmailBounceType(str, Enum):
-    hard = 'hard'
-    soft = 'soft'
-    undetermined = 'undetermined'
-    admin = 'admin'
-    block = 'block'
+    hard = "hard"
+    soft = "soft"
+    undetermined = "undetermined"
+    admin = "admin"
+    block = "block"
 
 
 class EventEmailBouncedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     bounce_type: EmailBounceType
     bounce_class: Annotated[
@@ -6544,43 +6601,43 @@ class EventEmailBouncedData(EventEmailBase):
     bounce_code: Annotated[
         str | None,
         Field(
-            description='SMTP reply code returned by the receiving mail server, or null when none was provided.',
-            examples=['550'],
+            description="SMTP reply code returned by the receiving mail server, or null when none was provided.",
+            examples=["550"],
         ),
     ]
     bounce_description: Annotated[
         str | None,
         Field(
-            description='Human-readable reason the receiving mail server gave for the bounce, or null when none was provided.',
-            examples=['5.1.1 Unknown user'],
+            description="Human-readable reason the receiving mail server gave for the bounce, or null when none was provided.",
+            examples=["5.1.1 Unknown user"],
         ),
     ]
     sending_ip: Annotated[
         str | None,
         Field(
-            description='The IP address used to send this message, or null when it is not known.',
-            examples=['192.0.2.10'],
+            description="The IP address used to send this message, or null when it is not known.",
+            examples=["192.0.2.10"],
         ),
     ]
 
 
-class Type9(str, Enum):
-    email_bounced = 'email.bounced'
+class Type10(str, Enum):
+    email_bounced = "email.bounced"
 
 
 class EventEmailBounced(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.bounced'],
-        Field(description='Event type.', examples=['email.bounced']),
+        Literal["email.bounced"],
+        Field(description="Event type.", examples=["email.bounced"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the bounce was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the bounce was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6589,64 +6646,64 @@ class EventEmailBounced(BaseModel):
 
 class EventEmailMessageBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     email_id: Annotated[
         str,
         Field(
-            description='ID of the email send.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the email send.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Tags provided on the send request, echoed on the event so you can route and correlate without an extra lookup. Null when the send carried no tags.\n'
+            description="Tags provided on the send request, echoed on the event so you can route and correlate without an extra lookup. Null when the send carried no tags.\n"
         ),
     ]
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.\n',
-            examples=[{'order_id': 'ord_123'}],
+            description="The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.\n",
+            examples=[{"order_id": "ord_123"}],
         ),
     ]
 
 
 class EventEmailCanceledData(EventEmailMessageBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type10(str, Enum):
-    email_canceled = 'email.canceled'
+class Type11(str, Enum):
+    email_canceled = "email.canceled"
 
 
 class EventEmailCanceled(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.canceled'],
-        Field(description='Event type.', examples=['email.canceled']),
+        Literal["email.canceled"],
+        Field(description="Event type.", examples=["email.canceled"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the scheduled send was canceled.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the scheduled send was canceled.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6655,49 +6712,49 @@ class EventEmailCanceled(BaseModel):
 
 class EventEmailClickedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     url: Annotated[
         str,
         Field(
-            description='The URL the recipient clicked.',
-            examples=['https://bird.com/welcome'],
+            description="The URL the recipient clicked.",
+            examples=["https://bird.com/welcome"],
             min_length=1,
         ),
     ]
     ip_address: Annotated[
         str | None,
         Field(
-            description='IP address of the client that clicked the link, or null when it is not known.',
-            examples=['203.0.113.9'],
+            description="IP address of the client that clicked the link, or null when it is not known.",
+            examples=["203.0.113.9"],
         ),
     ]
     user_agent: Annotated[
         str | None,
         Field(
-            description='User-agent string of the client that clicked the link, or null when it is not known.',
-            examples=['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'],
+            description="User-agent string of the client that clicked the link, or null when it is not known.",
+            examples=["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"],
         ),
     ]
 
 
-class Type11(str, Enum):
-    email_clicked = 'email.clicked'
+class Type12(str, Enum):
+    email_clicked = "email.clicked"
 
 
 class EventEmailClicked(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.clicked'],
-        Field(description='Event type.', examples=['email.clicked']),
+        Literal["email.clicked"],
+        Field(description="Event type.", examples=["email.clicked"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the click was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the click was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6706,34 +6763,34 @@ class EventEmailClicked(BaseModel):
 
 class EventEmailComplainedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     feedback_type: Annotated[
         str | None,
         Field(
-            description='The kind of feedback the mailbox provider reported (such as `abuse` or `fraud`), or null when the provider did not specify one.',
-            examples=['abuse'],
+            description="The kind of feedback the mailbox provider reported (such as `abuse` or `fraud`), or null when the provider did not specify one.",
+            examples=["abuse"],
         ),
     ]
 
 
-class Type12(str, Enum):
-    email_complained = 'email.complained'
+class Type13(str, Enum):
+    email_complained = "email.complained"
 
 
 class EventEmailComplained(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.complained'],
-        Field(description='Event type.', examples=['email.complained']),
+        Literal["email.complained"],
+        Field(description="Event type.", examples=["email.complained"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the complaint was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the complaint was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6742,7 +6799,7 @@ class EventEmailComplained(BaseModel):
 
 class EventEmailDeferredData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     bounce_type: EmailBounceType
     bounce_class: Annotated[
@@ -6757,36 +6814,36 @@ class EventEmailDeferredData(EventEmailBase):
     defer_reason: Annotated[
         str | None,
         Field(
-            description='Human-readable reason the receiving mail server gave for the deferral, or null when none was provided.',
-            examples=['4.2.1 Mailbox temporarily unavailable, will retry'],
+            description="Human-readable reason the receiving mail server gave for the deferral, or null when none was provided.",
+            examples=["4.2.1 Mailbox temporarily unavailable, will retry"],
         ),
     ]
     sending_ip: Annotated[
         str | None,
         Field(
-            description='The IP address used to send this message, or null when it is not known.',
-            examples=['192.0.2.10'],
+            description="The IP address used to send this message, or null when it is not known.",
+            examples=["192.0.2.10"],
         ),
     ]
 
 
-class Type13(str, Enum):
-    email_deferred = 'email.deferred'
+class Type14(str, Enum):
+    email_deferred = "email.deferred"
 
 
 class EventEmailDeferred(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.deferred'],
-        Field(description='Event type.', examples=['email.deferred']),
+        Literal["email.deferred"],
+        Field(description="Event type.", examples=["email.deferred"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the deferral was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the deferral was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6795,27 +6852,27 @@ class EventEmailDeferred(BaseModel):
 
 class EventEmailDeliveredData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type14(str, Enum):
-    email_delivered = 'email.delivered'
+class Type15(str, Enum):
+    email_delivered = "email.delivered"
 
 
 class EventEmailDelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.delivered'],
-        Field(description='Event type.', examples=['email.delivered']),
+        Literal["email.delivered"],
+        Field(description="Event type.", examples=["email.delivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
             description="Time the recipient's mail server accepted the message.",
-            examples=['2026-05-21 12:00:00+00:00'],
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6824,27 +6881,27 @@ class EventEmailDelivered(BaseModel):
 
 class EventEmailListUnsubscribedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type15(str, Enum):
-    email_list_unsubscribed = 'email.list_unsubscribed'
+class Type16(str, Enum):
+    email_list_unsubscribed = "email.list_unsubscribed"
 
 
 class EventEmailListUnsubscribed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.list_unsubscribed'],
-        Field(description='Event type.', examples=['email.list_unsubscribed']),
+        Literal["email.list_unsubscribed"],
+        Field(description="Event type.", examples=["email.list_unsubscribed"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the unsubscribe was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the unsubscribe was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6853,41 +6910,41 @@ class EventEmailListUnsubscribed(BaseModel):
 
 class EventEmailOpenedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     ip_address: Annotated[
         str | None,
         Field(
-            description='IP address of the client that opened the email, or null when it is not known.',
-            examples=['203.0.113.9'],
+            description="IP address of the client that opened the email, or null when it is not known.",
+            examples=["203.0.113.9"],
         ),
     ]
     user_agent: Annotated[
         str | None,
         Field(
-            description='User-agent string of the client that opened the email, or null when it is not known.',
-            examples=['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'],
+            description="User-agent string of the client that opened the email, or null when it is not known.",
+            examples=["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"],
         ),
     ]
 
 
-class Type16(str, Enum):
-    email_opened = 'email.opened'
+class Type17(str, Enum):
+    email_opened = "email.opened"
 
 
 class EventEmailOpened(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.opened'],
-        Field(description='Event type.', examples=['email.opened']),
+        Literal["email.opened"],
+        Field(description="Event type.", examples=["email.opened"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the open was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the open was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6896,7 +6953,7 @@ class EventEmailOpened(BaseModel):
 
 class EventEmailOutOfBandBounceData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     bounce_type: EmailBounceType
     bounce_class: Annotated[
@@ -6911,43 +6968,43 @@ class EventEmailOutOfBandBounceData(EventEmailBase):
     bounce_code: Annotated[
         str | None,
         Field(
-            description='SMTP reply code returned by the receiving mail server, or null when none was provided.',
-            examples=['550'],
+            description="SMTP reply code returned by the receiving mail server, or null when none was provided.",
+            examples=["550"],
         ),
     ]
     bounce_description: Annotated[
         str | None,
         Field(
-            description='Human-readable reason the receiving mail server gave for the bounce, or null when none was provided.',
-            examples=['5.1.1 Unknown user'],
+            description="Human-readable reason the receiving mail server gave for the bounce, or null when none was provided.",
+            examples=["5.1.1 Unknown user"],
         ),
     ]
     sending_ip: Annotated[
         str | None,
         Field(
-            description='The IP address used to send this message, or null when it is not known.',
-            examples=['192.0.2.10'],
+            description="The IP address used to send this message, or null when it is not known.",
+            examples=["192.0.2.10"],
         ),
     ]
 
 
-class Type17(str, Enum):
-    email_out_of_band_bounce = 'email.out_of_band_bounce'
+class Type18(str, Enum):
+    email_out_of_band_bounce = "email.out_of_band_bounce"
 
 
 class EventEmailOutOfBandBounce(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.out_of_band_bounce'],
-        Field(description='Event type.', examples=['email.out_of_band_bounce']),
+        Literal["email.out_of_band_bounce"],
+        Field(description="Event type.", examples=["email.out_of_band_bounce"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the bounce notification was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the bounce notification was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6956,27 +7013,27 @@ class EventEmailOutOfBandBounce(BaseModel):
 
 class EventEmailProcessedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type18(str, Enum):
-    email_processed = 'email.processed'
+class Type19(str, Enum):
+    email_processed = "email.processed"
 
 
 class EventEmailProcessed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.processed'],
-        Field(description='Event type.', examples=['email.processed']),
+        Literal["email.processed"],
+        Field(description="Event type.", examples=["email.processed"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time Bird processed the message and queued it for SMTP delivery.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time Bird processed the message and queued it for SMTP delivery.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -6985,61 +7042,61 @@ class EventEmailProcessed(BaseModel):
 
 class EventEmailReceivedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     inbound_message_id: Annotated[
         str,
         Field(
-            description='ID of the received email. Use it with GET /v1/email/inbound-messages/{id} to fetch the body, raw content, and attachments.',
-            examples=['rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the received email. Use it with GET /v1/email/inbound-messages/{id} to fetch the body, raw content, and attachments.",
+            examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^rem_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^rem_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     message_id: Annotated[
         str | None,
         Field(
-            description='RFC 5322 Message-ID header from the sender, or null when the sender did not include one.',
-            examples=['<CAH+T8d5...@mail.gmail.com>'],
+            description="RFC 5322 Message-ID header from the sender, or null when the sender did not include one.",
+            examples=["<CAH+T8d5...@mail.gmail.com>"],
         ),
     ]
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Envelope-from address.',
-            examples=['alice@example.com'],
+            alias="from",
+            description="Envelope-from address.",
+            examples=["alice@example.com"],
             min_length=1,
         ),
     ]
     to: Annotated[
         list[str],
         Field(
-            description='Recipient addresses the message was sent to.',
-            examples=[['support@acme.com']],
+            description="Recipient addresses the message was sent to.",
+            examples=[["support@acme.com"]],
         ),
     ]
     subject: Annotated[
         str | None,
         Field(
-            description='Subject line as received, or null when the message had no subject.',
-            examples=['Welcome to Bird'],
+            description="Subject line as received, or null when the message had no subject.",
+            examples=["Welcome to Bird"],
         ),
     ]
     in_reply_to: Annotated[
         str | None,
         Field(
-            description='In-Reply-To header — the Message-ID this message replies to, or null when it is not a reply.',
-            examples=['<previous-message@example.com>'],
+            description="In-Reply-To header — the Message-ID this message replies to, or null when it is not a reply.",
+            examples=["<previous-message@example.com>"],
         ),
     ] = None
     authentication: Annotated[
@@ -7051,46 +7108,46 @@ class EventEmailReceivedData(BaseModel):
     spf_pass: Annotated[
         bool | None,
         Field(
-            description='Whether SPF passed for the sender, or null when the result did not carry an SPF verdict.'
+            description="Whether SPF passed for the sender, or null when the result did not carry an SPF verdict."
         ),
     ] = None
     dkim_pass: Annotated[
         bool | None,
         Field(
-            description='Whether DKIM passed for the sender, or null when the result did not carry a DKIM verdict.'
+            description="Whether DKIM passed for the sender, or null when the result did not carry a DKIM verdict."
         ),
     ] = None
     dmarc_pass: Annotated[
         bool | None,
         Field(
-            description='Whether DMARC passed for the sender, or null when the result did not carry a DMARC verdict.'
+            description="Whether DMARC passed for the sender, or null when the result did not carry a DMARC verdict."
         ),
     ] = None
     spam_score: Annotated[
         float | None,
         Field(
-            description='Spam score for the message. Always null at present; reserved for a future content-scoring capability.'
+            description="Spam score for the message. Always null at present; reserved for a future content-scoring capability."
         ),
     ] = None
 
 
-class Type19(str, Enum):
-    email_received = 'email.received'
+class Type20(str, Enum):
+    email_received = "email.received"
 
 
 class EventEmailReceived(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.received'],
-        Field(description='Event type.', examples=['email.received']),
+        Literal["email.received"],
+        Field(description="Event type.", examples=["email.received"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When Bird received the message.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="When Bird received the message.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7098,39 +7155,39 @@ class EventEmailReceived(BaseModel):
 
 
 class EmailRejectionReason(str, Enum):
-    EmailRejectionReasonRecipientSuppressed = 'recipient_suppressed'
-    EmailRejectionReasonTransmissionFailed = 'transmission_failed'
-    EmailRejectionReasonGenerationFailure = 'generation_failure'
-    EmailRejectionReasonPolicyRejection = 'policy_rejection'
-    EmailRejectionReasonDomainUnverified = 'domain_unverified'
-    EmailRejectionReasonQuotaExceeded = 'quota_exceeded'
-    EmailRejectionReasonRecipientNotAllowed = 'recipient_not_allowed'
+    EmailRejectionReasonRecipientSuppressed = "recipient_suppressed"
+    EmailRejectionReasonTransmissionFailed = "transmission_failed"
+    EmailRejectionReasonGenerationFailure = "generation_failure"
+    EmailRejectionReasonPolicyRejection = "policy_rejection"
+    EmailRejectionReasonDomainUnverified = "domain_unverified"
+    EmailRejectionReasonQuotaExceeded = "quota_exceeded"
+    EmailRejectionReasonRecipientNotAllowed = "recipient_not_allowed"
 
 
 class EventEmailRejectedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     rejection_reason: EmailRejectionReason
 
 
-class Type20(str, Enum):
-    email_rejected = 'email.rejected'
+class Type21(str, Enum):
+    email_rejected = "email.rejected"
 
 
 class EventEmailRejected(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.rejected'],
-        Field(description='Event type.', examples=['email.rejected']),
+        Literal["email.rejected"],
+        Field(description="Event type.", examples=["email.rejected"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the rejection was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the rejection was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7139,35 +7196,35 @@ class EventEmailRejected(BaseModel):
 
 class EventEmailScheduledData(EventEmailMessageBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     scheduled_at: Annotated[
         str,
         Field(
-            description='When the message is scheduled to send.',
-            examples=['2026-05-22 09:00:00+00:00'],
+            description="When the message is scheduled to send.",
+            examples=["2026-05-22 09:00:00+00:00"],
             min_length=1,
         ),
     ]
 
 
-class Type21(str, Enum):
-    email_scheduled = 'email.scheduled'
+class Type22(str, Enum):
+    email_scheduled = "email.scheduled"
 
 
 class EventEmailScheduled(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.scheduled'],
-        Field(description='Event type.', examples=['email.scheduled']),
+        Literal["email.scheduled"],
+        Field(description="Event type.", examples=["email.scheduled"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the send was scheduled.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the send was scheduled.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7176,27 +7233,27 @@ class EventEmailScheduled(BaseModel):
 
 class EventEmailUnsubscribedData(EventEmailBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type22(str, Enum):
-    email_unsubscribed = 'email.unsubscribed'
+class Type23(str, Enum):
+    email_unsubscribed = "email.unsubscribed"
 
 
 class EventEmailUnsubscribed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email.unsubscribed'],
-        Field(description='Event type.', examples=['email.unsubscribed']),
+        Literal["email.unsubscribed"],
+        Field(description="Event type.", examples=["email.unsubscribed"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the unsubscribe was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the unsubscribe was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7205,54 +7262,54 @@ class EventEmailUnsubscribed(BaseModel):
 
 class EventEmailMailboxMessageDeliveredData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     message_id: Annotated[
         str,
         Field(
-            description='ID of the delivered message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the delivered message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='ID of the mailbox the message was sent from.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the mailbox the message was sent from.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     thread_id: Annotated[
         str,
         Field(
-            description='ID of the thread the message belongs to.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the thread the message belongs to.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
-class Type23(str, Enum):
-    email_mailbox_message_delivered = 'email_mailbox.message_delivered'
+class Type24(str, Enum):
+    email_mailbox_message_delivered = "email_mailbox.message_delivered"
 
 
 class EventEmailMailboxMessageDelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_mailbox.message_delivered'],
-        Field(description='Event type.', examples=['email_mailbox.message_delivered']),
+        Literal["email_mailbox.message_delivered"],
+        Field(description="Event type.", examples=["email_mailbox.message_delivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-07-08 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7261,62 +7318,62 @@ class EventEmailMailboxMessageDelivered(BaseModel):
 
 class EventEmailMailboxMessageFailedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     message_id: Annotated[
         str,
         Field(
-            description='ID of the failed message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the failed message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='ID of the mailbox the message was sent from.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the mailbox the message was sent from.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     thread_id: Annotated[
         str,
         Field(
-            description='ID of the thread the message belongs to.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the thread the message belongs to.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     reason: Annotated[
         str,
         Field(
-            description='Why the send folded to failed.',
-            examples=['all recipients bounced'],
+            description="Why the send folded to failed.",
+            examples=["all recipients bounced"],
             min_length=1,
         ),
     ]
 
 
-class Type24(str, Enum):
-    email_mailbox_message_failed = 'email_mailbox.message_failed'
+class Type25(str, Enum):
+    email_mailbox_message_failed = "email_mailbox.message_failed"
 
 
 class EventEmailMailboxMessageFailed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_mailbox.message_failed'],
-        Field(description='Event type.', examples=['email_mailbox.message_failed']),
+        Literal["email_mailbox.message_failed"],
+        Field(description="Event type.", examples=["email_mailbox.message_failed"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-07-08 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7325,82 +7382,82 @@ class EventEmailMailboxMessageFailed(BaseModel):
 
 class EventEmailMailboxMessageReceivedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     message_id: Annotated[
         str,
         Field(
-            description='ID of the received message. The same message fires email.received with this ID as inbound_message_id — when you subscribe to both families, dedupe by this ID.',
-            examples=['rem_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the received message. The same message fires email.received with this ID as inbound_message_id — when you subscribe to both families, dedupe by this ID.",
+            examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^rem_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^rem_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='ID of the mailbox that received the message.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the mailbox that received the message.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     thread_id: Annotated[
         str,
         Field(
-            description='ID of the thread the message was filed into.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the thread the message was filed into.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     route_id: Annotated[
         str | None,
         Field(
-            description='ID (ein_…) of the explicit inbound route that matched, or null when the message was delivered by the virtual exact-address route.',
+            description="ID (ein_…) of the explicit inbound route that matched, or null when the message was delivered by the virtual exact-address route.",
             examples=[None],
         ),
     ] = None
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Envelope-from address.',
-            examples=['alice@example.com'],
+            alias="from",
+            description="Envelope-from address.",
+            examples=["alice@example.com"],
             min_length=1,
         ),
     ]
     to: Annotated[
         list[str],
         Field(
-            description='Recipient addresses the message was sent to.',
-            examples=[['support@inbox.ai']],
+            description="Recipient addresses the message was sent to.",
+            examples=[["support@inbox.ai"]],
         ),
     ]
     subject: Annotated[
         str | None,
         Field(
-            description='Subject line as received, or null when the message had no subject.',
-            examples=['Re: Your quote'],
+            description="Subject line as received, or null when the message had no subject.",
+            examples=["Re: Your quote"],
         ),
     ]
     extracted_text: Annotated[
         str | None,
         Field(
-            description='Plain-text body with quoted history stripped, capped at 64 KB (see truncated_text). Null when extraction produced nothing. This copy is what the mailbox durably retains.',
-            examples=['Sounds good — can you send the invoice?'],
+            description="Plain-text body with quoted history stripped, capped at 64 KB (see truncated_text). Null when extraction produced nothing. This copy is what the mailbox durably retains.",
+            examples=["Sounds good — can you send the invoice?"],
         ),
     ] = None
     truncated_text: Annotated[
         bool | None,
         Field(
-            description='True when extracted_text was truncated to the 64 KB cap; fetch the full text via the thread-member endpoint.'
+            description="True when extracted_text was truncated to the 64 KB cap; fetch the full text via the thread-member endpoint."
         ),
     ] = False
     attachment_count: Annotated[
         int,
         Field(
-            description='Number of attachments on the message. Metadata is durable; bytes are fetchable while within the 30-day original-source window.',
+            description="Number of attachments on the message. Metadata is durable; bytes are fetchable while within the 30-day original-source window.",
             examples=[1],
             ge=0,
         ),
@@ -7414,40 +7471,40 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     spf_pass: Annotated[
         bool | None,
         Field(
-            description='Whether SPF passed for the sender, or null when no verdict was computable.'
+            description="Whether SPF passed for the sender, or null when no verdict was computable."
         ),
     ] = None
     dkim_pass: Annotated[
         bool | None,
         Field(
-            description='Whether DKIM passed for the sender, or null when no verdict was computable.'
+            description="Whether DKIM passed for the sender, or null when no verdict was computable."
         ),
     ] = None
     dmarc_pass: Annotated[
         bool | None,
         Field(
-            description='Whether DMARC passed for the sender, or null when no verdict was computable.'
+            description="Whether DMARC passed for the sender, or null when no verdict was computable."
         ),
     ] = None
 
 
-class Type25(str, Enum):
-    email_mailbox_message_received = 'email_mailbox.message_received'
+class Type26(str, Enum):
+    email_mailbox_message_received = "email_mailbox.message_received"
 
 
 class EventEmailMailboxMessageReceived(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_mailbox.message_received'],
-        Field(description='Event type.', examples=['email_mailbox.message_received']),
+        Literal["email_mailbox.message_received"],
+        Field(description="Event type.", examples=["email_mailbox.message_received"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-07-08 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7456,54 +7513,54 @@ class EventEmailMailboxMessageReceived(BaseModel):
 
 class EventEmailMailboxMessageSentData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     message_id: Annotated[
         str,
         Field(
-            description='ID of the sent message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.',
-            examples=['em_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the sent message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.",
+            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^em_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='ID of the mailbox the message was sent from.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the mailbox the message was sent from.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     thread_id: Annotated[
         str,
         Field(
-            description='ID of the thread the message belongs to.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the thread the message belongs to.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
-class Type26(str, Enum):
-    email_mailbox_message_sent = 'email_mailbox.message_sent'
+class Type27(str, Enum):
+    email_mailbox_message_sent = "email_mailbox.message_sent"
 
 
 class EventEmailMailboxMessageSent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_mailbox.message_sent'],
-        Field(description='Event type.', examples=['email_mailbox.message_sent']),
+        Literal["email_mailbox.message_sent"],
+        Field(description="Event type.", examples=["email_mailbox.message_sent"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-07-08 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7512,44 +7569,44 @@ class EventEmailMailboxMessageSent(BaseModel):
 
 class EventEmailMailboxSuspendedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     mailbox_id: Annotated[
         str,
         Field(
-            description='ID of the suspended mailbox.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the suspended mailbox.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     reason: Annotated[
         str,
         Field(
-            description='Why the mailbox was suspended.',
-            examples=['abuse review'],
+            description="Why the mailbox was suspended.",
+            examples=["abuse review"],
             min_length=1,
         ),
     ]
 
 
-class Type27(str, Enum):
-    email_mailbox_suspended = 'email_mailbox.suspended'
+class Type28(str, Enum):
+    email_mailbox_suspended = "email_mailbox.suspended"
 
 
 class EventEmailMailboxSuspended(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_mailbox.suspended'],
-        Field(description='Event type.', examples=['email_mailbox.suspended']),
+        Literal["email_mailbox.suspended"],
+        Field(description="Event type.", examples=["email_mailbox.suspended"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-07-08 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7557,62 +7614,62 @@ class EventEmailMailboxSuspended(BaseModel):
 
 
 class InitiatedBy(str, Enum):
-    inbound = 'inbound'
-    outbound = 'outbound'
+    inbound = "inbound"
+    outbound = "outbound"
 
 
 class EventEmailMailboxThreadCreatedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     thread_id: Annotated[
         str,
         Field(
-            description='ID of the thread.',
-            examples=['thr_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the thread.",
+            examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^thr_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     mailbox_id: Annotated[
         str,
         Field(
-            description='ID of the mailbox.',
-            examples=['mbx_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the mailbox.",
+            examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^mbx_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     subject: Annotated[
         str | None,
         Field(
-            description='Subject of the first message in the thread, or null when it had none.',
-            examples=['Your quote'],
+            description="Subject of the first message in the thread, or null when it had none.",
+            examples=["Your quote"],
         ),
     ]
     initiated_by: Annotated[
         InitiatedBy,
-        Field(description='Which direction created the thread.', examples=['inbound']),
+        Field(description="Which direction created the thread.", examples=["inbound"]),
     ]
 
 
-class Type28(str, Enum):
-    email_mailbox_thread_created = 'email_mailbox.thread_created'
+class Type29(str, Enum):
+    email_mailbox_thread_created = "email_mailbox.thread_created"
 
 
 class EventEmailMailboxThreadCreated(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_mailbox.thread_created'],
-        Field(description='Event type.', examples=['email_mailbox.thread_created']),
+        Literal["email_mailbox.thread_created"],
+        Field(description="Event type.", examples=["email_mailbox.thread_created"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-07-08 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-07-08 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7621,61 +7678,61 @@ class EventEmailMailboxThreadCreated(BaseModel):
 
 class EventEmailSuppressionCreatedData(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     suppression_id: Annotated[
         str,
         Field(
-            description='The suppression entry that was created.',
-            examples=['sup_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The suppression entry that was created.",
+            examples=["sup_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^sup_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^sup_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     email: Annotated[
         str,
         Field(
-            description='The recipient address that was added to the suppression list.',
-            examples=['user@example.com'],
+            description="The recipient address that was added to the suppression list.",
+            examples=["user@example.com"],
             min_length=1,
         ),
     ]
     reason: Annotated[
         str,
         Field(
-            description='Why the address was suppressed. This list grows over time — treat unknown values as informational rather than rejecting the event.\n',
-            examples=['hard_bounce'],
+            description="Why the address was suppressed. This list grows over time — treat unknown values as informational rather than rejecting the event.\n",
+            examples=["hard_bounce"],
             min_length=1,
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='The workspace the suppression belongs to.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="The workspace the suppression belongs to.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
-class Type29(str, Enum):
-    email_suppression_created = 'email_suppression.created'
+class Type30(str, Enum):
+    email_suppression_created = "email_suppression.created"
 
 
 class EventEmailSuppressionCreated(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['email_suppression.created'],
-        Field(description='Event type.', examples=['email_suppression.created']),
+        Literal["email_suppression.created"],
+        Field(description="Event type.", examples=["email_suppression.created"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the event occurred.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="When the event occurred.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7684,81 +7741,81 @@ class EventEmailSuppressionCreated(BaseModel):
 
 class EventSMSBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     sms_id: Annotated[
         str,
         Field(
-            description='ID of the SMS message.',
-            examples=['sms_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the SMS message.",
+            examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^sms_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     to: Annotated[
         str,
         Field(
-            description='Recipient phone number in E.164 format.',
-            examples=['+15551234567'],
+            description="Recipient phone number in E.164 format.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     from_: Annotated[
         str,
         Field(
-            alias='from',
-            description='Sender the message was sent from — an E.164 number, an alphanumeric sender ID, or a short code.',
-            examples=['+15557654321'],
+            alias="from",
+            description="Sender the message was sent from — an E.164 number, an alphanumeric sender ID, or a short code.",
+            examples=["+15557654321"],
             min_length=1,
         ),
     ]
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Tags provided on the send request, echoed on every event for the message so you can route and correlate without an extra lookup. Null when the message carried no tags.\n'
+            description="Tags provided on the send request, echoed on every event for the message so you can route and correlate without an extra lookup. Null when the message carried no tags.\n"
         ),
     ]
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.\n',
-            examples=[{'order_id': 'ord_123'}],
+            description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.\n",
+            examples=[{"order_id": "ord_123"}],
         ),
     ]
 
 
 class EventSMSAcceptedData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type30(str, Enum):
-    sms_accepted = 'sms.accepted'
+class Type31(str, Enum):
+    sms_accepted = "sms.accepted"
 
 
 class EventSMSAccepted(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.accepted'],
-        Field(description='Event type.', examples=['sms.accepted']),
+        Literal["sms.accepted"],
+        Field(description="Event type.", examples=["sms.accepted"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time Bird accepted the request.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time Bird accepted the request.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7767,41 +7824,41 @@ class EventSMSAccepted(BaseModel):
 
 class EventSMSDeliveredData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     carrier: Annotated[
         str | None,
         Field(
-            description='Carrier that delivered the message, or null when not known.',
-            examples=['Verizon'],
+            description="Carrier that delivered the message, or null when not known.",
+            examples=["Verizon"],
         ),
     ]
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description='Mobile country code and mobile network code of the carrier, or null when not known.',
-            examples=['311480'],
+            description="Mobile country code and mobile network code of the carrier, or null when not known.",
+            examples=["311480"],
         ),
     ]
 
 
-class Type31(str, Enum):
-    sms_delivered = 'sms.delivered'
+class Type32(str, Enum):
+    sms_delivered = "sms.delivered"
 
 
 class EventSMSDelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.delivered'],
-        Field(description='Event type.', examples=['sms.delivered']),
+        Literal["sms.delivered"],
+        Field(description="Event type.", examples=["sms.delivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the carrier confirmed delivery.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the carrier confirmed delivery.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7810,27 +7867,27 @@ class EventSMSDelivered(BaseModel):
 
 class EventSMSExpiredData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type32(str, Enum):
-    sms_expired = 'sms.expired'
+class Type33(str, Enum):
+    sms_expired = "sms.expired"
 
 
 class EventSMSExpired(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.expired'],
-        Field(description='Event type.', examples=['sms.expired']),
+        Literal["sms.expired"],
+        Field(description="Event type.", examples=["sms.expired"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the message expired.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the message expired.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7839,29 +7896,29 @@ class EventSMSExpired(BaseModel):
 
 class EventSMSFailedData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     error: Annotated[
-        SMSError | None, Field(description='Why the message terminally failed.')
+        SMSError | None, Field(description="Why the message terminally failed.")
     ]
 
 
-class Type33(str, Enum):
-    sms_failed = 'sms.failed'
+class Type34(str, Enum):
+    sms_failed = "sms.failed"
 
 
 class EventSMSFailed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.failed'], Field(description='Event type.', examples=['sms.failed'])
+        Literal["sms.failed"], Field(description="Event type.", examples=["sms.failed"])
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the failure was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the failure was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7870,31 +7927,31 @@ class EventSMSFailed(BaseModel):
 
 class EventSMSRejectedData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     error: Annotated[
         SMSError | None,
-        Field(description='Why the message was rejected before reaching the carrier.'),
+        Field(description="Why the message was rejected before reaching the carrier."),
     ]
 
 
-class Type34(str, Enum):
-    sms_rejected = 'sms.rejected'
+class Type35(str, Enum):
+    sms_rejected = "sms.rejected"
 
 
 class EventSMSRejected(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.rejected'],
-        Field(description='Event type.', examples=['sms.rejected']),
+        Literal["sms.rejected"],
+        Field(description="Event type.", examples=["sms.rejected"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the rejection was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the rejection was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7903,40 +7960,40 @@ class EventSMSRejected(BaseModel):
 
 class EventSMSSentData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     carrier: Annotated[
         str | None,
         Field(
-            description='Carrier that handled the message, or null when not known.',
-            examples=['Verizon'],
+            description="Carrier that handled the message, or null when not known.",
+            examples=["Verizon"],
         ),
     ]
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description='Mobile country code and mobile network code of the carrier, or null when not known.',
-            examples=['311480'],
+            description="Mobile country code and mobile network code of the carrier, or null when not known.",
+            examples=["311480"],
         ),
     ]
 
 
-class Type35(str, Enum):
-    sms_sent = 'sms.sent'
+class Type36(str, Enum):
+    sms_sent = "sms.sent"
 
 
 class EventSMSSent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.sent'], Field(description='Event type.', examples=['sms.sent'])
+        Literal["sms.sent"], Field(description="Event type.", examples=["sms.sent"])
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the message was handed to the carrier.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the message was handed to the carrier.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -7945,68 +8002,68 @@ class EventSMSSent(BaseModel):
 
 class EventSMSTfnVerificationBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     verification_id: Annotated[
         str,
         Field(
-            description='ID of the toll-free verification.',
-            examples=['tfv_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the toll-free verification.",
+            examples=["tfv_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^tfv_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^tfv_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace that owns the verification.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace that owns the verification.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     status: Annotated[
         str,
         Field(
-            description='Lifecycle state of the verification at the time of the event.',
-            examples=['approved'],
+            description="Lifecycle state of the verification at the time of the event.",
+            examples=["approved"],
             min_length=1,
         ),
     ]
     sender_id: Annotated[
         str,
         Field(
-            description='ID of the toll-free number the verification licenses.',
-            examples=['snd_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the toll-free number the verification licenses.",
+            examples=["snd_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^snd_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^snd_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class EventSMSTfnVerificationApprovedData(EventSMSTfnVerificationBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type36(str, Enum):
-    sms_tfn_verification_approved = 'sms.tfn_verification.approved'
+class Type37(str, Enum):
+    sms_tfn_verification_approved = "sms.tfn_verification.approved"
 
 
 class EventSMSTfnVerificationApproved(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.tfn_verification.approved'],
-        Field(description='Event type.', examples=['sms.tfn_verification.approved']),
+        Literal["sms.tfn_verification.approved"],
+        Field(description="Event type.", examples=["sms.tfn_verification.approved"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the approval was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the approval was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8015,29 +8072,29 @@ class EventSMSTfnVerificationApproved(BaseModel):
 
 class EventSMSTfnVerificationInfoRequestedData(EventSMSTfnVerificationBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type37(str, Enum):
-    sms_tfn_verification_info_requested = 'sms.tfn_verification.info_requested'
+class Type38(str, Enum):
+    sms_tfn_verification_info_requested = "sms.tfn_verification.info_requested"
 
 
 class EventSMSTfnVerificationInfoRequested(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.tfn_verification.info_requested'],
+        Literal["sms.tfn_verification.info_requested"],
         Field(
-            description='Event type.', examples=['sms.tfn_verification.info_requested']
+            description="Event type.", examples=["sms.tfn_verification.info_requested"]
         ),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the information request was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the information request was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8050,41 +8107,41 @@ class DenialReason(RootModel[str]):
 
 class EventSMSTfnVerificationRejectedData(EventSMSTfnVerificationBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     denial_reasons: Annotated[
         list[DenialReason],
         Field(
-            description='Human-readable reasons the carrier gave for the rejection.',
-            examples=[['opt-in workflow unclear']],
+            description="Human-readable reasons the carrier gave for the rejection.",
+            examples=[["opt-in workflow unclear"]],
         ),
     ]
     resubmit_allowed: Annotated[
         bool,
         Field(
-            description='Whether the verification may be corrected and resubmitted within the resubmission window.',
+            description="Whether the verification may be corrected and resubmitted within the resubmission window.",
             examples=[True],
         ),
     ]
 
 
-class Type38(str, Enum):
-    sms_tfn_verification_rejected = 'sms.tfn_verification.rejected'
+class Type39(str, Enum):
+    sms_tfn_verification_rejected = "sms.tfn_verification.rejected"
 
 
 class EventSMSTfnVerificationRejected(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.tfn_verification.rejected'],
-        Field(description='Event type.', examples=['sms.tfn_verification.rejected']),
+        Literal["sms.tfn_verification.rejected"],
+        Field(description="Event type.", examples=["sms.tfn_verification.rejected"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the rejection was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the rejection was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8093,27 +8150,27 @@ class EventSMSTfnVerificationRejected(BaseModel):
 
 class EventSMSTfnVerificationSubmittedData(EventSMSTfnVerificationBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type39(str, Enum):
-    sms_tfn_verification_submitted = 'sms.tfn_verification.submitted'
+class Type40(str, Enum):
+    sms_tfn_verification_submitted = "sms.tfn_verification.submitted"
 
 
 class EventSMSTfnVerificationSubmitted(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.tfn_verification.submitted'],
-        Field(description='Event type.', examples=['sms.tfn_verification.submitted']),
+        Literal["sms.tfn_verification.submitted"],
+        Field(description="Event type.", examples=["sms.tfn_verification.submitted"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the verification was submitted.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the verification was submitted.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8122,30 +8179,30 @@ class EventSMSTfnVerificationSubmitted(BaseModel):
 
 class EventSMSUndeliveredData(EventSMSBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     error: Annotated[
-        SMSError | None, Field(description='Why the message was not delivered.')
+        SMSError | None, Field(description="Why the message was not delivered.")
     ]
 
 
-class Type40(str, Enum):
-    sms_undelivered = 'sms.undelivered'
+class Type41(str, Enum):
+    sms_undelivered = "sms.undelivered"
 
 
 class EventSMSUndelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['sms.undelivered'],
-        Field(description='Event type.', examples=['sms.undelivered']),
+        Literal["sms.undelivered"],
+        Field(description="Event type.", examples=["sms.undelivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the non-delivery was recorded.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the non-delivery was recorded.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8154,102 +8211,98 @@ class EventSMSUndelivered(BaseModel):
 
 class EventVerifyBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     verification_id: Annotated[
         str,
         Field(
-            description='ID of the verification session.',
-            examples=['vrf_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the verification session.",
+            examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^vrf_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^vrf_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     to: Annotated[
         VerificationTo,
         Field(
-            description='The recipient identity of the verification session (email address, phone number, or both), echoed on every event so you can correlate without an extra lookup. An individual attempt reports the single address it was dispatched to in its own `address` field.'
+            description="The recipient identity of the verification session (email address, phone number, or both), echoed on every event so you can correlate without an extra lookup. An individual attempt reports the single address it was dispatched to in its own `address` field."
         ),
     ]
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.\n',
-            examples=[{'user_id': 'usr_123'}],
+            description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.\n",
+            examples=[{"user_id": "usr_123"}],
         ),
     ]
 
 
 class EventVerifyAttemptDeliveredData(EventVerifyBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     channel: Annotated[
-        str,
-        Field(
-            description='The channel this attempt was sent on.',
-            examples=['sms'],
-            min_length=1,
-        ),
+        Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")],
+        Field(description="The channel this attempt was sent on.", examples=["sms"]),
     ]
     address: Annotated[
         str,
         Field(
-            description='The single address this attempt was dispatched to, an E.164 phone number or an email address.',
-            examples=['+15551234567'],
+            description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     carrier: Annotated[
         str | None,
         Field(
-            description='Carrier that delivered the message, when the carrier network reports it. Always null for email and WhatsApp.',
-            examples=['Verizon'],
+            description="Carrier that delivered the message, when the carrier network reports it. Always null for email and WhatsApp.",
+            examples=["Verizon"],
         ),
     ]
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description='Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email and WhatsApp.',
-            examples=['311480'],
+            description="Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email and WhatsApp.",
+            examples=["311480"],
         ),
     ]
     delivered_at: Annotated[
         str,
         Field(
-            description='Time delivery was confirmed.',
-            examples=['2026-07-24 12:00:05+00:00'],
+            description="Time delivery was confirmed.",
+            examples=["2026-07-24 12:00:05+00:00"],
             min_length=1,
         ),
     ]
 
 
-class Type41(str, Enum):
-    verify_attempt_delivered = 'verify.attempt.delivered'
+class Type42(str, Enum):
+    verify_attempt_delivered = "verify.attempt.delivered"
 
 
 class EventVerifyAttemptDelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['verify.attempt.delivered'],
-        Field(description='Event type.', examples=['verify.attempt.delivered']),
+        Literal["verify.attempt.delivered"],
+        Field(description="Event type.", examples=["verify.attempt.delivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time delivery was confirmed.',
-            examples=['2026-07-24 12:00:05+00:00'],
+            description="Time delivery was confirmed.",
+            examples=["2026-07-24 12:00:05+00:00"],
             min_length=1,
         ),
     ]
@@ -8258,59 +8311,55 @@ class EventVerifyAttemptDelivered(BaseModel):
 
 class EventVerifyAttemptSentData(EventVerifyBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     channel: Annotated[
-        str,
-        Field(
-            description='The channel this attempt was sent on.',
-            examples=['sms'],
-            min_length=1,
-        ),
+        Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")],
+        Field(description="The channel this attempt was sent on.", examples=["sms"]),
     ]
     address: Annotated[
         str,
         Field(
-            description='The single address this attempt was dispatched to, an E.164 phone number or an email address.',
-            examples=['+15551234567'],
+            description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     from_: Annotated[
         str | None,
         Field(
-            alias='from',
-            description='The sender the passcode was sent from: a phone number, alphanumeric sender ID, short code, or email address. Null when the channel exposes no sender.',
-            examples=['Authifly'],
+            alias="from",
+            description="The sender the passcode was sent from: a phone number, alphanumeric sender ID, short code, or email address. Null when the channel exposes no sender.",
+            examples=["Authifly"],
         ),
     ]
     sent_at: Annotated[
         str,
         Field(
-            description='Time the passcode was dispatched.',
-            examples=['2026-07-24 12:00:01+00:00'],
+            description="Time the passcode was dispatched.",
+            examples=["2026-07-24 12:00:01+00:00"],
             min_length=1,
         ),
     ]
 
 
-class Type42(str, Enum):
-    verify_attempt_sent = 'verify.attempt.sent'
+class Type43(str, Enum):
+    verify_attempt_sent = "verify.attempt.sent"
 
 
 class EventVerifyAttemptSent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['verify.attempt.sent'],
-        Field(description='Event type.', examples=['verify.attempt.sent']),
+        Literal["verify.attempt.sent"],
+        Field(description="Event type.", examples=["verify.attempt.sent"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the passcode was dispatched.',
-            examples=['2026-07-24 12:00:01+00:00'],
+            description="Time the passcode was dispatched.",
+            examples=["2026-07-24 12:00:01+00:00"],
             min_length=1,
         ),
     ]
@@ -8319,66 +8368,64 @@ class EventVerifyAttemptSent(BaseModel):
 
 class EventVerifyAttemptUndeliveredData(EventVerifyBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     channel: Annotated[
-        str,
-        Field(
-            description='The channel this attempt was sent on.',
-            examples=['sms'],
-            min_length=1,
-        ),
+        Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")],
+        Field(description="The channel this attempt was sent on.", examples=["sms"]),
     ]
     address: Annotated[
         str,
         Field(
-            description='The single address this attempt was dispatched to, an E.164 phone number or an email address.',
-            examples=['+15551234567'],
+            description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
+            examples=["+15551234567"],
             min_length=1,
         ),
     ]
     reason: Annotated[
-        str,
+        Annotated[
+            Union[VerificationAttemptFailureReason, str],
+            Field(union_mode="left_to_right"),
+        ],
         Field(
-            description='Why the attempt failed to reach the recipient.',
-            examples=['carrier_rejected'],
-            min_length=1,
+            description="Why the attempt failed to reach the recipient.",
+            examples=["carrier_rejected"],
         ),
     ]
     error: Annotated[
         str | None,
         Field(
-            description='Diagnostic text describing the failure, for display only. Null when none was reported.',
-            examples=['550: mailbox unavailable'],
+            description="Diagnostic text describing the failure, for display only. Null when none was reported.",
+            examples=["550: mailbox unavailable"],
         ),
     ]
     failed_at: Annotated[
         str,
         Field(
-            description='Time the failure was recorded.',
-            examples=['2026-07-24 12:00:05+00:00'],
+            description="Time the failure was recorded.",
+            examples=["2026-07-24 12:00:05+00:00"],
             min_length=1,
         ),
     ]
 
 
-class Type43(str, Enum):
-    verify_attempt_undelivered = 'verify.attempt.undelivered'
+class Type44(str, Enum):
+    verify_attempt_undelivered = "verify.attempt.undelivered"
 
 
 class EventVerifyAttemptUndelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['verify.attempt.undelivered'],
-        Field(description='Event type.', examples=['verify.attempt.undelivered']),
+        Literal["verify.attempt.undelivered"],
+        Field(description="Event type.", examples=["verify.attempt.undelivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the failure was recorded.',
-            examples=['2026-07-24 12:00:05+00:00'],
+            description="Time the failure was recorded.",
+            examples=["2026-07-24 12:00:05+00:00"],
             min_length=1,
         ),
     ]
@@ -8387,51 +8434,50 @@ class EventVerifyAttemptUndelivered(BaseModel):
 
 class EventVerifyVerificationCreatedData(EventVerifyBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     channel: Annotated[
-        str,
+        Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")],
         Field(
             description="The first channel of the verification's resolved channel plan.",
-            examples=['sms'],
-            min_length=1,
+            examples=["sms"],
         ),
     ]
     status: Annotated[
         str,
         Field(
             description="The verification's state at creation, always `pending`. Open enum for forward compatibility.",
-            examples=['pending'],
+            examples=["pending"],
             min_length=1,
         ),
     ]
     created_at: Annotated[
         str,
         Field(
-            description='Time the verification session was created.',
-            examples=['2026-07-24 12:00:00+00:00'],
+            description="Time the verification session was created.",
+            examples=["2026-07-24 12:00:00+00:00"],
             min_length=1,
         ),
     ]
 
 
-class Type44(str, Enum):
-    verify_verification_created = 'verify.verification.created'
+class Type45(str, Enum):
+    verify_verification_created = "verify.verification.created"
 
 
 class EventVerifyVerificationCreated(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['verify.verification.created'],
-        Field(description='Event type.', examples=['verify.verification.created']),
+        Literal["verify.verification.created"],
+        Field(description="Event type.", examples=["verify.verification.created"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the verification session was created.',
-            examples=['2026-07-24 12:00:00+00:00'],
+            description="Time the verification session was created.",
+            examples=["2026-07-24 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8440,50 +8486,51 @@ class EventVerifyVerificationCreated(BaseModel):
 
 class EventVerifyVerificationVerifiedData(EventVerifyBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     status: Annotated[
         str,
         Field(
             description="The verification's state, always `verified`. Open enum for forward compatibility.",
-            examples=['verified'],
+            examples=["verified"],
             min_length=1,
         ),
     ]
     channel: Annotated[
-        VerificationChannel | None,
+        Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]
+        | None,
         Field(
-            description='The channel whose passcode the recipient confirmed, the channel that converted. Null when the verification was resolved without attributing a channel.',
-            examples=['sms'],
+            description="The channel whose passcode the recipient confirmed, the channel that converted. Null when the verification was resolved without attributing a channel.",
+            examples=["sms"],
         ),
     ]
     verified_at: Annotated[
         str,
         Field(
-            description='Time the verification was verified.',
-            examples=['2026-07-24 12:01:00+00:00'],
+            description="Time the verification was verified.",
+            examples=["2026-07-24 12:01:00+00:00"],
             min_length=1,
         ),
     ]
 
 
-class Type45(str, Enum):
-    verify_verification_verified = 'verify.verification.verified'
+class Type46(str, Enum):
+    verify_verification_verified = "verify.verification.verified"
 
 
 class EventVerifyVerificationVerified(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['verify.verification.verified'],
-        Field(description='Event type.', examples=['verify.verification.verified']),
+        Literal["verify.verification.verified"],
+        Field(description="Event type.", examples=["verify.verification.verified"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the verification was verified.',
-            examples=['2026-07-24 12:01:00+00:00'],
+            description="Time the verification was verified.",
+            examples=["2026-07-24 12:01:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8494,60 +8541,60 @@ class VoiceSessionID(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            examples=['vcs_01krdgeqcxet5s7t44vh8rt9mg'],
+            examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^vcs_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
 
 
 class VoiceCallDirection(str, Enum):
-    inbound = 'inbound'
-    outbound = 'outbound'
+    inbound = "inbound"
+    outbound = "outbound"
 
 
 class EventVoiceBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     call_id: Annotated[
         str,
         Field(
-            description='ID of the call record.',
-            examples=['vcl_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the call record.",
+            examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^vcl_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     session_id: Annotated[
         VoiceSessionID | None,
         Field(
-            description='Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. Null when session correlation is not available for the call.'
+            description="Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. Null when session correlation is not available for the call."
         ),
     ] = None
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     direction: VoiceCallDirection
     src_number: Annotated[
         str,
         Field(
-            description='Calling party number in E.164 format.',
-            examples=['+14155551234'],
+            description="Calling party number in E.164 format.",
+            examples=["+14155551234"],
             min_length=1,
         ),
     ]
     dst_number: Annotated[
         str,
         Field(
-            description='Called party number in E.164 format.',
-            examples=['+16505559876'],
+            description="Called party number in E.164 format.",
+            examples=["+16505559876"],
             min_length=1,
         ),
     ]
@@ -8555,27 +8602,27 @@ class EventVoiceBase(BaseModel):
 
 class EventVoiceCallAnsweredData(EventVoiceBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type46(str, Enum):
-    voice_call_answered = 'voice_call.answered'
+class Type47(str, Enum):
+    voice_call_answered = "voice_call.answered"
 
 
 class EventVoiceCallAnswered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['voice_call.answered'],
-        Field(description='Event type.', examples=['voice_call.answered']),
+        Literal["voice_call.answered"],
+        Field(description="Event type.", examples=["voice_call.answered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the call was answered.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the call was answered.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8583,26 +8630,26 @@ class EventVoiceCallAnswered(BaseModel):
 
 
 class VoiceCallStatus(str, Enum):
-    answered = 'answered'
-    no_answer = 'no_answer'
-    busy = 'busy'
-    canceled = 'canceled'
-    failed = 'failed'
-    rejected = 'rejected'
-    unknown = 'unknown'
-    ringing = 'ringing'
-    in_progress = 'in_progress'
+    answered = "answered"
+    no_answer = "no_answer"
+    busy = "busy"
+    canceled = "canceled"
+    failed = "failed"
+    rejected = "rejected"
+    unknown = "unknown"
+    ringing = "ringing"
+    in_progress = "in_progress"
 
 
 class EventVoiceCallEndedData(EventVoiceBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     status: VoiceCallStatus
     sip_response_code: Annotated[
         int | None,
         Field(
-            description='Final SIP response code received from the carrier. Null when no SIP response was received, for example on timeout or DNS failure.',
+            description="Final SIP response code received from the carrier. Null when no SIP response was received, for example on timeout or DNS failure.",
             examples=[200],
             ge=100,
         ),
@@ -8610,7 +8657,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
     duration_ms: Annotated[
         int,
         Field(
-            description='Total call duration in milliseconds, measured from the first INVITE to the BYE or final response.',
+            description="Total call duration in milliseconds, measured from the first INVITE to the BYE or final response.",
             examples=[65000],
             ge=0,
         ),
@@ -8618,30 +8665,30 @@ class EventVoiceCallEndedData(EventVoiceBase):
     billable_ms: Annotated[
         int,
         Field(
-            description='Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls.',
+            description="Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls.",
             examples=[60000],
             ge=0,
         ),
     ]
 
 
-class Type47(str, Enum):
-    voice_call_ended = 'voice_call.ended'
+class Type48(str, Enum):
+    voice_call_ended = "voice_call.ended"
 
 
 class EventVoiceCallEnded(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['voice_call.ended'],
-        Field(description='Event type.', examples=['voice_call.ended']),
+        Literal["voice_call.ended"],
+        Field(description="Event type.", examples=["voice_call.ended"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='When the call ended (BYE or final non-2xx response).',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="When the call ended (BYE or final non-2xx response).",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8650,27 +8697,27 @@ class EventVoiceCallEnded(BaseModel):
 
 class EventVoiceCallInitiatedData(EventVoiceBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type48(str, Enum):
-    voice_call_initiated = 'voice_call.initiated'
+class Type49(str, Enum):
+    voice_call_initiated = "voice_call.initiated"
 
 
 class EventVoiceCallInitiated(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['voice_call.initiated'],
-        Field(description='Event type.', examples=['voice_call.initiated']),
+        Literal["voice_call.initiated"],
+        Field(description="Event type.", examples=["voice_call.initiated"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the call was initiated.',
-            examples=['2026-05-21 12:00:00+00:00'],
+            description="Time the call was initiated.",
+            examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8678,89 +8725,89 @@ class EventVoiceCallInitiated(BaseModel):
 
 
 class Direction3(str, Enum):
-    outbound = 'outbound'
-    inbound = 'inbound'
+    outbound = "outbound"
+    inbound = "inbound"
 
 
 class EventWhatsAppBase(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     whatsapp_id: Annotated[
         str,
         Field(
-            description='ID of the WhatsApp message.',
-            examples=['wam_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the WhatsApp message.",
+            examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^wam_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     workspace_id: Annotated[
         str,
         Field(
-            description='ID of the workspace.',
-            examples=['ws_01krdgeqcxet5s7t44vh8rt9mg'],
+            description="ID of the workspace.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
-            pattern='^ws_[0-9a-hjkmnp-tv-z]{26}$',
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
     direction: Annotated[
         Direction3,
         Field(
-            description='Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).'
+            description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`)."
         ),
     ]
     from_: Annotated[
         WhatsAppAddress,
         Field(
-            alias='from',
-            description='Sender of the message. On outbound messages, the business number it was sent from.',
+            alias="from",
+            description="Sender of the message. On outbound messages, the business number it was sent from.",
         ),
     ]
     to: Annotated[
         WhatsAppAddress,
         Field(
-            description='Recipient of the message. On outbound messages, the WhatsApp contact.'
+            description="Recipient of the message. On outbound messages, the WhatsApp contact."
         ),
     ]
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description='Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.\n'
+            description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.\n"
         ),
     ]
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description='The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.\n',
-            examples=[{'order_id': 'ord_123'}],
+            description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.\n",
+            examples=[{"order_id": "ord_123"}],
         ),
     ]
 
 
 class EventWhatsAppAcceptedData(EventWhatsAppBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type49(str, Enum):
-    whatsapp_accepted = 'whatsapp.accepted'
+class Type50(str, Enum):
+    whatsapp_accepted = "whatsapp.accepted"
 
 
 class EventWhatsAppAccepted(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['whatsapp.accepted'],
-        Field(description='Event type.', examples=['whatsapp.accepted']),
+        Literal["whatsapp.accepted"],
+        Field(description="Event type.", examples=["whatsapp.accepted"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time Bird accepted and charged the send request.',
-            examples=['2026-07-16 12:00:00+00:00'],
+            description="Time Bird accepted and charged the send request.",
+            examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8769,27 +8816,27 @@ class EventWhatsAppAccepted(BaseModel):
 
 class EventWhatsAppDeliveredData(EventWhatsAppBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type50(str, Enum):
-    whatsapp_delivered = 'whatsapp.delivered'
+class Type51(str, Enum):
+    whatsapp_delivered = "whatsapp.delivered"
 
 
 class EventWhatsAppDelivered(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['whatsapp.delivered'],
-        Field(description='Event type.', examples=['whatsapp.delivered']),
+        Literal["whatsapp.delivered"],
+        Field(description="Event type.", examples=["whatsapp.delivered"]),
     ]
     timestamp: Annotated[
         str,
         Field(
             description="Time the message was delivered to the recipient's device.",
-            examples=['2026-07-16 12:00:00+00:00'],
+            examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8798,30 +8845,30 @@ class EventWhatsAppDelivered(BaseModel):
 
 class EventWhatsAppFailedData(EventWhatsAppBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     error: Annotated[
-        WhatsAppError | None, Field(description='Why the message terminally failed.')
+        WhatsAppError | None, Field(description="Why the message terminally failed.")
     ]
 
 
-class Type51(str, Enum):
-    whatsapp_failed = 'whatsapp.failed'
+class Type52(str, Enum):
+    whatsapp_failed = "whatsapp.failed"
 
 
 class EventWhatsAppFailed(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['whatsapp.failed'],
-        Field(description='Event type.', examples=['whatsapp.failed']),
+        Literal["whatsapp.failed"],
+        Field(description="Event type.", examples=["whatsapp.failed"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the failure was recorded.',
-            examples=['2026-07-16 12:00:00+00:00'],
+            description="Time the failure was recorded.",
+            examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8830,27 +8877,27 @@ class EventWhatsAppFailed(BaseModel):
 
 class EventWhatsAppReadData(EventWhatsAppBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type52(str, Enum):
-    whatsapp_read = 'whatsapp.read'
+class Type53(str, Enum):
+    whatsapp_read = "whatsapp.read"
 
 
 class EventWhatsAppRead(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['whatsapp.read'],
-        Field(description='Event type.', examples=['whatsapp.read']),
+        Literal["whatsapp.read"],
+        Field(description="Event type.", examples=["whatsapp.read"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the recipient read the message.',
-            examples=['2026-07-16 12:00:00+00:00'],
+            description="Time the recipient read the message.",
+            examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8859,31 +8906,31 @@ class EventWhatsAppRead(BaseModel):
 
 class EventWhatsAppRejectedData(EventWhatsAppBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     error: Annotated[
         WhatsAppError | None,
-        Field(description='Why the message was rejected before sending.'),
+        Field(description="Why the message was rejected before sending."),
     ]
 
 
-class Type53(str, Enum):
-    whatsapp_rejected = 'whatsapp.rejected'
+class Type54(str, Enum):
+    whatsapp_rejected = "whatsapp.rejected"
 
 
 class EventWhatsAppRejected(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['whatsapp.rejected'],
-        Field(description='Event type.', examples=['whatsapp.rejected']),
+        Literal["whatsapp.rejected"],
+        Field(description="Event type.", examples=["whatsapp.rejected"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time the rejection was recorded.',
-            examples=['2026-07-23 12:00:00+00:00'],
+            description="Time the rejection was recorded.",
+            examples=["2026-07-23 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -8892,27 +8939,27 @@ class EventWhatsAppRejected(BaseModel):
 
 class EventWhatsAppSentData(EventWhatsAppBase):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
 
 
-class Type54(str, Enum):
-    whatsapp_sent = 'whatsapp.sent'
+class Type55(str, Enum):
+    whatsapp_sent = "whatsapp.sent"
 
 
 class EventWhatsAppSent(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
     )
     type: Annotated[
-        Literal['whatsapp.sent'],
-        Field(description='Event type.', examples=['whatsapp.sent']),
+        Literal["whatsapp.sent"],
+        Field(description="Event type.", examples=["whatsapp.sent"]),
     ]
     timestamp: Annotated[
         str,
         Field(
-            description='Time Bird handed the message to Meta for delivery.',
-            examples=['2026-07-16 12:00:00+00:00'],
+            description="Time Bird handed the message to Meta for delivery.",
+            examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
     ]
@@ -9024,6 +9071,6 @@ class WebhookEvent(
         | EventWhatsAppSent,
         Field(
             description="Discriminated union of every webhook event the Bird platform emits.\n\nEach variant is the full delivery body: `type` names the event, `timestamp` is when the\nevent occurred, and `data` carries the event-specific payload. The `type` property\nselects the variant, and the generated SDK types narrow on it, so your code can switch\non the event id and read the variant-specific payload fields without casting.\n\nDelivery metadata (the event id and per-attempt signature headers) rides in HTTP headers\nper Standard Webhooks and is handled by the SDK's webhook verification helper, which\nreturns one of these variants. See the [webhooks guide](/docs/guides/webhooks) for\nheader names and the verification recipe.\n",
-            discriminator='type',
+            discriminator="type",
         ),
     ]

@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Generate the Bird Python SDK's wire models from the OpenAPI customer bundle.
 
-datamodel-code-generator has no operation filter, so the one thing this script
-does by hand is scope the spec to the curated SDK surface (the same operations the
-TS and Go SDKs expose): keep the email operations, walk every ``$ref`` they reach
-— plus the webhook event union, which no operation references but
-``webhooks.unwrap`` decodes — and prune the unreachable component schemas.
-Everything else is native generator behavior; the per-flag rationale lives at the
-call site in ``main``.
+Two things this script does by hand, everything else being native generator
+behavior whose per-flag rationale lives at the call site in ``main``:
+
+1. **Scoping.** datamodel-code-generator has no operation filter, so the spec is
+   narrowed to the curated SDK surface (the same operations the TS and Go SDKs
+   expose): keep the email operations, walk every ``$ref`` they reach — plus the
+   webhook event union, which no operation references but ``webhooks.unwrap``
+   decodes — and prune the unreachable component schemas.
+2. **Open-enum retyping.** ``x-extensible-enum`` is a Bird extension the generator
+   does not understand, so ``open_enum_unions`` rewrites those fields and
+   ``prefer_enum_member`` fixes the resulting union's mode. Both are documented in
+   AGENTS.md § "Open enums are retyped, and must stay open"; both are load-bearing
+   for forward compatibility, and ``tests/test_open_enums.py`` pins them.
 
 Run via ``make generate``. Regenerate after the OpenAPI bundle changes; the output
 is checked in and guarded by the repo drift gate.
@@ -16,6 +22,7 @@ is checked in and guarded by the repo drift gate.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -84,11 +91,95 @@ def collect_refs(spec: dict) -> set[str]:
     return reached
 
 
+def find_open_enums(schemas: dict) -> set[str]:
+    """Names of the string schemas carrying ``x-extensible-enum`` values."""
+    return {
+        name
+        for name, schema in schemas.items()
+        if isinstance(schema, dict)
+        and schema.get("type") == "string"
+        and schema.get("x-extensible-enum")
+    }
+
+
+def open_enum_unions(spec: dict) -> list[str]:
+    """Retype every open-enum field to ``<Enum> | str``, in place.
+
+    An open enum (``x-extensible-enum``) is a plain string on the wire whose known
+    values the generator cannot see, so a field referencing one lands as bare
+    ``str`` and the values are lost. Giving the component a real ``enum`` makes
+    datamodel-codegen emit the class, and rewriting each reference to
+    ``anyOf: [<enum>, string]`` keeps the field open: a value no version of the
+    spec knew about still decodes, where a bare enum field would raise.
+
+    Generator-facing only — this runs on the filtered copy, never on the published
+    bundle, which must keep saying the enum is open.
+
+    Returns the enum class names, for the union-mode pass over the output. Empty is
+    a legitimate answer: the curated surface may not reach any open enum, and the
+    convention itself is asserted against the unpruned bundle in ``main``.
+    """
+    schemas = spec.get("components", {}).get("schemas", {})
+    open_enums = find_open_enums(schemas)
+    if not open_enums:
+        return []
+
+    for name in open_enums:
+        # The class only exists if the component carries `enum`. The values stay
+        # identical to x-extensible-enum, so the enum members are the known set.
+        schemas[name]["enum"] = list(schemas[name]["x-extensible-enum"])
+
+    ref_targets = {f"#/components/schemas/{name}" for name in open_enums}
+
+    def rewrite(node) -> None:
+        """Wrap every `$ref` to an open enum in an `anyOf` with a bare string.
+
+        Skips the component definitions themselves (walked from `properties` and
+        composition lists only), so an enum is never wrapped in its own union.
+        """
+        if isinstance(node, dict):
+            for key, val in list(node.items()):
+                if isinstance(val, dict) and val.get("$ref") in ref_targets:
+                    node[key] = _open_union(val)
+                else:
+                    rewrite(val)
+        elif isinstance(node, list):
+            for i, val in enumerate(node):
+                if isinstance(val, dict) and val.get("$ref") in ref_targets:
+                    node[i] = _open_union(val)
+                else:
+                    rewrite(val)
+
+    for name, schema in schemas.items():
+        if name in open_enums:
+            continue  # the enum component itself stays a plain enum
+        rewrite(schema)
+    rewrite(spec["paths"])
+    return sorted(open_enums)
+
+
+def _open_union(ref_node: dict) -> dict:
+    """`{$ref: Enum, description: …}` -> `{anyOf: [{$ref: Enum}, {type: string}], description: …}`.
+
+    Sibling keys (description, example) are carried over, so the field keeps its
+    docs; the enum is listed first so the union-mode pass can prefer it.
+    """
+    siblings = {k: v for k, v in ref_node.items() if k != "$ref"}
+    return {"anyOf": [{"$ref": ref_node["$ref"]}, {"type": "string"}], **siblings}
+
+
 def main() -> None:
     if not BUNDLE.exists():
         sys.exit(f"OpenAPI bundle not found: {BUNDLE}\nRun `make openapi-bundle` from the repo root first.")
 
     spec = yaml.safe_load(BUNDLE.read_text())
+
+    # Convention tripwire, asserted before pruning: the bundle always carries open
+    # enums, so none at all means x-extensible-enum went away and the retype below
+    # would silently no-op. After pruning, an empty set is legitimate instead — the
+    # curated surface need not reach one.
+    if not find_open_enums(spec.get("components", {}).get("schemas", {})):
+        sys.exit("no x-extensible-enum schemas in the bundle; the convention changed")
 
     # Prune paths to the kept (path, method) pairs.
     kept_paths = {}
@@ -109,6 +200,8 @@ def main() -> None:
             spec["components"][section] = kept
         else:
             del spec["components"][section]
+
+    open_enums = open_enum_unions(spec)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
@@ -146,7 +239,52 @@ def main() -> None:
         ],
         check=True,
     )
+    prefer_enum_member(OUT, open_enums)
     print(f"generated models into {OUT.relative_to(ROOT) if not _STAGE else OUT}")
+
+
+# The generator writes each open-enum field as `Enum | str`, which pydantic
+# validates in smart mode: it returns a plain `str` even for a value the enum
+# knows, so reading a field never yields the enum member. Left-to-right tries the
+# enum first, so a known value arrives as the member (narrowing, completion) and
+# an unknown one still falls through to `str`.
+UNION_MODE = 'Annotated[Union[{enum}, str], Field(union_mode="left_to_right")]'
+
+
+def prefer_enum_member(out: Path, open_enums: list[str]) -> None:
+    """Rewrite each `Enum | str` union to prefer the enum member, then reformat.
+
+    Annotating the union itself rather than the field is what makes this compose:
+    the union also appears inside `list[...]`, where a field-level
+    ``Field(union_mode=…)`` would bind to the list and never reach the element.
+
+    A no-op when the scoped spec reached no open enum; only a retype that produced
+    no union is an error, since that means the shape it keys on moved.
+    """
+    if not open_enums:
+        return
+    src = out.read_text()
+    rewritten = 0
+    for enum in open_enums:
+        pattern = re.compile(rf"\b{re.escape(enum)} \| str\b")
+        src, n = pattern.subn(UNION_MODE.format(enum=enum), src)
+        rewritten += n
+    if rewritten == 0:
+        sys.exit(
+            "no `<Enum> | str` unions in the generated models: the open-enum spec "
+            "transform or the generator's union rendering changed"
+        )
+    # Union is not in the generator's import line; Annotated and Field already are.
+    src = src.replace(
+        "from typing import Annotated", "from typing import Annotated, Union", 1
+    )
+    out.write_text(src)
+    # The rewrite changes line lengths, so reformat with the pinned formatter the
+    # generator itself used — the checked-in output has to stay byte-reproducible.
+    subprocess.run(
+        ["uvx", "--from", "black==26.5.1", "black", "--quiet", str(out)], check=True
+    )
+    print(f"preferred the enum member in {rewritten} open-enum unions")
 
 
 if __name__ == "__main__":
