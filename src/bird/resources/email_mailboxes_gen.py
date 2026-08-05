@@ -140,7 +140,8 @@ class EmailMailboxes(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """
+        """Read one mailbox by id. A mailbox deleted within its 30-day restore window is still returned, carrying a non-null `deleted_at`; once that window closes it is gone and this returns 404.
+
         ```python
         mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.address)
@@ -261,7 +262,8 @@ class EmailMailboxes(Resource):
         granularity: str | None = None,
         options: RequestOptions | None = None,
     ) -> MailboxStatsResponse:
-        """
+        """Read a mailbox's sent and received email statistics over a window: a period summary plus a bucketed series. Rows are bucketed by event time rather than send time, so engagement that arrived during the period for messages sent earlier is counted here. Both window bounds must use the same form, calendar days or RFC 3339 instants, matching the granularity.
+
         ```python
         stats = client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(stats.summary)
@@ -379,7 +381,8 @@ class AsyncEmailMailboxes(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """
+        """Read one mailbox by id. A mailbox deleted within its 30-day restore window is still returned, carrying a non-null `deleted_at`; once that window closes it is gone and this returns 404.
+
         ```python
         mailbox = await client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(mailbox.address)
@@ -500,7 +503,8 @@ class AsyncEmailMailboxes(AsyncResource):
         granularity: str | None = None,
         options: RequestOptions | None = None,
     ) -> MailboxStatsResponse:
-        """
+        """Read a mailbox's sent and received email statistics over a window: a period summary plus a bucketed series. Rows are bucketed by event time rather than send time, so engagement that arrived during the period for messages sent earlier is counted here. Both window bounds must use the same form, calendar days or RFC 3339 instants, matching the granularity.
+
         ```python
         stats = await client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         print(stats.summary)

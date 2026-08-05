@@ -27,6 +27,7 @@ class ContactListParams(TypedDict, total=False):
     limit: int
     starting_after: str
     ending_before: str
+    include_total: bool
 
 
 class _ContactCreateRequired(TypedDict):
@@ -73,9 +74,10 @@ class Contacts(Resource):
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
+        include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email or external_id, or search by email substring.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email or external_id, or search by email/name substring. Pass include_total for a total count.
 
         ```python
         for contact in client.contacts.list(q="acme.com"):
@@ -89,6 +91,7 @@ class Contacts(Resource):
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
+            "include_total": include_total,
         }
         return SyncPage(self._client, "/v1/contacts", query, Contact, options)
 
@@ -242,9 +245,10 @@ class AsyncContacts(AsyncResource):
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
+        include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email or external_id, or search by email substring.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email or external_id, or search by email/name substring. Pass include_total for a total count.
 
         ```python
         async for contact in client.contacts.list(q="acme.com"):
@@ -258,6 +262,7 @@ class AsyncContacts(AsyncResource):
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
+            "include_total": include_total,
         }
         return AsyncPage(self._client, "/v1/contacts", query, Contact, options)
 

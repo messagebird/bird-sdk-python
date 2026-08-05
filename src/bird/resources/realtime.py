@@ -21,6 +21,7 @@ from bird._generated import (
     RealtimeChannelInfo,
     RealtimeChannelMembers,
     RealtimeChannelsList,
+    RealtimeMemberPublish,
     RealtimePublish,
     RealtimePublishResult,
 )
@@ -49,6 +50,10 @@ def _publish_body(
         "exclude_connection_id": exclude_connection_id,
         "include": list(include) if include else None,
     })
+
+
+def _member_send_body(*, event: str, data: Any) -> dict[str, Any]:
+    return to_wire(RealtimeMemberPublish, {"event": event, "data": data})
 
 
 def _batch_body(events: Sequence[RealtimeBatchEventParams]) -> dict[str, Any]:
@@ -189,6 +194,36 @@ class RealtimeMembers:
     def __init__(self, client: SyncAPIClient, auth: _RealtimeAuth) -> None:
         self._client = client
         self._auth = auth
+
+    def send(
+        self,
+        realtime_app_id: str,
+        member_id: str,
+        *,
+        event: str,
+        data: Any = None,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Send an event to one member instead of to a channel. Every connection that
+        member currently holds receives it, across tabs and devices, so there is no
+        need to track their connections or give them a channel of their own. The
+        member must have signed in on the connection to be addressable.
+
+        Delivery is best-effort: a member holding no connections right now simply does
+        not receive the event, and that is not reported back.
+
+        ```python
+        client.realtime.members.send(
+            "rap_01krd...", "member:42", event="order-shipped", data={"id": 42}
+        )
+        ```
+        """
+        self._client.request(
+            "POST",
+            _app_path(realtime_app_id, "members", member_id, "events"),
+            body=_member_send_body(event=event, data=data),
+            **self._auth.options(options),
+        )
 
     def disconnect(
         self,
@@ -348,6 +383,23 @@ class AsyncRealtimeMembers:
     def __init__(self, client: AsyncAPIClient, auth: _RealtimeAuth) -> None:
         self._client = client
         self._auth = auth
+
+    async def send(
+        self,
+        realtime_app_id: str,
+        member_id: str,
+        *,
+        event: str,
+        data: Any = None,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Send an event to every connection this member holds (async)."""
+        await self._client.request(
+            "POST",
+            _app_path(realtime_app_id, "members", member_id, "events"),
+            body=_member_send_body(event=event, data=data),
+            **self._auth.options(options),
+        )
 
     async def disconnect(
         self,

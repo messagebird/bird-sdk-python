@@ -473,6 +473,27 @@ class RealtimeChannelMembers(BaseModel):
     members: list[RealtimeChannelMember]
 
 
+class RealtimeMemberPublish(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    event: Annotated[
+        str,
+        Field(
+            description="The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.",
+            examples=["order-updated"],
+            max_length=200,
+            min_length=1,
+        ),
+    ]
+    data: Annotated[
+        Any | None,
+        Field(
+            description="Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized."
+        ),
+    ] = None
+
+
 class EmailMessageStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
@@ -787,7 +808,7 @@ class EmailMessage(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="The substitution values this send supplied, or null for a send that carried its content inline. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.\n"
+            description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.\n"
         ),
     ] = None
     attachments: Annotated[
@@ -885,7 +906,7 @@ class EmailTemplateSend1(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Send everything the template's `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n",
+            description='Values for the template\'s variables, keyed by variable name. A token with no matching value renders empty. Nest values to fill dotted tokens: `{"contact": {"first_name": "Ada"}}` fills `{{ contact.first_name }}`. Send everything the template\'s `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n',
             examples=[{"first_name": "Ada"}],
         ),
     ] = None
@@ -926,7 +947,7 @@ class EmailTemplateSend2(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's variables, keyed by variable name. A token with no matching value renders empty. Send everything the template's `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n",
+            description='Values for the template\'s variables, keyed by variable name. A token with no matching value renders empty. Nest values to fill dotted tokens: `{"contact": {"first_name": "Ada"}}` fills `{{ contact.first_name }}`. Send everything the template\'s `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n',
             examples=[{"first_name": "Ada"}],
         ),
     ] = None
@@ -1297,7 +1318,7 @@ class Contact(Timestamps):
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, or boolean matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
+            description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
         ),
     ] = None
     channels: Annotated[
@@ -1311,7 +1332,7 @@ class Contact(Timestamps):
     updated_at: str
 
 
-class ContactList(FieldListEnvelope):
+class ContactList(FieldListEnvelopeWithTotal):
     model_config = ConfigDict(
         extra="allow",
     )
@@ -1346,7 +1367,7 @@ class ContactCreateRequest(BaseModel):
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values for this contact. Each key must be a property created via the contact properties API, and each value must be a string, number, or boolean matching the property's declared type (strings up to 500 characters); a null value is ignored. Unregistered or archived keys are rejected with a validation error. Total size is capped at 2 KB serialized.\n"
+            description="Custom property values for this contact. Each key must be a property created via the contact properties API, and each value must be a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters); a null value is ignored. Unregistered or archived keys are rejected with a validation error. Total size is capped at 2 KB serialized.\n"
         ),
     ] = None
 
@@ -1487,7 +1508,7 @@ class ContactUpdateRequest(BaseModel):
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values to change, merged into the contact's existing data. Keys you supply are set, keys set to null are removed, and keys you omit are left unchanged. Each key must be a property created via the contact properties API, and each value must be a string, number, or boolean matching the property's declared type (strings up to 500 characters); writing an unregistered or archived key returns a validation error. The merged result is capped at 2 KB serialized.\n"
+            description="Custom property values to change, merged into the contact's existing data. Keys you supply are set, keys set to null are removed, and keys you omit are left unchanged. Each key must be a property created via the contact properties API, and each value must be a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters); writing an unregistered or archived key returns a validation error. The merged result is capped at 2 KB serialized.\n"
         ),
     ] = None
 
@@ -1544,6 +1565,7 @@ class ContactPropertyType(str, Enum):
     ContactPropertyTypeString = "string"
     ContactPropertyTypeNumber = "number"
     ContactPropertyTypeBoolean = "boolean"
+    ContactPropertyTypeDatetime = "datetime"
 
 
 class ContactProperty(Timestamps):
@@ -1572,7 +1594,7 @@ class ContactProperty(Timestamps):
     fallback_value: Annotated[
         Any | None,
         Field(
-            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null when no fallback is set.",
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to 500 characters), or null when no fallback is set.",
             max_length=500,
         ),
     ] = None
@@ -1612,7 +1634,7 @@ class ContactPropertyCreateRequest(BaseModel):
     fallback_value: Annotated[
         Any | None,
         Field(
-            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters), or null for no fallback; a value of another type returns a validation error.",
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to 500 characters), or null for no fallback; a value of another type returns a validation error.",
             max_length=500,
         ),
     ] = None
@@ -1625,7 +1647,7 @@ class ContactPropertyUpdateRequest(BaseModel):
     fallback_value: Annotated[
         Any | None,
         Field(
-            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, or boolean matching the declared type (strings up to 500 characters); a value of another type returns a validation error. Set to null to remove the fallback.",
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to 500 characters); a value of another type returns a validation error. Set to null to remove the fallback.",
             max_length=500,
         ),
     ] = None
@@ -1956,8 +1978,8 @@ class SMSMessage(BaseModel):
     text: Annotated[
         str,
         Field(
-            description="The message body as sent. For a template send, this is the rendered text after parameter substitution.\n",
-            examples=["Your verification code is 123456."],
+            description="The message body as sent. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, Bird just does not persist it for later reads.\n",
+            examples=["Your order has shipped and is on its way."],
             min_length=1,
         ),
     ]
@@ -2453,6 +2475,12 @@ class TemplateVariable(BaseModel):
             min_length=1,
         ),
     ]
+    sensitive: Annotated[
+        bool | None,
+        Field(
+            description="Whether this slot's value is redacted before it reaches storage. A sensitive slot's rendered value never appears in message content read back through the API: a stand-in placeholder is stored instead.\n"
+        ),
+    ] = False
 
 
 class SMSTemplateVersionID(RootModel[str]):
@@ -2887,7 +2915,7 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
     name: Annotated[
         str | None,
         Field(
-            description="For named-parameter templates: the placeholder this value fills (for example `first_name`). Omit for positional templates.",
+            description="Required when the template declares named parameters: the placeholder this value fills (for example `first_name`), matching exactly one of the names the template declares. Name every parameter in that case; order does not matter once names are supplied. Omit this field for a positional template, which takes its values in `{{n}}` order instead. Sending the wrong set of names, or leaving one out that the template requires, returns a `422` `WhatsAppTemplateParameterMismatch`.\n",
             min_length=1,
         ),
     ] = None
@@ -2907,7 +2935,7 @@ class WhatsAppMessageTemplateComponent(BaseModel):
     parameters: Annotated[
         list[WhatsAppMessageTemplateComponentParameter] | None,
         Field(
-            description="The values that fill this part's placeholders, in `{{n}}` placeholder order.\n"
+            description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning.\n"
         ),
     ] = None
 
@@ -3102,7 +3130,7 @@ class WhatsAppTemplateSend(BaseModel):
     components: Annotated[
         list[WhatsAppMessageTemplateComponent] | None,
         Field(
-            description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters` in `{{n}}` order. Parameter counts must match the template's declared placeholders exactly, or the send returns a `422` `WhatsAppTemplateParameterMismatch`.\n"
+            description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters`. A positional template takes its parameters in `{{n}}` order; a template with named parameters requires each parameter's `name` to match one the template declares. Either way, sending parameters that do not match what the template declares returns a `422` `WhatsAppTemplateParameterMismatch`.\n"
         ),
     ] = None
 
@@ -3156,7 +3184,7 @@ class WhatsAppEvent(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Lifecycle event type. `whatsapp.accepted`: Bird accepted the request. `whatsapp.sent`: handed to the WhatsApp network. `whatsapp.delivered`: delivery confirmed to the recipient's device. `whatsapp.read`: the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed`: terminal permanent failure. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
+            description="Lifecycle event type. `whatsapp.accepted`: Bird accepted the request. `whatsapp.sent`: handed to the WhatsApp network. `whatsapp.delivered`: delivery confirmed to the recipient's device. `whatsapp.read`: the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed`: terminal permanent failure. `whatsapp.rejected`: Bird refused the message before sending it, so it was never charged. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
             examples=["whatsapp.delivered"],
             min_length=1,
         ),
@@ -3166,7 +3194,9 @@ class WhatsAppEvent(BaseModel):
     ]
     error: Annotated[
         WhatsAppError | None,
-        Field(description="Failure detail. Present only on `whatsapp.failed` events."),
+        Field(
+            description="Failure detail. Present only on `whatsapp.failed` and `whatsapp.rejected` events."
+        ),
     ] = None
 
 
@@ -4828,12 +4858,6 @@ class EmailBroadcastStatsPoint(BaseModel):
     delivery: EmailDeliveryStats
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
-    trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
-        Field(
-            description="Per-bucket rate series for this broadcast over the window. Never returned today, because `include_trend` is not available for the broadcast breakdown (supplying it returns 422)."
-        ),
-    ] = None
 
 
 class EmailStatsByBroadcastResponse(BaseModel):

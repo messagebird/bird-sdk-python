@@ -225,8 +225,6 @@ class EmailStatsByBroadcastParams(TypedDict, total=False):
     category: str
     sort: str
     limit: int
-    include_trend: bool
-    trend_grain: str
 
 
 class EmailStats(Resource):
@@ -796,11 +794,9 @@ class EmailStats(Resource):
         category: str | None = None,
         sort: str | None = None,
         limit: int | None = None,
-        include_trend: bool | None = None,
-        trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast; only broadcast sends appear. Reflects roughly the last 30 days of activity; `include_trend` is not available here and returns 422.
+        """Email delivery and engagement stats grouped by broadcast; only broadcast sends appear. Reflects roughly the last 30 days of activity.
 
         ```python
         stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -816,8 +812,6 @@ class EmailStats(Resource):
                 "category": category,
                 "sort": sort,
                 "limit": limit,
-                "include_trend": include_trend,
-                "trend_grain": trend_grain,
             },
             EmailStatsByBroadcastResponse,
             options,
@@ -1391,11 +1385,9 @@ class AsyncEmailStats(AsyncResource):
         category: str | None = None,
         sort: str | None = None,
         limit: int | None = None,
-        include_trend: bool | None = None,
-        trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast; only broadcast sends appear. Reflects roughly the last 30 days of activity; `include_trend` is not available here and returns 422.
+        """Email delivery and engagement stats grouped by broadcast; only broadcast sends appear. Reflects roughly the last 30 days of activity.
 
         ```python
         stats = await client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -1411,8 +1403,6 @@ class AsyncEmailStats(AsyncResource):
                 "category": category,
                 "sort": sort,
                 "limit": limit,
-                "include_trend": include_trend,
-                "trend_grain": trend_grain,
             },
             EmailStatsByBroadcastResponse,
             options,

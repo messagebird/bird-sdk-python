@@ -116,6 +116,28 @@ def test_channel_members_returns_member_ids() -> None:
 
 
 @respx.mock
+def test_member_send_posts_the_event_to_the_members_events_path() -> None:
+    route = respx.post(f"{APP_BASE}/members/m_1/events").mock(return_value=httpx.Response(204))
+    assert (
+        client().realtime.members.send(APP, "m_1", event="order-shipped", data={"id": 42})
+        is None
+    )
+    # The member is the address: no channel is named, because the reserved channel
+    # the edge delivers on is built server-side.
+    assert json.loads(route.calls.last.request.content) == {
+        "event": "order-shipped",
+        "data": {"id": 42},
+    }
+
+
+@respx.mock
+def test_member_send_omits_data_when_absent() -> None:
+    route = respx.post(f"{APP_BASE}/members/m_1/events").mock(return_value=httpx.Response(204))
+    client().realtime.members.send(APP, "m_1", event="session-revoked")
+    assert json.loads(route.calls.last.request.content) == {"event": "session-revoked"}
+
+
+@respx.mock
 def test_member_disconnect_is_a_bodyless_post_returning_none() -> None:
     route = respx.post(f"{APP_BASE}/members/m_1/disconnect").mock(return_value=httpx.Response(204))
     assert client().realtime.members.disconnect(APP, "m_1") is None

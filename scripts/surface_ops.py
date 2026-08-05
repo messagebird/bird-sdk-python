@@ -68,5 +68,6 @@ KEEP: dict[str, set[str]] = {
     "/v1/realtime/apps/{realtime_app_id}/channels": {"get"},
     "/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}": {"get"},
     "/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}/members": {"get"},
+    "/v1/realtime/apps/{realtime_app_id}/members/{member_id}/events": {"post"},
     "/v1/realtime/apps/{realtime_app_id}/members/{member_id}/disconnect": {"post"},
 }

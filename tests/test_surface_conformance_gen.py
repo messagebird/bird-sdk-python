@@ -94,4 +94,5 @@ def test_surface_conformance() -> None:
     assert callable(client.realtime.channels.list)
     assert callable(client.realtime.channels.get)
     assert callable(client.realtime.channels.members)
+    assert callable(client.realtime.members.send)
     assert callable(client.realtime.members.disconnect)
