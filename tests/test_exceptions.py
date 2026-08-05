@@ -73,7 +73,7 @@ def test_from_response_tolerates_null_or_absent_next(next_value: str) -> None:
     """A present-but-null `next` (or an absent one) must not crash from_response —
     `.get("next", [])` returns None on an explicit null, so the comprehension would
     iterate None. `.next` degrades to []."""
-    body = '{"error":{"type":"conflict_error","code":"E11003","message":"x",' + next_value + '"remediation":"r"}}'
+    body = '{"error":{"type":"conflict_error","code":"E01028","message":"x",' + next_value + '"remediation":"r"}}'
     err = from_response(409, body, {})
     assert err.next == []
     assert err.remediation == "r"

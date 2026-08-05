@@ -2089,8 +2089,9 @@ class SMSTemplateSend1(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
+            description="Which of the template's localized bodies to send, as a BCP-47 tag. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
             examples=["fr"],
+            max_length=35,
             min_length=2,
         ),
     ] = None
@@ -2129,8 +2130,9 @@ class SMSTemplateSend2(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Language tag (BCP 47, for example `fr` or `pt-BR`) selecting the localized body. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
+            description="Which of the template's localized bodies to send, as a BCP-47 tag. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
             examples=["fr"],
+            max_length=35,
             min_length=2,
         ),
     ] = None
@@ -2965,9 +2967,10 @@ class WhatsAppMessageTemplate(BaseModel):
     language: Annotated[
         str,
         Field(
-            description="The language code of the template variant that was sent (for example `en`).",
-            examples=["en"],
-            min_length=1,
+            description="The canonical BCP-47 tag of the template variant that was sent.",
+            examples=["pt-BR"],
+            max_length=35,
+            min_length=2,
         ),
     ]
     components: Annotated[
@@ -3105,10 +3108,59 @@ class WhatsAppMessageList(FieldListEnvelope):
     ]
 
 
-class WhatsAppTemplateSend(BaseModel):
+class WhatsAppTemplateSend1(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
+    id: Annotated[
+        str,
+        Field(
+            description="The template to send, by its id.",
+            examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    slug: Annotated[
+        str | None,
+        Field(
+            description="The template to send, by its slug (for example `bird_otp`).",
+            examples=["bird_otp"],
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+        ),
+    ] = None
+    language: Annotated[
+        str | None,
+        Field(
+            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available tags.\n",
+            examples=["pt-BR"],
+            max_length=35,
+            min_length=2,
+        ),
+    ] = None
+    components: Annotated[
+        list[WhatsAppMessageTemplateComponent] | None,
+        Field(
+            description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters`. A positional template takes its parameters in `{{n}}` order; a template with named parameters requires each parameter's `name` to match one the template declares. Either way, sending parameters that do not match what the template declares returns a `422` `WhatsAppTemplateParameterMismatch`.\n"
+        ),
+    ] = None
+
+
+class WhatsAppTemplateSend2(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str | None,
+        Field(
+            description="The template to send, by its id.",
+            examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ] = None
     slug: Annotated[
         str,
         Field(
@@ -3122,9 +3174,10 @@ class WhatsAppTemplateSend(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Language code of the template variant to send (for example `en` or `pt_BR`). May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available codes. The accepted message echoes the resolved language.\n",
-            examples=["en"],
-            min_length=1,
+            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available tags.\n",
+            examples=["pt-BR"],
+            max_length=35,
+            min_length=2,
         ),
     ] = None
     components: Annotated[
@@ -3142,15 +3195,58 @@ class WhatsAppMessageSendRequest(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="The message recipient's phone number in E.164 format (for example `+31612345678`). A value that is not a valid phone number returns a `422` `WhatsAppInvalidRecipient`.\n",
+            description="The message recipient: a phone number in E.164 format (for example `+31612345678`), or the recipient's business-scoped user ID (for example `US.13491208655302741918`), which addresses a WhatsApp user whose phone number you do not have. A value that is neither returns a `422` `WhatsAppInvalidRecipient`. One-time-passcode templates require a phone number and return a `422` `WhatsAppRecipientNotSupportedForTemplate` when sent to a business-scoped user ID.\n",
             examples=["+31612345678"],
             min_length=1,
         ),
     ]
     template: Annotated[
-        WhatsAppTemplateSend | None,
+        WhatsAppTemplateSend1 | WhatsAppTemplateSend2 | None,
         Field(
-            description="The template to send. Bird selects the sender number from the template's category, so there is no sender field on this request. Templates are the only supported content type today: a request without one is rejected with a `422`.\n"
+            description="The template to send. Bird selects the sender number from the template's category, so there is no sender field on this request. Templates are the only supported content type today: a request without one is rejected with a `422`.\n",
+            examples=[
+                {
+                    "id": "wat_01ky4x8e4genzb7way45txfkm1",
+                    "language": "en",
+                    "components": [
+                        {
+                            "type": "body",
+                            "parameters": [{"type": "text", "text": "1234"}],
+                        },
+                        {
+                            "type": "button",
+                            "parameters": [{"type": "text", "text": "1234"}],
+                        },
+                    ],
+                },
+                {
+                    "slug": "bird_order_confirmation",
+                    "language": "en",
+                    "components": [
+                        {
+                            "type": "body",
+                            "parameters": [
+                                {"type": "text", "name": "ref", "text": "A1B2C3D4"},
+                                {"type": "text", "name": "amount", "text": "EUR 49.99"},
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "slug": "bird_otp",
+                    "language": "en",
+                    "components": [
+                        {
+                            "type": "body",
+                            "parameters": [{"type": "text", "text": "1234"}],
+                        },
+                        {
+                            "type": "button",
+                            "parameters": [{"type": "text", "text": "1234"}],
+                        },
+                    ],
+                },
+            ],
         ),
     ] = None
     tags: Annotated[
@@ -5532,7 +5628,7 @@ class MailboxCreate(BaseModel):
     retention_tier: Annotated[
         RetentionTier1 | None,
         Field(
-            description="How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon."
+            description="How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier. Only `30d` is available today; additional tiers are planned."
         ),
     ] = "30d"
     metadata: Annotated[
@@ -5567,7 +5663,7 @@ class MailboxUpdate(BaseModel):
     retention_tier: Annotated[
         RetentionTier1 | None,
         Field(
-            description="How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes memory older than the new horizon and requires `confirm=true` when messages older than the new horizon would be deleted. Only `30d` is available today; longer tiers (`90d`, `1y`, and beyond) are coming soon."
+            description="How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes memory older than the new horizon and requires `confirm=true` when messages older than the new horizon would be deleted. Only `30d` is available today; additional tiers are planned."
         ),
     ] = "30d"
     metadata: Annotated[
@@ -8606,15 +8702,16 @@ class EventVoiceBase(BaseModel):
         ),
     ]
     direction: VoiceCallDirection
-    src_number: Annotated[
+    from_: Annotated[
         str,
         Field(
+            alias="from",
             description="Calling party number in E.164 format.",
             examples=["+14155551234"],
             min_length=1,
         ),
     ]
-    dst_number: Annotated[
+    to: Annotated[
         str,
         Field(
             description="Called party number in E.164 format.",

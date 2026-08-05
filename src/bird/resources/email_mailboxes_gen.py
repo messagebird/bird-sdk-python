@@ -62,7 +62,7 @@ class EmailMailboxesStatsParams(TypedDict, total=False):
     granularity: str
 
 
-class EmailMailboxes(Resource):
+class EmailMailboxesBase(Resource):
     def list(
         self,
         *,
@@ -107,7 +107,7 @@ class EmailMailboxes(Resource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Create a mailbox — a durable agent identity that owns an email address, groups mail into threads, and remembers conversations for its retention tier.
+        """Create a mailbox: a durable agent identity that owns an email address, groups mail into threads, and remembers conversations for its retention tier.
 
         ```python
         mailbox = client.email.mailboxes.create(display_name="Acme Support")
@@ -166,7 +166,7 @@ class EmailMailboxes(Resource):
         confirm: bool | None = None,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Update a mailbox's display name, reply-to, receive policy, retention tier, contact, or metadata. Lowering the retention tier onto remembered messages older than the new horizon requires confirm=true.
+        """Update a mailbox's display name, reply-to, receive policy, retention tier, IP pool, or metadata. Lowering the retention tier onto remembered messages older than the new horizon requires confirm=true.
 
         ```python
         mailbox = client.email.mailboxes.update(
@@ -303,7 +303,7 @@ class EmailMailboxes(Resource):
         )
 
 
-class AsyncEmailMailboxes(AsyncResource):
+class AsyncEmailMailboxesBase(AsyncResource):
     def list(
         self,
         *,
@@ -348,7 +348,7 @@ class AsyncEmailMailboxes(AsyncResource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Create a mailbox — a durable agent identity that owns an email address, groups mail into threads, and remembers conversations for its retention tier.
+        """Create a mailbox: a durable agent identity that owns an email address, groups mail into threads, and remembers conversations for its retention tier.
 
         ```python
         mailbox = await client.email.mailboxes.create(display_name="Acme Support")
@@ -407,7 +407,7 @@ class AsyncEmailMailboxes(AsyncResource):
         confirm: bool | None = None,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Update a mailbox's display name, reply-to, receive policy, retention tier, contact, or metadata. Lowering the retention tier onto remembered messages older than the new horizon requires confirm=true.
+        """Update a mailbox's display name, reply-to, receive policy, retention tier, IP pool, or metadata. Lowering the retention tier onto remembered messages older than the new horizon requires confirm=true.
 
         ```python
         mailbox = await client.email.mailboxes.update(

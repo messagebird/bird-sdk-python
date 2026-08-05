@@ -5,8 +5,8 @@ nested ``messages`` collection, which a generated class can't declare.
 from __future__ import annotations
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
-from bird.resources.email_threads_gen import AsyncEmailThreads as AsyncEmailThreadsBase
-from bird.resources.email_threads_gen import EmailThreads as EmailThreadsBase
+from bird.resources.email_threads_gen import AsyncEmailThreadsBase
+from bird.resources.email_threads_gen import EmailThreadsBase
 from bird.resources.email_threads_messages_gen import (
     AsyncEmailThreadsMessages,
     EmailThreadsMessages,

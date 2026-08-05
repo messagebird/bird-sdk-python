@@ -49,7 +49,7 @@ class EmailThreadsDeleteParams(TypedDict, total=False):
     permanent: bool
 
 
-class EmailThreads(Resource):
+class EmailThreadsBase(Resource):
     def list(
         self,
         *,
@@ -66,7 +66,7 @@ class EmailThreads(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailThread]:
-        """List mailbox conversations as a cursor page, most recently active first. `label` selects the view — inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
+        """List mailbox conversations as a cursor page, most recently active first. `label` selects the view: inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
 
         ```python
         for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -116,7 +116,7 @@ class EmailThreads(Resource):
         contact_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailThread:
-        """Add or remove labels on a conversation — adding `spam` files it as spam, adding `archive` clears it out of the inbox, adding `inbox` brings it back — or link/unlink a contact.
+        """Add or remove labels on a conversation, or link and unlink a contact. Adding `spam` files it as spam, `archive` clears it out of the inbox, and `inbox` brings it back.
 
         ```python
         thread = client.email.threads.update(
@@ -161,7 +161,7 @@ class EmailThreads(Resource):
         )
 
 
-class AsyncEmailThreads(AsyncResource):
+class AsyncEmailThreadsBase(AsyncResource):
     def list(
         self,
         *,
@@ -178,7 +178,7 @@ class AsyncEmailThreads(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailThread]:
-        """List mailbox conversations as a cursor page, most recently active first. `label` selects the view — inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
+        """List mailbox conversations as a cursor page, most recently active first. `label` selects the view: inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
 
         ```python
         async for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -228,7 +228,7 @@ class AsyncEmailThreads(AsyncResource):
         contact_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailThread:
-        """Add or remove labels on a conversation — adding `spam` files it as spam, adding `archive` clears it out of the inbox, adding `inbox` brings it back — or link/unlink a contact.
+        """Add or remove labels on a conversation, or link and unlink a contact. Adding `spam` files it as spam, `archive` clears it out of the inbox, and `inbox` brings it back.
 
         ```python
         thread = await client.email.threads.update(

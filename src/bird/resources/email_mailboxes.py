@@ -6,8 +6,8 @@ can't declare.
 from __future__ import annotations
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
-from bird.resources.email_mailboxes_gen import AsyncEmailMailboxes as AsyncEmailMailboxesBase
-from bird.resources.email_mailboxes_gen import EmailMailboxes as EmailMailboxesBase
+from bird.resources.email_mailboxes_gen import AsyncEmailMailboxesBase
+from bird.resources.email_mailboxes_gen import EmailMailboxesBase
 from bird.resources.email_mailboxes_messages import (
     AsyncEmailMailboxesMessages,
     EmailMailboxesMessages,

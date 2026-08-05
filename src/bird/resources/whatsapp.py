@@ -28,7 +28,8 @@ def _send_body(
 ) -> dict[str, Any]:
     body: dict[str, Any] = {"to": to}
     if template is not None:
-        tmpl: dict[str, Any] = {"slug": template}
+        # A wat_-prefixed value is the id; anything else is the slug handle.
+        tmpl: dict[str, Any] = {"id" if template.startswith("wat_") else "slug": template}
         if language is not None:
             tmpl["language"] = language
         if components is not None:
@@ -49,9 +50,10 @@ class Whatsapp(WhatsappBase):
         components: Sequence[Mapping[str, Any]] | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppMessage:
-        """Send a template message to a single recipient. The result is
-        ``accepted``, not yet delivered — read it back with ``get`` or follow
-        its timeline with ``list_events``.
+        """Send a template message to a single recipient, naming the template
+        by its id (``wat_…``) or its slug. The result is ``accepted``, not yet
+        delivered — read it back with ``get`` or follow its timeline with
+        ``list_events``.
 
         ```python
         msg = client.whatsapp.send(

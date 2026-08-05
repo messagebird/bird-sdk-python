@@ -96,7 +96,7 @@ class EmailThreadsMessages(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
-        """Get one conversation message with its extracted plain text — readable for the mailbox's full retention period, no MIME parsing needed.
+        """Get one conversation message with its extracted plain text, readable for the mailbox's full retention period without MIME parsing.
 
         ```python
         message = client.email.threads.messages.get(
@@ -241,7 +241,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
-        """Get one conversation message with its extracted plain text — readable for the mailbox's full retention period, no MIME parsing needed.
+        """Get one conversation message with its extracted plain text, readable for the mailbox's full retention period without MIME parsing.
 
         ```python
         message = await client.email.threads.messages.get(

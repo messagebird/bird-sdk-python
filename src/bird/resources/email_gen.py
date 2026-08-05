@@ -35,7 +35,7 @@ class EmailBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
-        """Fetch one email message by id — aggregate delivery status and per-state recipient counts. The message body (html, text) is not returned. Per-recipient delivery statuses and the event log are separate sub-resources: GET /v1/email/messages/{message_id}/recipients and GET /v1/email/messages/{message_id}/events.
+        """Fetch one email message by id, with aggregate delivery status and per-state recipient counts. The message body (html, text) is not returned. Per-recipient delivery statuses and the event log are separate sub-resources: GET /v1/email/messages/{message_id}/recipients and GET /v1/email/messages/{message_id}/events.
 
         ```python
         message = client.email.get("em_abc123")
@@ -64,7 +64,7 @@ class EmailBase(Resource):
         from_: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailMessage]:
-        """List sent email messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by creation time with the half-open range created_after (inclusive) / created_before (exclusive) — e.g. for a single UTC day set created_after to that day at 00:00:00Z and created_before to the next day at 00:00:00Z.
+        """List sent email messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by creation time with the half-open range created_after (inclusive) / created_before (exclusive). For a single UTC day, created_after is that day at 00:00:00Z and created_before is the next day at 00:00:00Z.
 
         ```python
         for message in client.email.list(status="delivered"):
@@ -91,7 +91,7 @@ class EmailBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Cancel a scheduled email before it sends. Only works while the message is still scheduled (status `scheduled`); once it starts sending — or was already canceled — the call returns a conflict error. Canceling does not return consumed scheduled-send quota.
+        """Cancel a scheduled email before it sends. Only works while the message is still scheduled (status `scheduled`); once it starts sending, or was already canceled, the call returns a conflict error. Canceling does not return consumed scheduled-send quota.
 
         ```python
         client.email.cancel("em_abc123")
@@ -111,7 +111,7 @@ class AsyncEmailBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
-        """Fetch one email message by id — aggregate delivery status and per-state recipient counts. The message body (html, text) is not returned. Per-recipient delivery statuses and the event log are separate sub-resources: GET /v1/email/messages/{message_id}/recipients and GET /v1/email/messages/{message_id}/events.
+        """Fetch one email message by id, with aggregate delivery status and per-state recipient counts. The message body (html, text) is not returned. Per-recipient delivery statuses and the event log are separate sub-resources: GET /v1/email/messages/{message_id}/recipients and GET /v1/email/messages/{message_id}/events.
 
         ```python
         message = await client.email.get("em_abc123")
@@ -140,7 +140,7 @@ class AsyncEmailBase(AsyncResource):
         from_: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailMessage]:
-        """List sent email messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by creation time with the half-open range created_after (inclusive) / created_before (exclusive) — e.g. for a single UTC day set created_after to that day at 00:00:00Z and created_before to the next day at 00:00:00Z.
+        """List sent email messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by creation time with the half-open range created_after (inclusive) / created_before (exclusive). For a single UTC day, created_after is that day at 00:00:00Z and created_before is the next day at 00:00:00Z.
 
         ```python
         async for message in client.email.list(status="delivered"):
@@ -167,7 +167,7 @@ class AsyncEmailBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Cancel a scheduled email before it sends. Only works while the message is still scheduled (status `scheduled`); once it starts sending — or was already canceled — the call returns a conflict error. Canceling does not return consumed scheduled-send quota.
+        """Cancel a scheduled email before it sends. Only works while the message is still scheduled (status `scheduled`); once it starts sending, or was already canceled, the call returns a conflict error. Canceling does not return consumed scheduled-send quota.
 
         ```python
         await client.email.cancel("em_abc123")
