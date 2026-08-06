@@ -8,7 +8,7 @@ helpers live here once instead of being emitted into every resource file
 
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any, Sequence, TypeVar
 
 import pydantic
 
@@ -20,8 +20,13 @@ T = TypeVar("T", bound=pydantic.BaseModel)
 
 def _opts(options: RequestOptions | None) -> dict[str, Any]:
     """Per-call options as request kwargs — a plain ``dict[str, Any]`` to spread
-    into ``request()``; a bare ``dict(options)`` widens the values to ``object``."""
-    return dict(options or {})
+    into ``request()``; a bare ``dict(options)`` widens the values to ``object``.
+
+    ``credentials`` is dropped: the credential resolver consumes it, and the
+    transport has no such parameter."""
+    kwargs = dict(options or {})
+    kwargs.pop("credentials", None)
+    return kwargs
 
 
 def _request_kwargs(
@@ -32,6 +37,22 @@ def _request_kwargs(
     clean = {key: value for key, value in query.items() if value is not None}
     kwargs = _opts(options)
     kwargs["extra_query"] = {**(kwargs.get("extra_query") or {}), **clean}
+    return kwargs
+
+
+def _creds(
+    client: object,
+    options: RequestOptions | None,
+    kwargs: dict[str, Any],
+    schemes: Sequence[str] | None,
+) -> dict[str, Any]:
+    """Merge the credential headers an operation's security schemes require into
+    the request kwargs. Resolved by the client, which raises before the request
+    when one is unconfigured."""
+    if not schemes:
+        return kwargs
+    headers = client.credential_headers(schemes, options)  # type: ignore[attr-defined]
+    kwargs["extra_headers"] = {**(kwargs.get("extra_headers") or {}), **headers}
     return kwargs
 
 
@@ -47,8 +68,9 @@ class Resource:
         query: dict[str, object],
         model: type[T],
         options: RequestOptions | None,
+        schemes: Sequence[str] | None = None,
     ) -> T:
-        response = self._client.request("GET", path, **_request_kwargs(options, query))
+        response = self._client.request("GET", path, **_creds(self._client, options, _request_kwargs(options, query), schemes))
         return model.model_validate(response.json())
 
     def _write(
@@ -59,9 +81,10 @@ class Resource:
         model: type[T],
         options: RequestOptions | None,
         query: dict[str, object] | None = None,
+        schemes: Sequence[str] | None = None,
     ) -> T:
         kwargs = _request_kwargs(options, query) if query else _opts(options)
-        response = self._client.request(verb, path, body=body, **kwargs)
+        response = self._client.request(verb, path, body=body, **_creds(self._client, options, kwargs, schemes))
         return model.model_validate(response.json())
 
     def _write_none(
@@ -71,11 +94,12 @@ class Resource:
         body: dict[str, object],
         options: RequestOptions | None,
         query: dict[str, object] | None = None,
+        schemes: Sequence[str] | None = None,
     ) -> None:
         """A write whose success is 204 (no body): same write lifecycle as
         :meth:`_write`, but the response is discarded."""
         kwargs = _request_kwargs(options, query) if query else _opts(options)
-        self._client.request(verb, path, body=body, **kwargs)
+        self._client.request(verb, path, body=body, **_creds(self._client, options, kwargs, schemes))
 
     def _action(
         self,
@@ -83,12 +107,13 @@ class Resource:
         path: str,
         model: type[T],
         options: RequestOptions | None,
+        schemes: Sequence[str] | None = None,
     ) -> T:
-        response = self._client.request(verb, path, **_opts(options))
+        response = self._client.request(verb, path, **_creds(self._client, options, _opts(options), schemes))
         return model.model_validate(response.json())
 
-    def _action_none(self, verb: str, path: str, options: RequestOptions | None) -> None:
-        self._client.request(verb, path, **_opts(options))
+    def _action_none(self, verb: str, path: str, options: RequestOptions | None, schemes: Sequence[str] | None = None) -> None:
+        self._client.request(verb, path, **_creds(self._client, options, _opts(options), schemes))
 
     def _delete(
         self,
@@ -112,9 +137,10 @@ class AsyncResource:
         query: dict[str, object],
         model: type[T],
         options: RequestOptions | None,
+        schemes: Sequence[str] | None = None,
     ) -> T:
         response = await self._client.request(
-            "GET", path, **_request_kwargs(options, query)
+            "GET", path, **_creds(self._client, options, _request_kwargs(options, query), schemes)
         )
         return model.model_validate(response.json())
 
@@ -126,9 +152,10 @@ class AsyncResource:
         model: type[T],
         options: RequestOptions | None,
         query: dict[str, object] | None = None,
+        schemes: Sequence[str] | None = None,
     ) -> T:
         kwargs = _request_kwargs(options, query) if query else _opts(options)
-        response = await self._client.request(verb, path, body=body, **kwargs)
+        response = await self._client.request(verb, path, body=body, **_creds(self._client, options, kwargs, schemes))
         return model.model_validate(response.json())
 
     async def _write_none(
@@ -138,11 +165,12 @@ class AsyncResource:
         body: dict[str, object],
         options: RequestOptions | None,
         query: dict[str, object] | None = None,
+        schemes: Sequence[str] | None = None,
     ) -> None:
         """A write whose success is 204 (no body): same write lifecycle as
         :meth:`_write`, but the response is discarded."""
         kwargs = _request_kwargs(options, query) if query else _opts(options)
-        await self._client.request(verb, path, body=body, **kwargs)
+        await self._client.request(verb, path, body=body, **_creds(self._client, options, kwargs, schemes))
 
     async def _action(
         self,
@@ -150,12 +178,13 @@ class AsyncResource:
         path: str,
         model: type[T],
         options: RequestOptions | None,
+        schemes: Sequence[str] | None = None,
     ) -> T:
-        response = await self._client.request(verb, path, **_opts(options))
+        response = await self._client.request(verb, path, **_creds(self._client, options, _opts(options), schemes))
         return model.model_validate(response.json())
 
-    async def _action_none(self, verb: str, path: str, options: RequestOptions | None) -> None:
-        await self._client.request(verb, path, **_opts(options))
+    async def _action_none(self, verb: str, path: str, options: RequestOptions | None, schemes: Sequence[str] | None = None) -> None:
+        await self._client.request(verb, path, **_creds(self._client, options, _opts(options), schemes))
 
     async def _delete(
         self,

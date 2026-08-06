@@ -11,12 +11,6 @@ from __future__ import annotations
 from typing import Final
 
 
-class ContactChannel:
-    """Values of ContactChannel known at this SDK version (open enum)."""
-
-    EMAIL: Final = "email"
-
-
 class EmailEventType:
     """Values of EmailEventType known at this SDK version (open enum)."""
 
@@ -89,7 +83,6 @@ class WhatsAppTemplateParameterType:
 
 
 __all__ = [
-    "ContactChannel",
     "EmailEventType",
     "VerificationAttemptFailureReason",
     "VerificationChannel",

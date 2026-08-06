@@ -15,14 +15,14 @@ import platform
 import random
 import time
 import uuid
-from typing import Any, Mapping, TypeVar
+from typing import Any, Mapping, Sequence, TypeVar
 from urllib.parse import urlsplit
 
 import httpx
 
 from bird._caller import detect_caller
 from bird._constants import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, INITIAL_RETRY_DELAY, MAX_RETRY_DELAY
-from bird._exceptions import APIConnectionError, APITimeoutError, from_response, parse_retry_after
+from bird._exceptions import BirdError, APIConnectionError, APITimeoutError, from_response, parse_retry_after
 from bird._types import omit, Omit
 from bird._version import __version__
 
@@ -85,7 +85,11 @@ class BaseClient:
         max_retries: int = DEFAULT_MAX_RETRIES,
         default_headers: Mapping[str, str] | None = None,
         default_query: Mapping[str, Any] | None = None,
+        credentials: Mapping[str, tuple[str, str | None, str]] | None = None,
     ) -> None:
+        # Extra credentials some operations require on top of the API key, keyed by
+        # the security scheme that names them: {scheme: (header, value, how)}.
+        self._credentials = dict(credentials or {})
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.api_version = api_version
@@ -154,6 +158,35 @@ class BaseClient:
         if given is not None:
             return given
         return str(uuid.uuid4()) if method.upper() in _MUTATING_METHODS else None
+
+
+    def credential_headers(
+        self, schemes: Sequence[str] | None, options: Mapping[str, Any] | None = None
+    ) -> dict[str, str]:
+        """Resolve the credential headers an operation's security schemes require.
+
+        Raises before the request when one is unconfigured, so a caller gets a named
+        error instead of a 401. A per-call ``credentials`` mapping in ``options``
+        overrides the client config, so one client can address several apps.
+        """
+        if not schemes:
+            return {}
+        override = (options or {}).get("credentials") or {}
+        out: dict[str, str] = {}
+        for scheme in schemes:
+            cred = self._credentials.get(scheme)
+            if cred is None:
+                raise BirdError(f"unknown credential scheme {scheme!r}")
+            header, value, how = cred
+            # Only an ABSENT override falls back to the client config. An explicit
+            # empty one is a caller error, not a request for the client's value —
+            # falling back there would mix one app's key with another's secret.
+            supplied = override.get(scheme)
+            resolved = value if supplied is None else supplied
+            if not resolved:
+                raise BirdError(f"{header} is required for this operation: {how}")
+            out[header] = resolved
+        return out
 
 
 class SyncAPIClient(BaseClient):

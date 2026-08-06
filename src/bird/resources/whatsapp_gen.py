@@ -23,6 +23,7 @@ class WhatsappListParams(TypedDict, total=False):
     created_after: str
     created_before: str
     status: Sequence[str]
+    direction: str
     phone_number: str
     bsuid: str
     tag: Sequence[str]
@@ -64,12 +65,13 @@ class WhatsappBase(Resource):
         created_after: str | None = None,
         created_before: str | None = None,
         status: Sequence[str] | None = None,
+        direction: str | None = None,
         phone_number: str | None = None,
         bsuid: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by status, contact phone number, bsuid, or tag. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, or tag. Use whatsapp_get for one message's current state.
 
         ```python
         for msg in client.whatsapp.list(status=["delivered"]):
@@ -83,6 +85,7 @@ class WhatsappBase(Resource):
             "created_after": created_after,
             "created_before": created_before,
             "status": status,
+            "direction": direction,
             "phone_number": phone_number,
             "bsuid": bsuid,
             "tag": tag,
@@ -144,12 +147,13 @@ class AsyncWhatsappBase(AsyncResource):
         created_after: str | None = None,
         created_before: str | None = None,
         status: Sequence[str] | None = None,
+        direction: str | None = None,
         phone_number: str | None = None,
         bsuid: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by status, contact phone number, bsuid, or tag. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, or tag. Use whatsapp_get for one message's current state.
 
         ```python
         async for msg in client.whatsapp.list(status=["delivered"]):
@@ -163,6 +167,7 @@ class AsyncWhatsappBase(AsyncResource):
             "created_after": created_after,
             "created_before": created_before,
             "status": status,
+            "direction": direction,
             "phone_number": phone_number,
             "bsuid": bsuid,
             "tag": tag,

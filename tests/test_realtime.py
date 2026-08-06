@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import contextlib
+
 import httpx
 import pytest
 import respx
@@ -154,6 +156,20 @@ def test_unknown_response_fields_are_tolerated() -> None:
 
 
 @respx.mock
+def test_per_call_credentials_override_the_client_config() -> None:
+    # One client can address several apps: the per-call pair wins over the configured
+    # one, keyed by the security scheme that names it.
+    route = respx.get(f"{APP_BASE}/channels").mock(return_value=httpx.Response(200, json={"data": []}))
+    client().realtime.channels.list(
+        APP,
+        options={"credentials": {"RealtimeKey": "rk_call", "RealtimeSecret": "rs_call"}},
+    )
+    sent = route.calls.last.request
+    assert sent.headers["X-Realtime-Key"] == "rk_call"
+    assert sent.headers["X-Realtime-Secret"] == "rs_call"
+
+
+@respx.mock
 def test_caller_options_thread_through_but_cannot_override_the_credentials() -> None:
     route = respx.get(f"{APP_BASE}/channels").mock(return_value=httpx.Response(200, json={"data": []}))
     client().realtime.channels.list(
@@ -165,21 +181,34 @@ def test_caller_options_thread_through_but_cannot_override_the_credentials() -> 
 
 
 @respx.mock
+def test_an_explicitly_empty_override_is_rejected_not_silently_replaced() -> None:
+    # Parity with Go, TypeScript, and PHP, which all reject an empty override. Falling
+    # back to the client value here would pair one app's secret with another's key.
+    route = respx.get(f"{APP_BASE}/channels").mock(return_value=httpx.Response(200, json={"data": []}))
+
+    with pytest.raises(BirdError, match="is required for this operation"):
+        client().realtime.channels.list(
+            APP, options={"credentials": {"RealtimeKey": "", "RealtimeSecret": "rs_call"}}
+        )
+    assert route.call_count == 0
+
+
+@respx.mock
 def test_missing_credentials_raises_before_any_request() -> None:
     route = respx.post(f"{APP_BASE}/events").mock(return_value=httpx.Response(200, json={}))
     bird = Bird(api_key="bk_eu1_secret")  # no realtime_key/realtime_secret
 
-    with pytest.raises(BirdError, match="Realtime app credentials"):
+    with pytest.raises(BirdError, match="is required for this operation"):
         bird.realtime.publish(APP, event="greeting", channels=["orders"])
-    with pytest.raises(BirdError, match="Realtime app credentials"):
+    with pytest.raises(BirdError, match="is required for this operation"):
         bird.realtime.channels.list(APP)
     assert route.call_count == 0
 
 
 def test_with_options_carries_the_realtime_credentials() -> None:
     derived = client().with_options(max_retries=0)
-    assert derived.realtime._auth._key == "rk_test"
-    assert derived.realtime._auth._secret == "rs_test"
+    headers = derived.credential_headers(("RealtimeKey", "RealtimeSecret"))
+    assert headers == {"X-Realtime-Key": "rk_test", "X-Realtime-Secret": "rs_test"}
 
 
 @respx.mock
@@ -203,6 +232,38 @@ async def test_async_surface_mirrors_sync() -> None:
 async def test_async_missing_credentials_raises_before_any_request() -> None:
     route = respx.post(f"{APP_BASE}/events").mock(return_value=httpx.Response(200, json={}))
     async with AsyncBird(api_key="bk_eu1_secret") as bird:
-        with pytest.raises(BirdError, match="Realtime app credentials"):
+        with pytest.raises(BirdError, match="is required for this operation"):
             await bird.realtime.publish(APP, event="greeting", channels=["orders"])
     assert route.call_count == 0
+
+
+@respx.mock
+def test_paginated_call_tolerates_a_credentials_override() -> None:
+    # The paginated path builds its request kwargs separately from the single-call
+    # path, so it has to drop `credentials` too or the transport rejects the kwarg.
+    route = respx.get("https://eu1.platform.bird.com/v1/contacts").mock(
+        return_value=httpx.Response(200, json={"data": [], "next_cursor": None})
+    )
+    page = client().contacts.list(options={"credentials": {"RealtimeKey": "rk", "RealtimeSecret": "rs"}})
+    assert list(page.data) == []
+    assert route.called
+
+
+@respx.mock
+def test_credentials_are_not_sent_on_an_unrelated_resource() -> None:
+    # The app secret must reach ONLY the operations that declare the schemes. A
+    # shared header path once put it on every request, so this pins the scope.
+    # A generated, non-paginated method, so this travels the shared _creds path the
+    # credentials are injected on. A hand-written resource would bypass it and prove
+    # nothing. The response body is irrelevant — the assertion is about what went
+    # out — so a decode failure is suppressed.
+    route = respx.get("https://eu1.platform.bird.com/v1/contacts/con_1").mock(
+        return_value=httpx.Response(200, json={})
+    )
+    with contextlib.suppress(Exception):
+        client().contacts.get("con_1")
+    assert route.called
+    sent = route.calls.last.request
+    assert "X-Realtime-Key" not in sent.headers
+    assert "X-Realtime-Secret" not in sent.headers
+    assert sent.headers["Authorization"] == "Bearer bk_eu1_secret"

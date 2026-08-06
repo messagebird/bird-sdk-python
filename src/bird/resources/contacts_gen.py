@@ -22,6 +22,7 @@ class ContactListParams(TypedDict, total=False):
     """Query params for ``client.contacts.list``. Every key is optional."""
 
     email: str
+    phone: str
     external_id: str
     q: str
     limit: int
@@ -30,13 +31,11 @@ class ContactListParams(TypedDict, total=False):
     include_total: bool
 
 
-class _ContactCreateRequired(TypedDict):
+class ContactCreateParams(TypedDict, total=False):
+    """Params for ``client.contacts.create``. Every key is optional."""
+
     email: str
-
-
-class ContactCreateParams(_ContactCreateRequired, total=False):
-    """Params for ``client.contacts.create``. ``email`` is required."""
-
+    phone: str
     first_name: str
     last_name: str
     external_id: str
@@ -46,7 +45,8 @@ class ContactCreateParams(_ContactCreateRequired, total=False):
 class ContactUpdateParams(TypedDict, total=False):
     """Params for ``client.contacts.update``. Every key is optional."""
 
-    email: str
+    email: str | None
+    phone: str | None
     first_name: str | None
     last_name: str | None
     external_id: str | None
@@ -61,6 +61,7 @@ class ContactBatchParams(_ContactBatchRequired, total=False):
     """Params for ``client.contacts.batch``. ``contacts`` is required."""
 
     audience_ids: Sequence[str]
+    match_on: str
     data_mode: str
 
 
@@ -69,6 +70,7 @@ class Contacts(Resource):
         self,
         *,
         email: str | None = None,
+        phone: str | None = None,
         external_id: str | None = None,
         q: str | None = None,
         limit: int | None = None,
@@ -77,7 +79,7 @@ class Contacts(Resource):
         include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email or external_id, or search by email/name substring. Pass include_total for a total count.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
 
         ```python
         for contact in client.contacts.list(q="acme.com"):
@@ -86,6 +88,7 @@ class Contacts(Resource):
         """
         query = {
             "email": email,
+            "phone": phone,
             "external_id": external_id,
             "q": q,
             "limit": limit,
@@ -101,7 +104,7 @@ class Contacts(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email or external_id with `contacts.list`.
+        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email, phone, or external_id with `contacts.list`.
 
         ```python
         contact = client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
@@ -118,14 +121,15 @@ class Contacts(Resource):
     def create(
         self,
         *,
-        email: str,
+        email: str | None = None,
+        phone: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
         external_id: str | None = None,
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Create a contact by email address in the workspace. Fails with a conflict if the email or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
+        """Create a contact identified by an email address, an E.164 phone number, or both. Fails with a conflict if the email, phone, or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
 
         ```python
         contact = client.contacts.create(email="jane@acme.com", first_name="Jane")
@@ -136,6 +140,7 @@ class Contacts(Resource):
             ContactCreateRequest,
             {
                 "email": email,
+                "phone": phone,
                 "first_name": first_name,
                 "last_name": last_name,
                 "external_id": external_id,
@@ -154,14 +159,15 @@ class Contacts(Resource):
         self,
         contact_id: str,
         *,
-        email: str | None = None,
+        email: str | None | Omit = omit,
+        phone: str | None | Omit = omit,
         first_name: str | None | Omit = omit,
         last_name: str | None | Omit = omit,
         external_id: str | None | Omit = omit,
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Update a contact's name, external_id, email, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key.
+        """Update a contact's name, external_id, email, phone, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key. A contact keeps at least one identifier: clearing both email and phone is rejected.
 
         ```python
         contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
@@ -169,8 +175,10 @@ class Contacts(Resource):
         ```
         """
         _body: dict[str, Any] = {}
-        if email is not None:
+        if not isinstance(email, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["email"] = email
+        if not isinstance(phone, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["phone"] = phone
         if not isinstance(first_name, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["first_name"] = first_name
         if not isinstance(last_name, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -207,15 +215,16 @@ class Contacts(Resource):
         *,
         contacts: Sequence[ContactCreateParams],
         audience_ids: Sequence[str] | None = None,
+        match_on: str | None = None,
         data_mode: str | None = None,
         options: RequestOptions | None = None,
     ) -> ContactUpsertResult:
-        """Create or update up to 1,000 contacts in one request, matched by email address, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
+        """Create or update up to 1,000 contacts in one request, each entry matched automatically against every identifier it supplies (email, phone, external_id) or, with match_on, by that one field only, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
 
         ```python
         result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
         for item in result.data:
-            print(item.email, item.status)
+            print(item.entry.email, item.status)
         ```
         """
         body = to_wire(
@@ -223,6 +232,7 @@ class Contacts(Resource):
             {
                 "contacts": contacts,
                 "audience_ids": audience_ids,
+                "match_on": match_on,
                 "data_mode": data_mode,
             },
         )
@@ -240,6 +250,7 @@ class AsyncContacts(AsyncResource):
         self,
         *,
         email: str | None = None,
+        phone: str | None = None,
         external_id: str | None = None,
         q: str | None = None,
         limit: int | None = None,
@@ -248,7 +259,7 @@ class AsyncContacts(AsyncResource):
         include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email or external_id, or search by email/name substring. Pass include_total for a total count.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
 
         ```python
         async for contact in client.contacts.list(q="acme.com"):
@@ -257,6 +268,7 @@ class AsyncContacts(AsyncResource):
         """
         query = {
             "email": email,
+            "phone": phone,
             "external_id": external_id,
             "q": q,
             "limit": limit,
@@ -272,7 +284,7 @@ class AsyncContacts(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email or external_id with `contacts.list`.
+        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email, phone, or external_id with `contacts.list`.
 
         ```python
         contact = await client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
@@ -289,14 +301,15 @@ class AsyncContacts(AsyncResource):
     async def create(
         self,
         *,
-        email: str,
+        email: str | None = None,
+        phone: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
         external_id: str | None = None,
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Create a contact by email address in the workspace. Fails with a conflict if the email or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
+        """Create a contact identified by an email address, an E.164 phone number, or both. Fails with a conflict if the email, phone, or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
 
         ```python
         contact = await client.contacts.create(email="jane@acme.com", first_name="Jane")
@@ -307,6 +320,7 @@ class AsyncContacts(AsyncResource):
             ContactCreateRequest,
             {
                 "email": email,
+                "phone": phone,
                 "first_name": first_name,
                 "last_name": last_name,
                 "external_id": external_id,
@@ -325,14 +339,15 @@ class AsyncContacts(AsyncResource):
         self,
         contact_id: str,
         *,
-        email: str | None = None,
+        email: str | None | Omit = omit,
+        phone: str | None | Omit = omit,
         first_name: str | None | Omit = omit,
         last_name: str | None | Omit = omit,
         external_id: str | None | Omit = omit,
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Update a contact's name, external_id, email, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key.
+        """Update a contact's name, external_id, email, phone, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key. A contact keeps at least one identifier: clearing both email and phone is rejected.
 
         ```python
         contact = await client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
@@ -340,8 +355,10 @@ class AsyncContacts(AsyncResource):
         ```
         """
         _body: dict[str, Any] = {}
-        if email is not None:
+        if not isinstance(email, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["email"] = email
+        if not isinstance(phone, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["phone"] = phone
         if not isinstance(first_name, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["first_name"] = first_name
         if not isinstance(last_name, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -378,15 +395,16 @@ class AsyncContacts(AsyncResource):
         *,
         contacts: Sequence[ContactCreateParams],
         audience_ids: Sequence[str] | None = None,
+        match_on: str | None = None,
         data_mode: str | None = None,
         options: RequestOptions | None = None,
     ) -> ContactUpsertResult:
-        """Create or update up to 1,000 contacts in one request, matched by email address, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
+        """Create or update up to 1,000 contacts in one request, each entry matched automatically against every identifier it supplies (email, phone, external_id) or, with match_on, by that one field only, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
 
         ```python
         result = await client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
         for item in result.data:
-            print(item.email, item.status)
+            print(item.entry.email, item.status)
         ```
         """
         body = to_wire(
@@ -394,6 +412,7 @@ class AsyncContacts(AsyncResource):
             {
                 "contacts": contacts,
                 "audience_ids": audience_ids,
+                "match_on": match_on,
                 "data_mode": data_mode,
             },
         )

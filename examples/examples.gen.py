@@ -97,7 +97,7 @@ async def _ex_15() -> None:
 async def _ex_16() -> None:
     result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
     for item in result.data:
-        print(item.email, item.status)
+        print(item.entry.email, item.status)
 
 
 async def _ex_17() -> None:
@@ -479,47 +479,56 @@ async def _ex_74() -> None:
 
 async def _ex_75() -> None:
     channel = client.realtime.channels.get(
-        "rap_01krd...", "presence-lobby", include=["member_count"]
+        "rap_01krdgeqcxet5s7t44vh8rt9mg", "presence-lobby", include=["member_count"]
     )
     print(channel.occupied, channel.member_count)
 
 
 async def _ex_76() -> None:
-    channels = client.realtime.channels.list("rap_01krd...", prefix="presence-")
+    channels = client.realtime.channels.list(
+        "rap_01krdgeqcxet5s7t44vh8rt9mg", prefix="presence-", include=["member_count"]
+    )
     for channel in channels.data:
-        print(channel.name)
+        print(channel.name, channel.member_count)
 
 
 async def _ex_77() -> None:
-    members = client.realtime.channels.members("rap_01krd...", "presence-lobby")
-    print([member.member_id for member in members.members])
+    members = client.realtime.channels.members(
+        "rap_01krdgeqcxet5s7t44vh8rt9mg", "presence-lobby"
+    )
+    for member in members.members:
+        print(member.member_id)
 
 
 async def _ex_78() -> None:
-    client.realtime.members.disconnect("rap_01krd...", "member:42")
+    client.realtime.members.disconnect("rap_01krdgeqcxet5s7t44vh8rt9mg", "user_42")
 
 
 async def _ex_79() -> None:
     client.realtime.members.send(
-        "rap_01krd...", "member:42", event="order-shipped", data={"id": 42}
+        "rap_01krdgeqcxet5s7t44vh8rt9mg",
+        "user_42",
+        event="order-shipped",
+        data={"order_id": "ord_123"},
     )
 
 
 async def _ex_80() -> None:
-    client.realtime.publish(
-        "rap_01krd...",
-        event="order-updated",
-        channels=["orders", "orders-42"],
-        data={"id": 42, "status": "shipped"},
+    result = client.realtime.publish(
+        "rap_01krdgeqcxet5s7t44vh8rt9mg",
+        event="order.updated",
+        channels=["orders", "presence-lobby"],
+        data={"order_id": "ord_123", "status": "shipped"},
     )
+    print(result.data)
 
 
 async def _ex_81() -> None:
     client.realtime.publish_batch(
-        "rap_01krd...",
+        "rap_01krdgeqcxet5s7t44vh8rt9mg",
         events=[
-            {"event": "order-created", "channel": "orders", "data": {"id": 1}},
-            {"event": "order-updated", "channel": "orders", "data": {"id": 2}},
+            {"event": "order.created", "channel": "orders", "data": {"id": 1}},
+            {"event": "order.updated", "channel": "orders", "data": {"id": 2}},
         ],
     )
 

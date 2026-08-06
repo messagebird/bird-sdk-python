@@ -122,7 +122,6 @@ from bird.resources.verify_verifications_gen import (
 )
 from bird._event_types import WebhookEventType
 from bird._open_enums import (
-    ContactChannel,
     EmailEventType,
     VerificationAttemptFailureReason,
     VerificationChannel,
@@ -255,7 +254,6 @@ __all__ = [
     "WebhookEvent",
     "GenericWebhookEvent",
     "WebhookEventType",
-    "ContactChannel",
     "EmailEventType",
     "VerificationAttemptFailureReason",
     "VerificationChannel",

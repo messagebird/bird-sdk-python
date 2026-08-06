@@ -24,6 +24,10 @@ class RequestOptions(TypedDict, total=False):
     timeout: float | httpx.Timeout | None
     max_retries: int
     idempotency_key: str
+    credentials: Mapping[str, str]
+    """Per-call override for the extra credentials an operation requires, keyed by
+    security scheme (``{"RealtimeKey": ..., "RealtimeSecret": ...}``). Overrides the
+    client config for this call, so one client can address several apps."""
 
 
 class EmailDefaults(TypedDict, total=False):

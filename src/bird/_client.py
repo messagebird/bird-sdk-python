@@ -149,7 +149,15 @@ class Bird(SyncAPIClient):
             "http_client": http_client,
         }
         # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")})
+        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")}
+        # The extra credentials some operations require, keyed by the security scheme
+        # that names them. A generated method names its schemes; the base client
+        # resolves them from here.
+        base["credentials"] = {
+            "RealtimeKey": ("X-Realtime-Key", realtime_key, "pass realtime_key= when constructing the client"),
+            "RealtimeSecret": ("X-Realtime-Secret", realtime_secret, "pass realtime_secret= when constructing the client"),
+        }
+        super().__init__(**base)
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
         self.sms = Sms(self)
@@ -161,7 +169,7 @@ class Bird(SyncAPIClient):
         self.audiences = Audiences(self)
         self.domains = Domains(self)
         self.webhooks = Webhooks(webhook_secret)
-        self.realtime = Realtime(self, realtime_key, realtime_secret)
+        self.realtime = Realtime(self)
 
     def with_options(
         self,
@@ -256,7 +264,15 @@ class AsyncBird(AsyncAPIClient):
             "http_client": http_client,
         }
         # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        super().__init__(**{k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")})
+        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")}
+        # The extra credentials some operations require, keyed by the security scheme
+        # that names them. A generated method names its schemes; the base client
+        # resolves them from here.
+        base["credentials"] = {
+            "RealtimeKey": ("X-Realtime-Key", realtime_key, "pass realtime_key= when constructing the client"),
+            "RealtimeSecret": ("X-Realtime-Secret", realtime_secret, "pass realtime_secret= when constructing the client"),
+        }
+        super().__init__(**base)
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
         self.sms = AsyncSms(self)
@@ -268,7 +284,7 @@ class AsyncBird(AsyncAPIClient):
         self.audiences = AsyncAudiences(self)
         self.domains = AsyncDomains(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
-        self.realtime = AsyncRealtime(self, realtime_key, realtime_secret)
+        self.realtime = AsyncRealtime(self)
 
     def with_options(
         self,

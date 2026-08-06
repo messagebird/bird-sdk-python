@@ -32,7 +32,7 @@ def contacts_update() -> None:
 def contacts_batch() -> None:
     result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
     for item in result.data:
-        print(item.email, item.status)
+        print(item.entry.email, item.status)
 
 
 def contacts_list() -> None:

@@ -1269,10 +1269,6 @@ class ContactID(RootModel[str]):
     ]
 
 
-class ContactChannel(str, Enum):
-    email = "email"
-
-
 class Contact(Timestamps):
     model_config = ConfigDict(
         extra="allow",
@@ -1287,11 +1283,18 @@ class Contact(Timestamps):
         ),
     ]
     email: Annotated[
-        str,
+        str | None,
         Field(
-            description="The contact's email address, stored trimmed and lowercased. Unique within the workspace.",
+            description="The contact's email address, in its stored form, trimmed and lowercased before uniqueness is checked. Unique within the workspace. Null when the contact has no email address.",
             max_length=254,
-            min_length=1,
+        ),
+    ]
+    phone: Annotated[
+        str | None,
+        Field(
+            description="The contact's phone number in normalized international form (a leading `+` and four to 15 digits), which may differ from the form it was supplied in. Bird normalizes formatting but does not verify the number against numbering-plan metadata. Unique within the workspace. Carriers recycle disconnected numbers, so a long-stored number can come to belong to someone else; `external_id` is the durable key for your own records. Null when the contact has no phone number.",
+            max_length=16,
+            min_length=5,
         ),
     ]
     first_name: Annotated[
@@ -1321,13 +1324,6 @@ class Contact(Timestamps):
             description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
         ),
     ] = None
-    channels: Annotated[
-        list[Annotated[Union[ContactChannel, str], Field(union_mode="left_to_right")]]
-        | None,
-        Field(
-            description="Channels this contact can be reached on, derived from the identifiers it has. A contact with an email address includes `email`. More values are added as a contact gains identifiers for other channels.\n"
-        ),
-    ] = None
     created_at: str
     updated_at: str
 
@@ -1344,13 +1340,20 @@ class ContactCreateRequest(BaseModel):
         extra="allow",
     )
     email: Annotated[
-        str,
+        str | None,
         Field(
-            description="The contact's email address. Trimmed and lowercased before it is stored and checked for uniqueness. Unique within the workspace.",
+            description="The contact's email address. Trimmed and lowercased before it is stored and checked for uniqueness. Unique within the workspace. Supply an email address, a phone number, or both.",
             max_length=254,
-            min_length=1,
         ),
-    ]
+    ] = None
+    phone: Annotated[
+        str | None,
+        Field(
+            description="The contact's phone number in E.164 format, including the leading `+` and country code. Spaces and punctuation are accepted and stripped; the number is stored in its canonical form, which may differ from what you send, and is unique within the workspace. An empty string is treated as if the field were omitted. Supply an email address, a phone number, or both.",
+            examples=["+31612345678"],
+            max_length=32,
+        ),
+    ] = None
     first_name: Annotated[
         str | None, Field(description="The contact's first name.", max_length=100)
     ] = None
@@ -1372,6 +1375,12 @@ class ContactCreateRequest(BaseModel):
     ] = None
 
 
+class ContactMatchKey(str, Enum):
+    email = "email"
+    phone = "phone"
+    external_id = "external_id"
+
+
 class DataMode(str, Enum):
     merge = "merge"
     replace_ = "replace"
@@ -1384,7 +1393,7 @@ class ContactUpsertRequest(BaseModel):
     contacts: Annotated[
         list[ContactCreateRequest],
         Field(
-            description="Contacts to create or update, matched by email address. Existing contacts are updated with the fields each entry supplies; omitted fields keep their stored values, so an entry can set fields but never clear them. New addresses create contacts.",
+            description="Contacts to create or update, matched automatically against every identifier an entry supplies. Existing contacts are updated with the fields each entry supplies; omitted fields keep their stored values, so an entry can set fields but never clear them. Unmatched entries create contacts.",
             max_length=1000,
             min_length=1,
         ),
@@ -1397,12 +1406,49 @@ class ContactUpsertRequest(BaseModel):
             min_length=1,
         ),
     ] = None
+    match_on: Annotated[
+        ContactMatchKey | None,
+        Field(
+            description="Optional. Forces every entry to be matched to an existing contact by this one field, which every entry must then carry. When omitted, each entry is matched automatically against every identifier it supplies: no match creates a contact, one match updates it, and an entry whose identifiers belong to more than one contact fails with an error naming each.\n"
+        ),
+    ] = None
     data_mode: Annotated[
         DataMode | None,
         Field(
             description="How a supplied `data` object is applied to an existing contact. `merge` (the default) merges the supplied keys onto the contact's stored custom values, and a key with a `null` value deletes that one key. `replace` overwrites the whole stored `data` map with the supplied one. In both modes a contact that omits `data` keeps its stored values unchanged, so an import that touches one attribute never wipes the others.\n"
         ),
     ] = "merge"
+
+
+class ContactUpsertEntry(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    email: Annotated[
+        str | None,
+        Field(
+            description="Email address this entry carried, trimmed and lowercased. Null when the entry carried none."
+        ),
+    ]
+    phone: Annotated[
+        str | None,
+        Field(
+            description="Phone number this entry carried, in its normalized international form. Null when the entry carried none. A row rejected for an invalid phone echoes the value as sent, trimmed, since no normalized form exists."
+        ),
+    ]
+    external_id: Annotated[
+        str | None,
+        Field(
+            description="Your own identifier for this entry, when the entry supplied one."
+        ),
+    ]
+
+
+class ContactMatchedOn(Enum):
+    email = "email"
+    phone = "phone"
+    external_id = "external_id"
+    NoneType_None = None
 
 
 class ContactUpsertError(BaseModel):
@@ -1414,6 +1460,14 @@ class ContactUpsertError(BaseModel):
         Field(
             description="Machine-readable error category for this entry, such as `validation_error` or `conflict_error`, in the same vocabulary as the top-level error `type`. New categories may be added over time, so treat unrecognized values as a generic failure.",
             min_length=1,
+        ),
+    ]
+    code: Annotated[
+        str,
+        Field(
+            description="The specific error code for this entry, from the same catalog as the top-level error `code`: the discriminator within a category. `E04058` (the entry matched two different contacts, a human must decide) and `E04055` (the phone belongs to another contact, retry with different data) are both `conflict_error`; the code tells a sync which one it hit.",
+            min_length=6,
+            pattern="^E\\d{5}$",
         ),
     ]
     message: Annotated[
@@ -1435,11 +1489,11 @@ class ContactUpsertResultItem(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    email: Annotated[
-        str,
+    entry: ContactUpsertEntry
+    matched_on: Annotated[
+        ContactMatchedOn,
         Field(
-            description="Email address this entry refers to, in the normalized (trimmed and lowercased) form it was matched and stored as.",
-            min_length=1,
+            description="Which identifier matched this entry to an existing contact. Null when the entry created a new contact."
         ),
     ]
     status: Annotated[
@@ -1480,9 +1534,15 @@ class ContactUpdateRequest(BaseModel):
     email: Annotated[
         str | None,
         Field(
-            description="New email address for the contact. Trimmed and lowercased before it is stored and checked for uniqueness. Must not be in use by another contact in the workspace. Omit to keep the current address; a contact's email cannot be removed.",
+            description="New email address for the contact. Trimmed and lowercased before it is stored and checked for uniqueness. Must not be in use by another contact in the workspace. Omit to keep the current address; set to null to remove it, as long as the contact keeps at least one identifier.",
             max_length=254,
-            min_length=1,
+        ),
+    ] = None
+    phone: Annotated[
+        str | None,
+        Field(
+            description="New phone number for the contact, in E.164 format with the leading `+` and country code. Spaces and punctuation are accepted and stripped. Stored in its canonical form, which may differ from what you send, and unique within the workspace. Omit to keep the current number; set to null to remove it, as long as the contact keeps at least one identifier. An empty string behaves as null.",
+            max_length=32,
         ),
     ] = None
     first_name: Annotated[
@@ -3083,7 +3143,7 @@ class WhatsAppMessage(BaseModel):
     cost: Annotated[
         Money | None,
         Field(
-            description="Amount charged for this message, at full precision. Null until the message has been priced, and on messages that were rejected before pricing. The rate depends on the template category and the recipient's country."
+            description="Amount charged for this message, at full precision. Null until the message has been priced, and on messages that were rejected before pricing. The rate depends on the message category and the recipient's country."
         ),
     ] = None
     tags: Annotated[
@@ -3203,7 +3263,7 @@ class WhatsAppMessageSendRequest(BaseModel):
     template: Annotated[
         WhatsAppTemplateSend1 | WhatsAppTemplateSend2 | None,
         Field(
-            description="The template to send. Bird selects the sender number from the template's category, so there is no sender field on this request. Templates are the only supported content type today: a request without one is rejected with a `422`.\n",
+            description="The template to send. For a Bird-managed template, Bird selects the sender number from the template's category, so `from` must be omitted. A template is the only content deliverable outside a customer service window.\n",
             examples=[
                 {
                     "id": "wat_01ky4x8e4genzb7way45txfkm1",
@@ -3280,7 +3340,7 @@ class WhatsAppEvent(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Lifecycle event type. `whatsapp.accepted`: Bird accepted the request. `whatsapp.sent`: handed to the WhatsApp network. `whatsapp.delivered`: delivery confirmed to the recipient's device. `whatsapp.read`: the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed`: terminal permanent failure. `whatsapp.rejected`: Bird refused the message before sending it, so it was never charged. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
+            description="Lifecycle event type. `whatsapp.accepted`: Bird accepted the request. `whatsapp.sent`: handed to the WhatsApp network. `whatsapp.delivered`: delivery confirmed to the recipient's device. `whatsapp.read`: the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed`: terminal permanent failure. `whatsapp.rejected`: Bird refused the message before sending it, so it was never charged. `whatsapp.received`: an inbound message arrived from the contact. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
             examples=["whatsapp.delivered"],
             min_length=1,
         ),
@@ -6472,10 +6532,6 @@ class WebhookEventType(str, Enum):
     sms_failed = "sms.failed"
     sms_rejected = "sms.rejected"
     sms_sent = "sms.sent"
-    sms_tfn_verification_approved = "sms.tfn_verification.approved"
-    sms_tfn_verification_info_requested = "sms.tfn_verification.info_requested"
-    sms_tfn_verification_rejected = "sms.tfn_verification.rejected"
-    sms_tfn_verification_submitted = "sms.tfn_verification.submitted"
     sms_undelivered = "sms.undelivered"
     verify_attempt_delivered = "verify.attempt.delivered"
     verify_attempt_sent = "verify.attempt.sent"
@@ -8120,183 +8176,6 @@ class EventSMSSent(BaseModel):
     data: EventSMSSentData
 
 
-class EventSMSTfnVerificationBase(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    verification_id: Annotated[
-        str,
-        Field(
-            description="ID of the toll-free verification.",
-            examples=["tfv_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-            pattern="^tfv_[0-9a-hjkmnp-tv-z]{26}$",
-        ),
-    ]
-    workspace_id: Annotated[
-        str,
-        Field(
-            description="ID of the workspace that owns the verification.",
-            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-        ),
-    ]
-    status: Annotated[
-        str,
-        Field(
-            description="Lifecycle state of the verification at the time of the event.",
-            examples=["approved"],
-            min_length=1,
-        ),
-    ]
-    sender_id: Annotated[
-        str,
-        Field(
-            description="ID of the toll-free number the verification licenses.",
-            examples=["snd_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-            pattern="^snd_[0-9a-hjkmnp-tv-z]{26}$",
-        ),
-    ]
-
-
-class EventSMSTfnVerificationApprovedData(EventSMSTfnVerificationBase):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-
-
-class Type37(str, Enum):
-    sms_tfn_verification_approved = "sms.tfn_verification.approved"
-
-
-class EventSMSTfnVerificationApproved(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    type: Annotated[
-        Literal["sms.tfn_verification.approved"],
-        Field(description="Event type.", examples=["sms.tfn_verification.approved"]),
-    ]
-    timestamp: Annotated[
-        str,
-        Field(
-            description="Time the approval was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
-            min_length=1,
-        ),
-    ]
-    data: EventSMSTfnVerificationApprovedData
-
-
-class EventSMSTfnVerificationInfoRequestedData(EventSMSTfnVerificationBase):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-
-
-class Type38(str, Enum):
-    sms_tfn_verification_info_requested = "sms.tfn_verification.info_requested"
-
-
-class EventSMSTfnVerificationInfoRequested(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    type: Annotated[
-        Literal["sms.tfn_verification.info_requested"],
-        Field(
-            description="Event type.", examples=["sms.tfn_verification.info_requested"]
-        ),
-    ]
-    timestamp: Annotated[
-        str,
-        Field(
-            description="Time the information request was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
-            min_length=1,
-        ),
-    ]
-    data: EventSMSTfnVerificationInfoRequestedData
-
-
-class DenialReason(RootModel[str]):
-    root: Annotated[str, Field(min_length=1)]
-
-
-class EventSMSTfnVerificationRejectedData(EventSMSTfnVerificationBase):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    denial_reasons: Annotated[
-        list[DenialReason],
-        Field(
-            description="Human-readable reasons the carrier gave for the rejection.",
-            examples=[["opt-in workflow unclear"]],
-        ),
-    ]
-    resubmit_allowed: Annotated[
-        bool,
-        Field(
-            description="Whether the verification may be corrected and resubmitted within the resubmission window.",
-            examples=[True],
-        ),
-    ]
-
-
-class Type39(str, Enum):
-    sms_tfn_verification_rejected = "sms.tfn_verification.rejected"
-
-
-class EventSMSTfnVerificationRejected(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    type: Annotated[
-        Literal["sms.tfn_verification.rejected"],
-        Field(description="Event type.", examples=["sms.tfn_verification.rejected"]),
-    ]
-    timestamp: Annotated[
-        str,
-        Field(
-            description="Time the rejection was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
-            min_length=1,
-        ),
-    ]
-    data: EventSMSTfnVerificationRejectedData
-
-
-class EventSMSTfnVerificationSubmittedData(EventSMSTfnVerificationBase):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-
-
-class Type40(str, Enum):
-    sms_tfn_verification_submitted = "sms.tfn_verification.submitted"
-
-
-class EventSMSTfnVerificationSubmitted(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    type: Annotated[
-        Literal["sms.tfn_verification.submitted"],
-        Field(description="Event type.", examples=["sms.tfn_verification.submitted"]),
-    ]
-    timestamp: Annotated[
-        str,
-        Field(
-            description="Time the verification was submitted.",
-            examples=["2026-05-21 12:00:00+00:00"],
-            min_length=1,
-        ),
-    ]
-    data: EventSMSTfnVerificationSubmittedData
-
-
 class EventSMSUndeliveredData(EventSMSBase):
     model_config = ConfigDict(
         extra="allow",
@@ -8306,7 +8185,7 @@ class EventSMSUndeliveredData(EventSMSBase):
     ]
 
 
-class Type41(str, Enum):
+class Type37(str, Enum):
     sms_undelivered = "sms.undelivered"
 
 
@@ -8406,7 +8285,7 @@ class EventVerifyAttemptDeliveredData(EventVerifyBase):
     ]
 
 
-class Type42(str, Enum):
+class Type38(str, Enum):
     verify_attempt_delivered = "verify.attempt.delivered"
 
 
@@ -8463,7 +8342,7 @@ class EventVerifyAttemptSentData(EventVerifyBase):
     ]
 
 
-class Type43(str, Enum):
+class Type39(str, Enum):
     verify_attempt_sent = "verify.attempt.sent"
 
 
@@ -8529,7 +8408,7 @@ class EventVerifyAttemptUndeliveredData(EventVerifyBase):
     ]
 
 
-class Type44(str, Enum):
+class Type40(str, Enum):
     verify_attempt_undelivered = "verify.attempt.undelivered"
 
 
@@ -8581,7 +8460,7 @@ class EventVerifyVerificationCreatedData(EventVerifyBase):
     ]
 
 
-class Type45(str, Enum):
+class Type41(str, Enum):
     verify_verification_created = "verify.verification.created"
 
 
@@ -8634,7 +8513,7 @@ class EventVerifyVerificationVerifiedData(EventVerifyBase):
     ]
 
 
-class Type46(str, Enum):
+class Type42(str, Enum):
     verify_verification_verified = "verify.verification.verified"
 
 
@@ -8727,7 +8606,7 @@ class EventVoiceCallAnsweredData(EventVoiceBase):
     )
 
 
-class Type47(str, Enum):
+class Type43(str, Enum):
     voice_call_answered = "voice_call.answered"
 
 
@@ -8793,7 +8672,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
     ]
 
 
-class Type48(str, Enum):
+class Type44(str, Enum):
     voice_call_ended = "voice_call.ended"
 
 
@@ -8822,7 +8701,7 @@ class EventVoiceCallInitiatedData(EventVoiceBase):
     )
 
 
-class Type49(str, Enum):
+class Type45(str, Enum):
     voice_call_initiated = "voice_call.initiated"
 
 
@@ -8882,13 +8761,13 @@ class EventWhatsAppBase(BaseModel):
         WhatsAppAddress,
         Field(
             alias="from",
-            description="Sender of the message. On outbound messages, the business number it was sent from.",
+            description="Sender of the message. On outbound messages, the business number it was sent from; on inbound, the WhatsApp contact.",
         ),
     ]
     to: Annotated[
         WhatsAppAddress,
         Field(
-            description="Recipient of the message. On outbound messages, the WhatsApp contact."
+            description="Recipient of the message. On outbound messages, the WhatsApp contact; on inbound, the business number."
         ),
     ]
     tags: Annotated[
@@ -8912,7 +8791,7 @@ class EventWhatsAppAcceptedData(EventWhatsAppBase):
     )
 
 
-class Type50(str, Enum):
+class Type46(str, Enum):
     whatsapp_accepted = "whatsapp.accepted"
 
 
@@ -8941,7 +8820,7 @@ class EventWhatsAppDeliveredData(EventWhatsAppBase):
     )
 
 
-class Type51(str, Enum):
+class Type47(str, Enum):
     whatsapp_delivered = "whatsapp.delivered"
 
 
@@ -8973,7 +8852,7 @@ class EventWhatsAppFailedData(EventWhatsAppBase):
     ]
 
 
-class Type52(str, Enum):
+class Type48(str, Enum):
     whatsapp_failed = "whatsapp.failed"
 
 
@@ -9002,7 +8881,7 @@ class EventWhatsAppReadData(EventWhatsAppBase):
     )
 
 
-class Type53(str, Enum):
+class Type49(str, Enum):
     whatsapp_read = "whatsapp.read"
 
 
@@ -9035,7 +8914,7 @@ class EventWhatsAppRejectedData(EventWhatsAppBase):
     ]
 
 
-class Type54(str, Enum):
+class Type50(str, Enum):
     whatsapp_rejected = "whatsapp.rejected"
 
 
@@ -9064,7 +8943,7 @@ class EventWhatsAppSentData(EventWhatsAppBase):
     )
 
 
-class Type55(str, Enum):
+class Type51(str, Enum):
     whatsapp_sent = "whatsapp.sent"
 
 
@@ -9119,10 +8998,6 @@ class WebhookEvent(
         | EventSMSFailed
         | EventSMSRejected
         | EventSMSSent
-        | EventSMSTfnVerificationApproved
-        | EventSMSTfnVerificationInfoRequested
-        | EventSMSTfnVerificationRejected
-        | EventSMSTfnVerificationSubmitted
         | EventSMSUndelivered
         | EventVerifyAttemptDelivered
         | EventVerifyAttemptSent
@@ -9171,10 +9046,6 @@ class WebhookEvent(
         | EventSMSFailed
         | EventSMSRejected
         | EventSMSSent
-        | EventSMSTfnVerificationApproved
-        | EventSMSTfnVerificationInfoRequested
-        | EventSMSTfnVerificationRejected
-        | EventSMSTfnVerificationSubmitted
         | EventSMSUndelivered
         | EventVerifyAttemptDelivered
         | EventVerifyAttemptSent
