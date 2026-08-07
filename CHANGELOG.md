@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.0
+
+- Listing WhatsApp messages gains a `category` filter, matching the equivalent filter on SMS and email messages.
+
 ## 0.21.0
 
 - The Realtime app credentials can now be overridden per call, keyed by security scheme: `options={"credentials": {"RealtimeKey": …, "RealtimeSecret": …}}`. One client can address several Realtime apps; setting them on the client stays the default.
