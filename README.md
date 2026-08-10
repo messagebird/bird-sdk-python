@@ -1,6 +1,6 @@
 # Bird Python SDK
 
-The official Python SDK for the [Bird](https://bird.com) email platform.
+The official Python SDK for the [Bird](https://bird.com) API: email, SMS, WhatsApp, verification, and Realtime, over one typed client.
 
 📚 **Documentation:** https://bird.com/docs/sdks/python
 

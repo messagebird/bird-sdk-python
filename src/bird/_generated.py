@@ -1892,66 +1892,42 @@ class SMSSegments(BaseModel):
     ]
 
 
-class SMSCostBreakdown(BaseModel):
+class MessageCost(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    per_segment: Annotated[
+    amount: Annotated[
         str,
         Field(
-            description="Per-segment price as a decimal string.",
-            examples=["0.0079"],
+            description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.\n",
+            examples=["0.00990"],
             min_length=1,
         ),
     ]
-    segments: Annotated[int, Field(description="Number of billable segments.", ge=1)]
-    country_code: Annotated[
-        str,
-        Field(
-            description="ISO 3166-1 alpha-2 destination country the price was resolved for.",
-            examples=["US"],
-            max_length=2,
-            min_length=2,
-        ),
-    ]
-    carrier_surcharge: Annotated[
-        str,
-        Field(
-            description="Carrier surcharge component as a decimal string (for example US 10DLC fees). `0.0000` when none applies.",
-            examples=["0.0000"],
-            min_length=1,
-        ),
-    ]
-
-
-class SMSCost(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
     currency_code: Annotated[
-        str | None,
+        str,
         Field(
-            description="ISO 4217 currency code for the cost amount. Omitted when the cost is not denominated in a currency (for example a zero-priced internal send).",
+            description="ISO 4217 currency code. Every component is denominated in this currency.",
             examples=["USD"],
             max_length=3,
             min_length=3,
             pattern="^[A-Z]{3}$",
         ),
-    ] = None
-    amount: Annotated[
-        str,
+    ]
+    transaction_amount: Annotated[
+        str | None,
         Field(
-            description="Total cost as a decimal string: the per-segment rate multiplied by the segment count, plus any surcharges.",
-            examples=["0.0079"],
-            min_length=1,
+            description='What Bird charged to carry the message, as a decimal string. Null when this component was not priced; `"0.00000"` when it priced at zero.\n',
+            examples=["0.00790"],
         ),
     ]
-    breakdown: Annotated[
-        SMSCostBreakdown | None,
+    passthrough_amount: Annotated[
+        str | None,
         Field(
-            description="Per-component cost breakdown. Returned on single-message reads; omitted from list rows."
+            description='Third-party fees Bird passes on, as a decimal string, such as US 10DLC carrier surcharges. Null when this component was not priced; `"0.00000"` when it priced at zero.\n',
+            examples=["0.00200"],
         ),
-    ] = None
+    ]
 
 
 class SMSErrorCode(str, Enum):
@@ -2053,9 +2029,9 @@ class SMSMessage(BaseModel):
         SMSSegments, Field(description="Segment breakdown for the body.")
     ]
     cost: Annotated[
-        SMSCost | None,
+        MessageCost | None,
         Field(
-            description="Cost of the message. Null until the message has been priced."
+            description="What the message cost, split into Bird's charge and any third-party fees passed through. Null until the message has been priced."
         ),
     ] = None
     tags: Annotated[

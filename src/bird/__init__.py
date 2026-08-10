@@ -1,7 +1,9 @@
-"""The official Python SDK for the Bird email platform.
+"""The official Python SDK for the Bird API.
 
-It offers a synchronous ``Bird`` client and an asynchronous ``AsyncBird`` client,
-a typed exception hierarchy, safe retries, pagination, and webhook verification.
+It covers email, SMS, WhatsApp, verification, and Realtime on one typed client,
+and offers a synchronous ``Bird`` client and an asynchronous ``AsyncBird``
+client, a typed exception hierarchy, safe retries, pagination, and webhook
+verification.
 """
 
 from __future__ import annotations

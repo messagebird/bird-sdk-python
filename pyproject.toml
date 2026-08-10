@@ -1,4 +1,4 @@
-# Python SDK for the Bird email platform (ADR-0045).
+# Python SDK for the Bird API (ADR-0045).
 # Distribution name is `messagebird-sdk` on PyPI; the import package is `bird`.
 [build-system]
 requires = ["hatchling"]
@@ -6,13 +6,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "messagebird-sdk"
-description = "The official Python SDK for the Bird email platform."
+description = "The official Python SDK for the Bird API: email, SMS, WhatsApp, verification, and Realtime on one typed client."
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Bird" }]
 dynamic = ["version"]
 requires-python = ">=3.10"
-keywords = ["bird", "email", "webhooks", "sdk", "api"]
+keywords = ["bird", "api", "sdk", "email", "sms", "whatsapp", "verify", "realtime", "webhooks"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,7 +22,9 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Topic :: Communications",
     "Topic :: Communications :: Email",
+    "Topic :: Communications :: Telephony",
     "Typing :: Typed",
 ]
 dependencies = [
