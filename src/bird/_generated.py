@@ -1258,6 +1258,11 @@ class AudienceID(RootModel[str]):
     ]
 
 
+class ContactIdentifierFilter(str, Enum):
+    email = "email"
+    phone = "phone"
+
+
 class ContactID(RootModel[str]):
     root: Annotated[
         str,
@@ -1266,6 +1271,25 @@ class ContactID(RootModel[str]):
             min_length=1,
             pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
         ),
+    ]
+
+
+class AudienceRef(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="ID of the referenced audience (`adn_`-prefixed).",
+            examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(description="The audience's display name.", max_length=100, min_length=1),
     ]
 
 
@@ -1322,6 +1346,12 @@ class Contact(Timestamps):
         dict[str, Any] | None,
         Field(
             description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
+        ),
+    ] = None
+    audiences: Annotated[
+        list[AudienceRef] | None,
+        Field(
+            description="The audiences this contact belongs to, most-recently-joined first. Only present when listing contacts; omitted from every other contact operation."
         ),
     ] = None
     created_at: str
@@ -1758,25 +1788,6 @@ class AudienceUpdateRequest(BaseModel):
     ] = None
 
 
-class AudienceRef(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    id: Annotated[
-        str,
-        Field(
-            description="ID of the referenced audience (`adn_`-prefixed).",
-            examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-            pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
-        ),
-    ]
-    name: Annotated[
-        str,
-        Field(description="The audience's display name.", max_length=100, min_length=1),
-    ]
-
-
 class AudienceMember(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -1997,7 +2008,7 @@ class SMSMessage(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="Recipient phone number in E.164 format.",
+            description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.\n",
             examples=["+15551234567"],
             min_length=1,
         ),
@@ -2006,19 +2017,19 @@ class SMSMessage(BaseModel):
         str,
         Field(
             alias="from",
-            description="Sender the message was sent from: an E.164 number, an alphanumeric sender ID, or a short code.",
+            description="Where the message came from. On an outbound message this is the sender you sent it from (an E.164 number, an alphanumeric sender ID, or a short code); on an inbound one it is the phone number that sent it to you.\n",
             examples=["+15557654321"],
             min_length=1,
         ),
     ]
     text: Annotated[
-        str,
+        str | None,
         Field(
-            description="The message body as sent. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, Bird just does not persist it for later reads.\n",
+            description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, Bird just does not persist it for later reads.\n",
             examples=["Your order has shipped and is on its way."],
             min_length=1,
         ),
-    ]
+    ] = None
     category: Annotated[
         SMSMessageCategory | None,
         Field(
@@ -2055,14 +2066,14 @@ class SMSMessage(BaseModel):
     carrier: Annotated[
         str | None,
         Field(
-            description="Carrier that handled the message, when known. Populated once a delivery receipt identifies it.",
+            description="Carrier that handled the message. Absent until a delivery receipt identifies it, and on a received message the carrier reports it only where a carrier fee applies.",
             examples=["Verizon"],
         ),
     ] = None
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description="Mobile country code and mobile network code of the carrier, when known.",
+            description="Mobile country code and mobile network code of the carrier. Absent until the carrier is identified.",
             examples=["311480"],
         ),
     ] = None
@@ -2781,7 +2792,7 @@ class Verification(Timestamps):
     channels: Annotated[
         list[VerificationChannelEntry],
         Field(
-            description="The channels this verification uses to deliver the passcode, in attempt order: the first entry is tried first and later entries are fallbacks. An email recipient is verified over email; a phone recipient is verified over SMS.",
+            description="The channels this verification uses to deliver the passcode, in attempt order: the first entry is tried first and later entries are fallbacks. An email recipient is verified over email; a phone recipient is verified over the phone channels enabled for its destination country, in the order that country's configuration sets.",
             min_length=1,
         ),
     ]
@@ -2892,6 +2903,13 @@ class VerificationCheckResult(BaseModel):
             ge=0,
         ),
     ] = None
+
+
+class VerificationNextChannelRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    to: VerificationTo
 
 
 class WhatsAppMessageStatus(str, Enum):
@@ -3117,9 +3135,9 @@ class WhatsAppMessage(BaseModel):
         ),
     ] = None
     cost: Annotated[
-        Money | None,
+        MessageCost | None,
         Field(
-            description="Amount charged for this message, at full precision. Null until the message has been priced, and on messages that were rejected before pricing. The rate depends on the message category and the recipient's country."
+            description="What the message cost, split into Bird's charge and any third-party fees passed through. Null until the message has been priced, and on messages that were rejected before pricing. The rate depends on the message category and the recipient's country."
         ),
     ] = None
     tags: Annotated[
@@ -7916,7 +7934,7 @@ class EventSMSBase(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="Recipient phone number in E.164 format.",
+            description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.\n",
             examples=["+15551234567"],
             min_length=1,
         ),
@@ -7925,7 +7943,7 @@ class EventSMSBase(BaseModel):
         str,
         Field(
             alias="from",
-            description="Sender the message was sent from — an E.164 number, an alphanumeric sender ID, or a short code.",
+            description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.\n",
             examples=["+15557654321"],
             min_length=1,
         ),
@@ -7943,6 +7961,12 @@ class EventSMSBase(BaseModel):
             examples=[{"order_id": "ord_123"}],
         ),
     ]
+    cost: Annotated[
+        MessageCost | None,
+        Field(
+            description="What the message had cost as of this event, split into Bird's charge and any third-party fees passed through. Null on an event that priced nothing.\n\nComponents are named so you can merge them per component rather than replacing the object: webhook delivery is not ordered, so an older event arriving late would otherwise overwrite a newer figure. Take the latest `occurred_at` you have seen for each component. `amount` is the sum of the components in THIS payload, not a settled total.\n"
+        ),
+    ] = None
 
 
 class EventSMSAcceptedData(EventSMSBase):
@@ -8940,6 +8964,230 @@ class EventWhatsAppSent(BaseModel):
         ),
     ]
     data: EventWhatsAppSentData
+
+
+class AuditLogActor(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Actor identifier.",
+            examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+        ),
+    ]
+    type: Annotated[
+        str,
+        Field(
+            description="Actor type (e.g. user, api_key, system).",
+            examples=["user"],
+            min_length=1,
+        ),
+    ]
+    display_name: Annotated[
+        str | None,
+        Field(
+            description="Display name of the actor — the user's email address for user actors, or the API key's name for API-key actors. Absent when it could not be resolved.\n"
+        ),
+    ] = None
+
+
+class SIPTrunkID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
+class VoiceCallRejectionReason(str, Enum):
+    VoiceCallRejectionReasonSourceNotAllowed = "source_not_allowed"
+    VoiceCallRejectionReasonCallerIDNotVerified = "caller_id_not_verified"
+    VoiceCallRejectionReasonRoutingNotConfigured = "routing_not_configured"
+    VoiceCallRejectionReasonNoRouteFound = "no_route_found"
+    VoiceCallRejectionReasonDestinationBlocked = "destination_blocked"
+    VoiceCallRejectionReasonDestinationNotEnabled = "destination_not_enabled"
+    VoiceCallRejectionReasonInsufficientBalance = "insufficient_balance"
+    VoiceCallRejectionReasonDailySpendExceeded = "daily_spend_exceeded"
+    VoiceCallRejectionReasonConcurrentCallsExceeded = "concurrent_calls_exceeded"
+    VoiceCallRejectionReasonCallsPerSecondExceeded = "calls_per_second_exceeded"
+    VoiceCallRejectionReasonCallNotPermitted = "call_not_permitted"
+
+
+class VoiceMediaQuality(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    mos: Annotated[
+        float,
+        Field(
+            description="Mean opinion score, the single number for how the call sounded, from 1 (unintelligible) to 5 (as good as being in the same room). Anything at or above 4.0 is what most people would call a clear line, and below 3.5 is where callers start asking each other to repeat themselves. The three other fields are the impairments that move it.\n",
+            examples=[4.32],
+            ge=1.0,
+            le=5.0,
+        ),
+    ]
+    jitter_ms: Annotated[
+        int,
+        Field(
+            description="Variation in the arrival time of the audio packets, in milliseconds. Audio arriving unevenly is heard as choppiness even when no packets are lost at all.",
+            examples=[12],
+            ge=0,
+        ),
+    ]
+    packet_loss_pct: Annotated[
+        float,
+        Field(
+            description="Percentage of audio packets that never arrived. Heard as brief gaps or clipped words, and the impairment that degrades a call fastest.",
+            examples=[1.5],
+            ge=0.0,
+        ),
+    ]
+    round_trip_time_ms: Annotated[
+        int,
+        Field(
+            description="Round-trip time between the two ends, in milliseconds. It does not distort the audio, but above roughly 300 ms the two parties start talking over each other.",
+            examples=[42],
+            ge=0,
+        ),
+    ]
+
+
+class VoiceCall(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Unique identifier for this call record.",
+            examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    session_id: Annotated[
+        VoiceSessionID | None,
+        Field(
+            description="Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. Null when session correlation is not available for the call."
+        ),
+    ] = None
+    workspace_id: Annotated[
+        str,
+        Field(
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    direction: VoiceCallDirection
+    from_: Annotated[
+        str,
+        Field(
+            alias="from",
+            description="Calling party number in E.164 format.",
+            examples=["+14155551234"],
+            min_length=1,
+        ),
+    ]
+    to: Annotated[
+        str,
+        Field(
+            description="Called party number in E.164 format.",
+            examples=["+16505559876"],
+            min_length=1,
+        ),
+    ]
+    actor: Annotated[
+        AuditLogActor | None,
+        Field(
+            description="Who placed the call. Either the API key whose credentials it used, or the user who placed it from a browser or the Bird CLI. Absent when the call was admitted by its source IP address alone, since no credential identifies a caller there, and for calls placed before Bird started recording this."
+        ),
+    ] = None
+    sip_trunk_id: Annotated[
+        SIPTrunkID | None,
+        Field(
+            description="Identifier of the SIP trunk that originated this call. Null when no trunk is associated."
+        ),
+    ] = None
+    status: VoiceCallStatus
+    sip_response_code: Annotated[
+        int | None,
+        Field(
+            description="Final SIP response code received from the carrier. Null when no SIP response was received, for example on timeout or DNS failure.",
+            examples=[200],
+            ge=100,
+        ),
+    ] = None
+    rejection_reason: Annotated[
+        VoiceCallRejectionReason | None,
+        Field(
+            description="Why Bird refused the call before dialing a carrier. Absent when Bird did not refuse it, meaning the call either connected or it failed at the carrier, where `sip_response_code` is the whole story."
+        ),
+    ] = None
+    started_at: Annotated[
+        str, Field(description="When the call was initiated.", min_length=1)
+    ]
+    answered_at: Annotated[
+        str | None,
+        Field(
+            description="When the call was answered (200 OK received). Null for unanswered calls."
+        ),
+    ] = None
+    ended_at: Annotated[
+        str | None,
+        Field(
+            description="When the call ended (BYE or final non-2xx response). Null for calls that ended abnormally without a recorded end event."
+        ),
+    ] = None
+    duration_ms: Annotated[
+        int | None,
+        Field(
+            description="Total call duration in milliseconds, measured from the first INVITE to the BYE or final response. Null while the call is still in progress and has no final duration yet.",
+            examples=[65000],
+            ge=0,
+        ),
+    ] = None
+    pdd_ms: Annotated[
+        int | None,
+        Field(
+            description='Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the call "not going through". Absent when the call never rang, either because it failed first or because the carrier answered it immediately.\n',
+            examples=[850],
+            ge=0,
+        ),
+    ] = None
+    billable_ms: Annotated[
+        int | None,
+        Field(
+            description="Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls, and null while the call is still in progress.",
+            examples=[60000],
+            ge=0,
+        ),
+    ] = None
+    media_quality: Annotated[
+        VoiceMediaQuality | None,
+        Field(
+            description="How the audio sounded, as opposed to whether the call connected. Absent when the call carried no audio, or when the far end reported nothing to measure from."
+        ),
+    ] = None
+    cost: Annotated[
+        Money | None,
+        Field(
+            description="Amount billed for this call, net of tax, at full precision. Absent until the call has been rated; unanswered or unpriced calls have no cost."
+        ),
+    ] = None
+
+
+class VoiceCallList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: list[VoiceCall]
 
 
 class WebhookEvent(

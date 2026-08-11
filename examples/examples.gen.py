@@ -584,29 +584,47 @@ async def _ex_89() -> None:
 
 
 async def _ex_90() -> None:
+    verification = client.verify.verifications.next_channel(
+        to={"phone_number": "+15551234567"}
+    )
+    print(verification.last_channel)
+
+
+async def _ex_91() -> None:
+    call = client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
+    # A call still ringing or connected carries no economics yet.
+    print(call.status, call.duration_ms, call.cost)
+
+
+async def _ex_92() -> None:
+    for call in client.voice.list(status=["ringing", "in_progress"]):
+        print(call.id, call.status)
+
+
+async def _ex_93() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_91() -> None:
+async def _ex_94() -> None:
     msg = client.whatsapp.get("wa_abc123")
     print(msg.id, msg.status)
 
 
-async def _ex_92() -> None:
+async def _ex_95() -> None:
     for msg in client.whatsapp.list(status=["delivered"]):
         print(msg.id, msg.status)
 
 
-async def _ex_93() -> None:
+async def _ex_96() -> None:
     events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_94() -> None:
+async def _ex_97() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",

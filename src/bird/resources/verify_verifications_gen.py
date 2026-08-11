@@ -10,6 +10,7 @@ from bird._generated import (
     VerificationCheckRequest,
     VerificationCheckResult,
     VerificationCreateRequest,
+    VerificationNextChannelRequest,
 )
 from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
@@ -46,6 +47,14 @@ class VerifyVerificationsCheckParams(_VerifyVerificationsCheckRequired, total=Fa
     """Params for ``client.verify.verifications.check``. ``to`` and ``code`` are required."""
 
 
+class _VerifyVerificationsNextChannelRequired(TypedDict):
+    to: VerificationTo
+
+
+class VerifyVerificationsNextChannelParams(_VerifyVerificationsNextChannelRequired, total=False):
+    """Params for ``client.verify.verifications.next_channel``. ``to`` is required."""
+
+
 class VerifyVerifications(Resource):
     def create(
         self,
@@ -55,7 +64,7 @@ class VerifyVerifications(Resource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over SMS, an email address over email, or both; with both, it is sent over one channel and fails over to the other, not to both at once). Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS delivery draws on the workspace's SMS balance.
+        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS delivery draws on the workspace's SMS balance.
 
         ```python
         verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
@@ -109,6 +118,35 @@ class VerifyVerifications(Resource):
             options,
         )
 
+    def next_channel(
+        self,
+        *,
+        to: VerificationTo,
+        options: RequestOptions | None = None,
+    ) -> Verification:
+        """Advance an in-progress verification to the next channel in its plan and send a fresh passcode there: the "I didn't receive my code" action. The verification is identified by the same `to` recipient used to start it, with no verification id needed. The send bypasses the resend cooldown, and earlier passcodes stay valid. Returns the verification with `last_channel` set to the channel the new code went to; when concurrent advances race for the same recipient, the response reflects committed state: `last_channel` names the most recent completed send, and the racing call that completed the newer send is authoritative. A plan with no further channel returns a 422 named NoNextChannel, after which only re-creating the verification will resend.
+
+        ```python
+        verification = client.verify.verifications.next_channel(
+            to={"phone_number": "+15551234567"}
+        )
+        print(verification.last_channel)
+        ```
+        """
+        body = to_wire(
+            VerificationNextChannelRequest,
+            {
+                "to": to,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/verify/verifications/next-channel",
+            body,
+            Verification,
+            options,
+        )
+
 
 class AsyncVerifyVerifications(AsyncResource):
     async def create(
@@ -119,7 +157,7 @@ class AsyncVerifyVerifications(AsyncResource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over SMS, an email address over email, or both; with both, it is sent over one channel and fails over to the other, not to both at once). Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS delivery draws on the workspace's SMS balance.
+        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS delivery draws on the workspace's SMS balance.
 
         ```python
         verification = await client.verify.verifications.create(to={"phone_number": "+15551234567"})
@@ -170,5 +208,34 @@ class AsyncVerifyVerifications(AsyncResource):
             "/v1/verify/verifications/check",
             body,
             VerificationCheckResult,
+            options,
+        )
+
+    async def next_channel(
+        self,
+        *,
+        to: VerificationTo,
+        options: RequestOptions | None = None,
+    ) -> Verification:
+        """Advance an in-progress verification to the next channel in its plan and send a fresh passcode there: the "I didn't receive my code" action. The verification is identified by the same `to` recipient used to start it, with no verification id needed. The send bypasses the resend cooldown, and earlier passcodes stay valid. Returns the verification with `last_channel` set to the channel the new code went to; when concurrent advances race for the same recipient, the response reflects committed state: `last_channel` names the most recent completed send, and the racing call that completed the newer send is authoritative. A plan with no further channel returns a 422 named NoNextChannel, after which only re-creating the verification will resend.
+
+        ```python
+        verification = await client.verify.verifications.next_channel(
+            to={"phone_number": "+15551234567"}
+        )
+        print(verification.last_channel)
+        ```
+        """
+        body = to_wire(
+            VerificationNextChannelRequest,
+            {
+                "to": to,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/verify/verifications/next-channel",
+            body,
+            Verification,
             options,
         )

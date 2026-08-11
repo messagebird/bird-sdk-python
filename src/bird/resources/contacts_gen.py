@@ -25,6 +25,7 @@ class ContactListParams(TypedDict, total=False):
     phone: str
     external_id: str
     q: str
+    identifier: str
     limit: int
     starting_after: str
     ending_before: str
@@ -73,6 +74,7 @@ class Contacts(Resource):
         phone: str | None = None,
         external_id: str | None = None,
         q: str | None = None,
+        identifier: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -91,6 +93,7 @@ class Contacts(Resource):
             "phone": phone,
             "external_id": external_id,
             "q": q,
+            "identifier": identifier,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
@@ -253,6 +256,7 @@ class AsyncContacts(AsyncResource):
         phone: str | None = None,
         external_id: str | None = None,
         q: str | None = None,
+        identifier: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -271,6 +275,7 @@ class AsyncContacts(AsyncResource):
             "phone": phone,
             "external_id": external_id,
             "q": q,
+            "identifier": identifier,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,

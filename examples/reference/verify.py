@@ -20,3 +20,10 @@ def verify_verifications_check() -> None:
         to={"phone_number": "+15551234567"}, code="123456"
     )
     print(result.success)
+
+
+def verify_verifications_next_channel() -> None:
+    verification = client.verify.verifications.next_channel(
+        to={"phone_number": "+15551234567"}
+    )
+    print(verification.last_channel)

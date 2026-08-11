@@ -74,6 +74,8 @@ from bird._generated import (
     SMSTemplateList,
     Verification,
     VerificationCheckResult,
+    VoiceCall,
+    VoiceCallList,
     WebhookEvent,
     WhatsAppEvent,
     WhatsAppEventList,
@@ -121,7 +123,9 @@ from bird.resources.sms_templates_gen import SmsTemplateListParams
 from bird.resources.verify_verifications_gen import (
     VerifyVerificationsCheckParams,
     VerifyVerificationsCreateParams,
+    VerifyVerificationsNextChannelParams,
 )
+from bird.resources.voice_gen import VoiceListParams
 from bird._event_types import WebhookEventType
 from bird._open_enums import (
     EmailEventType,
@@ -251,8 +255,12 @@ __all__ = [
     "WhatsAppEventList",
     "VerifyVerificationsCreateParams",
     "VerifyVerificationsCheckParams",
+    "VerifyVerificationsNextChannelParams",
     "Verification",
     "VerificationCheckResult",
+    "VoiceListParams",
+    "VoiceCall",
+    "VoiceCallList",
     "WebhookEvent",
     "GenericWebhookEvent",
     "WebhookEventType",
