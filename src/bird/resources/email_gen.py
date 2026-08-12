@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     EmailMessage,
@@ -43,7 +44,7 @@ class EmailBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/messages/{message_id}",
+            f"/v1/email/messages/{quote(message_id, safe='')}",
             {},
             EmailMessage,
             options,
@@ -99,7 +100,7 @@ class EmailBase(Resource):
         """
         self._action_none(
             "POST",
-            f"/v1/email/messages/{message_id}/cancel",
+            f"/v1/email/messages/{quote(message_id, safe='')}/cancel",
             options,
         )
 
@@ -119,7 +120,7 @@ class AsyncEmailBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/messages/{message_id}",
+            f"/v1/email/messages/{quote(message_id, safe='')}",
             {},
             EmailMessage,
             options,
@@ -175,6 +176,6 @@ class AsyncEmailBase(AsyncResource):
         """
         await self._action_none(
             "POST",
-            f"/v1/email/messages/{message_id}/cancel",
+            f"/v1/email/messages/{quote(message_id, safe='')}/cancel",
             options,
         )

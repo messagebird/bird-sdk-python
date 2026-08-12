@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     VoiceCall,
@@ -86,7 +87,7 @@ class Voice(Resource):
         ```
         """
         return self._get(
-            f"/v1/voice/calls/{call_id}",
+            f"/v1/voice/calls/{quote(call_id, safe='')}",
             {},
             VoiceCall,
             options,
@@ -149,7 +150,7 @@ class AsyncVoice(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/voice/calls/{call_id}",
+            f"/v1/voice/calls/{quote(call_id, safe='')}",
             {},
             VoiceCall,
             options,

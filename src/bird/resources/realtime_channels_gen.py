@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     RealtimeChannelInfo,
@@ -46,7 +47,7 @@ class RealtimeChannels(Resource):
         ```
         """
         return self._get(
-            f"/v1/realtime/apps/{realtime_app_id}/channels",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/channels",
             {
                 "prefix": prefix,
                 "include": include,
@@ -73,7 +74,7 @@ class RealtimeChannels(Resource):
         ```
         """
         return self._get(
-            f"/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/channels/{quote(channel_name, safe='')}",
             {
                 "include": include,
             },
@@ -99,7 +100,7 @@ class RealtimeChannels(Resource):
         ```
         """
         return self._get(
-            f"/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}/members",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/channels/{quote(channel_name, safe='')}/members",
             {},
             RealtimeChannelMembers,
             options,
@@ -126,7 +127,7 @@ class AsyncRealtimeChannels(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/realtime/apps/{realtime_app_id}/channels",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/channels",
             {
                 "prefix": prefix,
                 "include": include,
@@ -153,7 +154,7 @@ class AsyncRealtimeChannels(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/channels/{quote(channel_name, safe='')}",
             {
                 "include": include,
             },
@@ -179,7 +180,7 @@ class AsyncRealtimeChannels(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/realtime/apps/{realtime_app_id}/channels/{channel_name}/members",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/channels/{quote(channel_name, safe='')}/members",
             {},
             RealtimeChannelMembers,
             options,

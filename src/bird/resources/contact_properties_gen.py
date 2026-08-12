@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     ContactProperty,
@@ -77,7 +78,7 @@ class ContactProperties(Resource):
         ```
         """
         return self._get(
-            f"/v1/contact-properties/{property_id}",
+            f"/v1/contact-properties/{quote(property_id, safe='')}",
             {},
             ContactProperty,
             options,
@@ -136,7 +137,7 @@ class ContactProperties(Resource):
         )
         return self._write(
             "PATCH",
-            f"/v1/contact-properties/{property_id}",
+            f"/v1/contact-properties/{quote(property_id, safe='')}",
             body,
             ContactProperty,
             options,
@@ -157,7 +158,7 @@ class ContactProperties(Resource):
         """
         return self._action(
             "POST",
-            f"/v1/contact-properties/{property_id}/archive",
+            f"/v1/contact-properties/{quote(property_id, safe='')}/archive",
             ContactProperty,
             options,
         )
@@ -177,7 +178,7 @@ class ContactProperties(Resource):
         """
         return self._action(
             "POST",
-            f"/v1/contact-properties/{property_id}/unarchive",
+            f"/v1/contact-properties/{quote(property_id, safe='')}/unarchive",
             ContactProperty,
             options,
         )
@@ -220,7 +221,7 @@ class AsyncContactProperties(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/contact-properties/{property_id}",
+            f"/v1/contact-properties/{quote(property_id, safe='')}",
             {},
             ContactProperty,
             options,
@@ -279,7 +280,7 @@ class AsyncContactProperties(AsyncResource):
         )
         return await self._write(
             "PATCH",
-            f"/v1/contact-properties/{property_id}",
+            f"/v1/contact-properties/{quote(property_id, safe='')}",
             body,
             ContactProperty,
             options,
@@ -300,7 +301,7 @@ class AsyncContactProperties(AsyncResource):
         """
         return await self._action(
             "POST",
-            f"/v1/contact-properties/{property_id}/archive",
+            f"/v1/contact-properties/{quote(property_id, safe='')}/archive",
             ContactProperty,
             options,
         )
@@ -320,7 +321,7 @@ class AsyncContactProperties(AsyncResource):
         """
         return await self._action(
             "POST",
-            f"/v1/contact-properties/{property_id}/unarchive",
+            f"/v1/contact-properties/{quote(property_id, safe='')}/unarchive",
             ContactProperty,
             options,
         )

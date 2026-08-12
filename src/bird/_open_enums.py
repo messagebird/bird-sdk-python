@@ -52,6 +52,7 @@ class VerificationAttemptFailureReason:
     CARRIER_REJECTED: Final = "carrier_rejected"
     CHANNEL_DISABLED: Final = "channel_disabled"
     CHANNEL_UNAVAILABLE: Final = "channel_unavailable"
+    DELIVERY_TIMEOUT: Final = "delivery_timeout"
     HARD_BOUNCE: Final = "hard_bounce"
     SOFT_BOUNCE: Final = "soft_bounce"
     UNDELIVERED: Final = "undelivered"

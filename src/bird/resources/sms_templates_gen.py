@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     SMSTemplate,
@@ -62,7 +63,7 @@ class SmsTemplates(Resource):
         ```
         """
         return self._get(
-            f"/v1/sms/templates/{template_ref}",
+            f"/v1/sms/templates/{quote(template_ref, safe='')}",
             {},
             SMSTemplate,
             options,
@@ -111,7 +112,7 @@ class AsyncSmsTemplates(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/sms/templates/{template_ref}",
+            f"/v1/sms/templates/{quote(template_ref, safe='')}",
             {},
             SMSTemplate,
             options,

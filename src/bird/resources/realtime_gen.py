@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     RealtimeBatchPublish,
@@ -83,7 +84,7 @@ class RealtimeBase(Resource):
         )
         return self._write(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/events",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/events",
             body,
             RealtimePublishResult,
             options,
@@ -116,7 +117,7 @@ class RealtimeBase(Resource):
         )
         return self._write(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/batch-events",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/batch-events",
             body,
             RealtimeBatchPublishResult,
             options,
@@ -159,7 +160,7 @@ class AsyncRealtimeBase(AsyncResource):
         )
         return await self._write(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/events",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/events",
             body,
             RealtimePublishResult,
             options,
@@ -192,7 +193,7 @@ class AsyncRealtimeBase(AsyncResource):
         )
         return await self._write(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/batch-events",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/batch-events",
             body,
             RealtimeBatchPublishResult,
             options,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     WhatsAppEventList,
@@ -51,7 +52,7 @@ class WhatsappBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/whatsapp/messages/{message_id}",
+            f"/v1/whatsapp/messages/{quote(message_id, safe='')}",
             {},
             WhatsAppMessage,
             options,
@@ -111,7 +112,7 @@ class WhatsappBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/whatsapp/messages/{message_id}/events",
+            f"/v1/whatsapp/messages/{quote(message_id, safe='')}/events",
             {
                 "type": type,
             },
@@ -135,7 +136,7 @@ class AsyncWhatsappBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/whatsapp/messages/{message_id}",
+            f"/v1/whatsapp/messages/{quote(message_id, safe='')}",
             {},
             WhatsAppMessage,
             options,
@@ -195,7 +196,7 @@ class AsyncWhatsappBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/whatsapp/messages/{message_id}/events",
+            f"/v1/whatsapp/messages/{quote(message_id, safe='')}/events",
             {
                 "type": type,
             },

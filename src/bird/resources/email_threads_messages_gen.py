@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     EmailThreadMessage,
@@ -87,7 +88,7 @@ class EmailThreadsMessages(Resource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return SyncPage(self._client, f"/v1/email/threads/{thread_id}/messages", query, EmailThreadMessage, options)
+        return SyncPage(self._client, f"/v1/email/threads/{quote(thread_id, safe='')}/messages", query, EmailThreadMessage, options)
 
     def get(
         self,
@@ -106,7 +107,7 @@ class EmailThreadsMessages(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/threads/{thread_id}/messages/{message_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}",
             {},
             EmailThreadMessage,
             options,
@@ -129,7 +130,7 @@ class EmailThreadsMessages(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/threads/{thread_id}/messages/{message_id}/body",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}/body",
             {},
             EmailThreadMessageBody,
             options,
@@ -173,7 +174,7 @@ class EmailThreadsMessages(Resource):
         )
         return self._write(
             "POST",
-            f"/v1/email/threads/{thread_id}/messages/{message_id}/reply",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}/reply",
             body,
             EmailThreadMessage,
             options,
@@ -197,7 +198,7 @@ class EmailThreadsMessages(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/threads/{thread_id}/messages/{message_id}/attachments",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}/attachments",
             {},
             EmailThreadMessageAttachmentList,
             options,
@@ -232,7 +233,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return AsyncPage(self._client, f"/v1/email/threads/{thread_id}/messages", query, EmailThreadMessage, options)
+        return AsyncPage(self._client, f"/v1/email/threads/{quote(thread_id, safe='')}/messages", query, EmailThreadMessage, options)
 
     async def get(
         self,
@@ -251,7 +252,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/threads/{thread_id}/messages/{message_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}",
             {},
             EmailThreadMessage,
             options,
@@ -274,7 +275,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/threads/{thread_id}/messages/{message_id}/body",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}/body",
             {},
             EmailThreadMessageBody,
             options,
@@ -318,7 +319,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         )
         return await self._write(
             "POST",
-            f"/v1/email/threads/{thread_id}/messages/{message_id}/reply",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}/reply",
             body,
             EmailThreadMessage,
             options,
@@ -342,7 +343,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/threads/{thread_id}/messages/{message_id}/attachments",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/messages/{quote(message_id, safe='')}/attachments",
             {},
             EmailThreadMessageAttachmentList,
             options,

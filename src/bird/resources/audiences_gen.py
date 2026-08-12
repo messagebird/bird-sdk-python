@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     Audience,
@@ -110,7 +111,7 @@ class Audiences(Resource):
         ```
         """
         return self._get(
-            f"/v1/audiences/{audience_id}",
+            f"/v1/audiences/{quote(audience_id, safe='')}",
             {},
             Audience,
             options,
@@ -170,7 +171,7 @@ class Audiences(Resource):
         body = to_wire_exclude_unset(AudienceUpdateRequest, _body)
         return self._write(
             "PATCH",
-            f"/v1/audiences/{audience_id}",
+            f"/v1/audiences/{quote(audience_id, safe='')}",
             body,
             Audience,
             options,
@@ -188,7 +189,7 @@ class Audiences(Resource):
         client.audiences.delete("adn_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        self._delete(f"/v1/audiences/{audience_id}", options)
+        self._delete(f"/v1/audiences/{quote(audience_id, safe='')}", options)
 
     def list_contacts(
         self,
@@ -213,7 +214,7 @@ class Audiences(Resource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return SyncPage(self._client, f"/v1/audiences/{audience_id}/contacts", query, AudienceMember, options)
+        return SyncPage(self._client, f"/v1/audiences/{quote(audience_id, safe='')}/contacts", query, AudienceMember, options)
 
     def add_contacts(
         self,
@@ -238,7 +239,7 @@ class Audiences(Resource):
         )
         self._write_none(
             "POST",
-            f"/v1/audiences/{audience_id}/contacts",
+            f"/v1/audiences/{quote(audience_id, safe='')}/contacts",
             body,
             options,
         )
@@ -266,7 +267,7 @@ class Audiences(Resource):
         )
         self._write_none(
             "POST",
-            f"/v1/audiences/{audience_id}/contacts/remove",
+            f"/v1/audiences/{quote(audience_id, safe='')}/contacts/remove",
             body,
             options,
         )
@@ -286,7 +287,7 @@ class Audiences(Resource):
         )
         ```
         """
-        self._delete(f"/v1/audiences/{audience_id}/contacts/{contact_id}", options)
+        self._delete(f"/v1/audiences/{quote(audience_id, safe='')}/contacts/{quote(contact_id, safe='')}", options)
 
 
 class AsyncAudiences(AsyncResource):
@@ -328,7 +329,7 @@ class AsyncAudiences(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/audiences/{audience_id}",
+            f"/v1/audiences/{quote(audience_id, safe='')}",
             {},
             Audience,
             options,
@@ -388,7 +389,7 @@ class AsyncAudiences(AsyncResource):
         body = to_wire_exclude_unset(AudienceUpdateRequest, _body)
         return await self._write(
             "PATCH",
-            f"/v1/audiences/{audience_id}",
+            f"/v1/audiences/{quote(audience_id, safe='')}",
             body,
             Audience,
             options,
@@ -406,7 +407,7 @@ class AsyncAudiences(AsyncResource):
         await client.audiences.delete("adn_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        await self._delete(f"/v1/audiences/{audience_id}", options)
+        await self._delete(f"/v1/audiences/{quote(audience_id, safe='')}", options)
 
     def list_contacts(
         self,
@@ -431,7 +432,7 @@ class AsyncAudiences(AsyncResource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return AsyncPage(self._client, f"/v1/audiences/{audience_id}/contacts", query, AudienceMember, options)
+        return AsyncPage(self._client, f"/v1/audiences/{quote(audience_id, safe='')}/contacts", query, AudienceMember, options)
 
     async def add_contacts(
         self,
@@ -456,7 +457,7 @@ class AsyncAudiences(AsyncResource):
         )
         await self._write_none(
             "POST",
-            f"/v1/audiences/{audience_id}/contacts",
+            f"/v1/audiences/{quote(audience_id, safe='')}/contacts",
             body,
             options,
         )
@@ -484,7 +485,7 @@ class AsyncAudiences(AsyncResource):
         )
         await self._write_none(
             "POST",
-            f"/v1/audiences/{audience_id}/contacts/remove",
+            f"/v1/audiences/{quote(audience_id, safe='')}/contacts/remove",
             body,
             options,
         )
@@ -504,4 +505,4 @@ class AsyncAudiences(AsyncResource):
         )
         ```
         """
-        await self._delete(f"/v1/audiences/{audience_id}/contacts/{contact_id}", options)
+        await self._delete(f"/v1/audiences/{quote(audience_id, safe='')}/contacts/{quote(contact_id, safe='')}", options)

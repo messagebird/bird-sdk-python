@@ -2743,6 +2743,7 @@ class VerificationAttemptFailureReason(str, Enum):
     undelivered = "undelivered"
     channel_unavailable = "channel_unavailable"
     channel_disabled = "channel_disabled"
+    delivery_timeout = "delivery_timeout"
 
 
 class WhatsAppTemplateCategory(str, Enum):
@@ -6574,6 +6575,7 @@ class WebhookEventType(str, Enum):
     sms_delivered = "sms.delivered"
     sms_expired = "sms.expired"
     sms_failed = "sms.failed"
+    sms_received = "sms.received"
     sms_rejected = "sms.rejected"
     sms_sent = "sms.sent"
     sms_undelivered = "sms.undelivered"
@@ -8023,6 +8025,12 @@ class EventSMSAcceptedData(EventSMSBase):
     model_config = ConfigDict(
         extra="allow",
     )
+    segments: Annotated[
+        SMSSegments,
+        Field(
+            description="Segment breakdown of the body Bird accepted, which is what the send is billed on."
+        ),
+    ]
 
 
 class Type31(str, Enum):
@@ -8055,17 +8063,17 @@ class EventSMSDeliveredData(EventSMSBase):
     carrier: Annotated[
         str | None,
         Field(
-            description="Carrier that delivered the message, or null when not known.",
+            description="Carrier that delivered the message. Absent when the carrier does not report one.",
             examples=["Verizon"],
         ),
-    ]
+    ] = None
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description="Mobile country code and mobile network code of the carrier, or null when not known.",
+            description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
             examples=["311480"],
         ),
-    ]
+    ] = None
 
 
 class Type32(str, Enum):
@@ -8157,6 +8165,146 @@ class EventSMSFailed(BaseModel):
     data: EventSMSFailedData
 
 
+class SMSReceivedEventType(str, Enum):
+    sms_received = "sms.received"
+
+
+class EventSMSReceivedData1(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    text: Annotated[
+        str,
+        Field(
+            description="The message body, so you can act on it without a follow-up read. Absent when the message carried only attachments and no text of its own.\n",
+            examples=["STOP"],
+            min_length=1,
+        ),
+    ]
+    segments: Annotated[
+        SMSSegments, Field(description="Segment breakdown of the received body.")
+    ]
+    carrier: Annotated[
+        str | None,
+        Field(
+            description="Carrier the message came in over. Absent where the carrier does not report one.",
+            examples=["Verizon"],
+        ),
+    ] = None
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description="Mobile country code and mobile network code of the carrier. Absent when not known.",
+            examples=["311480"],
+        ),
+    ] = None
+    subject: Annotated[
+        str | None,
+        Field(description="Subject line. Absent when the message carried none."),
+    ] = None
+
+
+class EventSMSReceivedData2(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    text: Annotated[
+        str | None,
+        Field(
+            description="The message body, so you can act on it without a follow-up read. Absent when the message carried only attachments and no text of its own.\n",
+            examples=["STOP"],
+            min_length=1,
+        ),
+    ] = None
+    segments: Annotated[
+        SMSSegments, Field(description="Segment breakdown of the received body.")
+    ]
+    carrier: Annotated[
+        str | None,
+        Field(
+            description="Carrier the message came in over. Absent where the carrier does not report one.",
+            examples=["Verizon"],
+        ),
+    ] = None
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description="Mobile country code and mobile network code of the carrier. Absent when not known.",
+            examples=["311480"],
+        ),
+    ] = None
+    subject: Annotated[
+        str | None,
+        Field(description="Subject line. Absent when the message carried none."),
+    ] = None
+
+
+class EventSMSReceivedData3(EventSMSBase):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    text: Annotated[
+        str | None,
+        Field(
+            description="The message body, so you can act on it without a follow-up read. Absent when the message carried only attachments and no text of its own.\n",
+            examples=["STOP"],
+            min_length=1,
+        ),
+    ] = None
+    segments: Annotated[
+        SMSSegments, Field(description="Segment breakdown of the received body.")
+    ]
+    carrier: Annotated[
+        str | None,
+        Field(
+            description="Carrier the message came in over. Absent where the carrier does not report one.",
+            examples=["Verizon"],
+        ),
+    ] = None
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description="Mobile country code and mobile network code of the carrier. Absent when not known.",
+            examples=["311480"],
+        ),
+    ] = None
+    subject: Annotated[
+        str | None,
+        Field(description="Subject line. Absent when the message carried none."),
+    ] = None
+
+
+class EventSMSReceivedData4(EventSMSReceivedData1, EventSMSReceivedData3):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
+
+class EventSMSReceivedData5(EventSMSReceivedData2, EventSMSReceivedData3):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
+
+class EventSMSReceived(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["sms.received"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="Time the sender sent the message.",
+            examples=["2026-05-21 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: Annotated[
+        EventSMSReceivedData4 | EventSMSReceivedData5,
+        Field(description="Payload of the sms.received event."),
+    ]
+
+
 class EventSMSRejectedData(EventSMSBase):
     model_config = ConfigDict(
         extra="allow",
@@ -8197,17 +8345,17 @@ class EventSMSSentData(EventSMSBase):
     carrier: Annotated[
         str | None,
         Field(
-            description="Carrier that handled the message, or null when not known.",
+            description="Carrier that handled the message. Absent when the carrier does not report one.",
             examples=["Verizon"],
         ),
-    ]
+    ] = None
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description="Mobile country code and mobile network code of the carrier, or null when not known.",
+            description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
             examples=["311480"],
         ),
-    ]
+    ] = None
 
 
 class Type36(str, Enum):
@@ -9276,6 +9424,7 @@ class WebhookEvent(
         | EventSMSDelivered
         | EventSMSExpired
         | EventSMSFailed
+        | EventSMSReceived
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered
@@ -9324,6 +9473,7 @@ class WebhookEvent(
         | EventSMSDelivered
         | EventSMSExpired
         | EventSMSFailed
+        | EventSMSReceived
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered

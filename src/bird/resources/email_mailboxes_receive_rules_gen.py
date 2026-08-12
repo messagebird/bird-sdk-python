@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     ReceiveRule,
@@ -58,7 +59,7 @@ class EmailMailboxesReceiveRules(Resource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return SyncPage(self._client, f"/v1/email/mailboxes/{mailbox_id}/receive-rules", query, ReceiveRule, options)
+        return SyncPage(self._client, f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/receive-rules", query, ReceiveRule, options)
 
     def create(
         self,
@@ -88,7 +89,7 @@ class EmailMailboxesReceiveRules(Resource):
         )
         return self._write(
             "POST",
-            f"/v1/email/mailboxes/{mailbox_id}/receive-rules",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/receive-rules",
             body,
             ReceiveRule,
             options,
@@ -109,7 +110,7 @@ class EmailMailboxesReceiveRules(Resource):
         )
         ```
         """
-        self._delete(f"/v1/email/mailboxes/{mailbox_id}/receive-rules/{rule_id}", options)
+        self._delete(f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/receive-rules/{quote(rule_id, safe='')}", options)
 
 
 class AsyncEmailMailboxesReceiveRules(AsyncResource):
@@ -136,7 +137,7 @@ class AsyncEmailMailboxesReceiveRules(AsyncResource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return AsyncPage(self._client, f"/v1/email/mailboxes/{mailbox_id}/receive-rules", query, ReceiveRule, options)
+        return AsyncPage(self._client, f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/receive-rules", query, ReceiveRule, options)
 
     async def create(
         self,
@@ -166,7 +167,7 @@ class AsyncEmailMailboxesReceiveRules(AsyncResource):
         )
         return await self._write(
             "POST",
-            f"/v1/email/mailboxes/{mailbox_id}/receive-rules",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/receive-rules",
             body,
             ReceiveRule,
             options,
@@ -187,4 +188,4 @@ class AsyncEmailMailboxesReceiveRules(AsyncResource):
         )
         ```
         """
-        await self._delete(f"/v1/email/mailboxes/{mailbox_id}/receive-rules/{rule_id}", options)
+        await self._delete(f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/receive-rules/{quote(rule_id, safe='')}", options)

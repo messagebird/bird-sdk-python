@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.1
+
+- A verification attempt can now report `delivery_timeout` as its failure reason, meaning no delivery confirmation arrived before the channel's timeout and the verification failed over to the next channel.
+- Path ids are percent-encoded, so an id containing a reserved character reaches the intended endpoint instead of silently becoming URL structure.
+
 ## 0.25.0
 
 - An SMS error `code` is now an open enum: a reason added by a newer server parses through as a plain string instead of raising a validation error, so a delivery receipt carrying one no longer fails to read. The values known at this version are exported as `SMSErrorCode`.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     Domain,
@@ -128,7 +129,7 @@ class Domains(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/domains/{domain_id}",
+            f"/v1/email/domains/{quote(domain_id, safe='')}",
             {},
             Domain,
             options,
@@ -184,7 +185,7 @@ class Domains(Resource):
         """
         return self._action(
             "POST",
-            f"/v1/email/domains/{domain_id}/verify",
+            f"/v1/email/domains/{quote(domain_id, safe='')}/verify",
             Domain,
             options,
         )
@@ -225,7 +226,7 @@ class Domains(Resource):
         body = to_wire_exclude_unset(DomainUpdate, _body)
         return self._write(
             "PATCH",
-            f"/v1/email/domains/{domain_id}",
+            f"/v1/email/domains/{quote(domain_id, safe='')}",
             body,
             Domain,
             options,
@@ -243,7 +244,7 @@ class Domains(Resource):
         client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        self._delete(f"/v1/email/domains/{domain_id}", options)
+        self._delete(f"/v1/email/domains/{quote(domain_id, safe='')}", options)
 
 
 class AsyncDomains(AsyncResource):
@@ -291,7 +292,7 @@ class AsyncDomains(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/domains/{domain_id}",
+            f"/v1/email/domains/{quote(domain_id, safe='')}",
             {},
             Domain,
             options,
@@ -347,7 +348,7 @@ class AsyncDomains(AsyncResource):
         """
         return await self._action(
             "POST",
-            f"/v1/email/domains/{domain_id}/verify",
+            f"/v1/email/domains/{quote(domain_id, safe='')}/verify",
             Domain,
             options,
         )
@@ -388,7 +389,7 @@ class AsyncDomains(AsyncResource):
         body = to_wire_exclude_unset(DomainUpdate, _body)
         return await self._write(
             "PATCH",
-            f"/v1/email/domains/{domain_id}",
+            f"/v1/email/domains/{quote(domain_id, safe='')}",
             body,
             Domain,
             options,
@@ -406,4 +407,4 @@ class AsyncDomains(AsyncResource):
         await client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        await self._delete(f"/v1/email/domains/{domain_id}", options)
+        await self._delete(f"/v1/email/domains/{quote(domain_id, safe='')}", options)

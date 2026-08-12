@@ -42,6 +42,7 @@ class WebhookEventType:
     SMS_DELIVERED: Final = "sms.delivered"
     SMS_EXPIRED: Final = "sms.expired"
     SMS_FAILED: Final = "sms.failed"
+    SMS_RECEIVED: Final = "sms.received"
     SMS_REJECTED: Final = "sms.rejected"
     SMS_SENT: Final = "sms.sent"
     SMS_UNDELIVERED: Final = "sms.undelivered"

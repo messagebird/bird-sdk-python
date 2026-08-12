@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     EmailMailboxLabelList,
@@ -148,7 +149,7 @@ class EmailMailboxesBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/mailboxes/{mailbox_id}",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}",
             {},
             Mailbox,
             options,
@@ -189,7 +190,7 @@ class EmailMailboxesBase(Resource):
         body = to_wire_exclude_unset(MailboxUpdate, _body)
         return self._write(
             "PATCH",
-            f"/v1/email/mailboxes/{mailbox_id}",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}",
             body,
             Mailbox,
             options,
@@ -210,7 +211,7 @@ class EmailMailboxesBase(Resource):
         client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        self._delete(f"/v1/email/mailboxes/{mailbox_id}", options)
+        self._delete(f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}", options)
 
     def restore(
         self,
@@ -227,7 +228,7 @@ class EmailMailboxesBase(Resource):
         """
         return self._action(
             "POST",
-            f"/v1/email/mailboxes/{mailbox_id}/restore",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/restore",
             Mailbox,
             options,
         )
@@ -247,7 +248,7 @@ class EmailMailboxesBase(Resource):
         """
         return self._action(
             "POST",
-            f"/v1/email/mailboxes/{mailbox_id}/resume",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/resume",
             Mailbox,
             options,
         )
@@ -270,7 +271,7 @@ class EmailMailboxesBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/mailboxes/{mailbox_id}/stats",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/stats",
             {
                 "from": from_,
                 "to": to,
@@ -296,7 +297,7 @@ class EmailMailboxesBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/mailboxes/{mailbox_id}/labels",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/labels",
             {},
             EmailMailboxLabelList,
             options,
@@ -389,7 +390,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/mailboxes/{mailbox_id}",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}",
             {},
             Mailbox,
             options,
@@ -430,7 +431,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         body = to_wire_exclude_unset(MailboxUpdate, _body)
         return await self._write(
             "PATCH",
-            f"/v1/email/mailboxes/{mailbox_id}",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}",
             body,
             Mailbox,
             options,
@@ -451,7 +452,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         await client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        await self._delete(f"/v1/email/mailboxes/{mailbox_id}", options)
+        await self._delete(f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}", options)
 
     async def restore(
         self,
@@ -468,7 +469,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         """
         return await self._action(
             "POST",
-            f"/v1/email/mailboxes/{mailbox_id}/restore",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/restore",
             Mailbox,
             options,
         )
@@ -488,7 +489,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         """
         return await self._action(
             "POST",
-            f"/v1/email/mailboxes/{mailbox_id}/resume",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/resume",
             Mailbox,
             options,
         )
@@ -511,7 +512,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/mailboxes/{mailbox_id}/stats",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/stats",
             {
                 "from": from_,
                 "to": to,
@@ -537,7 +538,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/mailboxes/{mailbox_id}/labels",
+            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/labels",
             {},
             EmailMailboxLabelList,
             options,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     Contact,
@@ -115,7 +116,7 @@ class Contacts(Resource):
         ```
         """
         return self._get(
-            f"/v1/contacts/{contact_id}",
+            f"/v1/contacts/{quote(contact_id, safe='')}",
             {},
             Contact,
             options,
@@ -193,7 +194,7 @@ class Contacts(Resource):
         body = to_wire_exclude_unset(ContactUpdateRequest, _body)
         return self._write(
             "PATCH",
-            f"/v1/contacts/{contact_id}",
+            f"/v1/contacts/{quote(contact_id, safe='')}",
             body,
             Contact,
             options,
@@ -211,7 +212,7 @@ class Contacts(Resource):
         client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        self._delete(f"/v1/contacts/{contact_id}", options)
+        self._delete(f"/v1/contacts/{quote(contact_id, safe='')}", options)
 
     def batch(
         self,
@@ -297,7 +298,7 @@ class AsyncContacts(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/contacts/{contact_id}",
+            f"/v1/contacts/{quote(contact_id, safe='')}",
             {},
             Contact,
             options,
@@ -375,7 +376,7 @@ class AsyncContacts(AsyncResource):
         body = to_wire_exclude_unset(ContactUpdateRequest, _body)
         return await self._write(
             "PATCH",
-            f"/v1/contacts/{contact_id}",
+            f"/v1/contacts/{quote(contact_id, safe='')}",
             body,
             Contact,
             options,
@@ -393,7 +394,7 @@ class AsyncContacts(AsyncResource):
         await client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        await self._delete(f"/v1/contacts/{contact_id}", options)
+        await self._delete(f"/v1/contacts/{quote(contact_id, safe='')}", options)
 
     async def batch(
         self,

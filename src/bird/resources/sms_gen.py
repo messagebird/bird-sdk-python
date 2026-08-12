@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     SMSMessage,
@@ -45,7 +46,7 @@ class SmsBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/sms/messages/{message_id}",
+            f"/v1/sms/messages/{quote(message_id, safe='')}",
             {},
             SMSMessage,
             options,
@@ -107,7 +108,7 @@ class AsyncSmsBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/sms/messages/{message_id}",
+            f"/v1/sms/messages/{quote(message_id, safe='')}",
             {},
             SMSMessage,
             options,

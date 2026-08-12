@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     EmailThread,
@@ -102,7 +103,7 @@ class EmailThreadsBase(Resource):
         ```
         """
         return self._get(
-            f"/v1/email/threads/{thread_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}",
             {},
             EmailThread,
             options,
@@ -133,7 +134,7 @@ class EmailThreadsBase(Resource):
         body = to_wire_exclude_unset(EmailThreadUpdateRequest, _body)
         return self._write(
             "PATCH",
-            f"/v1/email/threads/{thread_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}",
             body,
             EmailThread,
             options,
@@ -153,7 +154,7 @@ class EmailThreadsBase(Resource):
         ```
         """
         self._delete(
-            f"/v1/email/threads/{thread_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}",
             options,
             {
                 "permanent": permanent,
@@ -214,7 +215,7 @@ class AsyncEmailThreadsBase(AsyncResource):
         ```
         """
         return await self._get(
-            f"/v1/email/threads/{thread_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}",
             {},
             EmailThread,
             options,
@@ -245,7 +246,7 @@ class AsyncEmailThreadsBase(AsyncResource):
         body = to_wire_exclude_unset(EmailThreadUpdateRequest, _body)
         return await self._write(
             "PATCH",
-            f"/v1/email/threads/{thread_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}",
             body,
             EmailThread,
             options,
@@ -265,7 +266,7 @@ class AsyncEmailThreadsBase(AsyncResource):
         ```
         """
         await self._delete(
-            f"/v1/email/threads/{thread_id}",
+            f"/v1/email/threads/{quote(thread_id, safe='')}",
             options,
             {
                 "permanent": permanent,

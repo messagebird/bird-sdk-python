@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, TypedDict
+from urllib.parse import quote
 
 from bird._generated import (
     RealtimeMemberPublish,
@@ -51,7 +52,7 @@ class RealtimeMembers(Resource):
         )
         self._write_none(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/members/{member_id}/events",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/members/{quote(member_id, safe='')}/events",
             body,
             options,
             schemes=("RealtimeKey", "RealtimeSecret",),
@@ -71,7 +72,7 @@ class RealtimeMembers(Resource):
         """
         self._action_none(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/members/{member_id}/disconnect",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/members/{quote(member_id, safe='')}/disconnect",
             options,
             schemes=("RealtimeKey", "RealtimeSecret",),
         )
@@ -106,7 +107,7 @@ class AsyncRealtimeMembers(AsyncResource):
         )
         await self._write_none(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/members/{member_id}/events",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/members/{quote(member_id, safe='')}/events",
             body,
             options,
             schemes=("RealtimeKey", "RealtimeSecret",),
@@ -126,7 +127,7 @@ class AsyncRealtimeMembers(AsyncResource):
         """
         await self._action_none(
             "POST",
-            f"/v1/realtime/apps/{realtime_app_id}/members/{member_id}/disconnect",
+            f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/members/{quote(member_id, safe='')}/disconnect",
             options,
             schemes=("RealtimeKey", "RealtimeSecret",),
         )

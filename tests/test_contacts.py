@@ -80,3 +80,25 @@ async def test_async_create_mirrors_sync() -> None:
         contact = await bird.contacts.create(email="jane@acme.com")
     assert contact.id == CID
     assert json.loads(route.calls.last.request.content) == {"email": "jane@acme.com"}
+
+
+@respx.mock
+def test_path_id_is_percent_encoded() -> None:
+    """A reserved character in a path id must not become URL structure.
+
+    httpx normalizes a URL but leaves an interpolated "/", "?" or "#" structural,
+    so before the generator wrapped path ids in quote() an id carrying one silently
+    reached a different path, turned the rest of the id into query params, or lost
+    it as a fragment. The other three SDKs encode already (oapi-codegen's
+    StyleParamWithOptions, hey-api's encodeURIComponent, PHP's rawurlencode), so
+    this asserted nothing anywhere.
+    """
+    route = respx.get(f"{BASE}/v1/contacts/a%2Fb%3Fx%3D1").mock(
+        return_value=httpx.Response(200, json=_contact())
+    )
+    client().contacts.get("a/b?x=1")
+
+    sent = route.calls.last.request
+    # The whole id is one path segment, and nothing leaked into the query.
+    assert sent.url.raw_path == b"/v1/contacts/a%2Fb%3Fx%3D1"
+    assert sent.url.query == b""
