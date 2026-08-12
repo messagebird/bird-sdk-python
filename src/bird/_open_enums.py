@@ -30,6 +30,22 @@ class EmailEventType:
     EMAIL_UNSUBSCRIBED: Final = "email.unsubscribed"
 
 
+class SMSErrorCode:
+    """Values of SMSErrorCode known at this SDK version (open enum)."""
+
+    BLOCKED_BY_CARRIER: Final = "blocked_by_carrier"
+    BLOCKED_BY_RECIPIENT: Final = "blocked_by_recipient"
+    CONTENT_REJECTED: Final = "content_rejected"
+    INSUFFICIENT_BALANCE: Final = "insufficient_balance"
+    INVALID_DESTINATION: Final = "invalid_destination"
+    LANDLINE_UNREACHABLE: Final = "landline_unreachable"
+    PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
+    RECIPIENT_OPTED_OUT: Final = "recipient_opted_out"
+    SENDER_UNREGISTERED: Final = "sender_unregistered"
+    UNKNOWN: Final = "unknown"
+    UNREACHABLE: Final = "unreachable"
+
+
 class VerificationAttemptFailureReason:
     """Values of VerificationAttemptFailureReason known at this SDK version (open enum)."""
 
@@ -79,11 +95,17 @@ class WhatsAppTemplateCategory:
 class WhatsAppTemplateParameterType:
     """Values of WhatsAppTemplateParameterType known at this SDK version (open enum)."""
 
+    DOCUMENT: Final = "document"
+    GIF: Final = "gif"
+    IMAGE: Final = "image"
+    LOCATION: Final = "location"
     TEXT: Final = "text"
+    VIDEO: Final = "video"
 
 
 __all__ = [
     "EmailEventType",
+    "SMSErrorCode",
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",

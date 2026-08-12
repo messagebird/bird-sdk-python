@@ -129,6 +129,7 @@ from bird.resources.voice_gen import VoiceListParams
 from bird._event_types import WebhookEventType
 from bird._open_enums import (
     EmailEventType,
+    SMSErrorCode,
     VerificationAttemptFailureReason,
     VerificationChannel,
     VerificationTerminalReason,
@@ -265,6 +266,7 @@ __all__ = [
     "GenericWebhookEvent",
     "WebhookEventType",
     "EmailEventType",
+    "SMSErrorCode",
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",

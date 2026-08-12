@@ -906,8 +906,8 @@ class EmailTemplateSend1(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Values for the template\'s variables, keyed by variable name. A token with no matching value renders empty. Nest values to fill dotted tokens: `{"contact": {"first_name": "Ada"}}` fills `{{ contact.first_name }}`. Send everything the template\'s `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n',
-            examples=[{"first_name": "Ada"}],
+            description="Values for the template's parameters, keyed by parameter name. A parameter name is a single word, and every parameter the template's `variables` lists needs a value here: a send that omits one is rejected rather than delivered with a blank. Send everything `variables` lists rather than only what you expect the chosen language to use, since languages need not reference the same parameters and a value no language uses is ignored. Cap: 16 KB serialized.\n",
+            examples=[{"animal": "otter"}],
         ),
     ] = None
 
@@ -947,8 +947,8 @@ class EmailTemplateSend2(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description='Values for the template\'s variables, keyed by variable name. A token with no matching value renders empty. Nest values to fill dotted tokens: `{"contact": {"first_name": "Ada"}}` fills `{{ contact.first_name }}`. Send everything the template\'s `variables` lists rather than only what you expect the chosen language to use: languages need not reference the same variables, and a value no language uses is ignored. Cap: 16 KB serialized.\n',
-            examples=[{"first_name": "Ada"}],
+            description="Values for the template's parameters, keyed by parameter name. A parameter name is a single word, and every parameter the template's `variables` lists needs a value here: a send that omits one is rejected rather than delivered with a blank. Send everything `variables` lists rather than only what you expect the chosen language to use, since languages need not reference the same parameters and a value no language uses is ignored. Cap: 16 KB serialized.\n",
+            examples=[{"animal": "otter"}],
         ),
     ] = None
 
@@ -1084,7 +1084,7 @@ class EmailMessageSendRequest(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Template variables used to personalize inline content. Tokens in the subject and body (e.g. `{{ first_name }}`) are replaced with these values at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.\n"
+            description="Parameter values used to personalize inline content. A parameter is a single word, and a token in the subject or body (for example `{{ animal }}`) is replaced with the value of that name at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.\n"
         ),
     ] = None
     template: Annotated[
@@ -1324,14 +1324,14 @@ class Contact(Timestamps):
     first_name: Annotated[
         str | None,
         Field(
-            description="The contact's first name. Available in broadcast templates as the `contact.first_name` variable.",
+            description="The contact's first name. Available in broadcast templates as `bird.contact.first_name`.",
             max_length=100,
         ),
     ] = None
     last_name: Annotated[
         str | None,
         Field(
-            description="The contact's last name. Available in broadcast templates as the `contact.last_name` variable.",
+            description="The contact's last name. Available in broadcast templates as `bird.contact.last_name`.",
             max_length=100,
         ),
     ] = None
@@ -1345,7 +1345,7 @@ class Contact(Timestamps):
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values for this contact, available as template variables in broadcasts. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
+            description="Custom property values for this contact, available in broadcast templates as `bird.contact.<key>`. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
         ),
     ] = None
     audiences: Annotated[
@@ -1674,7 +1674,7 @@ class ContactProperty(Timestamps):
     key: Annotated[
         str,
         Field(
-            description="The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
+            description="The property key, used as the key in contact data and as the attribute in the `bird.contact.<key>` broadcast template variable. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
             max_length=50,
             min_length=1,
             pattern="^[a-z][a-z0-9_]*$",
@@ -1714,7 +1714,7 @@ class ContactPropertyCreateRequest(BaseModel):
     key: Annotated[
         str,
         Field(
-            description="The property key, used as the key in contact data and as the template variable name in broadcasts. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
+            description="The property key, used as the key in contact data and as the attribute in the `bird.contact.<key>` broadcast template variable. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
             max_length=50,
             min_length=1,
             pattern="^[a-z][a-z0-9_]*$",
@@ -1959,7 +1959,7 @@ class SMSError(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    code: SMSErrorCode
+    code: Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")]
     description: Annotated[
         str,
         Field(
@@ -1971,8 +1971,7 @@ class SMSError(BaseModel):
     carrier_error_code: Annotated[
         str | None,
         Field(
-            description="Raw carrier-supplied error code, when available, for low-level debugging.",
-            examples=["30007"],
+            description="Raw provider-supplied error code, finer-grained than the `code` that normalizes it. Not a Bird-defined value, so quote it to support when asking why a message failed. Null when the provider sent none, including any failure decided before one was reached."
         ),
     ] = None
     occurred_at: Annotated[
@@ -2080,7 +2079,7 @@ class SMSMessage(BaseModel):
     last_error: Annotated[
         SMSError | None,
         Field(
-            description="Failure detail on a terminally failed or rejected message. Present only when the message failed."
+            description="Failure detail on a message that failed, was rejected, was not delivered, or expired. Absent otherwise."
         ),
     ] = None
     created_at: Annotated[
@@ -2502,7 +2501,7 @@ class TemplateVariable(BaseModel):
     )
     key: Annotated[
         str,
-        Field(description="The parameters key this slot is filled with.", min_length=1),
+        Field(description="The parameter key this slot is filled with.", min_length=1),
     ]
     type: Annotated[
         str,
@@ -2514,7 +2513,7 @@ class TemplateVariable(BaseModel):
     required: Annotated[
         bool,
         Field(
-            description="Whether the slot must be supplied when sending. Advisory for email templates, where a missing value renders as empty rather than rejecting the send.\n"
+            description="Whether the slot must be supplied when sending. A send that leaves a required slot unset is rejected.\n"
         ),
     ]
     constraint: Annotated[
@@ -2947,6 +2946,11 @@ class WhatsAppAddress(BaseModel):
 
 class WhatsAppTemplateParameterType(str, Enum):
     text = "text"
+    image = "image"
+    video = "video"
+    gif = "gif"
+    document = "document"
+    location = "location"
 
 
 class WhatsAppMessageTemplateComponentParameter(BaseModel):
@@ -2958,16 +2962,24 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
             Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")
         ],
         Field(
-            description="The kind of value this parameter carries. `text` is the only kind today."
+            description="The kind of value this parameter carries, which decides which of the fields below to send."
         ),
     ]
     text: Annotated[
-        str,
+        str | None,
         Field(
-            description="The value substituted into the placeholder, as a plain string.",
+            description="The value substituted into the placeholder, as a plain string. Send it on a `text` parameter.",
             min_length=1,
         ),
-    ]
+    ] = None
+    url: Annotated[
+        str | None,
+        Field(
+            description="Public `https` URL of the file a media header shows. Send it on an `image`, `video`, `gif` or `document` parameter. WhatsApp fetches it at send time, so it must still be reachable then, the same way a free-form media message's `url` must.\n",
+            examples=["https://cdn.example.com/receipts/a1b2c3.png"],
+            min_length=1,
+        ),
+    ] = None
     name: Annotated[
         str | None,
         Field(
@@ -2977,6 +2989,36 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
     ] = None
 
 
+class WhatsAppMessageTemplateCardComponent(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Annotated[
+        str,
+        Field(
+            description="Which part of the card this fills in: `header` for the card's image or video, `body` for its text, `button` for a button's variable.\n",
+            examples=["header"],
+            min_length=1,
+        ),
+    ]
+    parameters: Annotated[
+        list[WhatsAppMessageTemplateComponentParameter] | None,
+        Field(
+            description="The values that fill this part's placeholders, in placeholder order."
+        ),
+    ] = None
+
+
+class WhatsAppMessageTemplateCard(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    components: Annotated[
+        list[WhatsAppMessageTemplateCardComponent],
+        Field(description="The values that fill this card's blocks."),
+    ]
+
+
 class WhatsAppMessageTemplateComponent(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2984,14 +3026,22 @@ class WhatsAppMessageTemplateComponent(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Which part of the template this fills in: `body` for the main text, `button` for a button's variable, `header` for the header. Bird manages header values itself, so a `header` entry supplied on a send is ignored.\n",
+            description="Which part of the template this fills in: `body` for the main text, `button` for a button's variable, `header` for the header's text, media or location, `carousel` for the cards.\n",
             min_length=1,
         ),
     ]
     parameters: Annotated[
         list[WhatsAppMessageTemplateComponentParameter] | None,
         Field(
-            description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning.\n"
+            description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning. Send it on every part except `carousel`, which carries its values on `cards`.\n"
+        ),
+    ] = None
+    cards: Annotated[
+        list[WhatsAppMessageTemplateCard] | None,
+        Field(
+            description="The values that fill each card of a carousel. Send it only on a `carousel` part. A carousel sends exactly the number of cards its template was approved with, so every card needs an entry.\n",
+            max_length=10,
+            min_length=2,
         ),
     ] = None
 
@@ -3137,7 +3187,7 @@ class WhatsAppMessage(BaseModel):
     cost: Annotated[
         MessageCost | None,
         Field(
-            description="What the message cost, split into Bird's charge and any third-party fees passed through. Null until the message has been priced, and on messages that were rejected before pricing. The rate depends on the message category and the recipient's country."
+            description="What the message cost, split into Bird's charge and any third-party fees passed through. Null on an inbound message, which is never priced, on an outbound message that has not been priced yet, and on one rejected before pricing. The rate depends on the message category and the recipient's country."
         ),
     ] = None
     tags: Annotated[
@@ -3188,7 +3238,7 @@ class WhatsAppTemplateSend1(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available tags.\n",
+            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted, in which case the template's default language is sent. A language the template is not stocked in returns a `422` that names the available tags.\n",
             examples=["pt-BR"],
             max_length=35,
             min_length=2,
@@ -3228,7 +3278,7 @@ class WhatsAppTemplateSend2(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted when the template has a single language; when it is stocked in several, omitting the language returns a `422` that names the available tags.\n",
+            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted, in which case the template's default language is sent. A language the template is not stocked in returns a `422` that names the available tags.\n",
             examples=["pt-BR"],
             max_length=35,
             min_length=2,
@@ -8045,6 +8095,12 @@ class EventSMSExpiredData(EventSMSBase):
     model_config = ConfigDict(
         extra="allow",
     )
+    error: Annotated[
+        SMSError | None,
+        Field(
+            description="Why the message was still undelivered when its validity period elapsed. Typically `unreachable`, the handset having stayed off or out of coverage for the whole window."
+        ),
+    ]
 
 
 class Type33(str, Enum):
