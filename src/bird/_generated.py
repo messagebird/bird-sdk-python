@@ -1260,7 +1260,7 @@ class AudienceID(RootModel[str]):
 
 class ContactIdentifierFilter(str, Enum):
     email = "email"
-    phone = "phone"
+    phone_number = "phone_number"
 
 
 class ContactID(RootModel[str]):
@@ -1313,7 +1313,7 @@ class Contact(Timestamps):
             max_length=254,
         ),
     ]
-    phone: Annotated[
+    phone_number: Annotated[
         str | None,
         Field(
             description="The contact's phone number in normalized international form (a leading `+` and four to 15 digits), which may differ from the form it was supplied in. Bird normalizes formatting but does not verify the number against numbering-plan metadata. Unique within the workspace. Carriers recycle disconnected numbers, so a long-stored number can come to belong to someone else; `external_id` is the durable key for your own records. Null when the contact has no phone number.",
@@ -1376,7 +1376,7 @@ class ContactCreateRequest(BaseModel):
             max_length=254,
         ),
     ] = None
-    phone: Annotated[
+    phone_number: Annotated[
         str | None,
         Field(
             description="The contact's phone number in E.164 format, including the leading `+` and country code. Spaces and punctuation are accepted and stripped; the number is stored in its canonical form, which may differ from what you send, and is unique within the workspace. An empty string is treated as if the field were omitted. Supply an email address, a phone number, or both.",
@@ -1407,7 +1407,7 @@ class ContactCreateRequest(BaseModel):
 
 class ContactMatchKey(str, Enum):
     email = "email"
-    phone = "phone"
+    phone_number = "phone_number"
     external_id = "external_id"
 
 
@@ -1460,7 +1460,7 @@ class ContactUpsertEntry(BaseModel):
             description="Email address this entry carried, trimmed and lowercased. Null when the entry carried none."
         ),
     ]
-    phone: Annotated[
+    phone_number: Annotated[
         str | None,
         Field(
             description="Phone number this entry carried, in its normalized international form. Null when the entry carried none. A row rejected for an invalid phone echoes the value as sent, trimmed, since no normalized form exists."
@@ -1476,7 +1476,7 @@ class ContactUpsertEntry(BaseModel):
 
 class ContactMatchedOn(Enum):
     email = "email"
-    phone = "phone"
+    phone_number = "phone_number"
     external_id = "external_id"
     NoneType_None = None
 
@@ -1568,7 +1568,7 @@ class ContactUpdateRequest(BaseModel):
             max_length=254,
         ),
     ] = None
-    phone: Annotated[
+    phone_number: Annotated[
         str | None,
         Field(
             description="New phone number for the contact, in E.164 format with the leading `+` and country code. Spaces and punctuation are accepted and stripped. Stored in its canonical form, which may differ from what you send, and unique within the workspace. Omit to keep the current number; set to null to remove it, as long as the contact keeps at least one identifier. An empty string behaves as null.",
@@ -1941,6 +1941,18 @@ class MessageCost(BaseModel):
     ]
 
 
+class SMSMessageEffectiveOptions(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    smart_encoding: Annotated[
+        bool,
+        Field(
+            description="Whether Bird replaced characters outside the GSM-7 alphabet in this message's body with their closest equivalent before sending it. When `true`, `text` is the body as sent and `segments` describes that body.\n"
+        ),
+    ]
+
+
 class SMSErrorCode(str, Enum):
     invalid_destination = "invalid_destination"
     unreachable = "unreachable"
@@ -2056,6 +2068,12 @@ class SMSMessage(BaseModel):
             description="Arbitrary JSON metadata stored on the message and echoed in webhook payloads."
         ),
     ] = None
+    options: Annotated[
+        SMSMessageEffectiveOptions | None,
+        Field(
+            description="Settings Bird applied to this message, with any option you omitted filled in with the default that was in force when you sent it. Absent on inbound messages, and on outbound messages sent before Bird began recording these settings.\n"
+        ),
+    ] = None
     validity_period: Annotated[
         int | None,
         Field(
@@ -2107,6 +2125,30 @@ class SMSMessageList(FieldListEnvelope):
     data: Annotated[
         list[SMSMessage], Field(description="Page of SMS messages, newest first.")
     ]
+
+
+class SMSSendOptions(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    smart_encoding: Annotated[
+        bool | None,
+        Field(
+            description="Replace characters outside the GSM-7 alphabet with their closest GSM-7 equivalent before sending: typically curly quotes, dashes, ellipses, fullwidth forms, and non-breaking spaces.\n\nOne such character forces the whole body into `UCS2`, which more than halves the characters that fit in a segment, so replacing them often lowers the segment count and the cost.\n\nDisabled by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet afterwards, such as an emoji or a non-Latin script, is sent exactly as you supplied it. Read the message back to see what was applied: `text` is the body as sent.\n"
+        ),
+    ] = False
+    track_clicks: Annotated[
+        bool | None,
+        Field(
+            description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`."
+        ),
+    ] = None
+    max_price_per_segment: Annotated[
+        float | None,
+        Field(
+            description="Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
+        ),
+    ] = None
 
 
 class SMSTemplateSend1(BaseModel):
@@ -2247,6 +2289,12 @@ class SMSMessageSendRequest1(BaseModel):
             description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
+    options: Annotated[
+        SMSSendOptions | None,
+        Field(
+            description="What Bird does to this message on its way out, such as `smart_encoding`. The message being relayed stays at the top level: its recipient, sender, content, and the delivery instructions the carrier acts on.\n"
+        ),
+    ] = None
     media_urls: Annotated[
         list[str] | None,
         Field(
@@ -2301,22 +2349,10 @@ class SMSMessageSendRequest1(BaseModel):
             description="Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
-    max_price_per_segment: Annotated[
-        float | None,
-        Field(
-            description="Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
-        ),
-    ] = None
     personalization: Annotated[
         dict[str, Any] | None,
         Field(
             description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
-        ),
-    ] = None
-    track_clicks: Annotated[
-        bool | None,
-        Field(
-            description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
 
@@ -2377,6 +2413,12 @@ class SMSMessageSendRequest2(BaseModel):
             description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
+    options: Annotated[
+        SMSSendOptions | None,
+        Field(
+            description="What Bird does to this message on its way out, such as `smart_encoding`. The message being relayed stays at the top level: its recipient, sender, content, and the delivery instructions the carrier acts on.\n"
+        ),
+    ] = None
     media_urls: Annotated[
         list[str] | None,
         Field(
@@ -2431,22 +2473,10 @@ class SMSMessageSendRequest2(BaseModel):
             description="Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
-    max_price_per_segment: Annotated[
-        float | None,
-        Field(
-            description="Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
-        ),
-    ] = None
     personalization: Annotated[
         dict[str, Any] | None,
         Field(
             description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
-        ),
-    ] = None
-    track_clicks: Annotated[
-        bool | None,
-        Field(
-            description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`."
         ),
     ] = None
 
@@ -2679,7 +2709,7 @@ class VerificationTo(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    email_address: Annotated[
+    email: Annotated[
         str | None,
         Field(
             description="The recipient's email address. Case does not matter; the address is lowercased before use.",

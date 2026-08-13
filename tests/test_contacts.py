@@ -20,7 +20,7 @@ CID = "con_01krdgeqcxet5s7t44vh8rt9mg"
 
 def _contact(email: str = "jane@acme.com") -> dict:
     return {
-        "id": CID, "email": email, "phone": None, "first_name": "Jane",
+        "id": CID, "email": email, "phone_number": None, "first_name": "Jane",
         "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z",
     }
 

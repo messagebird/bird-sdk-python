@@ -23,7 +23,7 @@ class ContactListParams(TypedDict, total=False):
     """Query params for ``client.contacts.list``. Every key is optional."""
 
     email: str
-    phone: str
+    phone_number: str
     external_id: str
     q: str
     identifier: str
@@ -37,7 +37,7 @@ class ContactCreateParams(TypedDict, total=False):
     """Params for ``client.contacts.create``. Every key is optional."""
 
     email: str
-    phone: str
+    phone_number: str
     first_name: str
     last_name: str
     external_id: str
@@ -48,7 +48,7 @@ class ContactUpdateParams(TypedDict, total=False):
     """Params for ``client.contacts.update``. Every key is optional."""
 
     email: str | None
-    phone: str | None
+    phone_number: str | None
     first_name: str | None
     last_name: str | None
     external_id: str | None
@@ -72,7 +72,7 @@ class Contacts(Resource):
         self,
         *,
         email: str | None = None,
-        phone: str | None = None,
+        phone_number: str | None = None,
         external_id: str | None = None,
         q: str | None = None,
         identifier: str | None = None,
@@ -91,7 +91,7 @@ class Contacts(Resource):
         """
         query = {
             "email": email,
-            "phone": phone,
+            "phone_number": phone_number,
             "external_id": external_id,
             "q": q,
             "identifier": identifier,
@@ -126,7 +126,7 @@ class Contacts(Resource):
         self,
         *,
         email: str | None = None,
-        phone: str | None = None,
+        phone_number: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
         external_id: str | None = None,
@@ -144,7 +144,7 @@ class Contacts(Resource):
             ContactCreateRequest,
             {
                 "email": email,
-                "phone": phone,
+                "phone_number": phone_number,
                 "first_name": first_name,
                 "last_name": last_name,
                 "external_id": external_id,
@@ -164,7 +164,7 @@ class Contacts(Resource):
         contact_id: str,
         *,
         email: str | None | Omit = omit,
-        phone: str | None | Omit = omit,
+        phone_number: str | None | Omit = omit,
         first_name: str | None | Omit = omit,
         last_name: str | None | Omit = omit,
         external_id: str | None | Omit = omit,
@@ -181,8 +181,8 @@ class Contacts(Resource):
         _body: dict[str, Any] = {}
         if not isinstance(email, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["email"] = email
-        if not isinstance(phone, Omit):  # None clears (JSON null); omit leaves it unchanged
-            _body["phone"] = phone
+        if not isinstance(phone_number, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["phone_number"] = phone_number
         if not isinstance(first_name, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["first_name"] = first_name
         if not isinstance(last_name, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -254,7 +254,7 @@ class AsyncContacts(AsyncResource):
         self,
         *,
         email: str | None = None,
-        phone: str | None = None,
+        phone_number: str | None = None,
         external_id: str | None = None,
         q: str | None = None,
         identifier: str | None = None,
@@ -273,7 +273,7 @@ class AsyncContacts(AsyncResource):
         """
         query = {
             "email": email,
-            "phone": phone,
+            "phone_number": phone_number,
             "external_id": external_id,
             "q": q,
             "identifier": identifier,
@@ -308,7 +308,7 @@ class AsyncContacts(AsyncResource):
         self,
         *,
         email: str | None = None,
-        phone: str | None = None,
+        phone_number: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
         external_id: str | None = None,
@@ -326,7 +326,7 @@ class AsyncContacts(AsyncResource):
             ContactCreateRequest,
             {
                 "email": email,
-                "phone": phone,
+                "phone_number": phone_number,
                 "first_name": first_name,
                 "last_name": last_name,
                 "external_id": external_id,
@@ -346,7 +346,7 @@ class AsyncContacts(AsyncResource):
         contact_id: str,
         *,
         email: str | None | Omit = omit,
-        phone: str | None | Omit = omit,
+        phone_number: str | None | Omit = omit,
         first_name: str | None | Omit = omit,
         last_name: str | None | Omit = omit,
         external_id: str | None | Omit = omit,
@@ -363,8 +363,8 @@ class AsyncContacts(AsyncResource):
         _body: dict[str, Any] = {}
         if not isinstance(email, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["email"] = email
-        if not isinstance(phone, Omit):  # None clears (JSON null); omit leaves it unchanged
-            _body["phone"] = phone
+        if not isinstance(phone_number, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["phone_number"] = phone_number
         if not isinstance(first_name, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["first_name"] = first_name
         if not isinstance(last_name, Omit):  # None clears (JSON null); omit leaves it unchanged

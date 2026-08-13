@@ -18,7 +18,7 @@ from bird._types import RequestOptions
 
 
 class VerificationTo(TypedDict, total=False):
-    email_address: str
+    email: str
     phone_number: str
 
 

@@ -142,6 +142,7 @@ class SmsSendParams(_SmsSendRequired, total=False):
     parameters: Mapping[str, Any]
     tags: Sequence[Mapping[str, str]]
     metadata: Mapping[str, Any]
+    smart_encoding: bool
 
 
 class _WhatsappSendRequired(TypedDict):

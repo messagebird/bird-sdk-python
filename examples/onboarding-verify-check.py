@@ -3,7 +3,7 @@ from bird import APIError, Bird
 with Bird(api_key="bk_XXXXXXXXXXXXXXXXXXXXXXXX") as client:
     try:
         result = client.verify.verifications.check(
-            to={"email_address": "user@example.com"},
+            to={"email": "user@example.com"},
             code="123456",
         )
         print(result.success)

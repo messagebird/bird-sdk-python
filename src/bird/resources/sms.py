@@ -34,10 +34,15 @@ def _send_body(
     parameters: Mapping[str, Any] | None = None,
     tags: Sequence[Mapping[str, str]] | None = None,
     metadata: Mapping[str, Any] | None = None,
+    smart_encoding: bool | None = None,
 ) -> dict[str, Any]:
     # The generated send request is an anyOf(text | template) with no single
     # wrappable model, so the body is assembled as a plain dict here; unset fields
     # are dropped. ``from_`` maps to the wire field "from" (a Python keyword).
+    #
+    # The wire nests smart_encoding under "options", but it is a flat keyword here:
+    # ``options`` on every method in this SDK is the transport RequestOptions, so a
+    # second meaning would be a trap. A future send option joins it as its own keyword.
     body: dict[str, Any] = {
         "to": to,
         "from": from_,
@@ -46,6 +51,8 @@ def _send_body(
         "tags": tags,
         "metadata": metadata,
     }
+    if smart_encoding is not None:
+        body["options"] = {"smart_encoding": smart_encoding}
     if template is not None:
         # An smt_-prefixed value is the id; anything else is the name handle.
         tmpl: dict[str, Any] = {"id" if template.startswith("smt_") else "name": template}
@@ -68,6 +75,7 @@ def _message_body(m: Mapping[str, Any]) -> dict[str, Any]:
         parameters=m.get("parameters"),
         tags=m.get("tags"),
         metadata=m.get("metadata"),
+        smart_encoding=m.get("smart_encoding"),
     )
 
 
@@ -86,6 +94,7 @@ class Sms(SmsBase):
         parameters: Mapping[str, Any] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
+        smart_encoding: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
         """Send one SMS to a single recipient. Supply either ``text`` (with a
@@ -112,6 +121,7 @@ class Sms(SmsBase):
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
+            smart_encoding=smart_encoding,
         )
         return self._write("POST", _PATH, body, SMSMessage, options)
 
@@ -142,12 +152,14 @@ class AsyncSms(AsyncSmsBase):
         parameters: Mapping[str, Any] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
+        smart_encoding: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
         """Send one SMS to a single recipient (free text or by template)."""
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
+            smart_encoding=smart_encoding,
         )
         return await self._write("POST", _PATH, body, SMSMessage, options)
 
