@@ -243,7 +243,7 @@ class EmailStats(Resource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsSummary:
-        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. `from`/`to` are both YYYY-MM-DD days or both RFC 3339 instants (hour grain); add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use email_stats_daily or email_stats_hourly.
+        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. `from`/`to` are both YYYY-MM-DD days or both RFC 3339 instants (hour grain); add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use `email.stats.daily` or `email.stats.hourly`.
 
         ```python
         summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
@@ -282,7 +282,7 @@ class EmailStats(Resource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use email_stats_hourly; for one aggregate row use email_stats_summary.
+        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use `email.stats.hourly`; for one aggregate row use `email.stats.summary`.
 
         ```python
         stats = client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
@@ -321,7 +321,7 @@ class EmailStats(Resource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as email_stats_daily; for longer ranges use email_stats_daily, for one aggregate row use email_stats_summary.
+        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as `email.stats.daily`; for longer ranges use `email.stats.daily`, for one aggregate row use `email.stats.summary`.
 
         ```python
         stats = client.email.stats.hourly(
@@ -362,7 +362,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsTagsResponse:
-        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time; ranked by `sort` (default `processed`). `include_trend=true` adds a per-bucket rate series to each row.
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row.
 
         ```python
         stats = client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
@@ -399,7 +399,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByCategoryResponse:
-        """Email delivery and engagement stats grouped by category (`transactional` versus `marketing`), ranked by `sort` (default `processed`). `include_trend=true` adds a per-bucket rate series to each row.
+        """Email delivery and engagement stats grouped by category, meaning `transactional` compared with `marketing`. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row.
 
         ```python
         stats = client.email.stats.by_category(from_="2026-05-01", to="2026-05-25")
@@ -435,7 +435,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsBySendingIpResponse:
-        """Delivery and bounce stats grouped by sending IP; `sort=bounces.block` surfaces reputation-damaged IPs first. No engagement, complaint, or accepted/processed counts per IP; use email_stats_daily for workspace-wide figures.
+        """Delivery and bounce stats grouped by sending IP, with deferral counts alongside them. `sort=bounces.block` surfaces reputation-damaged IPs first. Engagement, accepted, and processed counts aren't available per IP, and complaint and out-of-band bounce counts always read 0 here. For workspace-wide figures, use `email.stats.daily`.
 
         ```python
         stats = client.email.stats.by_sending_ip(
@@ -474,7 +474,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsBySendingDomainResponse:
-        """Email delivery and engagement stats grouped by sending (`From`) domain; compare deliverability across the workspace's verified domains. For per-IP reputation use email_stats_by_sending_ip.
+        """Email delivery and engagement stats grouped by sending (`From`) domain, so you can compare deliverability across your workspace's verified domains. For per-IP reputation instead, use `email.stats.by_sending_ip`.
 
         ```python
         stats = client.email.stats.by_sending_domain(from_="2026-05-01", to="2026-05-25")
@@ -511,7 +511,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByRecipientDomainResponse:
-        """Email delivery and engagement stats grouped by exact recipient mailbox domain (for example `gmail.com`). Finer-grained than email_stats_by_mailbox_provider, which buckets domains into providers.
+        """Email delivery and engagement stats grouped by exact recipient mailbox domain, for example `gmail.com`. Finer-grained than `email.stats.by_mailbox_provider`, which buckets domains into providers.
 
         ```python
         stats = client.email.stats.by_recipient_domain(from_="2026-05-01", to="2026-05-25")
@@ -548,7 +548,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByMailboxProviderResponse:
-        """Email delivery and engagement stats grouped by recipient mailbox provider (`gmail`, `microsoft`, `yahoo`, ...); covers the delivery stage onward, no accepted/processed counts. For a per-region split use email_stats_by_mailbox_provider_region; for exact destination domains use email_stats_by_recipient_domain.
+        """Email delivery and engagement stats grouped by recipient mailbox provider, for example `gmail`, `microsoft`, or `yahoo`. It covers the delivery stage onward, so there are no accepted or processed counts. For a per-region split within a provider, use `email.stats.by_mailbox_provider_region`; for exact destination domains instead, use `email.stats.by_recipient_domain`.
 
         ```python
         stats = client.email.stats.by_mailbox_provider(from_="2026-05-01", to="2026-05-25")
@@ -585,7 +585,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByMailboxProviderRegionResponse:
-        """Email delivery and engagement stats grouped by mailbox provider and provider region pair (for example `gmail` in `NA`); covers the delivery stage onward, no accepted/processed counts. For the provider-level view use email_stats_by_mailbox_provider.
+        """Email delivery and engagement stats grouped by a mailbox provider and provider region pair, for example `gmail` in `NA`. It covers the delivery stage onward, so there are no accepted or processed counts. For the provider-level view without the region split, use `email.stats.by_mailbox_provider`.
 
         ```python
         stats = client.email.stats.by_mailbox_provider_region(from_="2026-05-01", to="2026-05-25")
@@ -622,7 +622,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByTemplateResponse:
-        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from email_stats_daily with its `template` filter.
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter.
 
         ```python
         stats = client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
@@ -658,7 +658,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByLocationResponse:
-        """Opens and clicks grouped by country, region, or city (`group_by`); engagement counts only, no delivery counts or rates. For engagement by mail client or device use email_stats_by_client.
+        """Opens and clicks grouped by country, region, or city, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by mail client or device instead, use `email.stats.by_client`.
 
         ```python
         stats = client.email.stats.by_location(
@@ -695,7 +695,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByClientResponse:
-        """Opens and clicks grouped by mail client, OS, or device type (`group_by`); engagement counts only, no delivery counts or rates. For engagement by geography use email_stats_by_location.
+        """Opens and clicks grouped by mail client, operating system, or device type, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by geography instead, use `email.stats.by_location`.
 
         ```python
         stats = client.email.stats.by_client(
@@ -731,7 +731,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBounceCodeResponse:
-        """Bounce counts grouped by the SMTP error code the receiving server returned, with the hard/soft/admin/block/undetermined split; failure side only. It shows what is driving bounces, while bounces by destination come from email_stats_by_recipient_domain or email_stats_by_mailbox_provider.
+        """Bounce counts grouped by the SMTP error code the receiving mail server returned. Each row also breaks the bounce down into its hard, soft, admin, block, and undetermined split. There are no delivered, open, or click counts here, because a bounce code only appears on a bounce event. For bounces broken down by destination instead, use `email.stats.by_recipient_domain` or `email.stats.by_mailbox_provider`.
 
         ```python
         stats = client.email.stats.by_bounce_code(from_="2026-05-01", to="2026-05-25")
@@ -764,7 +764,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByComplaintTypeResponse:
-        """Spam-complaint counts grouped by the feedback-loop complaint type (for example `abuse`, `fraud`, `virus`); complaint side only. For complaints by destination use email_stats_by_mailbox_provider or email_stats_by_recipient_domain.
+        """Spam-complaint counts grouped by the feedback-loop complaint type, for example `abuse`, `fraud`, or `virus`. Complaint side only, so there are no delivery or engagement counts. For complaints broken down by destination instead, use `email.stats.by_mailbox_provider` or `email.stats.by_recipient_domain`.
 
         ```python
         stats = client.email.stats.by_complaint_type(from_="2026-05-01", to="2026-05-25")
@@ -796,7 +796,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast; only broadcast sends appear. Reflects roughly the last 30 days of activity.
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity.
 
         ```python
         stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -834,7 +834,7 @@ class AsyncEmailStats(AsyncResource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsSummary:
-        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. `from`/`to` are both YYYY-MM-DD days or both RFC 3339 instants (hour grain); add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use email_stats_daily or email_stats_hourly.
+        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. `from`/`to` are both YYYY-MM-DD days or both RFC 3339 instants (hour grain); add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use `email.stats.daily` or `email.stats.hourly`.
 
         ```python
         summary = await client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
@@ -873,7 +873,7 @@ class AsyncEmailStats(AsyncResource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use email_stats_hourly; for one aggregate row use email_stats_summary.
+        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use `email.stats.hourly`; for one aggregate row use `email.stats.summary`.
 
         ```python
         stats = await client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
@@ -912,7 +912,7 @@ class AsyncEmailStats(AsyncResource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as email_stats_daily; for longer ranges use email_stats_daily, for one aggregate row use email_stats_summary.
+        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as `email.stats.daily`; for longer ranges use `email.stats.daily`, for one aggregate row use `email.stats.summary`.
 
         ```python
         stats = await client.email.stats.hourly(
@@ -953,7 +953,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsTagsResponse:
-        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time; ranked by `sort` (default `processed`). `include_trend=true` adds a per-bucket rate series to each row.
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row.
 
         ```python
         stats = await client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
@@ -990,7 +990,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByCategoryResponse:
-        """Email delivery and engagement stats grouped by category (`transactional` versus `marketing`), ranked by `sort` (default `processed`). `include_trend=true` adds a per-bucket rate series to each row.
+        """Email delivery and engagement stats grouped by category, meaning `transactional` compared with `marketing`. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row.
 
         ```python
         stats = await client.email.stats.by_category(from_="2026-05-01", to="2026-05-25")
@@ -1026,7 +1026,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsBySendingIpResponse:
-        """Delivery and bounce stats grouped by sending IP; `sort=bounces.block` surfaces reputation-damaged IPs first. No engagement, complaint, or accepted/processed counts per IP; use email_stats_daily for workspace-wide figures.
+        """Delivery and bounce stats grouped by sending IP, with deferral counts alongside them. `sort=bounces.block` surfaces reputation-damaged IPs first. Engagement, accepted, and processed counts aren't available per IP, and complaint and out-of-band bounce counts always read 0 here. For workspace-wide figures, use `email.stats.daily`.
 
         ```python
         stats = await client.email.stats.by_sending_ip(
@@ -1065,7 +1065,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsBySendingDomainResponse:
-        """Email delivery and engagement stats grouped by sending (`From`) domain; compare deliverability across the workspace's verified domains. For per-IP reputation use email_stats_by_sending_ip.
+        """Email delivery and engagement stats grouped by sending (`From`) domain, so you can compare deliverability across your workspace's verified domains. For per-IP reputation instead, use `email.stats.by_sending_ip`.
 
         ```python
         stats = await client.email.stats.by_sending_domain(from_="2026-05-01", to="2026-05-25")
@@ -1102,7 +1102,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByRecipientDomainResponse:
-        """Email delivery and engagement stats grouped by exact recipient mailbox domain (for example `gmail.com`). Finer-grained than email_stats_by_mailbox_provider, which buckets domains into providers.
+        """Email delivery and engagement stats grouped by exact recipient mailbox domain, for example `gmail.com`. Finer-grained than `email.stats.by_mailbox_provider`, which buckets domains into providers.
 
         ```python
         stats = await client.email.stats.by_recipient_domain(from_="2026-05-01", to="2026-05-25")
@@ -1139,7 +1139,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByMailboxProviderResponse:
-        """Email delivery and engagement stats grouped by recipient mailbox provider (`gmail`, `microsoft`, `yahoo`, ...); covers the delivery stage onward, no accepted/processed counts. For a per-region split use email_stats_by_mailbox_provider_region; for exact destination domains use email_stats_by_recipient_domain.
+        """Email delivery and engagement stats grouped by recipient mailbox provider, for example `gmail`, `microsoft`, or `yahoo`. It covers the delivery stage onward, so there are no accepted or processed counts. For a per-region split within a provider, use `email.stats.by_mailbox_provider_region`; for exact destination domains instead, use `email.stats.by_recipient_domain`.
 
         ```python
         stats = await client.email.stats.by_mailbox_provider(from_="2026-05-01", to="2026-05-25")
@@ -1176,7 +1176,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByMailboxProviderRegionResponse:
-        """Email delivery and engagement stats grouped by mailbox provider and provider region pair (for example `gmail` in `NA`); covers the delivery stage onward, no accepted/processed counts. For the provider-level view use email_stats_by_mailbox_provider.
+        """Email delivery and engagement stats grouped by a mailbox provider and provider region pair, for example `gmail` in `NA`. It covers the delivery stage onward, so there are no accepted or processed counts. For the provider-level view without the region split, use `email.stats.by_mailbox_provider`.
 
         ```python
         stats = await client.email.stats.by_mailbox_provider_region(from_="2026-05-01", to="2026-05-25")
@@ -1213,7 +1213,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByTemplateResponse:
-        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from email_stats_daily with its `template` filter.
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter.
 
         ```python
         stats = await client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
@@ -1249,7 +1249,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByLocationResponse:
-        """Opens and clicks grouped by country, region, or city (`group_by`); engagement counts only, no delivery counts or rates. For engagement by mail client or device use email_stats_by_client.
+        """Opens and clicks grouped by country, region, or city, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by mail client or device instead, use `email.stats.by_client`.
 
         ```python
         stats = await client.email.stats.by_location(
@@ -1286,7 +1286,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByClientResponse:
-        """Opens and clicks grouped by mail client, OS, or device type (`group_by`); engagement counts only, no delivery counts or rates. For engagement by geography use email_stats_by_location.
+        """Opens and clicks grouped by mail client, operating system, or device type, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by geography instead, use `email.stats.by_location`.
 
         ```python
         stats = await client.email.stats.by_client(
@@ -1322,7 +1322,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBounceCodeResponse:
-        """Bounce counts grouped by the SMTP error code the receiving server returned, with the hard/soft/admin/block/undetermined split; failure side only. It shows what is driving bounces, while bounces by destination come from email_stats_by_recipient_domain or email_stats_by_mailbox_provider.
+        """Bounce counts grouped by the SMTP error code the receiving mail server returned. Each row also breaks the bounce down into its hard, soft, admin, block, and undetermined split. There are no delivered, open, or click counts here, because a bounce code only appears on a bounce event. For bounces broken down by destination instead, use `email.stats.by_recipient_domain` or `email.stats.by_mailbox_provider`.
 
         ```python
         stats = await client.email.stats.by_bounce_code(from_="2026-05-01", to="2026-05-25")
@@ -1355,7 +1355,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByComplaintTypeResponse:
-        """Spam-complaint counts grouped by the feedback-loop complaint type (for example `abuse`, `fraud`, `virus`); complaint side only. For complaints by destination use email_stats_by_mailbox_provider or email_stats_by_recipient_domain.
+        """Spam-complaint counts grouped by the feedback-loop complaint type, for example `abuse`, `fraud`, or `virus`. Complaint side only, so there are no delivery or engagement counts. For complaints broken down by destination instead, use `email.stats.by_mailbox_provider` or `email.stats.by_recipient_domain`.
 
         ```python
         stats = await client.email.stats.by_complaint_type(from_="2026-05-01", to="2026-05-25")
@@ -1387,7 +1387,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast; only broadcast sends appear. Reflects roughly the last 30 days of activity.
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity.
 
         ```python
         stats = await client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")

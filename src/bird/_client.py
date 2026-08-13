@@ -25,6 +25,7 @@ from bird.resources.contact_properties_gen import AsyncContactProperties, Contac
 from bird.resources.contacts_gen import AsyncContacts, Contacts
 from bird.resources.domains_gen import AsyncDomains, Domains
 from bird.resources.email import AsyncEmail, Email
+from bird.resources.lookup_gen import AsyncLookup, Lookup
 from bird.resources.realtime import AsyncRealtime, Realtime
 from bird.resources.sms import AsyncSms, Sms
 from bird.resources.sms_templates_gen import AsyncSmsTemplates, SmsTemplates
@@ -170,6 +171,7 @@ class Bird(SyncAPIClient):
         self.contact_properties = ContactProperties(self)
         self.audiences = Audiences(self)
         self.domains = Domains(self)
+        self.lookup = Lookup(self)
         self.webhooks = Webhooks(webhook_secret)
         self.realtime = Realtime(self)
 
@@ -286,6 +288,7 @@ class AsyncBird(AsyncAPIClient):
         self.contact_properties = AsyncContactProperties(self)
         self.audiences = AsyncAudiences(self)
         self.domains = AsyncDomains(self)
+        self.lookup = AsyncLookup(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
         self.realtime = AsyncRealtime(self)
 

@@ -72,6 +72,8 @@ from bird._generated import (
     SMSMessageBatchResponse,
     SMSTemplate,
     SMSTemplateList,
+    EmailLookup,
+    PhoneNumberLookup,
     Verification,
     VerificationCheckResult,
     VoiceCall,
@@ -101,6 +103,7 @@ from bird.resources.domains_gen import (
     DomainListParams,
     DomainUpdateParams,
 )
+from bird.resources.lookup_gen import LookupEmailParams, LookupPhoneNumberParams
 from bird.resources.email_stats_gen import (
     EmailStatsByBounceCodeParams,
     EmailStatsByBroadcastParams,
@@ -129,6 +132,11 @@ from bird.resources.voice_gen import VoiceListParams
 from bird._event_types import WebhookEventType
 from bird._open_enums import (
     EmailEventType,
+    EmailLookupFlag,
+    EmailLookupReason,
+    EmailLookupResult,
+    LookupFlag,
+    LookupPropertyStatus,
     SMSErrorCode,
     VerificationAttemptFailureReason,
     VerificationChannel,
@@ -232,6 +240,10 @@ __all__ = [
     "EmailStatsByBounceCodeParams",
     "EmailStatsByComplaintTypeParams",
     "EmailStatsByBroadcastParams",
+    "EmailLookup",
+    "PhoneNumberLookup",
+    "LookupEmailParams",
+    "LookupPhoneNumberParams",
     "RealtimePublishParams",
     "RealtimePublishBatchParams",
     "RealtimeBatchEventParams",
@@ -266,6 +278,11 @@ __all__ = [
     "GenericWebhookEvent",
     "WebhookEventType",
     "EmailEventType",
+    "EmailLookupFlag",
+    "EmailLookupReason",
+    "EmailLookupResult",
+    "LookupFlag",
+    "LookupPropertyStatus",
     "SMSErrorCode",
     "VerificationAttemptFailureReason",
     "VerificationChannel",

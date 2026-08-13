@@ -82,7 +82,7 @@ class Contacts(Resource):
         include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone_number, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
 
         ```python
         for contact in client.contacts.list(q="acme.com"):
@@ -108,7 +108,7 @@ class Contacts(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email, phone, or external_id with `contacts.list`.
+        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email, phone_number, or external_id with `contacts.list`.
 
         ```python
         contact = client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
@@ -133,7 +133,7 @@ class Contacts(Resource):
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Create a contact identified by an email address, an E.164 phone number, or both. Fails with a conflict if the email, phone, or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
+        """Create a contact identified by an email address, an E.164 phone number, or both. Fails with a conflict if the email, phone_number, or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
 
         ```python
         contact = client.contacts.create(email="jane@acme.com", first_name="Jane")
@@ -171,7 +171,7 @@ class Contacts(Resource):
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Update a contact's name, external_id, email, phone, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key. A contact keeps at least one identifier: clearing both email and phone is rejected.
+        """Update a contact's name, external_id, email, phone_number, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key. A contact keeps at least one identifier: clearing both email and phone_number is rejected.
 
         ```python
         contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
@@ -223,7 +223,7 @@ class Contacts(Resource):
         data_mode: str | None = None,
         options: RequestOptions | None = None,
     ) -> ContactUpsertResult:
-        """Create or update up to 1,000 contacts in one request, each entry matched automatically against every identifier it supplies (email, phone, external_id) or, with match_on, by that one field only, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
+        """Create or update up to 1,000 contacts in one request, each entry matched automatically against every identifier it supplies (email, phone_number, external_id) or, with match_on, by that one field only, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
 
         ```python
         result = client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])
@@ -264,7 +264,7 @@ class AsyncContacts(AsyncResource):
         include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone_number, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
 
         ```python
         async for contact in client.contacts.list(q="acme.com"):
@@ -290,7 +290,7 @@ class AsyncContacts(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email, phone, or external_id with `contacts.list`.
+        """Get a single contact by ID (`con_`-prefixed). Look up an ID by exact email, phone_number, or external_id with `contacts.list`.
 
         ```python
         contact = await client.contacts.get("con_01krdgeqcxet5s7t44vh8rt9mg")
@@ -315,7 +315,7 @@ class AsyncContacts(AsyncResource):
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Create a contact identified by an email address, an E.164 phone number, or both. Fails with a conflict if the email, phone, or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
+        """Create a contact identified by an email address, an E.164 phone number, or both. Fails with a conflict if the email, phone_number, or external_id is already used by another contact. For bulk import or create-or-update semantics use `contacts.batch`.
 
         ```python
         contact = await client.contacts.create(email="jane@acme.com", first_name="Jane")
@@ -353,7 +353,7 @@ class AsyncContacts(AsyncResource):
         data: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Contact:
-        """Update a contact's name, external_id, email, phone, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key. A contact keeps at least one identifier: clearing both email and phone is rejected.
+        """Update a contact's name, external_id, email, phone_number, or custom data. Only supplied fields change; custom data keys are merged, with null removing a key. A contact keeps at least one identifier: clearing both email and phone_number is rejected.
 
         ```python
         contact = await client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
@@ -405,7 +405,7 @@ class AsyncContacts(AsyncResource):
         data_mode: str | None = None,
         options: RequestOptions | None = None,
     ) -> ContactUpsertResult:
-        """Create or update up to 1,000 contacts in one request, each entry matched automatically against every identifier it supplies (email, phone, external_id) or, with match_on, by that one field only, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
+        """Create or update up to 1,000 contacts in one request, each entry matched automatically against every identifier it supplies (email, phone_number, external_id) or, with match_on, by that one field only, and optionally add them all to one or more audiences. Per-contact results are returned in submission order.
 
         ```python
         result = await client.contacts.batch(contacts=[{"email": "jane@acme.com", "first_name": "Jane"}])

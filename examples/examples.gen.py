@@ -478,13 +478,29 @@ async def _ex_74() -> None:
 
 
 async def _ex_75() -> None:
+    answer = client.lookup.email(email="aisha.khan@example.com")
+    # result is an open vocabulary; delivery_confidence is always comparable.
+    print(answer.result, answer.delivery_confidence)
+
+
+async def _ex_76() -> None:
+    answer = client.lookup.phone_number(
+        phone_number="+31612345678", type=["classification", "score"]
+    )
+    print(answer.country_code, answer.line_type)
+    # Only a block whose status is ok carries a value, and only that one is billed.
+    if answer.score is not None and answer.score.status == "ok":
+        print(answer.score.value)
+
+
+async def _ex_77() -> None:
     channel = client.realtime.channels.get(
         "rap_01krdgeqcxet5s7t44vh8rt9mg", "presence-lobby", include=["member_count"]
     )
     print(channel.occupied, channel.member_count)
 
 
-async def _ex_76() -> None:
+async def _ex_78() -> None:
     channels = client.realtime.channels.list(
         "rap_01krdgeqcxet5s7t44vh8rt9mg", prefix="presence-", include=["member_count"]
     )
@@ -492,7 +508,7 @@ async def _ex_76() -> None:
         print(channel.name, channel.member_count)
 
 
-async def _ex_77() -> None:
+async def _ex_79() -> None:
     members = client.realtime.channels.members(
         "rap_01krdgeqcxet5s7t44vh8rt9mg", "presence-lobby"
     )
@@ -500,11 +516,11 @@ async def _ex_77() -> None:
         print(member.member_id)
 
 
-async def _ex_78() -> None:
+async def _ex_80() -> None:
     client.realtime.members.disconnect("rap_01krdgeqcxet5s7t44vh8rt9mg", "user_42")
 
 
-async def _ex_79() -> None:
+async def _ex_81() -> None:
     client.realtime.members.send(
         "rap_01krdgeqcxet5s7t44vh8rt9mg",
         "user_42",
@@ -513,7 +529,7 @@ async def _ex_79() -> None:
     )
 
 
-async def _ex_80() -> None:
+async def _ex_82() -> None:
     result = client.realtime.publish(
         "rap_01krdgeqcxet5s7t44vh8rt9mg",
         event="order.updated",
@@ -523,7 +539,7 @@ async def _ex_80() -> None:
     print(result.data)
 
 
-async def _ex_81() -> None:
+async def _ex_83() -> None:
     client.realtime.publish_batch(
         "rap_01krdgeqcxet5s7t44vh8rt9mg",
         events=[
@@ -533,17 +549,17 @@ async def _ex_81() -> None:
     )
 
 
-async def _ex_82() -> None:
+async def _ex_84() -> None:
     message = client.sms.get("sms_abc123")
     print(message.id, message.status)
 
 
-async def _ex_83() -> None:
+async def _ex_85() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_84() -> None:
+async def _ex_86() -> None:
     msg = client.sms.send(
         to="+15551234567",
         text="Your verification code is 123456.",
@@ -552,7 +568,7 @@ async def _ex_84() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_85() -> None:
+async def _ex_87() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -560,71 +576,71 @@ async def _ex_85() -> None:
     )
 
 
-async def _ex_86() -> None:
+async def _ex_88() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_87() -> None:
+async def _ex_89() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.name)
 
 
-async def _ex_88() -> None:
+async def _ex_90() -> None:
     result = client.verify.verifications.check(
         to={"phone_number": "+15551234567"}, code="123456"
     )
     print(result.success)
 
 
-async def _ex_89() -> None:
+async def _ex_91() -> None:
     verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
     print(verification.id, verification.status)
 
 
-async def _ex_90() -> None:
+async def _ex_92() -> None:
     verification = client.verify.verifications.next_channel(
         to={"phone_number": "+15551234567"}
     )
     print(verification.last_channel)
 
 
-async def _ex_91() -> None:
+async def _ex_93() -> None:
     call = client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
     # A call still ringing or connected carries no economics yet.
     print(call.status, call.duration_ms, call.cost)
 
 
-async def _ex_92() -> None:
+async def _ex_94() -> None:
     for call in client.voice.list(status=["ringing", "in_progress"]):
         print(call.id, call.status)
 
 
-async def _ex_93() -> None:
+async def _ex_95() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_94() -> None:
+async def _ex_96() -> None:
     msg = client.whatsapp.get("wa_abc123")
     print(msg.id, msg.status)
 
 
-async def _ex_95() -> None:
+async def _ex_97() -> None:
     for msg in client.whatsapp.list(status=["delivered"]):
         print(msg.id, msg.status)
 
 
-async def _ex_96() -> None:
+async def _ex_98() -> None:
     events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_97() -> None:
+async def _ex_99() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",

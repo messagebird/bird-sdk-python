@@ -42,6 +42,8 @@ def test_surface_conformance() -> None:
     assert callable(client.verify.verifications.create)
     assert callable(client.verify.verifications.check)
     assert callable(client.verify.verifications.next_channel)
+    assert callable(client.lookup.phone_number)
+    assert callable(client.lookup.email)
     assert callable(client.domains.list)
     assert callable(client.domains.get)
     assert callable(client.domains.create)

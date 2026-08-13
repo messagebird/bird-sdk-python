@@ -223,7 +223,7 @@ class Audiences(Resource):
         contact_ids: Sequence[str],
         options: RequestOptions | None = None,
     ) -> None:
-        """Add up to 1,000 existing contacts to a static audience by ID. Fails entirely if any contact ID does not exist.
+        """Add up to 1,000 existing contacts to a static audience by ID. Fails entirely if any contact ID does not exist. To add contacts you have not created yet, use `contacts.batch` with `audience_ids` instead: it matches or creates each contact by email address and assigns it to the audience in one call.
 
         ```python
         client.audiences.add_contacts(
@@ -441,7 +441,7 @@ class AsyncAudiences(AsyncResource):
         contact_ids: Sequence[str],
         options: RequestOptions | None = None,
     ) -> None:
-        """Add up to 1,000 existing contacts to a static audience by ID. Fails entirely if any contact ID does not exist.
+        """Add up to 1,000 existing contacts to a static audience by ID. Fails entirely if any contact ID does not exist. To add contacts you have not created yet, use `contacts.batch` with `audience_ids` instead: it matches or creates each contact by email address and assigns it to the audience in one call.
 
         ```python
         await client.audiences.add_contacts(

@@ -35,6 +35,8 @@ KEEP: dict[str, set[str]] = {
     "/v1/verify/verifications": {"post"},
     "/v1/verify/verifications/check": {"post"},
     "/v1/verify/verifications/next-channel": {"post"},
+    "/v1/lookup/phone-number": {"post"},
+    "/v1/lookup/email": {"post"},
     "/v1/email/domains": {"get", "post"},
     "/v1/email/domains/{domain_id}": {"delete", "get", "patch"},
     "/v1/email/domains/{domain_id}/verify": {"post"},

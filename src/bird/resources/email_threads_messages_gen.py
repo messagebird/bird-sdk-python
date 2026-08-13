@@ -73,7 +73,7 @@ class EmailThreadsMessages(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailThreadMessage]:
-        """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's durable plain text.
+        """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's extracted plain text.
 
         ```python
         for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -97,7 +97,7 @@ class EmailThreadsMessages(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
-        """Get one conversation message with its extracted plain text, readable for the mailbox's full retention period without MIME parsing.
+        """Get one conversation message with its extracted plain text, readable for the mailbox's full retention tier without MIME parsing.
 
         ```python
         message = client.email.threads.messages.get(
@@ -120,7 +120,7 @@ class EmailThreadsMessages(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessageBody:
-        """Get the original rendered HTML and plain-text body of a conversation message. Available 30 days; after that use the message's extracted_text.
+        """Get the original rendered HTML and plain-text body of a conversation message. Available for 30 days. After that, use the message's extracted_text.
 
         ```python
         body = client.email.threads.messages.body(
@@ -187,7 +187,7 @@ class EmailThreadsMessages(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessageAttachmentList:
-        """List the attachments on a conversation message. Bytes are downloadable for 30 days; the metadata also rides the message's attachment_manifest durably.
+        """List the attachments on a conversation message. Bytes are downloadable for 30 days, and the metadata stays readable afterward on the message's attachment_manifest.
 
         ```python
         result = client.email.threads.messages.attachments(
@@ -218,7 +218,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailThreadMessage]:
-        """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's durable plain text.
+        """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's extracted plain text.
 
         ```python
         async for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -242,7 +242,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
-        """Get one conversation message with its extracted plain text, readable for the mailbox's full retention period without MIME parsing.
+        """Get one conversation message with its extracted plain text, readable for the mailbox's full retention tier without MIME parsing.
 
         ```python
         message = await client.email.threads.messages.get(
@@ -265,7 +265,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessageBody:
-        """Get the original rendered HTML and plain-text body of a conversation message. Available 30 days; after that use the message's extracted_text.
+        """Get the original rendered HTML and plain-text body of a conversation message. Available for 30 days. After that, use the message's extracted_text.
 
         ```python
         body = await client.email.threads.messages.body(
@@ -332,7 +332,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessageAttachmentList:
-        """List the attachments on a conversation message. Bytes are downloadable for 30 days; the metadata also rides the message's attachment_manifest durably.
+        """List the attachments on a conversation message. Bytes are downloadable for 30 days, and the metadata stays readable afterward on the message's attachment_manifest.
 
         ```python
         result = await client.email.threads.messages.attachments(

@@ -222,6 +222,19 @@ class FieldListEnvelopeWithTotal(FieldListEnvelope):
     ] = None
 
 
+class CountryCode(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="ISO 3166-1 alpha-2 country code.",
+            examples=["US"],
+            max_length=2,
+            min_length=2,
+            pattern="^[A-Za-z]{2}$",
+        ),
+    ]
+
+
 class Timestamps(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -529,9 +542,7 @@ class EmailAddress(BaseModel):
     )
     email: Annotated[
         str,
-        Field(
-            description="Email address.", examples=["jane@example.com"], min_length=5
-        ),
+        Field(description="Email address.", examples=["jane@acme.com"], min_length=5),
     ]
     name: Annotated[
         str | None,
@@ -673,7 +684,7 @@ class EmailMessage(BaseModel):
     to: Annotated[
         list[EmailAddress],
         Field(
-            description="Primary recipients. Length is the recipient count; use the broadcasts endpoint for audience-targeted sends. Each entry's `name` is present when a display name was provided on the send.",
+            description="Primary recipients. Length is the recipient count. Use the broadcasts endpoint for audience-targeted sends. Each entry's `name` is present when a display name was provided on the send.",
             max_length=50,
             min_length=1,
         ),
@@ -697,28 +708,23 @@ class EmailMessage(BaseModel):
             max_length=25,
         ),
     ] = None
-    status: Annotated[
-        EmailMessageStatus,
-        Field(
-            description="Aggregate delivery status derived from recipient states. `scheduled` means the message is queued to send at a future time and has not been dispatched yet. `accepted` means Bird has the send and is preparing to deliver. `processed` means Bird has processed the message and queued it for delivery to the recipient's mail server. `canceled` means a scheduled message was canceled before it was sent.\n"
-        ),
-    ]
+    status: EmailMessageStatus
     accepted_count: Annotated[
         int,
         Field(
-            description="Number of recipients currently in the `accepted` state — Bird has the send and is preparing to deliver."
+            description="How many recipients are in the `accepted` state, meaning we have the message and are getting ready to deliver it."
         ),
     ]
     processed_count: Annotated[
         int,
         Field(
-            description="Number of recipients for whom Bird has processed the message and queued it for delivery."
+            description="How many recipients the message has been prepared for and queued for delivery."
         ),
     ]
     delivered_count: Annotated[
         int,
         Field(
-            description="Number of recipients whose messages were accepted by the remote MTA."
+            description="How many recipients' messages were accepted by their mail server."
         ),
     ]
     bounced_count: Annotated[
@@ -733,19 +739,19 @@ class EmailMessage(BaseModel):
     deferred_count: Annotated[
         int,
         Field(
-            description="Number of recipients in transient delivery deferral; the provider is retrying."
+            description="Number of recipients in transient delivery deferral. Their mail server asked for a retry, and delivery attempts continue."
         ),
     ]
     rejected_count: Annotated[
         int,
         Field(
-            description="Number of recipients rejected before delivery. See the per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` for the specific cause (suppression match, transmission failure, generation failure, or policy refusal).\n"
+            description="Number of recipients rejected before delivery. Read the per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` for the specific cause.\n"
         ),
     ]
     processing_latency_ms: Annotated[
         int | None,
         Field(
-            description="Time between Bird accepting the send and the message being processed for delivery, in milliseconds, for the fastest recipient. Null until the first recipient reaches `processed`.\n",
+            description="Time between the send being accepted and the message being prepared for delivery, in milliseconds, for the fastest recipient. Null until the first recipient reaches `processed`.\n",
             ge=0,
         ),
     ] = None
@@ -796,13 +802,13 @@ class EmailMessage(BaseModel):
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description="Structured `{name, value}` filter labels applied to this send. See EmailMessageSendRequest for the tags vs metadata distinction."
+            description="Labels on this message, each one a `name` and a `value`, that you can filter and search messages by. Use tags for anything you want to find messages by later, and `metadata` for data you only want handed back to you."
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Arbitrary JSON metadata stored on the message object and echoed in webhook payloads. See EmailMessageSendRequest for the tags vs metadata distinction."
+            description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead."
         ),
     ] = None
     parameters: Annotated[
@@ -814,7 +820,7 @@ class EmailMessage(BaseModel):
     attachments: Annotated[
         list[EmailAttachmentRef] | None,
         Field(
-            description="Attachment metadata for the send. Empty when no attachments were included. Raw content is not echoed; when content storage is enabled, download an attachment by its `id` via the message's attachment endpoint."
+            description="Attachment metadata for the send. Empty when no attachments were included. Raw content is not echoed. When content storage is enabled, download an attachment by its `id` via the message's attachment endpoint."
         ),
     ] = None
     track_opens: Annotated[
@@ -829,7 +835,7 @@ class EmailMessage(BaseModel):
     thread_id: Annotated[
         str | None,
         Field(
-            description="Thread this message belongs to. Null until threading is enabled.",
+            description="Thread this message belongs to, or null when the message is not part of one.",
             pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
@@ -862,7 +868,7 @@ class EmailAddressInput1(RootModel[str]):
         str,
         Field(
             description="Email address, optionally in RFC 5322 mailbox form with an embedded display name.",
-            examples=["Jane Doe <jane@example.com>"],
+            examples=["Jane Doe <jane@acme.com>"],
             max_length=998,
             min_length=5,
             pattern="^[^\\r\\n]+$",
@@ -897,7 +903,7 @@ class EmailTemplateSend1(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not have the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
             examples=["pt-BR"],
             max_length=35,
             min_length=2,
@@ -906,7 +912,7 @@ class EmailTemplateSend1(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's parameters, keyed by parameter name. A parameter name is a single word, and every parameter the template's `variables` lists needs a value here: a send that omits one is rejected rather than delivered with a blank. Send everything `variables` lists rather than only what you expect the chosen language to use, since languages need not reference the same parameters and a value no language uses is ignored. Cap: 16 KB serialized.\n",
+            description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable the template's `variables` lists needs a value here. A send that leaves one out is rejected rather than delivered with a blank in it. Send values for everything in that list rather than only what you expect the language you are sending to use, because languages do not have to use the same variables and a value no language uses is simply ignored.\n\n`bird` is reserved for the values we fill in ourselves, so a send that sets it is rejected. `parameters` is capped at 16 KB once serialized.\n",
             examples=[{"animal": "otter"}],
         ),
     ] = None
@@ -938,7 +944,7 @@ class EmailTemplateSend2(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not have the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
             examples=["pt-BR"],
             max_length=35,
             min_length=2,
@@ -947,7 +953,7 @@ class EmailTemplateSend2(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's parameters, keyed by parameter name. A parameter name is a single word, and every parameter the template's `variables` lists needs a value here: a send that omits one is rejected rather than delivered with a blank. Send everything `variables` lists rather than only what you expect the chosen language to use, since languages need not reference the same parameters and a value no language uses is ignored. Cap: 16 KB serialized.\n",
+            description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable the template's `variables` lists needs a value here. A send that leaves one out is rejected rather than delivered with a blank in it. Send values for everything in that list rather than only what you expect the language you are sending to use, because languages do not have to use the same variables and a value no language uses is simply ignored.\n\n`bird` is reserved for the values we fill in ourselves, so a send that sets it is rejected. `parameters` is capped at 16 KB once serialized.\n",
             examples=[{"animal": "otter"}],
         ),
     ] = None
@@ -960,7 +966,7 @@ class EmailAttachment(BaseModel):
     filename: Annotated[
         str,
         Field(
-            description="Filename shown to the recipient. Required.",
+            description="The name the recipient sees on the attachment.",
             examples=["invoice.pdf"],
             max_length=255,
             min_length=1,
@@ -969,27 +975,21 @@ class EmailAttachment(BaseModel):
     content: Annotated[
         Base64Str,
         Field(
-            description="Base64-encoded attachment bytes. Required. Counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n",
+            description="The file's bytes, base64-encoded. What you send here counts toward the message's 20 MB limit after encoding and MIME wrapping, not at its raw size.",
             min_length=1,
         ),
     ]
-    path: Annotated[
-        str | None,
-        Field(
-            description="Preview feature — provide a URL and Bird fetches the attachment for you. Currently unavailable. Use `content` instead. The schema currently requires `content`, so a request with only `path` is rejected with 422 for missing `content`; a request supplying both `content` and `path` is rejected with 422 `UnsupportedEmailFeature` until this preview ships. When generally available: HTTPS-only, single redirect followed and re-validated, private IP ranges blocked, request timeout enforced, fetched content counts toward the 20 MB estimated generated message-size cap after encoding and MIME wrapping.\n"
-        ),
-    ] = None
     content_type: Annotated[
         str | None,
         Field(
-            description="MIME type. Inferred from `filename` extension when omitted. Used to enforce the blocklist of disallowed executable / script types.\n",
+            description="The file's MIME type. Leave it out and we work it out from the extension on `filename`. This is what we check against the list of executable and script types we refuse.",
             examples=["application/pdf"],
         ),
     ] = None
     content_id: Annotated[
         str | None,
         Field(
-            description='RFC 2392 Content-ID. When set, the attachment is rendered inline and can be referenced from the HTML body as `<img src="cid:{content_id}"/>`. When omitted, the attachment is rendered as a regular file attachment.\n',
+            description='An RFC 2392 Content-ID for the file. Set it and the attachment is shown inline, so your HTML body can point at it with `<img src="cid:{content_id}"/>`. Leave it out and the file arrives as an ordinary attachment the recipient downloads.',
             examples=["invoice-logo"],
             max_length=128,
             min_length=1,
@@ -1006,13 +1006,13 @@ class EmailMessageSendRequest(BaseModel):
         EmailAddressInput1 | EmailAddress,
         Field(
             alias="from",
-            description="Sender address, as a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name. Must be from a verified domain in this workspace.",
+            description="Sender address, as a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name. Must be from a verified domain in this workspace.",
         ),
     ]
     to: Annotated[
         list[EmailAddressInput1 | EmailAddress],
         Field(
-            description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
+            description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
             min_length=1,
         ),
@@ -1020,21 +1020,21 @@ class EmailMessageSendRequest(BaseModel):
     cc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
+            description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     bcc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
+            description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     subject: Annotated[
         str | None,
         Field(
-            description="Message subject line. Required for inline sends; omit it when sending a `template` (the template supplies the subject).",
+            description="Message subject line. Required for inline sends. Omit it when sending a `template` (the template supplies the subject).",
             max_length=998,
             min_length=1,
         ),
@@ -1056,7 +1056,7 @@ class EmailMessageSendRequest(BaseModel):
     reply_to: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description="Reply-To addresses, each a plain email string, an RFC 5322 mailbox string, or an object with an optional display name. RFC 5322 allows multiple. Every recipient reply hits all listed addresses, so 1-2 is typical; the 25 cap exists to prevent runaway header sizes that some MTAs reject.\n",
+            description="Reply-To addresses, each a plain email string, an RFC 5322 mailbox string, or an object with an optional display name. RFC 5322 allows multiple. Every recipient reply hits all listed addresses, so 1-2 is typical. The 25 cap exists to prevent header sizes that some receiving mail servers reject.\n",
             max_length=25,
             min_length=1,
         ),
@@ -1064,21 +1064,21 @@ class EmailMessageSendRequest(BaseModel):
     headers: Annotated[
         dict[str, str] | None,
         Field(
-            description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`: set the message's addressing and subject through the dedicated fields (`from`, `to`, `cc`, `bcc`, `reply_to`, `subject`) rather than here, and headers the platform generates for you — `Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path` — cannot be overridden. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends; on `marketing` sends the platform sets a compliant unsubscribe header for you, so supplying them there is rejected with a `422`. Header values may not contain carriage-return or line-feed characters.\n",
+            description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`. Set the message's addressing and subject through the dedicated fields (`from`, `to`, `cc`, `bcc`, `reply_to`, `subject`) rather than here, and the headers generated for you automatically (`Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path`) cannot be overridden. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends. On a `marketing` send a compliant unsubscribe header is set for you, so supplying either one there is rejected with a `422`. Header values may not contain carriage-return or line-feed characters. Up to 25 headers per send, each value up to 998 characters.\n",
             max_length=25,
         ),
     ] = None
     tags: Annotated[
         list[Tag] | None,
         Field(
-            description="Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics rollups by tag, and surface in webhook payloads. Cap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.\n",
+            description="Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions:\n\n- Filter the list endpoint by tag name.\n- Slice analytics rollups by tag.\n- Surface in webhook payloads.\n\nCap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Arbitrary JSON object **stored, returned on API reads, and echoed in webhook payloads**. Path-queryable in analytics (e.g. filter on `metadata.order_id`) but not surfaced as a first-class dashboard filter dimension. Cap: 2 KB serialized. Use metadata for per-send context like internal IDs, foreign keys, and structured payloads you want round-tripped through events. For low-cardinality filterable labels, use `tags` instead.\n"
+            description="Arbitrary JSON object **stored, returned on API reads, and echoed in webhook payloads**. Path-queryable in analytics (for example, filter on `metadata.order_id`) but not surfaced as a first-class dashboard filter dimension. Cap: 2 KB serialized. Use metadata for per-send context like internal IDs, foreign keys, and structured payloads you want round-tripped through events. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
     parameters: Annotated[
@@ -1090,7 +1090,7 @@ class EmailMessageSendRequest(BaseModel):
     template: Annotated[
         EmailTemplateSend1 | EmailTemplateSend2 | None,
         Field(
-            description="Send a stored template instead of inline content. When set, omit `subject`/`html`/`text` — the template supplies them; personalize with `template.parameters`.\n"
+            description="Send a stored template instead of inline content. When set, omit `subject`, `html` and `text`, because the template supplies them. Personalize with `template.parameters`. A template send goes out immediately: `template` and `scheduled_at` are mutually exclusive, and combining them is rejected with a `422`.\n"
         ),
     ] = None
     track_opens: Annotated[
@@ -1110,42 +1110,20 @@ class EmailMessageSendRequest(BaseModel):
     category: Annotated[
         EmailMessageCategory | None,
         Field(
-            description="Content classification. Controls suppression policy: `marketing` blocks on all suppression reasons; `transactional` allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail. When you send with `template` and omit this field, the message takes the template's own classification, so a template created as `transactional` sends as transactional. Set this field to classify a single send differently from its template; it always takes precedence. Sends that carry no template and no category are `marketing`.\n"
+            description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.\n\nWhen you send with `template` and omit this field, the message takes the template's own classification, so a template created as `transactional` sends as transactional. Set this field to classify a single send differently from its template. It always takes precedence. A send with no template and no category defaults to `marketing`.\n"
         ),
     ] = "marketing"
-    in_reply_to_message_id: Annotated[
-        str | None,
-        Field(
-            description="Preview feature — threaded replies. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, sets In-Reply-To and References headers automatically.",
-            examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-            pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
-        ),
-    ] = None
     attachments: Annotated[
         list[EmailAttachment] | None,
         Field(
-            description="File attachments. Bird rejects sends whose estimated generated message size exceeds 20 MB. The estimate is the HTML and text body plus all attachments and inline images measured after base64 encoding. Keep total raw attachment content at or below 15 MB for reliable headroom. In batch sends, this per-message cap still applies and the serialized JSON request body for the whole batch has a hard 20 MB cap. See the EmailAttachment schema for the full field contract.\n",
+            description="Files to attach, up to 20 per message. A message can be at most 20 MB once it has been generated, and we refuse a send that would go over. That figure covers the HTML body, the text body and every attachment and inline image, all measured after base64 encoding, which adds roughly a third. So 15 MB of raw files already accounts for most of the budget, and the body competes for the same space. A batch send is held to the same 20 MB per message, and the whole request body is capped at 20 MB as well.\n",
             max_length=20,
         ),
     ] = None
     scheduled_at: Annotated[
         str | None,
         Field(
-            description="Schedule the message to send at a future time instead of immediately. Must be at least 30 seconds and at most 30 days ahead — outside that range the request is rejected with `422`. The message returns with status `accepted` and shows as `scheduled` on reads until it sends; cancel it before then with the message cancel endpoint. Scheduled sends count against your plan's monthly scheduled-email allowance; exceeding it is rejected with a `422`.\n"
-        ),
-    ] = None
-    contact_id: Annotated[
-        str | None,
-        Field(
-            description="Preview feature — contact-targeted sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`."
-        ),
-    ] = None
-    topic_id: Annotated[
-        str | None,
-        Field(
-            description="Preview feature — topic-gated sends. Currently unavailable; supplying this field returns `422 UnsupportedEmailFeature`. When generally available, a non-empty `topic_id` gates delivery on the recipient's opt-in state for that topic — if the recipient is opt_out, the send is silently suppressed and an `email.suppressed` event fires with `reason: topic_opt_out`.\n",
-            pattern="^top_[0-9a-hjkmnp-tv-z]{26}$",
+            description="Schedule the message to send at a future time instead of immediately. Must be at least 30 seconds and at most 30 days ahead. Outside that range the request is rejected with `422`. The message returns with status `accepted` and shows as `scheduled` on reads until it sends. Cancel it before then with the message cancel endpoint. Scheduled sends count against your plan's monthly scheduled-email allowance. Exceeding it is rejected with a `422`. A scheduled message has inline content: `scheduled_at` and `template` are mutually exclusive, and combining them is rejected with a `422`. This field is only accepted on a single send, not on a batch item.\n"
         ),
     ] = None
 
@@ -1158,14 +1136,18 @@ class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
             examples=[
                 [
                     {
-                        "from": {"email": "hello@bird.com", "name": "Bird Support"},
-                        "to": [{"email": "jane@example.com", "name": "Jane Doe"}],
+                        "from": {"email": "noreply@acme.com", "name": "Acme Support"},
+                        "to": [
+                            {"email": "delivered@messagebird.dev", "name": "Jane Doe"}
+                        ],
                         "subject": "Your receipt for order #1234",
                         "text": "Thanks for your purchase! Your receipt is attached.",
                     },
                     {
-                        "from": {"email": "hello@bird.com", "name": "Bird Support"},
-                        "to": [{"email": "john@example.com", "name": "John Roe"}],
+                        "from": {"email": "noreply@acme.com", "name": "Acme Support"},
+                        "to": [
+                            {"email": "delivered@messagebird.dev", "name": "John Roe"}
+                        ],
                         "subject": "Your receipt for order #1235",
                         "text": "Thanks for your purchase! Your receipt is attached.",
                     },
@@ -1214,7 +1196,7 @@ class EmailMessageBatchItem(BaseModel):
     resolved_language: Annotated[
         LanguageTag | None,
         Field(
-            description="The template language this item was actually delivered in, in canonical form. Null when the item used no template. A value here differing from `requested_language` means the template did not carry the language asked for and its `on_missing_language` policy chose this one.\n"
+            description="The template language this item was actually delivered in, in canonical form. Null when the item used no template. A value here differing from `requested_language` means the template did not have the language asked for and its `on_missing_language` policy chose this one.\n"
         ),
     ] = None
     template_id: Annotated[
@@ -1605,8 +1587,6 @@ class ContactUpdateRequest(BaseModel):
 
 class Type1(str, Enum):
     AudienceTypeStatic = "static"
-    AudienceTypeDynamic = "dynamic"
-    AudienceTypeExternal = "external"
 
 
 class Audience(Timestamps):
@@ -1637,7 +1617,7 @@ class Audience(Timestamps):
     type: Annotated[
         Type1,
         Field(
-            description="How the audience's recipients are determined. `static` (the default) is an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable; creating an audience with either returns a validation error.\n"
+            description="How the audience's recipients are determined. `static` is an explicit member list you manage by adding and removing contacts."
         ),
     ]
     created_at: str
@@ -1762,7 +1742,7 @@ class AudienceCreateRequest(BaseModel):
     type: Annotated[
         Type1 | None,
         Field(
-            description="How the audience's recipients are determined. `static` (the default) is an explicit member list you manage via the API. `dynamic` and `external` are preview values and currently unavailable; creating an audience with either returns a validation error.\n"
+            description="How the audience's recipients are determined. `static` is an explicit member list you manage by adding and removing contacts."
         ),
     ] = "static"
 
@@ -1774,7 +1754,7 @@ class AudienceUpdateRequest(BaseModel):
     name: Annotated[
         str | None,
         Field(
-            description="New display name for the audience. Omit to keep the current name; the name cannot be cleared, and a whitespace-only value returns a validation error.",
+            description="New display name for the audience. Omit to keep the current name. The name cannot be cleared, and a whitespace-only value returns a validation error.",
             max_length=100,
             min_length=1,
         ),
@@ -1827,7 +1807,7 @@ class AudienceContactsAddRequest(BaseModel):
     contact_ids: Annotated[
         list[ContactID],
         Field(
-            description="Contacts to add to the audience. Adding a contact that is already a member has no effect and keeps its original join time; duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no contacts are added.",
+            description="Contacts to add to the audience. Adding a contact that is already a member has no effect and keeps its original join time. Duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no contacts are added.",
             max_length=1000,
             min_length=1,
         ),
@@ -1841,7 +1821,7 @@ class AudienceContactsRemoveRequest(BaseModel):
     contact_ids: Annotated[
         list[ContactID],
         Field(
-            description="Contacts to remove from the audience. Removing a contact that is not a member has no effect; duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no memberships are removed.",
+            description="Contacts to remove from the audience. Removing a contact that is not a member has no effect. Duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no memberships are removed.",
             max_length=1000,
             min_length=1,
         ),
@@ -2531,32 +2511,35 @@ class TemplateVariable(BaseModel):
     )
     key: Annotated[
         str,
-        Field(description="The parameter key this slot is filled with.", min_length=1),
+        Field(
+            description="The variable's name, the key you use for it in `parameters` when you send.",
+            min_length=1,
+        ),
     ]
     type: Annotated[
         str,
         Field(
-            description="The value type this slot accepts. Open enum — treat any unrecognized value as a future type rather than an error. SMS templates use the typed slots (`code`, `amount`, …); email templates use `text`.\n",
+            description="The value type this variable accepts. We can add new types to this list over time, so treat a value you do not recognize as a new type rather than as an error. SMS templates use the typed values, such as `code` and `amount`. Email templates only use `text`.\n",
             min_length=1,
         ),
     ]
     required: Annotated[
         bool,
         Field(
-            description="Whether the slot must be supplied when sending. A send that leaves a required slot unset is rejected.\n"
+            description="Whether a value has to be supplied when sending. A send that leaves a required variable unset is rejected.\n"
         ),
     ]
     constraint: Annotated[
         str,
         Field(
-            description="A human-readable description of the accepted values.",
+            description="A plain-language description of what values this variable accepts.",
             min_length=1,
         ),
     ]
     sensitive: Annotated[
         bool | None,
         Field(
-            description="Whether this slot's value is redacted before it reaches storage. A sensitive slot's rendered value never appears in message content read back through the API: a stand-in placeholder is stored instead.\n"
+            description="Whether this variable's value gets redacted before it is stored. When it does, the rendered value never appears in message content you read back through the API: a placeholder is stored in its place instead.\n"
         ),
     ] = False
 
@@ -2700,6 +2683,417 @@ class StatsTrendGrain(str, Enum):
     hourly = "hourly"
 
 
+class LookupProperty(str, Enum):
+    classification = "classification"
+    porting = "porting"
+    presence = "presence"
+    roaming = "roaming"
+    sim_swap = "sim_swap"
+    score = "score"
+
+
+class PhoneNumberLookupRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    phone_number: Annotated[
+        str,
+        Field(
+            description="The phone number to look up, in E.164 format, which is a leading `+`, the country calling code, then the national number.",
+            min_length=1,
+        ),
+    ]
+    type: Annotated[
+        list[LookupProperty] | None,
+        Field(
+            description="The paid properties to enrich the answer with. Omit it, or send an empty array, to get the free baseline and make no vendor call.\n\nEach delivered property is billed on top of the lookup itself. A property that could not be answered is reported in `properties` and is not billed.\n"
+        ),
+    ] = None
+
+
+class LookupNetworkInfo(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    carrier_name: Annotated[
+        str | None,
+        Field(
+            description="The carrier's name, absent when the carrier could not be identified."
+        ),
+    ] = None
+    mcc: Annotated[
+        str | None,
+        Field(
+            description="The mobile country code, absent for a network that has none or could not be identified."
+        ),
+    ] = None
+    mnc: Annotated[
+        str | None,
+        Field(
+            description="The mobile network code, absent for a network that has none or could not be identified."
+        ),
+    ] = None
+
+
+class LookupFlag(str, Enum):
+    ported = "ported"
+
+
+class LookupLineType(str, Enum):
+    mobile = "mobile"
+    fixed_line = "fixed_line"
+    voip = "voip"
+    toll_free = "toll_free"
+    premium_rate = "premium_rate"
+    satellite = "satellite"
+    pager = "pager"
+    payphone = "payphone"
+    m2m = "m2m"
+    service = "service"
+    other = "other"
+    unknown = "unknown"
+
+
+class LookupPropertyStatus(str, Enum):
+    ok = "ok"
+    unavailable = "unavailable"
+    inconclusive = "inconclusive"
+
+
+class LookupClassificationValue(str, Enum):
+    mobile = "mobile"
+    fixed_line = "fixed_line"
+    fixed_line_or_mobile = "fixed_line_or_mobile"
+    voip = "voip"
+    toll_free = "toll_free"
+    premium_rate = "premium_rate"
+    shared_cost = "shared_cost"
+    local_rate = "local_rate"
+    national_rate = "national_rate"
+    personal_number = "personal_number"
+    universal_access = "universal_access"
+    satellite = "satellite"
+    pager = "pager"
+    payphone = "payphone"
+    m2m = "m2m"
+    isp = "isp"
+    vpn = "vpn"
+    voice_mail = "voice_mail"
+    calling_cards = "calling_cards"
+    short_codes = "short_codes"
+    service = "service"
+    other = "other"
+
+
+class LookupClassification(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")
+    ]
+    value: Annotated[
+        LookupClassificationValue | None,
+        Field(
+            description="The allocated service of the range. Present only when `status` is `ok`."
+        ),
+    ] = None
+
+
+class LookupPresence(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")
+    ]
+    reachable: Annotated[
+        bool | None,
+        Field(
+            description="Whether the number is registered on a network and able to receive traffic. False means the network answered and reported the number as not currently reachable, which is different from us being unable to find out. Present only when `status` is `ok`.\n"
+        ),
+    ] = None
+
+
+class LookupRoaming(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")
+    ]
+    is_roaming: Annotated[
+        bool | None,
+        Field(
+            description="Whether the number is currently roaming outside its home network. Present only when `status` is `ok`."
+        ),
+    ] = None
+    mcc: Annotated[
+        str | None,
+        Field(
+            description="The mobile country code of the visited network. Absent when the number is not roaming or the visited network is not reported."
+        ),
+    ] = None
+    mnc: Annotated[
+        str | None,
+        Field(
+            description="The mobile network code of the visited network. Absent when the number is not roaming or the visited network is not reported."
+        ),
+    ] = None
+
+
+class LookupSimSwap(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")
+    ]
+    last_swapped_at: Annotated[
+        str | None,
+        Field(
+            description="When the SIM was last changed. Absent when only a recency band is known."
+        ),
+    ] = None
+    min_days: Annotated[
+        int | None,
+        Field(
+            description="The lower bound, in days, of how long ago the SIM was last changed. Networks that do not release an exact date report a band instead; absent when no lower bound is known."
+        ),
+    ] = None
+    max_days: Annotated[
+        int | None,
+        Field(
+            description="The upper bound, in days, of how long ago the SIM was last changed. Absent when no upper bound is known; with a lower bound present, that means the change was at least `min_days` ago."
+        ),
+    ] = None
+
+
+class LookupPortingEvent(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    occurred_at: Annotated[
+        str | None,
+        Field(
+            description="When the move was recorded, null when the record carries no date."
+        ),
+    ]
+    action: Annotated[
+        str | None,
+        Field(
+            description="What the record describes, as the number's registry reports it. Registries use their own short codes rather than a shared vocabulary, so treat this as a label to display rather than a value to branch on."
+        ),
+    ]
+
+
+class LookupPorting(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")
+    ]
+    ported: Annotated[
+        bool | None,
+        Field(
+            description="Whether the number has ever moved network. False is a positive finding rather than a lack of one: the registry was consulted and holds no move for this number. Present only when `status` is `ok`.\n"
+        ),
+    ] = None
+    last_ported_at: Annotated[
+        str | None,
+        Field(
+            description="When the number last moved network. Absent when it has never ported or when no date is on record."
+        ),
+    ] = None
+    last_ported_at_is_approximate: Annotated[
+        bool | None,
+        Field(
+            description="Whether `last_ported_at` is an approximation. Some registries record only the period a move happened in, not the day."
+        ),
+    ] = None
+    history: Annotated[
+        list[LookupPortingEvent] | None,
+        Field(
+            description="Every move on record, oldest first. Absent when the number has never ported or when its registry publishes no history."
+        ),
+    ] = None
+
+
+class LookupScore(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")
+    ]
+    value: Annotated[
+        int | None,
+        Field(
+            description="Credibility from 0 (low) to 100 (high). A low score means the number looks less credible than a typical subscriber line in the same range; it is a signal to weigh, not a verdict. It is a composite and is not derivable from the other properties. Present only when `status` is `ok`.\n",
+            ge=0,
+            le=100,
+        ),
+    ] = None
+
+
+class PhoneNumberLookup(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    phone_number: Annotated[
+        str,
+        Field(
+            description="The number that was looked up, in E.164 format.", min_length=1
+        ),
+    ]
+    country_code: Annotated[
+        CountryCode | None,
+        Field(
+            description="The ISO 3166-1 alpha-2 country of the number. Absent when the number belongs to no single country, as a non-geographic range does."
+        ),
+    ] = None
+    network_info: Annotated[
+        LookupNetworkInfo | None,
+        Field(
+            description="The network that serves the number today. Absent when no network could be identified."
+        ),
+    ] = None
+    original_network_info: Annotated[
+        LookupNetworkInfo | None,
+        Field(
+            description="The network that issued the number's range. It differs from `network_info` when the number has been ported. Absent when the issuing network could not be identified."
+        ),
+    ] = None
+    flags: Annotated[
+        list[Annotated[Union[LookupFlag, str], Field(union_mode="left_to_right")]],
+        Field(
+            description="Notable characteristics of the number. Empty when none apply."
+        ),
+    ]
+    line_type: LookupLineType
+    classification: Annotated[
+        LookupClassification | None,
+        Field(
+            description="The allocated service of the number's range. Absent unless you requested the `classification` property."
+        ),
+    ] = None
+    presence: Annotated[
+        LookupPresence | None,
+        Field(
+            description="Whether the number is live on its network. Absent unless you requested the `presence` property."
+        ),
+    ] = None
+    roaming: Annotated[
+        LookupRoaming | None,
+        Field(
+            description="Whether the number is roaming. Absent unless you requested the `roaming` property."
+        ),
+    ] = None
+    sim_swap: Annotated[
+        LookupSimSwap | None,
+        Field(
+            description="When the number's SIM last changed. Absent unless you requested the `sim_swap` property."
+        ),
+    ] = None
+    porting: Annotated[
+        LookupPorting | None,
+        Field(
+            description="The number's porting record. Absent unless you requested the `porting` property."
+        ),
+    ] = None
+    score: Annotated[
+        LookupScore | None,
+        Field(
+            description="The number's credibility score. Absent unless you requested the `score` property."
+        ),
+    ] = None
+
+
+class EmailLookupRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    email: Annotated[
+        str,
+        Field(
+            description="The email address to look up. Send it exactly as you hold it: the part before the `@` is case-sensitive, so nothing is lowercased for you, and a display-name form such as `Aisha <aisha@example.com>` is rejected rather than unwrapped.\n",
+            max_length=254,
+            min_length=3,
+        ),
+    ]
+
+
+class EmailLookupResult(str, Enum):
+    valid = "valid"
+    neutral = "neutral"
+    risky = "risky"
+    undeliverable = "undeliverable"
+    typo = "typo"
+
+
+class EmailLookupFlag(str, Enum):
+    role = "role"
+    disposable = "disposable"
+    free_provider = "free_provider"
+
+
+class EmailLookupReason(str, Enum):
+    invalid_syntax = "invalid_syntax"
+    invalid_domain = "invalid_domain"
+    invalid_recipient = "invalid_recipient"
+
+
+class EmailLookup(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    email: Annotated[
+        str,
+        Field(
+            description="The address that was looked up, exactly as you sent it.",
+            max_length=254,
+            min_length=3,
+        ),
+    ]
+    valid: Annotated[
+        bool,
+        Field(
+            description="Whether the address is well-formed and its domain is set up to receive mail at all. It says nothing about the mailbox itself, so a `valid` domain with no such mailbox is `true` here and `undeliverable` in `result`."
+        ),
+    ]
+    result: Annotated[Union[EmailLookupResult, str], Field(union_mode="left_to_right")]
+    delivery_confidence: Annotated[
+        int,
+        Field(
+            description="How likely mail to this address is to be delivered, from 0 (certain not to be) to 100 (certain to be). Read it alongside `result` rather than instead of it, because the same score can sit under `neutral` or `risky` for different reasons.",
+            ge=0,
+            le=100,
+        ),
+    ]
+    flags: Annotated[
+        list[Annotated[Union[EmailLookupFlag, str], Field(union_mode="left_to_right")]],
+        Field(
+            description="Notable characteristics of the address. Empty when none apply."
+        ),
+    ]
+    reason: Annotated[
+        Annotated[Union[EmailLookupReason, str], Field(union_mode="left_to_right")]
+        | None,
+        Field(
+            description="Why the address cannot receive mail. Absent unless `result` is `undeliverable`."
+        ),
+    ] = None
+    did_you_mean: Annotated[
+        str | None,
+        Field(
+            description="The address this one looks like a misspelling of. Absent unless a correction was found, which in practice means `result` is `typo`. Offer it to whoever typed the original rather than sending to it unasked, because it is a guess and the address they meant may be neither one.",
+            max_length=254,
+            min_length=3,
+        ),
+    ] = None
+
+
 class VerificationTerminalReason(str, Enum):
     attempts_exhausted = "attempts_exhausted"
     ttl_elapsed = "ttl_elapsed"
@@ -2782,7 +3176,7 @@ class WhatsAppTemplateCategory(str, Enum):
     marketing = "marketing"
 
 
-class Status3(str, Enum):
+class Status9(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -2804,7 +3198,7 @@ class Verification(Timestamps):
         ),
     ]
     status: Annotated[
-        Status3,
+        Status9,
         Field(
             description="The verification's current state: `pending` (the initial state, awaiting a correct passcode), `verified` (a correct passcode was submitted), `failed` (too many incorrect attempts), `expired` (the time window elapsed before a correct passcode), `canceled` (the verification was canceled before completing), or `blocked` (it was stopped by a fraud or abuse control)."
         ),
@@ -3451,7 +3845,7 @@ class EmailStatsSeriesPeriod(BaseModel):
         str,
         Field(
             alias="from",
-            description="Inclusive start of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain; on the hour grain, an RFC 3339 UTC instant marking the start of the first hour bucket, which falls on a local hour boundary when `timezone` is set.",
+            description="Inclusive start of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain. On the hour grain, an RFC 3339 UTC instant marking the start of the first hour bucket, which falls on a local hour boundary when `timezone` is set.",
             examples=["2026-05-01"],
             min_length=1,
             pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
@@ -3460,7 +3854,7 @@ class EmailStatsSeriesPeriod(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="Inclusive end of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain; on the hour grain, an RFC 3339 UTC instant marking the start of the last hour bucket, which falls on a local hour boundary when `timezone` is set.",
+            description="Inclusive end of the window. A calendar day (YYYY-MM-DD, in the requested `timezone`) on the day grain. On the hour grain, an RFC 3339 UTC instant marking the start of the last hour bucket, which falls on a local hour boundary when `timezone` is set.",
             examples=["2026-05-31"],
             min_length=1,
             pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
@@ -3470,7 +3864,7 @@ class EmailStatsSeriesPeriod(BaseModel):
     data_as_of: Annotated[
         str | None,
         Field(
-            description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n",
+            description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n",
             examples=["2026-05-25 14:03:10+00:00"],
         ),
     ] = None
@@ -3499,7 +3893,7 @@ class EmailBounceStatsWithRates(BaseModel):
     admin: Annotated[
         int,
         Field(
-            description="Distinct recipients bounced by an upstream policy block (relaying denied, blocklisted domain).",
+            description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain.",
             examples=[410],
             ge=0,
         ),
@@ -3574,7 +3968,7 @@ class EmailDeliveryStats(BaseModel):
     accepted: Annotated[
         int | None,
         Field(
-            description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary; omitted on breakdown rows, whose rollups do not carry it.",
+            description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary. Breakdown rows leave it out, because their rollups do not have it.",
             examples=[14820],
             ge=0,
         ),
@@ -3598,7 +3992,7 @@ class EmailDeliveryStats(BaseModel):
     bounced: Annotated[
         int,
         Field(
-            description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.\n",
+            description="Distinct recipients whose delivery failed. This is approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined). The two totals are worked out independently, so they can differ slightly.\n",
             examples=[90],
             ge=0,
         ),
@@ -3673,7 +4067,7 @@ class EmailDeliveryStats(BaseModel):
     bounce_rate: Annotated[
         float | None,
         Field(
-            description="Share of this scope's delivery attempts that ultimately failed (inband or out-of-band), computed as `all_bounces / (delivered + bounced)`. Because `oob_bounces` counts events rather than recipients, `all_bounces` can exceed the attempt count; the rate is clamped to 1. Null when there were no attempts.\n",
+            description="Share of this scope's delivery attempts that ultimately failed (inband or out-of-band), computed as `all_bounces / (delivered + bounced)`. Because `oob_bounces` counts events rather than recipients, `all_bounces` can exceed the attempt count. The rate is clamped to 1. Null when there were no attempts.\n",
             examples=[0.0061],
             ge=0.0,
             le=1.0,
@@ -3821,7 +4215,7 @@ class EmailStatsPoint(BaseModel):
     bucket: Annotated[
         str,
         Field(
-            description="The day (YYYY-MM-DD, in the requested `timezone`) or hour this point covers, matching the period's grain. An hour bucket is an RFC 3339 UTC instant marking the start of the hour; it falls on a local hour boundary when `timezone` is set, which is on the UTC hour only for whole-hour offsets.",
+            description="The day (YYYY-MM-DD, in the requested `timezone`) or hour this point covers, matching the period's grain. An hour bucket is an RFC 3339 UTC instant marking the start of the hour. It falls on a local hour boundary when `timezone` is set, which is on the UTC hour only for whole-hour offsets.",
             examples=["2026-05-25"],
             min_length=1,
         ),
@@ -3909,7 +4303,7 @@ class EmailStatsPeriod(BaseModel):
     data_as_of: Annotated[
         str | None,
         Field(
-            description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
+            description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
             examples=["2026-05-25 14:03:10+00:00"],
         ),
     ] = None
@@ -3952,21 +4346,21 @@ class EmailStatsSeriesPoint(BaseModel):
     complaint_rate: Annotated[
         float | None,
         Field(
-            description="Complaint rate for this bucket, as a fraction; event-time attribution can push it above 1 when complaints outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row complaints are not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
+            description="Complaint rate for this bucket, as a fraction. Event-time attribution can push it above 1 when complaints outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row complaints are not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
             ge=0.0,
         ),
     ]
     open_rate: Annotated[
         float | None,
         Field(
-            description="Open rate for this bucket, as a fraction; event-time attribution can push it above 1 when opens outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
+            description="Open rate for this bucket, as a fraction. Event-time attribution can push it above 1 when opens outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
             ge=0.0,
         ),
     ]
     click_rate: Annotated[
         float | None,
         Field(
-            description="Click rate for this bucket, as a fraction; event-time attribution can push it above 1 when clicks outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
+            description="Click rate for this bucket, as a fraction. Event-time attribution can push it above 1 when clicks outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
             ge=0.0,
         ),
     ]
@@ -4014,7 +4408,7 @@ class EmailStatsTagsResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[173],
             ge=0,
         ),
@@ -4029,7 +4423,7 @@ class EmailStatsSummaryPeriod(BaseModel):
         str,
         Field(
             alias="from",
-            description="Inclusive start of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows; for hour windows, an RFC 3339 UTC instant marking the start of the first hour, which falls on a local hour boundary when `timezone` is set.",
+            description="Inclusive start of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows. For hour windows, an RFC 3339 UTC instant marking the start of the first hour, which falls on a local hour boundary when `timezone` is set.",
             examples=["2026-05-01"],
             min_length=1,
             pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
@@ -4038,7 +4432,7 @@ class EmailStatsSummaryPeriod(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="Inclusive end of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows; for hour windows, an RFC 3339 UTC instant marking the start of the last hour, which falls on a local hour boundary when `timezone` is set.",
+            description="Inclusive end of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows. For hour windows, an RFC 3339 UTC instant marking the start of the last hour, which falls on a local hour boundary when `timezone` is set.",
             examples=["2026-05-25"],
             min_length=1,
             pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
@@ -4047,7 +4441,7 @@ class EmailStatsSummaryPeriod(BaseModel):
     data_as_of: Annotated[
         str | None,
         Field(
-            description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response is near-real-time but not live; use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
+            description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
             examples=["2026-05-25 14:03:10+00:00"],
         ),
     ] = None
@@ -4214,7 +4608,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     bounced: Annotated[
         int,
         Field(
-            description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.",
+            description="Distinct recipients whose delivery failed. This is approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined). The two are computed independently, so they can differ slightly.",
             examples=[131],
             ge=0,
         ),
@@ -4222,7 +4616,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     complained: Annotated[
         int,
         Field(
-            description="Distinct recipients who reported the message as spam. Complaints are not attributed to a sending IP, so this reads 0 on this breakdown; read complaint counts from the summary or time-series statistics instead.",
+            description="Distinct recipients who reported the message as spam. Complaints are not attributed to a sending IP, so this reads 0 on this breakdown. Read complaint counts from the summary or time-series statistics instead.",
             examples=[8],
             ge=0,
         ),
@@ -4238,7 +4632,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     oob_bounces: Annotated[
         int,
         Field(
-            description="Out-of-band bounce events: failure notifications received after the receiving server had initially confirmed delivery. Not attributed to a sending IP on this breakdown, so this reads 0; workspace-wide out-of-band counts are on the summary and time-series statistics.\n",
+            description="Out-of-band bounce events: failure notifications received after the receiving server had initially confirmed delivery. Not attributed to a sending IP on this breakdown, so this reads 0. Workspace-wide out-of-band counts are on the summary and time-series statistics.\n",
             examples=[3],
             ge=0,
         ),
@@ -4352,7 +4746,7 @@ class EmailStatsBySendingIpResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct sending IP addresses with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct sending IP addresses with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[6],
             ge=0,
         ),
@@ -4401,7 +4795,7 @@ class EmailStatsBySendingDomainResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct sending domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct sending domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[12],
             ge=0,
         ),
@@ -4415,7 +4809,7 @@ class EmailCategoryStatsPoint(BaseModel):
     category: Annotated[
         str,
         Field(
-            description="The category this row aggregates, as set at send time. `transactional` is one-to-one mail triggered by a user action; `marketing` is bulk sending. New categories may be added over time.",
+            description="The category this row aggregates, as set at send time. `transactional` is one-to-one mail triggered by a user action. `marketing` is bulk sending. New categories may be added over time.",
             examples=["transactional"],
             min_length=1,
         ),
@@ -4450,7 +4844,7 @@ class EmailStatsByCategoryResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[2],
             ge=0,
         ),
@@ -4560,7 +4954,7 @@ class EmailMailboxProviderStatsPoint(BaseModel):
     mailbox_provider: Annotated[
         str,
         Field(
-            description="The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`). The set is open and grows as new providers are categorised.",
+            description="The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`). The set is open and grows as new providers are categorized.",
             examples=["gmail"],
             min_length=1,
         ),
@@ -4595,7 +4989,7 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[14],
             ge=0,
         ),
@@ -4652,7 +5046,7 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[31],
             ge=0,
         ),
@@ -4701,7 +5095,7 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[412],
             ge=0,
         ),
@@ -4715,7 +5109,7 @@ class EmailTemplateStatsPoint(BaseModel):
     template_id: Annotated[
         str,
         Field(
-            description="The template this row aggregates, the same identifier returned by the email-template endpoints. Only messages sent with a template appear in this breakdown; a template deleted after sending still appears by its ID.",
+            description="The template this row is about, using the same `id` the email template endpoints return. Only messages sent with a template appear in this breakdown at all. If the template was deleted after it was used to send, this row still appears, keyed by that same `id`.\n",
             examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4727,7 +5121,7 @@ class EmailTemplateStatsPoint(BaseModel):
     trend: Annotated[
         list[EmailStatsSeriesPoint] | None,
         Field(
-            description="Per-bucket rate series for this template over the window. Present only when `include_trend=true`."
+            description="A short series of this template's delivery and engagement rates, one point per time bucket over the window. Only present when you set `include_trend=true` on the request.\n"
         ),
     ] = None
 
@@ -4739,19 +5133,19 @@ class EmailStatsByTemplateResponse(BaseModel):
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+            description="The date range this response covers, echoed back from what you requested, plus `data_as_of`: how far the underlying data is currently up to date.\n"
         ),
     ]
     data: Annotated[
         list[EmailTemplateStatsPoint],
         Field(
-            description="Template breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no templated messages were active in the period."
+            description="One row per template, ranked by the `sort` metric (`processed` by default) descending. Empty when no messages were sent with a template during the period.\n"
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct templates with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="How many distinct templates had activity in the period, regardless of `limit`. When this is higher than the number of rows in `data`, the ranking got cut off. Raise `limit` (up to 200), or narrow the date range, to see the rest.\n",
             examples=[42],
             ge=0,
         ),
@@ -4869,7 +5263,7 @@ class EmailStatsByLocationResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct locations at the requested `group_by` level with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct locations at the requested `group_by` level with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[86],
             ge=0,
         ),
@@ -4883,21 +5277,21 @@ class EmailClientStatsPoint(BaseModel):
     email_client: Annotated[
         str | None,
         Field(
-            description="The mail client this row aggregates (for example `Gmail`, `Apple Mail`, `Outlook`). Populated only when `group_by=email_client`; null otherwise.",
+            description="The mail client this row aggregates (for example `Gmail`, `Apple Mail`, `Outlook`). Populated only when `group_by=email_client`. Null otherwise.",
             examples=["Apple Mail"],
         ),
     ]
     os: Annotated[
         str | None,
         Field(
-            description="The operating system this row aggregates (for example `iOS`, `Android`, `Windows`, `macOS`). Populated only when `group_by=os`; null otherwise.",
+            description="The operating system this row aggregates (for example `iOS`, `Android`, `Windows`, `macOS`). Populated only when `group_by=os`. Null otherwise.",
             examples=["iOS"],
         ),
     ]
     device_type: Annotated[
         str | None,
         Field(
-            description="The device type this row aggregates (for example `mobile`, `desktop`, `tablet`). Populated only when `group_by=device_type`; null otherwise.",
+            description="The device type this row aggregates (for example `mobile`, `desktop`, `tablet`). Populated only when `group_by=device_type`. Null otherwise.",
             examples=["mobile"],
         ),
     ]
@@ -4923,7 +5317,7 @@ class EmailStatsByClientResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[9],
             ge=0,
         ),
@@ -4953,7 +5347,7 @@ class EmailBounceStats(BaseModel):
     admin: Annotated[
         int,
         Field(
-            description="Distinct recipients bounced by an upstream policy block (relaying denied, blocklisted domain). Triage usually focuses on content or sender configuration rather than recipient cleanup.\n",
+            description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain. Fixing these usually means changing your content or your sender configuration, not cleaning up the recipient list.\n",
             examples=[4],
             ge=0,
         ),
@@ -4991,7 +5385,7 @@ class EmailBounceCodeStatsPoint(BaseModel):
     bounced: Annotated[
         int,
         Field(
-            description="Distinct recipients whose delivery failed with this SMTP status code. Approximately the sum of the five `bounces.*` sub-counts; the totals are computed independently so they may differ slightly at the approximation error.",
+            description="Distinct recipients whose delivery failed with this SMTP status code, approximately equal to the sum of the five `bounces.*` sub-counts. The two are computed independently, so they can differ slightly because of approximation.",
             examples=[1240],
             ge=0,
         ),
@@ -5018,7 +5412,7 @@ class EmailStatsByBounceCodeResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[17],
             ge=0,
         ),
@@ -5066,7 +5460,7 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct feedback types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct feedback types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[4],
             ge=0,
         ),
@@ -5080,7 +5474,7 @@ class EmailBroadcastStatsPoint(BaseModel):
     broadcast_id: Annotated[
         str,
         Field(
-            description="The broadcast this row aggregates, the same identifier returned by the broadcast endpoints. Only messages sent as part of a broadcast carry a broadcast identifier; one-off and transactional sends are not included in this breakdown.",
+            description="The broadcast this row covers, the same ID the broadcast endpoints return. Only mail sent as part of a broadcast has a broadcast ID, so one-off and transactional sends do not appear in this breakdown at all.",
             examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5110,7 +5504,7 @@ class EmailStatsByBroadcastResponse(BaseModel):
     total: Annotated[
         int,
         Field(
-            description="Total number of distinct broadcasts with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            description="Total number of distinct broadcasts with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[57],
             ge=0,
         ),
@@ -5163,7 +5557,7 @@ class DomainDKIM(BaseModel):
     ]
 
 
-class Status4(str, Enum):
+class Status10(str, Enum):
     pending = "pending"
     failed = "failed"
     temporary_failure = "temporary_failure"
@@ -5182,7 +5576,7 @@ class DomainCapabilityPending(BaseModel):
         ),
     ]
     status: Annotated[
-        Status4,
+        Status10,
         Field(
             description="Verification status of the staged change. `pending` — waiting for the DNS records to be detected. `failed` — the records resolved with wrong values; correct them or submit a different change. `temporary_failure` — DNS lookup failed transiently and will be retried.\n",
             examples=["pending"],
@@ -5190,7 +5584,7 @@ class DomainCapabilityPending(BaseModel):
     ]
 
 
-class Status5(str, Enum):
+class Status11(str, Enum):
     pending = "pending"
     verified = "verified"
     warning = "warning"
@@ -5204,7 +5598,7 @@ class DomainCapability(BaseModel):
         extra="allow",
     )
     status: Annotated[
-        Status5,
+        Status11,
         Field(
             description="Capability verification status.\n- `pending` — verification has not run, or is currently running. - `verified` — all DNS records for this capability resolved with the\n  expected values.\n- `warning` — a record for this capability verified before and a recent\n  check no longer matches, but it is still within the grace period.\n  Sending is not yet affected; fix it before the grace period ends.\n- `failed` — DNS records resolved but at least one value is wrong.\n  Update your DNS to recover.\n- `temporary_failure` — DNS lookup failed transiently. Verification is\n  queued for retry; don't change DNS records yet.\n- `not_configured` — the capability is not set up on this domain\n  (e.g. no tracking domain configured).\n",
             examples=["verified"],
@@ -5281,7 +5675,7 @@ class State(str, Enum):
     deprecated = "deprecated"
 
 
-class Status6(str, Enum):
+class Status12(str, Enum):
     pending = "pending"
     verified = "verified"
     warning = "warning"
@@ -5333,7 +5727,7 @@ class DNSRecord(BaseModel):
         ),
     ]
     status: Annotated[
-        Status6,
+        Status12,
         Field(
             description="Verification status of this record's most recent DNS check.\n- `pending` — the record has not verified yet; publish it (or correct it)\n  and it will verify on the next check.\n- `verified` — the most recent check matched the expected value. - `warning` — the record verified before and a recent check no longer\n  matched, but it is still within the grace period. Sending is not yet\n  affected; fix the record before the grace period ends to avoid it\n  being blocked.\n- `failed` — the record verified before but later checks kept failing\n  past the grace period; the configuration has regressed and needs\n  attention.\n"
         ),
@@ -5364,7 +5758,7 @@ class Vendor(str, Enum):
     squarespace = "squarespace"
 
 
-class Status7(str, Enum):
+class Status13(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -5407,7 +5801,7 @@ class Domain(BaseModel):
         ),
     ]
     status: Annotated[
-        Status7,
+        Status13,
         Field(
             description="Domain ownership verification, proven by the DKIM record. Readiness to send or track is reported separately per capability under `capabilities.*.status`.\n- `pending` — the DKIM record has not been published yet. - `verified` — the DKIM record is in place; ownership is confirmed. - `failed` — a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure` — DNS resolution failed transiently (timeout,\n  unreachable nameserver). Verification is queued for retry on a 72h\n  cadence; customer should not edit DNS records before the retry runs.\n- `rejected` — the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n"
         ),
@@ -5639,13 +6033,13 @@ class Mailbox(BaseModel):
     receive_policy: Annotated[
         ReceivePolicy,
         Field(
-            description="Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule (replies to prior outbound are always admitted unless blocked); `drop` stores nothing."
+            description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule. Replies to\n  prior outbound mail are always admitted unless blocked.\n- `drop`: Stores nothing.\n"
         ),
     ]
     state: Annotated[
         State1,
         Field(
-            description="Lifecycle state. Suspended mailboxes stop emitting events; inbound mail is retained as blocked."
+            description="Lifecycle state. Suspended mailboxes stop emitting events. Inbound mail is retained as blocked."
         ),
     ]
     channel: Annotated[
@@ -5665,7 +6059,7 @@ class Mailbox(BaseModel):
     retention_tier: Annotated[
         RetentionTier,
         Field(
-            description="How long the mailbox remembers message metadata and extracted text. Original rendered source (HTML, raw message, attachments) is always available for 30 days regardless of tier. `3y` and `10y` are reserved future tiers."
+            description="How long the mailbox remembers message metadata and extracted text. Original rendered source (HTML, raw message, attachments) is always available for 30 days regardless of tier."
         ),
     ]
     message_count: Annotated[
@@ -5681,13 +6075,13 @@ class Mailbox(BaseModel):
     metadata: Annotated[
         dict[str, Any],
         Field(
-            description="Your own key/value data attached to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved."
+            description="Your own key/value data attached to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved."
         ),
     ]
     local_part_generated: Annotated[
         bool | None,
         Field(
-            description="Whether Bird generated the local part of the address. `false` means a custom handle was chosen at creation; on the shared `inbox.ai` domain a custom handle counts against your plan's custom-handle allowance."
+            description="Whether we generated the local part of the address. `false` means a custom handle was chosen at creation. On the shared `inbox.ai` domain a custom handle counts against your plan's custom-handle allowance."
         ),
     ] = None
     created_at: Annotated[
@@ -5722,7 +6116,7 @@ class MailboxCreate(BaseModel):
     local_part: Annotated[
         str | None,
         Field(
-            description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens; stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits (no leading, trailing, or repeated separators), reserved names such as `postmaster` or `abuse` are unavailable, and choosing your own local part uses one of your plan's custom-handle allowance slots (generated addresses are always available). Omit to have Bird generate a random local part.",
+            description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens. Stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits (no leading, trailing, or repeated separators), reserved names such as `postmaster` or `abuse` are unavailable, and choosing your own local part uses one of your plan's custom-handle allowance slots (generated addresses are always available). Omit it and we generate a random local part.",
             examples=["concierge"],
             max_length=64,
             min_length=1,
@@ -5732,7 +6126,7 @@ class MailboxCreate(BaseModel):
     domain: Annotated[
         str | None,
         Field(
-            description="The domain the address lives under. Defaults to `inbox.ai`, Bird's shared mailbox domain, where creating the mailbox claims the address for your organization: first come, first served, and permanently reserved to your organization even after the mailbox is deleted. May instead name one of your own domains that is enabled for receiving email.",
+            description="The domain the address lives under. Defaults to `inbox.ai`, our shared mailbox domain, where creating the mailbox claims the address for your organization: first come, first served, and permanently reserved to your organization even after the mailbox is deleted. May instead name one of your own domains that is enabled for receiving email.",
             examples=["mail.acme.com"],
             max_length=255,
             min_length=1,
@@ -5757,19 +6151,19 @@ class MailboxCreate(BaseModel):
     receive_policy: Annotated[
         ReceivePolicy | None,
         Field(
-            description="Which inbound mail the mailbox accepts. `open` accepts everything not blocked by a rule; `replies_only` accepts only replies to messages this mailbox has sent (a reply must match a message the mailbox sent, not merely land in an existing thread); `allowlist` accepts only senders matching an allow rule; `drop` stores nothing."
+            description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.\n"
         ),
     ] = "open"
     retention_tier: Annotated[
         RetentionTier1 | None,
         Field(
-            description="How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier. Only `30d` is available today; additional tiers are planned."
+            description="How long the mailbox remembers message metadata and extracted text. Original rendered source is always available for 30 days regardless of tier."
         ),
     ] = "30d"
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Your own key/value data to attach to the mailbox. Up to 2 KB; keys starting with `__bird` are reserved."
+            description="Your own key/value data to attach to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved."
         ),
     ] = None
 
@@ -5798,13 +6192,13 @@ class MailboxUpdate(BaseModel):
     retention_tier: Annotated[
         RetentionTier1 | None,
         Field(
-            description="How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes memory older than the new horizon and requires `confirm=true` when messages older than the new horizon would be deleted. Only `30d` is available today; additional tiers are planned."
+            description="How long the mailbox remembers message metadata and extracted text. Lowering the tier deletes remembered messages older than the new horizon, and requires `confirm=true` when that would happen."
         ),
     ] = "30d"
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Replaces the mailbox's key/value data. Up to 2 KB; keys starting with `__bird` are reserved."
+            description="Replaces the mailbox's key/value data. Up to 2 KB. Keys starting with `__bird` are reserved."
         ),
     ] = None
 
@@ -6089,13 +6483,13 @@ class EmailThread(BaseModel):
     last_direction: Annotated[
         LastDirection,
         Field(
-            description="Direction of the most recent message — `inbound` for a received message, `outbound` for a sent one."
+            description="Direction of the most recent message: `inbound` for a received message, `outbound` for a sent one."
         ),
     ]
     labels: Annotated[
         list[Label],
         Field(
-            description="Labels on this conversation. Exactly one system placement label is always present — `inbox`, `archive` (filed away, done for now), `spam` (the opening message failed sender authentication), or `blocked` (rejected by the mailbox's receive policy or rules) — set by the message that started the conversation. Move a conversation by updating its labels: add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox` — or remove `spam`, `blocked`, or `archive` — to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list; a conversation carries at most 20.\n",
+            description="Labels on this conversation. Exactly one system placement label is always present, set by the message that started the conversation:\n\n- `inbox`: The conversation is in the inbox.\n- `archive`: The conversation was filed away and is done for now.\n- `spam`: The conversation's opening message failed sender authentication.\n- `blocked`: The conversation's opening message was rejected by the mailbox's receive policy or rules.\n\nMove a conversation by updating its labels. Add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox`, or remove `spam`, `blocked`, or `archive`, to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list, and a conversation has at most 20 labels in total.\n",
             examples=[["inbox", "urgent"]],
             max_length=20,
         ),
@@ -6109,7 +6503,7 @@ class EmailThread(BaseModel):
     highlights: Annotated[
         EmailThreadHighlights | None,
         Field(
-            description="Matched search fragments, keyed by the field that matched. Returned only by thread search; omitted when listing threads.\n"
+            description="Matched search fragments, keyed by the field that matched. Returned only by thread search. Omitted when listing threads.\n"
         ),
     ] = None
 
@@ -6160,7 +6554,7 @@ class EmailThreadUpdateRequest(BaseModel):
     ] = None
 
 
-class Status8(str, Enum):
+class Status14(str, Enum):
     delivered = "delivered"
     failed = "failed"
 
@@ -6171,7 +6565,7 @@ class EmailThreadMessageRecipient(BaseModel):
     )
     address: Annotated[str, Field(description="Recipient address.", min_length=1)]
     status: Annotated[
-        Status8,
+        Status14,
         Field(
             description="Terminal outcome: `delivered`, or `failed` (bounce or provider rejection)."
         ),
@@ -6247,7 +6641,7 @@ class EmailThreadMessage(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="Message ID. Received messages carry a `rem_` ID, sent messages an `em_` ID — the same IDs used by the received-message and sent-message logs.\n",
+            description="Message ID. Received messages have a `rem_` ID, sent messages an `em_` ID: the same IDs used by the received-message and sent-message logs.\n",
             examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^(rem|em)_[0-9a-hjkmnp-tv-z]{26}$",
@@ -6256,13 +6650,13 @@ class EmailThreadMessage(BaseModel):
     direction: Annotated[
         Direction2,
         Field(
-            description="Direction of the message — `inbound` for a received message, `outbound` for a sent one."
+            description="Which way the message went. `inbound` means you received it, `outbound` means you sent it."
         ),
     ]
     channel: Annotated[
         str,
         Field(
-            description="Channel this message was carried on. Always `email`.",
+            description="Channel this message lives on. Always `email`.",
             examples=["email"],
             min_length=1,
         ),
@@ -6305,13 +6699,13 @@ class EmailThreadMessage(BaseModel):
     extracted_text: Annotated[
         str | None,
         Field(
-            description="Plain-text content of the message with quoted history stripped — readable for the mailbox's full retention period, both directions. Always present when fetching a single message; on list endpoints it is included only when the request sets `include=extracted_text`. Null when no text could be extracted.\n"
+            description="Plain-text content of the message with quoted history stripped. Readable for the mailbox's full retention tier, in both directions. Always present when fetching a single message. On list endpoints it is included only when the request sets `include=extracted_text`. Null when no text could be extracted.\n"
         ),
     ] = None
     labels: Annotated[
         list[Label],
         Field(
-            description="Labels on this message. System labels carry its state: a received message holds exactly one placement label — `inbox` for accepted mail, `archive` when its conversation was filed away, `spam` (failed sender authentication), or `blocked` (rejected by the mailbox's receive policy or rules) — plus `unread` until it is read. `trash` marks a message in the trash, either direction. Custom labels share the same list; a message carries at most 20.\n",
+            description="Labels on this message. A received message always has exactly one placement label:\n\n- `inbox`: Accepted mail.\n- `archive`: The message's conversation was filed away.\n- `spam`: The message failed sender authentication.\n- `blocked`: The message was rejected by the mailbox's receive policy or rules.\n\nA received message also has `unread` until it is read. `trash` marks a message in the trash, in either direction. Custom labels share the same list, and a message has at most 20 labels in total.\n",
             examples=[["inbox", "unread"]],
             max_length=20,
         ),
@@ -6319,43 +6713,43 @@ class EmailThreadMessage(BaseModel):
     status: Annotated[
         str | None,
         Field(
-            description="Folded delivery status of a sent message: `accepted`, `sent` (provider handoff), `delivered` (all attempted recipients delivered), or `failed` (terminal failure). Null for received messages.\n"
+            description="Folded delivery status of a sent message:\n\n- `accepted`: Accepted for sending.\n- `sent`: Handed off to the provider.\n- `delivered`: All attempted recipients delivered.\n- `failed`: Terminal failure.\n\nNull for received messages.\n"
         ),
     ]
     recipients: Annotated[
         list[EmailThreadMessageRecipient] | None,
         Field(
-            description="Terminal per-recipient delivery outcomes of a sent message, folded in as they become known — part of the message's durable memory. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.\n"
+            description="Terminal per-recipient delivery outcomes of a sent message, filled in as each one becomes known and kept for the mailbox's full retention tier. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.\n"
         ),
     ]
     authentication: Annotated[
         Authentication | None,
         Field(
-            description="Whether the sender of a received message was authenticated. `pass` means the sender's identity was verified; `fail` means it was checked and did not verify; `unknown` means no verdict could be determined and the sender should not be treated as verified. Null for sent messages. Part of the message's durable memory — readable for the mailbox's full retention period, so the verdict survives after the 30-day inbound log has expired.\n"
+            description="Whether the sender of a received message was authenticated. `pass` means the sender's identity was verified. `fail` means it was checked and did not verify. `unknown` means no verdict could be determined, and the sender should not be treated as verified. Null for sent messages. This field is readable for the mailbox's full retention tier, so the verdict is still available after the 30-day received-message log has expired.\n"
         ),
     ]
     spf_pass: Annotated[
         bool | None,
         Field(
-            description="Whether SPF passed for the sender of a received message. Null for sent messages and when no verdict is available. Durable for the mailbox's retention period.\n"
+            description="Whether SPF passed for the sender of a received message. Null for sent messages and when no verdict is available. This field is kept for the mailbox's retention tier.\n"
         ),
     ]
     dkim_pass: Annotated[
         bool | None,
         Field(
-            description="Whether DKIM passed for the sender of a received message. Null for sent messages and when no verdict is available. Durable for the mailbox's retention period.\n"
+            description="Whether DKIM passed for the sender of a received message. Null for sent messages and when no verdict is available. This field is kept for the mailbox's retention tier.\n"
         ),
     ]
     dmarc_pass: Annotated[
         bool | None,
         Field(
-            description="Whether DMARC passed for the sender of a received message. Null for sent messages and when no verdict is available. Durable for the mailbox's retention period.\n"
+            description="Whether DMARC passed for the sender of a received message. Null for sent messages and when no verdict is available. This field is kept for the mailbox's retention tier.\n"
         ),
     ]
     purge_at: Annotated[
         str,
         Field(
-            description='When the message will be permanently deleted: the end of the mailbox\'s retention period, pulled nearer (at most 30 days out) while the message is in the trash. Restore a trashed message before then with `PATCH {"labels": {"remove": ["trash"]}}`.\n',
+            description='When the message will be permanently deleted: the end of the mailbox\'s retention tier, pulled nearer (at most 30 days out) while the message is in the trash. Restore a trashed message before then with `PATCH {"labels": {"remove": ["trash"]}}`.\n',
             min_length=1,
         ),
     ]
@@ -6365,7 +6759,7 @@ class EmailThreadMessage(BaseModel):
     attachment_manifest: Annotated[
         list[EmailThreadMessageAttachment],
         Field(
-            description="Attachment metadata (filename, content type, size). Remains readable for the mailbox's retention period even after the attachment bytes themselves have expired.\n"
+            description="Attachment metadata (filename, content type, size). Stays readable for the mailbox's retention tier even after the attachment bytes themselves have expired.\n"
         ),
     ]
     reference_ids: Annotated[
@@ -6463,7 +6857,7 @@ class EmailThreadMessageReplyRequest(BaseModel):
     attachments: Annotated[
         list[EmailAttachment] | None,
         Field(
-            description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata endures on the message's `attachment_manifest`; the bytes are downloadable for 30 days.\n",
+            description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for 30 days.\n",
             max_length=20,
         ),
     ] = None
@@ -6476,7 +6870,7 @@ class EmailMailboxComposeRequest(BaseModel):
     to: Annotated[
         list[EmailAddressInput1 | EmailAddress],
         Field(
-            description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
+            description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
             min_length=1,
         ),
@@ -6484,14 +6878,14 @@ class EmailMailboxComposeRequest(BaseModel):
     cc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
+            description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     bcc: Annotated[
         list[EmailAddressInput1 | EmailAddress] | None,
         Field(
-            description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@example.com>`), or an object with an optional display name.",
+            description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
@@ -6523,7 +6917,7 @@ class EmailMailboxComposeRequest(BaseModel):
     attachments: Annotated[
         list[EmailAttachment] | None,
         Field(
-            description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Attachment metadata endures on the message's `attachment_manifest`; the bytes are downloadable for 30 days.\n",
+            description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for 30 days.\n",
             max_length=20,
         ),
     ] = None
@@ -6564,7 +6958,7 @@ class EmailMailboxLabel(BaseModel):
     type: Annotated[
         Type6,
         Field(
-            description="`system` labels are built in and carry state — the placements `inbox`, `archive`, `spam`, `blocked`, and `sent`, plus `trash` and `unread`. `custom` labels are the workspace's own tags."
+            description="`system` labels are the built-in placements a message can be in:\n\n- Inbox.\n- Archive.\n- Spam.\n- Blocked.\n- Sent.\n- Trash.\n- Unread.\n\n`custom` labels are the workspace's own tags."
         ),
     ]
 
@@ -7299,7 +7693,7 @@ class EventEmailReceivedData(BaseModel):
     inbound_message_id: Annotated[
         str,
         Field(
-            description="ID of the received email. Use it with GET /v1/email/inbound-messages/{id} to fetch the body, raw content, and attachments.",
+            description="ID of the received email. Fetch its parsed metadata with `GET /v1/email/inbound-messages/{id}`, and its content from that message's `/body`, `/raw`, and `/attachments` sub-resources.",
             examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^rem_[0-9a-hjkmnp-tv-z]{26}$",
@@ -7378,7 +7772,7 @@ class EventEmailReceivedData(BaseModel):
     spam_score: Annotated[
         float | None,
         Field(
-            description="Spam score for the message. Always null at present; reserved for a future content-scoring capability."
+            description="Spam score carried on the received message, or null when it carries no score."
         ),
     ] = None
 

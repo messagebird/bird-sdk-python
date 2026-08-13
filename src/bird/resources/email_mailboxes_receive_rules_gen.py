@@ -70,7 +70,7 @@ class EmailMailboxesReceiveRules(Resource):
         note: str | None = None,
         options: RequestOptions | None = None,
     ) -> ReceiveRule:
-        """Add an allow or block rule for a sender address or domain to a mailbox. Block always wins; up to 200 rules per mailbox.
+        """Add an allow or block rule for a sender address or domain to a mailbox. Block always wins. Up to 200 rules per mailbox.
 
         ```python
         rule = client.email.mailboxes.receive_rules.create(
@@ -148,7 +148,7 @@ class AsyncEmailMailboxesReceiveRules(AsyncResource):
         note: str | None = None,
         options: RequestOptions | None = None,
     ) -> ReceiveRule:
-        """Add an allow or block rule for a sender address or domain to a mailbox. Block always wins; up to 200 rules per mailbox.
+        """Add an allow or block rule for a sender address or domain to a mailbox. Block always wins. Up to 200 rules per mailbox.
 
         ```python
         rule = await client.email.mailboxes.receive_rules.create(

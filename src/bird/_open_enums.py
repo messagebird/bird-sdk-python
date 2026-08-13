@@ -30,6 +30,46 @@ class EmailEventType:
     EMAIL_UNSUBSCRIBED: Final = "email.unsubscribed"
 
 
+class EmailLookupFlag:
+    """Values of EmailLookupFlag known at this SDK version (open enum)."""
+
+    DISPOSABLE: Final = "disposable"
+    FREE_PROVIDER: Final = "free_provider"
+    ROLE: Final = "role"
+
+
+class EmailLookupReason:
+    """Values of EmailLookupReason known at this SDK version (open enum)."""
+
+    INVALID_DOMAIN: Final = "invalid_domain"
+    INVALID_RECIPIENT: Final = "invalid_recipient"
+    INVALID_SYNTAX: Final = "invalid_syntax"
+
+
+class EmailLookupResult:
+    """Values of EmailLookupResult known at this SDK version (open enum)."""
+
+    NEUTRAL: Final = "neutral"
+    RISKY: Final = "risky"
+    TYPO: Final = "typo"
+    UNDELIVERABLE: Final = "undeliverable"
+    VALID: Final = "valid"
+
+
+class LookupFlag:
+    """Values of LookupFlag known at this SDK version (open enum)."""
+
+    PORTED: Final = "ported"
+
+
+class LookupPropertyStatus:
+    """Values of LookupPropertyStatus known at this SDK version (open enum)."""
+
+    INCONCLUSIVE: Final = "inconclusive"
+    OK: Final = "ok"
+    UNAVAILABLE: Final = "unavailable"
+
+
 class SMSErrorCode:
     """Values of SMSErrorCode known at this SDK version (open enum)."""
 
@@ -106,6 +146,11 @@ class WhatsAppTemplateParameterType:
 
 __all__ = [
     "EmailEventType",
+    "EmailLookupFlag",
+    "EmailLookupReason",
+    "EmailLookupResult",
+    "LookupFlag",
+    "LookupPropertyStatus",
     "SMSErrorCode",
     "VerificationAttemptFailureReason",
     "VerificationChannel",
