@@ -43,7 +43,7 @@ def test_both_round_trip_to_the_wire_value() -> None:
 
 
 def test_known_values_are_enumerable() -> None:
-    assert [c.value for c in VerificationChannel] == ["email", "sms", "whatsapp"]
+    assert [c.value for c in VerificationChannel] == ["email", "sms", "whatsapp", "telegram"]
 
 
 def _whatsapp_error(code: str) -> WhatsAppError:

@@ -49,13 +49,21 @@ class ErrorDetail:
 
 
 @dataclass(frozen=True)
-class ErrorNextAction:
-    """One recovery operation the server suggests: call it to resolve
-    the error, then retry the original request."""
+class NextAction:
+    """One recovery step the server suggests. Read ``kind`` before ``operation``:
+    only an ``operation`` step carries one.
 
-    operation: str
-    description: str | None = None
-    scope: str | None = None
+    ``kind`` is ``operation`` (call the operation named in ``operation``, then read
+    again), ``external`` (act somewhere this API does not reach), ``wait`` (read
+    again later) or ``terminal`` (nothing resolves this, so stop retrying). A value
+    this SDK version does not know is display-only: show ``description`` and offer
+    no action."""
+
+    kind: str
+    description: str
+    operation: str | None = None
+    params: Mapping[str, str] | None = None
+    url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -124,7 +132,7 @@ class APIStatusError(APIError):
         param: str | None = None,
         vendor_code: str | None = None,
         remediation: str | None = None,
-        next: list[ErrorNextAction] | None = None,
+        next: list[NextAction] | None = None,
         unmet_gates: list[UnmetGate] | None = None,
     ) -> None:
         super().__init__(message)
@@ -226,10 +234,12 @@ def from_response(status_code: int, body: bytes | str, headers: Mapping[str, str
         "vendor_code": data.get("vendor_code"),
         "remediation": data.get("remediation"),
         "next": [
-            ErrorNextAction(
-                operation=n.get("operation", ""),
-                description=n.get("description"),
-                scope=n.get("scope"),
+            NextAction(
+                kind=n.get("kind", ""),
+                description=n.get("description", ""),
+                operation=n.get("operation"),
+                params=n.get("params"),
+                url=n.get("url"),
             )
             for n in (data.get("next") or [])  # `or []` handles both an absent key and an explicit null
             if isinstance(n, dict)

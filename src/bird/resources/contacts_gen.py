@@ -23,7 +23,7 @@ class ContactListParams(TypedDict, total=False):
     """Query params for ``client.contacts.list``. Every key is optional."""
 
     email: str
-    phone_number: str
+    phone_number: Sequence[str]
     external_id: str
     q: str
     identifier: str
@@ -72,7 +72,7 @@ class Contacts(Resource):
         self,
         *,
         email: str | None = None,
-        phone_number: str | None = None,
+        phone_number: Sequence[str] | None = None,
         external_id: str | None = None,
         q: str | None = None,
         identifier: str | None = None,
@@ -82,7 +82,7 @@ class Contacts(Resource):
         include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone_number, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone_number, or external_id, repeating phone_number to resolve up to 50 numbers in one call (raise limit to match), or search by email, name, or phone substring. Pass include_total for a total count.
 
         ```python
         for contact in client.contacts.list(q="acme.com"):
@@ -254,7 +254,7 @@ class AsyncContacts(AsyncResource):
         self,
         *,
         email: str | None = None,
-        phone_number: str | None = None,
+        phone_number: Sequence[str] | None = None,
         external_id: str | None = None,
         q: str | None = None,
         identifier: str | None = None,
@@ -264,7 +264,7 @@ class AsyncContacts(AsyncResource):
         include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[Contact]:
-        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone_number, or external_id, or search by email, name, or phone substring. Pass include_total for a total count.
+        """List the workspace's contacts as a cursor page, newest first. Look one up by exact email, phone_number, or external_id, repeating phone_number to resolve up to 50 numbers in one call (raise limit to match), or search by email, name, or phone substring. Pass include_total for a total count.
 
         ```python
         async for contact in client.contacts.list(q="acme.com"):

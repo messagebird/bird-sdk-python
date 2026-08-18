@@ -64,7 +64,7 @@ class VerifyVerifications(Resource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS delivery draws on the workspace's SMS balance.
+        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS, WhatsApp and Telegram delivery all draw on the workspace's balance.
 
         ```python
         verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
@@ -157,7 +157,7 @@ class AsyncVerifyVerifications(AsyncResource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS delivery draws on the workspace's SMS balance.
+        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS, WhatsApp and Telegram delivery all draw on the workspace's balance.
 
         ```python
         verification = await client.verify.verifications.create(to={"phone_number": "+15551234567"})

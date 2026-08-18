@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 import httpx
 import pytest
@@ -298,6 +299,34 @@ def test_send_template_by_id_serializes_to_wire() -> None:
     client().email.send(from_="a@b.com", to=["c@d.com"], template="emt_01krdgeqcxet5s7t44vh8rt9mg")
     body = json.loads(route.calls.last.request.content)
     assert body["template"] == {"id": "emt_01krdgeqcxet5s7t44vh8rt9mg"}
+
+
+@respx.mock
+def test_send_scheduled_at_serializes_to_wire() -> None:
+    route = respx.post(f"{BASE}/v1/email/messages").mock(return_value=httpx.Response(200, json=_message()))
+    client().email.send(
+        from_="a@b.com", to=["c@d.com"], subject="Hi", html="<p>x</p>",
+        scheduled_at=datetime(2026, 7, 30, 9, 0, tzinfo=timezone.utc),
+    )
+    body = json.loads(route.calls.last.request.content)
+    assert body["scheduled_at"] == "2026-07-30T09:00:00+00:00"
+
+
+@respx.mock
+def test_send_batch_forwards_scheduled_at_for_the_server_to_reject() -> None:
+    # Scheduling is a single-send field. Forwarding it lets the server answer
+    # with its 422; dropping it here would turn a schedule into an immediate send.
+    route = respx.post(f"{BASE}/v1/email/batches").mock(
+        return_value=httpx.Response(202, json={"data": [_batch_item(ID1)]})
+    )
+    client().email.send_batch(
+        messages=[{
+            "from_": "a@b.com", "to": ["c@d.com"], "subject": "Hi", "html": "<p>x</p>",
+            "scheduled_at": "2026-07-30T09:00:00Z",
+        }]
+    )
+    body = json.loads(route.calls.last.request.content)
+    assert body[0]["scheduled_at"] == "2026-07-30T09:00:00Z"
 
 
 @respx.mock

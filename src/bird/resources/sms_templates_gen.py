@@ -35,7 +35,7 @@ class SmsTemplates(Resource):
         ```python
         templates = client.sms_templates.list(scope="system")
         for template in templates.data:
-            print(template.id, template.name)
+            print(template.id, template.slug)
         ```
         """
         return self._get(
@@ -55,7 +55,7 @@ class SmsTemplates(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSTemplate:
-        """Get one SMS template by its name or id, including its body and the variables it expects. Fetch it before sms_send to see which parameter keys a template send requires.
+        """Get one SMS template by its slug or id, including its body and the variables it expects. Fetch it before sms_send to see which parameter keys a template send requires.
 
         ```python
         template = client.sms_templates.get("bird_otp_verification")
@@ -84,7 +84,7 @@ class AsyncSmsTemplates(AsyncResource):
         ```python
         templates = await client.sms_templates.list(scope="system")
         for template in templates.data:
-            print(template.id, template.name)
+            print(template.id, template.slug)
         ```
         """
         return await self._get(
@@ -104,7 +104,7 @@ class AsyncSmsTemplates(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSTemplate:
-        """Get one SMS template by its name or id, including its body and the variables it expects. Fetch it before sms_send to see which parameter keys a template send requires.
+        """Get one SMS template by its slug or id, including its body and the variables it expects. Fetch it before sms_send to see which parameter keys a template send requires.
 
         ```python
         template = await client.sms_templates.get("bird_otp_verification")

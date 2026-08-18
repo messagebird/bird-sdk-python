@@ -86,6 +86,24 @@ class SMSErrorCode:
     UNREACHABLE: Final = "unreachable"
 
 
+class TemplateLanguageStatus:
+    """Values of TemplateLanguageStatus known at this SDK version (open enum)."""
+
+    DRAFT: Final = "draft"
+    LIVE: Final = "live"
+    SUPERSEDED: Final = "superseded"
+
+
+class TemplateStatus:
+    """Values of TemplateStatus known at this SDK version (open enum)."""
+
+    ACTIVE: Final = "active"
+    DRAFT: Final = "draft"
+    INACTIVE: Final = "inactive"
+    PENDING: Final = "pending"
+    REJECTED: Final = "rejected"
+
+
 class VerificationAttemptFailureReason:
     """Values of VerificationAttemptFailureReason known at this SDK version (open enum)."""
 
@@ -103,6 +121,7 @@ class VerificationChannel:
 
     EMAIL: Final = "email"
     SMS: Final = "sms"
+    TELEGRAM: Final = "telegram"
     WHATSAPP: Final = "whatsapp"
 
 
@@ -123,6 +142,17 @@ class WhatsAppErrorCode:
     RECIPIENT_SUPPRESSED: Final = "recipient_suppressed"
     SERVICE_WINDOW_EXPIRED: Final = "service_window_expired"
     UNDELIVERABLE: Final = "undeliverable"
+
+
+class WhatsAppEventType:
+    """Values of WhatsAppEventType known at this SDK version (open enum)."""
+
+    WHATSAPP_ACCEPTED: Final = "whatsapp.accepted"
+    WHATSAPP_DELIVERED: Final = "whatsapp.delivered"
+    WHATSAPP_FAILED: Final = "whatsapp.failed"
+    WHATSAPP_READ: Final = "whatsapp.read"
+    WHATSAPP_REJECTED: Final = "whatsapp.rejected"
+    WHATSAPP_SENT: Final = "whatsapp.sent"
 
 
 class WhatsAppTemplateCategory:
@@ -152,10 +182,13 @@ __all__ = [
     "LookupFlag",
     "LookupPropertyStatus",
     "SMSErrorCode",
+    "TemplateLanguageStatus",
+    "TemplateStatus",
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
     "WhatsAppErrorCode",
+    "WhatsAppEventType",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateParameterType",
 ]

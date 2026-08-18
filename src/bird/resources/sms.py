@@ -2,7 +2,7 @@
 template), read a message back, and list the message log.
 
 A send carries either ``text`` (with a ``category``) or a ``template`` (by id or
-name, with its ``parameters``); the two are mutually exclusive.
+slug, with its ``parameters``); the two are mutually exclusive.
 """
 
 from __future__ import annotations
@@ -54,8 +54,8 @@ def _send_body(
     if smart_encoding is not None:
         body["options"] = {"smart_encoding": smart_encoding}
     if template is not None:
-        # An smt_-prefixed value is the id; anything else is the name handle.
-        tmpl: dict[str, Any] = {"id" if template.startswith("smt_") else "name": template}
+        # An smt_-prefixed value is the id; anything else is the slug handle.
+        tmpl: dict[str, Any] = {"id" if template.startswith("smt_") else "slug": template}
         if language is not None:
             tmpl["language"] = language
         if parameters is not None:
@@ -98,7 +98,7 @@ class Sms(SmsBase):
         options: RequestOptions | None = None,
     ) -> SMSMessage:
         """Send one SMS to a single recipient. Supply either ``text`` (with a
-        ``category``) or a stored ``template`` (by id or name, with ``parameters``).
+        ``category``) or a stored ``template`` (by id or slug, with ``parameters``).
         The result is ``accepted``, not yet delivered — read it back with ``get``.
 
         ```python
@@ -129,7 +129,19 @@ class Sms(SmsBase):
         self, *, messages: Sequence[Mapping[str, Any]], options: RequestOptions | None = None
     ) -> SMSMessageBatchResponse:
         """Send up to 100 independent SMS messages in one call. Each item is shaped
-        like the keyword arguments of ``send``; all are validated before any queue."""
+        like the keyword arguments of ``send``; all are validated before any queue.
+
+        ```python
+        batch = client.sms.send_batch(
+            messages=[
+                {"to": "+15551111111", "text": "Hi Alice!", "category": "marketing"},
+                {"to": "+15552222222", "text": "Hi Bob!", "category": "marketing"},
+            ]
+        )
+        for msg in batch.data:
+            print(msg.id, msg.status)
+        ```
+        """
         body = [_message_body(m) for m in messages]
         response = self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return SMSMessageBatchResponse.model_validate(response.json())

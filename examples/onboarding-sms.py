@@ -3,7 +3,7 @@ from bird import APIError, Bird
 with Bird(api_key="bk_XXXXXXXXXXXXXXXXXXXXXXXX") as client:
     try:
         message = client.sms.send(
-            to="+15551234567",
+            to="+14155550100",
             template="bird_otp_verification",
             parameters={"code": "493021"},
         )

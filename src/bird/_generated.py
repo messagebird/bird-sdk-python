@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Annotated, Union, Any, Literal
 
 from bird._models import BaseModel
-from pydantic import Base64Str, ConfigDict, Field, RootModel
+from pydantic import Base64Str, ConfigDict, Field, RootModel, constr
 
 
 class ErrorDetail(BaseModel):
@@ -25,22 +25,41 @@ class ErrorDetail(BaseModel):
     ]
 
 
-class ErrorNextAction(BaseModel):
+class NextAction(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    operation: Annotated[
+    kind: Annotated[
         str,
         Field(
-            description="The operationId of a follow-up operation that resolves this error. Call it, then retry the original request.",
+            description="What you do about this step. `operation` means call the operation named in `operation`, then read again. `external` means act somewhere this API does not reach, then read again. `wait` means nothing is asked of you, so read again later. `terminal` means nothing you do resolves this, so stop retrying. Tolerate a value you do not recognize: show the `description` and offer no action.\n",
             min_length=1,
         ),
     ]
     description: Annotated[
+        str,
+        Field(
+            description="A short, human-readable label for the step, suitable for display.",
+            min_length=1,
+        ),
+    ]
+    operation: Annotated[
         str | None,
         Field(
-            description="A short, human-readable label for the recovery step, suitable for display.",
+            description="The operationId to call. Present only when `kind` is `operation`. The operation's own schema says how to call it; this says only which one, and what to address it with.\n",
             min_length=1,
+        ),
+    ] = None
+    params: Annotated[
+        dict[str, str] | None,
+        Field(
+            description='The parameters that address the operation, by name: `{"sender_id": "…"}` for an operation on `/v1/sms/senders/{sender_id}/requirements`. A parameter the operation takes in its query string is given the same way, so an operation addressed as `?subject_id=` carries `{"subject_id": "…"}`. Every parameter the call needs is here, whether its value came from the thing you were acting on or is fixed for this step, so you can make the call from this object alone. Present only when `kind` is `operation` and the operation names a subject. A request body, when the operation takes one, is described by the operation\'s own schema and never appears here.\n'
+        ),
+    ] = None
+    url: Annotated[
+        str | None,
+        Field(
+            description="A URL to open. Present only when `kind` is `external`, and only when the step has one. An external step whose `description` says to go and do something with no URL to open is normal.\n"
         ),
     ] = None
 
@@ -165,9 +184,9 @@ class ErrorBody(BaseModel):
         ),
     ] = None
     next: Annotated[
-        list[ErrorNextAction] | None,
+        list[NextAction] | None,
         Field(
-            description="Operations that resolve this error, in the order to try them. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts."
+            description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.\n"
         ),
     ] = None
     unmet_gates: Annotated[
@@ -2144,20 +2163,28 @@ class SMSTemplateSend1(BaseModel):
             pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
-    name: Annotated[
+    slug: Annotated[
         str | None,
         Field(
-            description="The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
+            description="The template to send, by its slug handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
             examples=["bird_otp_verification_ttl"],
             max_length=63,
             min_length=1,
             pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ] = None
+    name: Annotated[
+        str | None,
+        Field(
+            deprecated=True,
+            description="Deprecated: use `slug` instead. Resolved as a slug first, and only if that finds nothing, matched against the template's display name.\n",
+            min_length=1,
+        ),
+    ] = None
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's localized bodies to send, as a BCP-47 tag. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
             examples=["fr"],
             max_length=35,
             min_length=2,
@@ -2185,20 +2212,77 @@ class SMSTemplateSend2(BaseModel):
             pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ] = None
-    name: Annotated[
+    slug: Annotated[
         str,
         Field(
-            description="The template to send, by its name handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
+            description="The template to send, by its slug handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
             examples=["bird_otp_verification_ttl"],
             max_length=63,
             min_length=1,
             pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
+    name: Annotated[
+        str | None,
+        Field(
+            deprecated=True,
+            description="Deprecated: use `slug` instead. Resolved as a slug first, and only if that finds nothing, matched against the template's display name.\n",
+            min_length=1,
+        ),
+    ] = None
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's localized bodies to send, as a BCP-47 tag. Falls back to the closest available language, then English, when the exact tag is not stocked. Omit for English.\n",
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
+            examples=["fr"],
+            max_length=35,
+            min_length=2,
+        ),
+    ] = None
+    parameters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.\n",
+            examples=[{"code": "493021", "ttl": "10"}],
+        ),
+    ] = None
+
+
+class SMSTemplateSend3(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str | None,
+        Field(
+            description="The template to send, by its id.",
+            examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ] = None
+    slug: Annotated[
+        str | None,
+        Field(
+            description="The template to send, by its slug handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.\n",
+            examples=["bird_otp_verification_ttl"],
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+        ),
+    ] = None
+    name: Annotated[
+        str,
+        Field(
+            deprecated=True,
+            description="Deprecated: use `slug` instead. Resolved as a slug first, and only if that finds nothing, matched against the template's display name.\n",
+            min_length=1,
+        ),
+    ]
+    language: Annotated[
+        str | None,
+        Field(
+            description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.\n",
             examples=["fr"],
             max_length=35,
             min_length=2,
@@ -2220,8 +2304,8 @@ class SMSMessageSendRequest1(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.",
-            examples=["+15551234567"],
+            description="Recipient phone number in E.164 format (for example `+14155550100`). One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.\n",
+            examples=["+14155550100"],
             min_length=1,
         ),
     ]
@@ -2294,7 +2378,7 @@ class SMSMessageSendRequest1(BaseModel):
         ),
     ] = None
     template: Annotated[
-        SMSTemplateSend1 | SMSTemplateSend2 | None,
+        SMSTemplateSend1 | SMSTemplateSend2 | SMSTemplateSend3 | None,
         Field(
             description="Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n"
         ),
@@ -2344,8 +2428,8 @@ class SMSMessageSendRequest2(BaseModel):
     to: Annotated[
         str,
         Field(
-            description="Recipient phone number in E.164 format (for example `+15551234567`). One recipient per message.",
-            examples=["+15551234567"],
+            description="Recipient phone number in E.164 format (for example `+14155550100`). One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.\n",
+            examples=["+14155550100"],
             min_length=1,
         ),
     ]
@@ -2418,7 +2502,7 @@ class SMSMessageSendRequest2(BaseModel):
         ),
     ] = None
     template: Annotated[
-        SMSTemplateSend1 | SMSTemplateSend2,
+        SMSTemplateSend1 | SMSTemplateSend2 | SMSTemplateSend3,
         Field(
             description="Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.\n"
         ),
@@ -2505,6 +2589,14 @@ class TemplateScope(str, Enum):
     workspace = "workspace"
 
 
+class TemplateStatus(str, Enum):
+    draft = "draft"
+    pending = "pending"
+    active = "active"
+    rejected = "rejected"
+    inactive = "inactive"
+
+
 class TemplateVariable(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -2512,21 +2604,21 @@ class TemplateVariable(BaseModel):
     key: Annotated[
         str,
         Field(
-            description="The variable's name, the key you use for it in `parameters` when you send.",
+            description="The key this slot is filled by. On email and SMS it is the key you set in the send's `parameters` object. On WhatsApp it is the `name` you repeat on the matching parameter inside `components`, or, for a template whose placeholders are positional, the position itself as `1`, `2` and so on.\n",
             min_length=1,
         ),
     ]
     type: Annotated[
         str,
         Field(
-            description="The value type this variable accepts. We can add new types to this list over time, so treat a value you do not recognize as a new type rather than as an error. SMS templates use the typed values, such as `code` and `amount`. Email templates only use `text`.\n",
+            description="The value type this slot accepts. SMS templates use the typed slots (`code`, `amount` and the rest), each of which rejects a value that does not match its `constraint`. Email and WhatsApp templates use `text`, which accepts any value. Open enum: treat an unrecognized value as a future type rather than an error.\n",
             min_length=1,
         ),
     ]
     required: Annotated[
         bool,
         Field(
-            description="Whether a value has to be supplied when sending. A send that leaves a required variable unset is rejected.\n"
+            description="Whether the slot must be supplied when sending. On SMS and WhatsApp a missing required value is rejected with a `422`. On email it is advisory: a missing value renders as empty rather than rejecting the send.\n"
         ),
     ]
     constraint: Annotated[
@@ -2539,9 +2631,29 @@ class TemplateVariable(BaseModel):
     sensitive: Annotated[
         bool | None,
         Field(
-            description="Whether this variable's value gets redacted before it is stored. When it does, the rendered value never appears in message content you read back through the API: a placeholder is stored in its place instead.\n"
+            description="Whether this slot's value is kept out of durable storage. A sensitive slot's rendered value never appears in message content read back through the API: a stand-in placeholder is stored instead.\n"
         ),
     ] = False
+
+
+class TemplateLanguageStatus(str, Enum):
+    draft = "draft"
+    live = "live"
+    superseded = "superseded"
+
+
+class SMSTemplateLanguageState(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")
+    ]
+
+
+class TemplateOnMissingLanguage(str, Enum):
+    TemplateOnMissingLanguageFallback = "fallback"
+    TemplateOnMissingLanguageFail = "fail"
 
 
 class SMSTemplateVersionID(RootModel[str]):
@@ -2553,14 +2665,6 @@ class SMSTemplateVersionID(RootModel[str]):
             pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
-
-
-class Status2(str, Enum):
-    active = "active"
-    draft = "draft"
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
 
 
 class SMSTemplate(BaseModel):
@@ -2576,25 +2680,34 @@ class SMSTemplate(BaseModel):
             pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
-    name: Annotated[
+    slug: Annotated[
         str,
         Field(
-            description="The template's stable handle. Pass it (or the id) as the template reference when sending.",
+            description="The template's permanent handle. Pass it (or the id) as the template reference when sending. Handles beginning with `bird_` are reserved for Bird's built-in templates.\n",
             examples=["bird_otp_verification"],
             max_length=63,
             min_length=1,
             pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
         ),
     ]
-    description: Annotated[
+    name: Annotated[
         str,
         Field(
-            description="Human-readable description of what the template is for.",
-            examples=["One-time passcode verification"],
+            description="The template's display name, shown wherever the template is listed. Nothing resolves through it, so it is safe to show wherever a human reads the template.\n",
+            examples=["bird_otp_verification"],
+            max_length=255,
             min_length=1,
         ),
     ]
+    description: Annotated[
+        str | None,
+        Field(
+            description="What the template is for. Null when unset.",
+            examples=["One-time passcode verification"],
+        ),
+    ]
     scope: TemplateScope
+    status: Annotated[Union[TemplateStatus, str], Field(union_mode="left_to_right")]
     category: Annotated[
         SMSMessageCategory,
         Field(
@@ -2604,7 +2717,7 @@ class SMSTemplate(BaseModel):
     body: Annotated[
         str,
         Field(
-            description="The template body in its default language, shown for preview. Variable placeholders appear inline (for example `{{ code }}`).\n",
+            description="The template body in its default language, shown for preview. Variable placeholders appear inline (for example `{{ code }}`). Name a `language` on the send to have another one served.\n",
             examples=["Your verification code is {{ code }}."],
             min_length=1,
         ),
@@ -2612,51 +2725,86 @@ class SMSTemplate(BaseModel):
     variables: Annotated[
         list[TemplateVariable],
         Field(
-            description="The typed slots this template fills in from the values you supply when sending."
+            description="The typed slots this template fills in from the values you supply in `parameters` when sending. Every language of a template declares the same slots, so this list holds for whichever one a send resolves to.\n"
+        ),
+    ]
+    default_language: Annotated[
+        str,
+        Field(
+            description="The language a send uses when it names none, and the last resort when `on_missing_language` is `fallback` and the language asked for is not available.\n",
+            examples=["pt-BR"],
+            max_length=35,
+            min_length=2,
         ),
     ]
     available_languages: Annotated[
-        list[str],
+        list[LanguageTag],
         Field(
-            description="The languages this template is available in, as BCP-47 tags.",
+            description="The languages a send can resolve right now, as BCP-47 tags. The set may shrink for reasons other than editing, so read it rather than assuming it matches what you last saw.\n",
             examples=[["en"]],
         ),
     ]
-    status: Annotated[
-        Status2,
+    languages: Annotated[
+        dict[constr(min_length=2, max_length=35), SMSTemplateLanguageState],
         Field(
-            description="The template's lifecycle state. `active` means the template can be sent; every built-in Bird template is `active`. `draft` (being edited), `pending` (submitted for review), `approved` (passed review), and `rejected` (failed review) describe a workspace-authored template's authoring lifecycle; workspace-authored SMS templates are not available yet, so today every template is `active`.\n"
+            description="Where each of the template's languages stands, keyed by BCP-47 language tag. Content is not here: `body` previews the default language, and a send resolves the one it needs.\n",
+            examples=[{"en": {"status": "live"}, "nl": {"status": "live"}}],
+        ),
+    ]
+    on_missing_language: Annotated[
+        TemplateOnMissingLanguage,
+        Field(
+            description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on SMS.\n"
+        ),
+    ]
+    language_source_required: Annotated[
+        bool,
+        Field(
+            description="Whether a send has to name a language. When true, a send that names none is rejected instead of being served the default language.\n"
         ),
     ]
     draft_version_id: Annotated[
         SMSTemplateVersionID | None,
         Field(
-            description="The current editable draft version. Always null today: SMS templates are not yet versioned; present for parity with email templates."
+            description="The current editable draft version, or null for a built-in `system` template, which has no draft.\n"
+        ),
+    ]
+    live_version_id: Annotated[
+        SMSTemplateVersionID | None,
+        Field(
+            description="The version a send resolves to, or null for a built-in `system` template, which Bird ships ready to send rather than versioning.\n"
         ),
     ]
     published_version_id: Annotated[
         SMSTemplateVersionID | None,
         Field(
-            description="The currently published version, or null if the template has never been published. Always null today: SMS templates are not yet versioned; present for parity with email templates."
+            deprecated=True,
+            description="Deprecated: use `live_version_id` instead, which carries the same value.\n",
         ),
-    ] = None
+    ]
     revision: Annotated[
         int | None,
         Field(
-            description="The draft's revision counter. Always null today: SMS templates are not yet versioned; present for parity with email templates.",
+            description="The draft's revision counter. Null for a built-in `system` template, which is unversioned.\n",
             ge=0,
+        ),
+    ]
+    last_submitted_at: Annotated[
+        str | None,
+        Field(
+            description="When this template was last submitted. Null for a built-in `system` template: Bird ships it ready to send, so there is nothing submitted to date.\n"
         ),
     ]
     created_at: Annotated[
         str | None,
         Field(
-            description="When the template was created. Null for built-in templates."
+            description="When the template was created. Null for a built-in `system` template, which Bird ships rather than stores.\n"
         ),
     ]
     updated_at: Annotated[
         str | None,
         Field(
-            description="When the template was last updated. Null for built-in templates."
+            description="When the template was last modified. Null for a built-in `system` template, which Bird ships rather than stores.\n"
         ),
     ]
 
@@ -2699,7 +2847,7 @@ class PhoneNumberLookupRequest(BaseModel):
     phone_number: Annotated[
         str,
         Field(
-            description="The phone number to look up, in E.164 format, which is a leading `+`, the country calling code, then the national number.",
+            description="The phone number to look up, in international format: the country calling code, then the national number. The leading `+` is optional, and `00` works in its place, so `+31612345678`, `31612345678` and `0031612345678` are all the same number. A number written for dialling inside one country, with no country code, is rejected rather than guessed at.",
             min_length=1,
         ),
     ]
@@ -3125,6 +3273,7 @@ class VerificationChannel(str, Enum):
     email = "email"
     sms = "sms"
     whatsapp = "whatsapp"
+    telegram = "telegram"
 
 
 class VerificationChannelEntry(BaseModel):
@@ -3176,7 +3325,7 @@ class WhatsAppTemplateCategory(str, Enum):
     marketing = "marketing"
 
 
-class Status9(str, Enum):
+class Status8(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -3198,7 +3347,7 @@ class Verification(Timestamps):
         ),
     ]
     status: Annotated[
-        Status9,
+        Status8,
         Field(
             description="The verification's current state: `pending` (the initial state, awaiting a correct passcode), `verified` (a correct passcode was submitted), `failed` (too many incorrect attempts), `expired` (the time window elapsed before a correct passcode), `canceled` (the verification was canceled before completing), or `blocked` (it was stopped by a fraud or abuse control)."
         ),
@@ -3653,7 +3802,7 @@ class WhatsAppTemplateSend1(BaseModel):
     slug: Annotated[
         str | None,
         Field(
-            description="The template to send, by its slug (for example `bird_otp`).",
+            description="The template to send, by its slug handle (for example `bird_otp`).",
             examples=["bird_otp"],
             max_length=63,
             min_length=1,
@@ -3663,7 +3812,7 @@ class WhatsAppTemplateSend1(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted, in which case the template's default language is sent. A language the template is not stocked in returns a `422` that names the available tags.\n",
+            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`); Meta's underscore form (`pt_BR`) is accepted and normalized. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected. The accepted message echoes the canonical BCP-47 form of the language it resolved to.\n",
             examples=["pt-BR"],
             max_length=35,
             min_length=2,
@@ -3693,7 +3842,7 @@ class WhatsAppTemplateSend2(BaseModel):
     slug: Annotated[
         str,
         Field(
-            description="The template to send, by its slug (for example `bird_otp`).",
+            description="The template to send, by its slug handle (for example `bird_otp`).",
             examples=["bird_otp"],
             max_length=63,
             min_length=1,
@@ -3703,7 +3852,7 @@ class WhatsAppTemplateSend2(BaseModel):
     language: Annotated[
         str | None,
         Field(
-            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`). Meta's underscore form (`pt_BR`) is accepted and normalized; the accepted message echoes the canonical BCP-47 form. May be omitted, in which case the template's default language is sent. A language the template is not stocked in returns a `422` that names the available tags.\n",
+            description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`); Meta's underscore form (`pt_BR`) is accepted and normalized. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected. The accepted message echoes the canonical BCP-47 form of the language it resolved to.\n",
             examples=["pt-BR"],
             max_length=35,
             min_length=2,
@@ -3793,6 +3942,15 @@ class WhatsAppMessageSendRequest(BaseModel):
     ] = None
 
 
+class WhatsAppEventType(str, Enum):
+    whatsapp_accepted = "whatsapp.accepted"
+    whatsapp_delivered = "whatsapp.delivered"
+    whatsapp_failed = "whatsapp.failed"
+    whatsapp_read = "whatsapp.read"
+    whatsapp_rejected = "whatsapp.rejected"
+    whatsapp_sent = "whatsapp.sent"
+
+
 class WhatsAppEvent(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -3806,14 +3964,7 @@ class WhatsAppEvent(BaseModel):
             pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
         ),
     ]
-    type: Annotated[
-        str,
-        Field(
-            description="Lifecycle event type. `whatsapp.accepted`: Bird accepted the request. `whatsapp.sent`: handed to the WhatsApp network. `whatsapp.delivered`: delivery confirmed to the recipient's device. `whatsapp.read`: the recipient opened the message (this does not change the message `status`, which never becomes `read`). `whatsapp.failed`: terminal permanent failure. `whatsapp.rejected`: Bird refused the message before sending it, so it was never charged. `whatsapp.received`: an inbound message arrived from the contact. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error.\n",
-            examples=["whatsapp.delivered"],
-            min_length=1,
-        ),
-    ]
+    type: Annotated[Union[WhatsAppEventType, str], Field(union_mode="left_to_right")]
     occurred_at: Annotated[
         str, Field(description="When this event occurred.", min_length=1)
     ]
@@ -5557,7 +5708,7 @@ class DomainDKIM(BaseModel):
     ]
 
 
-class Status10(str, Enum):
+class Status9(str, Enum):
     pending = "pending"
     failed = "failed"
     temporary_failure = "temporary_failure"
@@ -5576,7 +5727,7 @@ class DomainCapabilityPending(BaseModel):
         ),
     ]
     status: Annotated[
-        Status10,
+        Status9,
         Field(
             description="Verification status of the staged change. `pending` — waiting for the DNS records to be detected. `failed` — the records resolved with wrong values; correct them or submit a different change. `temporary_failure` — DNS lookup failed transiently and will be retried.\n",
             examples=["pending"],
@@ -5584,7 +5735,7 @@ class DomainCapabilityPending(BaseModel):
     ]
 
 
-class Status11(str, Enum):
+class Status10(str, Enum):
     pending = "pending"
     verified = "verified"
     warning = "warning"
@@ -5598,7 +5749,7 @@ class DomainCapability(BaseModel):
         extra="allow",
     )
     status: Annotated[
-        Status11,
+        Status10,
         Field(
             description="Capability verification status.\n- `pending` — verification has not run, or is currently running. - `verified` — all DNS records for this capability resolved with the\n  expected values.\n- `warning` — a record for this capability verified before and a recent\n  check no longer matches, but it is still within the grace period.\n  Sending is not yet affected; fix it before the grace period ends.\n- `failed` — DNS records resolved but at least one value is wrong.\n  Update your DNS to recover.\n- `temporary_failure` — DNS lookup failed transiently. Verification is\n  queued for retry; don't change DNS records yet.\n- `not_configured` — the capability is not set up on this domain\n  (e.g. no tracking domain configured).\n",
             examples=["verified"],
@@ -5675,7 +5826,7 @@ class State(str, Enum):
     deprecated = "deprecated"
 
 
-class Status12(str, Enum):
+class Status11(str, Enum):
     pending = "pending"
     verified = "verified"
     warning = "warning"
@@ -5727,7 +5878,7 @@ class DNSRecord(BaseModel):
         ),
     ]
     status: Annotated[
-        Status12,
+        Status11,
         Field(
             description="Verification status of this record's most recent DNS check.\n- `pending` — the record has not verified yet; publish it (or correct it)\n  and it will verify on the next check.\n- `verified` — the most recent check matched the expected value. - `warning` — the record verified before and a recent check no longer\n  matched, but it is still within the grace period. Sending is not yet\n  affected; fix the record before the grace period ends to avoid it\n  being blocked.\n- `failed` — the record verified before but later checks kept failing\n  past the grace period; the configuration has regressed and needs\n  attention.\n"
         ),
@@ -5758,7 +5909,7 @@ class Vendor(str, Enum):
     squarespace = "squarespace"
 
 
-class Status13(str, Enum):
+class Status12(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -5801,7 +5952,7 @@ class Domain(BaseModel):
         ),
     ]
     status: Annotated[
-        Status13,
+        Status12,
         Field(
             description="Domain ownership verification, proven by the DKIM record. Readiness to send or track is reported separately per capability under `capabilities.*.status`.\n- `pending` — the DKIM record has not been published yet. - `verified` — the DKIM record is in place; ownership is confirmed. - `failed` — a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure` — DNS resolution failed transiently (timeout,\n  unreachable nameserver). Verification is queued for retry on a 72h\n  cadence; customer should not edit DNS records before the retry runs.\n- `rejected` — the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n"
         ),
@@ -6554,7 +6705,7 @@ class EmailThreadUpdateRequest(BaseModel):
     ] = None
 
 
-class Status14(str, Enum):
+class Status13(str, Enum):
     delivered = "delivered"
     failed = "failed"
 
@@ -6565,7 +6716,7 @@ class EmailThreadMessageRecipient(BaseModel):
     )
     address: Annotated[str, Field(description="Recipient address.", min_length=1)]
     status: Annotated[
-        Status14,
+        Status13,
         Field(
             description="Terminal outcome: `delivered`, or `failed` (bounce or provider rejection)."
         ),
@@ -8892,14 +9043,14 @@ class EventVerifyAttemptDeliveredData(EventVerifyBase):
     carrier: Annotated[
         str | None,
         Field(
-            description="Carrier that delivered the message, when the carrier network reports it. Always null for email and WhatsApp.",
+            description="Carrier that delivered the message, when the carrier network reports it. Always null for email, WhatsApp, and Telegram.",
             examples=["Verizon"],
         ),
     ]
     mcc_mnc: Annotated[
         str | None,
         Field(
-            description="Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email and WhatsApp.",
+            description="Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email, WhatsApp, and Telegram.",
             examples=["311480"],
         ),
     ]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Mapping, Sequence
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
@@ -73,6 +74,7 @@ def _send_body(
     ip_pool_id: str | None,
     category: str | None,
     attachments: Sequence[Attachment] | None,
+    scheduled_at: str | datetime | None,
     defaults: EmailDefaults | None,
 ) -> dict[str, Any]:
     # A per-send value wins; an unset field falls back to the client's EmailDefaults
@@ -109,6 +111,7 @@ def _send_body(
         "ip_pool_id":      ip_pool_id,
         "category":     category     if category     is not None else d.get("category"),
         "attachments":  attachments,
+        "scheduled_at": scheduled_at.isoformat() if isinstance(scheduled_at, datetime) else scheduled_at,
     })
 
 
@@ -143,6 +146,7 @@ def _batch_body(
             ip_pool_id=m.get("ip_pool_id"),
             category=m.get("category"),
             attachments=m.get("attachments"),
+            scheduled_at=m.get("scheduled_at"),
             defaults=defaults,
         )
         for m in messages
@@ -195,6 +199,7 @@ class Email(EmailBase):
         ip_pool_id: str | None = None,
         category: str | None = None,
         attachments: Sequence[Attachment] | None = None,
+        scheduled_at: str | datetime | None = None,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
         """Send an email and return the created message.
@@ -211,6 +216,33 @@ class Email(EmailBase):
             to=["delivered@messagebird.dev"],
             subject="Hello from Bird",
             html="<p>My first Bird email.</p>",
+        )
+        print(msg.id, msg.status)
+        ```
+
+        Sending a published template instead of inline content:
+
+        ```python
+        msg = client.email.send(
+            from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
+            to=["delivered@messagebird.dev"],
+            category="transactional",
+            template="welcome-email",
+            parameters={"first_name": "Jane"},
+        )
+        print(msg.id, msg.status)
+        ```
+
+        Sending to the sandbox bounce address, which hard-bounces every time:
+
+        ```python
+        msg = client.email.send(
+            from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
+            to=["bounce+signup-flow@messagebird.dev"],
+            subject="Sandbox bounce test",
+            html="<p>This message will hard-bounce.</p>",
+            tags=[{"name": "flow", "value": "signup"}],
+            metadata={"test_run": "docs-capture-1"},
         )
         print(msg.id, msg.status)
         ```
@@ -253,7 +285,7 @@ class Email(EmailBase):
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults,
         )
         response = self._client.request("POST", _PATH, body=body, **_opts(options))
         return EmailMessage.model_validate(response.json())
@@ -343,6 +375,7 @@ class AsyncEmail(AsyncEmailBase):
         ip_pool_id: str | None = None,
         category: str | None = None,
         attachments: Sequence[Attachment] | None = None,
+        scheduled_at: str | datetime | None = None,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
         body = _send_body(
@@ -351,7 +384,7 @@ class AsyncEmail(AsyncEmailBase):
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults,
         )
         response = await self._client.request("POST", _PATH, body=body, **_opts(options))
         return EmailMessage.model_validate(response.json())
@@ -383,7 +416,8 @@ class EmailWithRawResponse:
         tags: Sequence[Mapping[str, str]] | None = None, metadata: Mapping[str, Any] | None = None,
         track_opens: bool | None = None, track_clicks: bool | None = None,
         ip_pool_id: str | None = None, category: str | None = None,
-        attachments: Sequence[Attachment] | None = None, options: RequestOptions | None = None,
+        attachments: Sequence[Attachment] | None = None, scheduled_at: str | datetime | None = None,
+        options: RequestOptions | None = None,
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
@@ -391,7 +425,7 @@ class EmailWithRawResponse:
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults,
         )
         return APIResponse(self._client.request("POST", _PATH, body=body, **_opts(options)), EmailMessage)
 
@@ -415,7 +449,8 @@ class AsyncEmailWithRawResponse:
         tags: Sequence[Mapping[str, str]] | None = None, metadata: Mapping[str, Any] | None = None,
         track_opens: bool | None = None, track_clicks: bool | None = None,
         ip_pool_id: str | None = None, category: str | None = None,
-        attachments: Sequence[Attachment] | None = None, options: RequestOptions | None = None,
+        attachments: Sequence[Attachment] | None = None, scheduled_at: str | datetime | None = None,
+        options: RequestOptions | None = None,
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
             from_=from_, to=to, subject=subject, html=html, text=text,
@@ -423,7 +458,7 @@ class AsyncEmailWithRawResponse:
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults,
         )
         return APIResponse(await self._client.request("POST", _PATH, body=body, **_opts(options)), EmailMessage)
 

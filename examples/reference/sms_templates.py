@@ -14,7 +14,7 @@ client = Bird()
 def sms_templates_list() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
-        print(template.id, template.name)
+        print(template.id, template.slug)
 
 
 def sms_templates_get() -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Mapping, Sequence, TypedDict, Union
 
 import httpx
@@ -98,6 +99,9 @@ class EmailSendParams(_EmailSendRequired, total=False):
     ip_pool_id: str
     category: str
     attachments: Sequence[Attachment]
+    # Only a single send accepts scheduling; the server rejects a batch item
+    # that carries it with a 422.
+    scheduled_at: str | datetime
 
 
 class _EmailSendBatchRequired(TypedDict):
@@ -132,7 +136,7 @@ class SmsSendParams(_SmsSendRequired, total=False):
     """Params for ``client.sms.send``. ``to`` is required. A send is either
     free-text (``text`` plus ``category``) or by ``template`` — with a template,
     omit ``text``/``category`` and personalize with ``parameters``. ``template``
-    is the template's id (``smt_`` prefix) or its name."""
+    is the template's id (``smt_`` prefix) or its slug."""
 
     from_: str
     text: str
