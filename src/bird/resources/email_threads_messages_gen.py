@@ -73,7 +73,7 @@ class EmailThreadsMessages(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailThreadMessage]:
-        """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's extracted plain text.
+        """List the messages in a conversation newest first, both directions. Page older messages with `starting_after`, and pass `include=extracted_text` to inline each message's extracted plain text.
 
         ```python
         for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -101,7 +101,7 @@ class EmailThreadsMessages(Resource):
 
         ```python
         message = client.email.threads.messages.get(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(message.subject)
         ```
@@ -124,7 +124,7 @@ class EmailThreadsMessages(Resource):
 
         ```python
         body = client.email.threads.messages.body(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(body.html)
         ```
@@ -154,7 +154,7 @@ class EmailThreadsMessages(Resource):
 
         ```python
         reply = client.email.threads.messages.reply(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
             text="Thanks for reaching out!",
         )
         print(reply.id)
@@ -191,7 +191,7 @@ class EmailThreadsMessages(Resource):
 
         ```python
         result = client.email.threads.messages.attachments(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         )
         for attachment in result.data:
             print(attachment.filename, attachment.size)
@@ -218,7 +218,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailThreadMessage]:
-        """List the messages in a conversation newest first, both directions. Page older messages with starting_after, and pass include=extracted_text to inline each message's extracted plain text.
+        """List the messages in a conversation newest first, both directions. Page older messages with `starting_after`, and pass `include=extracted_text` to inline each message's extracted plain text.
 
         ```python
         async for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -246,7 +246,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
 
         ```python
         message = await client.email.threads.messages.get(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(message.subject)
         ```
@@ -269,7 +269,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
 
         ```python
         body = await client.email.threads.messages.body(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         )
         print(body.html)
         ```
@@ -299,7 +299,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
 
         ```python
         reply = await client.email.threads.messages.reply(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
             text="Thanks for reaching out!",
         )
         print(reply.id)
@@ -336,7 +336,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
 
         ```python
         result = await client.email.threads.messages.attachments(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         )
         for attachment in result.data:
             print(attachment.filename, attachment.size)

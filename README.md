@@ -66,15 +66,22 @@ client.email.send(to=["c@x.com"], subject="Receipt", text="…")  # uses noreply
 
 ## WhatsApp
 
-Templates are currently the only supported content type, so every send must include one; Bird selects the sender number from the template's category.
+A send carries exactly one kind of content: a template, or free-form `text`, `image`, `video`, `audio`, `sticker`, `document` or `location`. Free-form content is deliverable only inside an open 24-hour customer service window, and every send but a Bird-managed template needs `from_`.
 
 ```python
-# Send
+# Send a template
 message = client.whatsapp.send(
     to="+31612345678",
     template="bird_otp",
     language="en",
     components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
+)
+
+# Send free-form text
+message = client.whatsapp.send(
+    to="+31612345678",
+    from_="+31687654321",
+    text={"body": "Your order has shipped!"},
 )
 
 # Fetch

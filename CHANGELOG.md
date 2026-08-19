@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.30.0
+
+- Add client.sms_keyword_rules: read Bird's SMS keyword catalogue and manage a workspace's own overrides of it.
+- Add client.sms.stats and client.sms_suppressions: SMS statistics (outbound, inbound breakdowns) and the suppression list, plus sms.list_events for a message's timeline.
+- Add end-to-end encrypted channels: `realtime.publish` and `realtime.publish_batch` seal `private-encrypted-` payloads under the `realtime_encryption_master_key` client option (install `messagebird-sdk[realtime-encryption]` for the cipher), and the new `realtime.authorize_channel` signs channel subscriptions, adding the channel's `shared_secret` on encrypted channels.
+- A sending domain read now says what to do next. `next` carries the steps that get the domain verified, in the order to take them: an `external` step for a DNS record only you can publish, then the operation that re-checks it. An empty list means nothing is asked of you on that axis, and `capabilities` still reports what each capability needs before the domain can send or receive.
+- Email defaults now cover `ip_pool_id`, applied to every send that does not name a pool.
+- `email.mailboxes.messages.create` now honors the email defaults for the fields a compose accepts: `reply_to`, `category`, `tags`, and `metadata`.
+- Optional fields on a WhatsApp message's content — a media caption, a location's name and address — are omitted when unset rather than returned as null.
+- Getting or listing a WhatsApp message now returns the free-form `text`, `image`, `video`, `audio`, `sticker`, `document` or `location` content it carried.
+- The `whatsapp.received` webhook event is now available, delivering an inbound WhatsApp message's content as it arrives.
+- `whatsapp.send` now accepts free-form `text`, `image`, `video`, `audio`, `sticker`, `document` and `location` content, `from_` for the business number every send but a Bird-managed template requires, and per-message `tags` and `metadata`.
+- Method, parameter and field documentation now states what each call does and what each value accepts, including its default, its units, and the fields it depends on.
+
 ## 0.29.0
 
 - **Breaking:** an SMS template is referenced by its `slug`, not its `name`. On a send, `template.name` becomes `template.slug` (unchanged if you pass an id). On a template read, `slug` is the handle you send by and `name` is now the display label the old `description` carried, so `description` reads null for Bird's built-in templates.

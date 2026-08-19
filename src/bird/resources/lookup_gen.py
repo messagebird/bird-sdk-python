@@ -42,7 +42,7 @@ class Lookup(Resource):
         type: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> PhoneNumberLookup:
-        """Look up what a phone number is. Returns the serving network, the issuing network, whether the number was ported, its country, and its line type, free with every call. Pass `type` to buy extra blocks: `classification` (the allocated service of the range, from an intelligence source, reported beside the free `line_type` rather than replacing it), `porting` (whether the number ever moved network, when, and its full history), `presence` (reachable on the network right now), `roaming`, `sim_swap` (when the SIM last changed), and `score` (0-100 credibility). Every requested block reports its own status, and only the ones reading `ok` are billed on top of the lookup. Nothing is sent to the number.
+        """Create a lookup for a phone number's networks, porting state, country, and line type. Pass `type` to request separately billed `classification`, `porting`, `presence`, `roaming`, `sim_swap`, or `score` blocks. Each block reports its own status, and only blocks with an `ok` status add a charge; the lookup does not contact the number.
 
         ```python
         answer = client.lookup.phone_number(
@@ -75,7 +75,7 @@ class Lookup(Resource):
         email: str,
         options: RequestOptions | None = None,
     ) -> EmailLookup:
-        """Look up whether an email address is worth sending to. Returns `result` (the verdict: `valid`; `neutral`, meaning it could not be confirmed either way; `risky`, meaning it will probably accept mail but is likelier than most to bounce or complain; `undeliverable`; or `typo`), `delivery_confidence` (0-100), `flags` (`role`, `disposable`, `free_provider`), `reason` on an undeliverable address (`invalid_syntax`, `invalid_domain`, `invalid_recipient`), and `did_you_mean` when the address looks like a misspelling of a real one. `result` and `reason` are OPEN vocabularies: the values listed here are today's and more may be added, so treat an unrecognized value as a future one rather than an error, falling back on `delivery_confidence`. One address per call. Every answered lookup is billed the same flat amount whatever the verdict, so treat it as a paid call rather than a free check, and use an `Idempotency-Key` so a retry does not buy a second answer. Nothing is sent to the address.
+        """Create a deliverability lookup for one email address. Returns `result`, `delivery_confidence`, address `flags`, an undeliverable `reason`, and `did_you_mean` when a correction is available. Treat unknown `result` and `reason` values as valid additions and use `delivery_confidence` as the fallback; each completed lookup incurs the same charge.
 
         ```python
         answer = client.lookup.email(email="aisha.khan@example.com")
@@ -106,7 +106,7 @@ class AsyncLookup(AsyncResource):
         type: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> PhoneNumberLookup:
-        """Look up what a phone number is. Returns the serving network, the issuing network, whether the number was ported, its country, and its line type, free with every call. Pass `type` to buy extra blocks: `classification` (the allocated service of the range, from an intelligence source, reported beside the free `line_type` rather than replacing it), `porting` (whether the number ever moved network, when, and its full history), `presence` (reachable on the network right now), `roaming`, `sim_swap` (when the SIM last changed), and `score` (0-100 credibility). Every requested block reports its own status, and only the ones reading `ok` are billed on top of the lookup. Nothing is sent to the number.
+        """Create a lookup for a phone number's networks, porting state, country, and line type. Pass `type` to request separately billed `classification`, `porting`, `presence`, `roaming`, `sim_swap`, or `score` blocks. Each block reports its own status, and only blocks with an `ok` status add a charge; the lookup does not contact the number.
 
         ```python
         answer = await client.lookup.phone_number(
@@ -139,7 +139,7 @@ class AsyncLookup(AsyncResource):
         email: str,
         options: RequestOptions | None = None,
     ) -> EmailLookup:
-        """Look up whether an email address is worth sending to. Returns `result` (the verdict: `valid`; `neutral`, meaning it could not be confirmed either way; `risky`, meaning it will probably accept mail but is likelier than most to bounce or complain; `undeliverable`; or `typo`), `delivery_confidence` (0-100), `flags` (`role`, `disposable`, `free_provider`), `reason` on an undeliverable address (`invalid_syntax`, `invalid_domain`, `invalid_recipient`), and `did_you_mean` when the address looks like a misspelling of a real one. `result` and `reason` are OPEN vocabularies: the values listed here are today's and more may be added, so treat an unrecognized value as a future one rather than an error, falling back on `delivery_confidence`. One address per call. Every answered lookup is billed the same flat amount whatever the verdict, so treat it as a paid call rather than a free check, and use an `Idempotency-Key` so a retry does not buy a second answer. Nothing is sent to the address.
+        """Create a deliverability lookup for one email address. Returns `result`, `delivery_confidence`, address `flags`, an undeliverable `reason`, and `did_you_mean` when a correction is available. Treat unknown `result` and `reason` values as valid additions and use `delivery_confidence` as the fallback; each completed lookup incurs the same charge.
 
         ```python
         answer = await client.lookup.email(email="aisha.khan@example.com")

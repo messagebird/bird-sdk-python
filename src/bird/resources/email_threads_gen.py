@@ -147,7 +147,7 @@ class EmailThreadsBase(Resource):
         permanent: bool | None = None,
         options: RequestOptions | None = None,
     ) -> None:
-        """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with ?permanent=true.
+        """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with `?permanent=true`.
 
         ```python
         client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
@@ -259,7 +259,7 @@ class AsyncEmailThreadsBase(AsyncResource):
         permanent: bool | None = None,
         options: RequestOptions | None = None,
     ) -> None:
-        """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with ?permanent=true.
+        """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with `?permanent=true`.
 
         ```python
         await client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)

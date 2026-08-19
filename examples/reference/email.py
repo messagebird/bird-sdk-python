@@ -219,21 +219,21 @@ def mailbox_thread_message_list() -> None:
 
 def mailbox_thread_message_get() -> None:
     message = client.email.threads.messages.get(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(message.subject)
 
 
 def mailbox_thread_message_body() -> None:
     body = client.email.threads.messages.body(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(body.html)
 
 
 def mailbox_thread_message_attachments() -> None:
     result = client.email.threads.messages.attachments(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     for attachment in result.data:
         print(attachment.filename, attachment.size)
@@ -241,7 +241,7 @@ def mailbox_thread_message_attachments() -> None:
 
 def mailbox_thread_message_reply() -> None:
     reply = client.email.threads.messages.reply(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         text="Thanks for reaching out!",
     )
     print(reply.id)

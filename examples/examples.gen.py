@@ -460,7 +460,7 @@ async def _ex_70() -> None:
 
 async def _ex_71() -> None:
     result = client.email.threads.messages.attachments(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     for attachment in result.data:
         print(attachment.filename, attachment.size)
@@ -468,14 +468,14 @@ async def _ex_71() -> None:
 
 async def _ex_72() -> None:
     body = client.email.threads.messages.body(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(body.html)
 
 
 async def _ex_73() -> None:
     message = client.email.threads.messages.get(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(message.subject)
 
@@ -487,7 +487,7 @@ async def _ex_74() -> None:
 
 async def _ex_75() -> None:
     reply = client.email.threads.messages.reply(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", "msg_01krdgeqcxet5s7t44vh8rt9mg",
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         text="Thanks for reaching out!",
     )
     print(reply.id)
@@ -583,7 +583,14 @@ async def _ex_87() -> None:
 
 
 async def _ex_88() -> None:
+    events = client.sms.list_events("sms_abc123")
+    for event in events.data:
+        print(event.type, event.occurred_at)
+
+
+async def _ex_89() -> None:
     msg = client.sms.send(
+        from_="+15557654321",
         to="+15551234567",
         text="Your verification code is 123456.",
         category="authentication",
@@ -591,18 +598,28 @@ async def _ex_88() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_89() -> None:
+async def _ex_90() -> None:
     batch = client.sms.send_batch(
         messages=[
-            {"to": "+15551111111", "text": "Hi Alice!", "category": "marketing"},
-            {"to": "+15552222222", "text": "Hi Bob!", "category": "marketing"},
+            {
+                "from_": "+15557654321",
+                "to": "+15551111111",
+                "text": "Hi Alice!",
+                "category": "marketing",
+            },
+            {
+                "from_": "+15557654321",
+                "to": "+15552222222",
+                "text": "Hi Bob!",
+                "category": "marketing",
+            },
         ]
     )
     for msg in batch.data:
         print(msg.id, msg.status)
 
 
-async def _ex_90() -> None:
+async def _ex_91() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -610,71 +627,231 @@ async def _ex_90() -> None:
     )
 
 
-async def _ex_91() -> None:
+async def _ex_92() -> None:
+    stats = client.sms.stats.by_carrier(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.carrier, row.delivery)
+
+
+async def _ex_93() -> None:
+    stats = client.sms.stats.by_category(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.category, row.delivery)
+
+
+async def _ex_94() -> None:
+    stats = client.sms.stats.by_country(from_="2026-05-01", to="2026-05-31", sort="delivery_rate")
+    for row in stats.data or []:
+        print(row.country, row.delivery)
+
+
+async def _ex_95() -> None:
+    stats = client.sms.stats.by_error_code(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        # The same value as the error_code filter on client.sms.list.
+        print(row.error_code, row.delivery)
+
+
+async def _ex_96() -> None:
+    stats = client.sms.stats.by_originator(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.originator, row.delivery)
+
+
+async def _ex_97() -> None:
+    stats = client.sms.stats.by_status(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.status, row.count)
+
+
+async def _ex_98() -> None:
+    stats = client.sms.stats.by_tag(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        # A message carrying several tags counts once under each, so rows do not
+        # sum to the period total.
+        print(row.tag, row.delivery)
+
+
+async def _ex_99() -> None:
+    stats = client.sms.stats.daily(from_="2026-05-01", to="2026-05-31")
+    for point in stats.data or []:
+        print(point.bucket, point.delivery)
+
+
+async def _ex_100() -> None:
+    stats = client.sms.stats.hourly(from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z")
+    for point in stats.data or []:
+        print(point.bucket, point.delivery)
+
+
+async def _ex_101() -> None:
+    stats = client.sms.stats.inbound.by_country(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.country, row.received)
+
+
+async def _ex_102() -> None:
+    stats = client.sms.stats.inbound.by_number(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.number, row.received)
+
+
+async def _ex_103() -> None:
+    stats = client.sms.stats.inbound.by_operator(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        # Messages whose operator the carrier did not report are excluded, so these
+        # rows can sum to less than the inbound summary for the same period.
+        print(row.mcc_mnc, row.received)
+
+
+async def _ex_104() -> None:
+    stats = client.sms.stats.inbound.daily(from_="2026-05-01", to="2026-05-31")
+    for point in stats.data or []:
+        print(point.bucket, point.received)
+
+
+async def _ex_105() -> None:
+    stats = client.sms.stats.inbound.hourly(
+        from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z"
+    )
+    for point in stats.data or []:
+        print(point.bucket, point.received)
+
+
+async def _ex_106() -> None:
+    summary = client.sms.stats.inbound.summary(from_="2026-05-01", to="2026-05-31")
+    print(summary.received)
+
+
+async def _ex_107() -> None:
+    summary = client.sms.stats.summary(from_="2026-05-01", to="2026-05-31")
+    print(summary.delivery, summary.latency)
+
+
+async def _ex_108() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_92() -> None:
+async def _ex_109() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.slug)
 
 
-async def _ex_93() -> None:
+async def _ex_110() -> None:
+    rule = client.sms_keyword_rules.create(
+        operation="stop",
+        country="NL",
+        reply="You are unsubscribed from MyBrand. Reply START to resume.",
+    )
+    # effective_keywords is Bird's set plus any of your own.
+    print(rule.id, rule.effective_keywords)
+
+
+async def _ex_111() -> None:
+    client.sms_keyword_rules.delete("skr_abc123")
+
+
+async def _ex_112() -> None:
+    rule = client.sms_keyword_rules.get("skr_abc123")
+    print(rule.operation, rule.reply)
+
+
+async def _ex_113() -> None:
+    rules = client.sms_keyword_rules.list(country="NL")
+    for rule in rules.data:
+        print(rule.operation, rule.keywords)
+
+
+async def _ex_114() -> None:
+    # Omitting keywords leaves the set alone; an empty list clears your additions
+    # back to Bird's.
+    rule = client.sms_keyword_rules.update(
+        "skr_abc123", reply="You are unsubscribed. Reply START to resume."
+    )
+    print(rule.reply)
+
+
+async def _ex_115() -> None:
+    # A suppression covers one sender and one subscriber, so stopping every sender
+    # means one call per sender.
+    suppression = client.sms_suppressions.add(
+        destination="+15550001234", originator="+15557654321"
+    )
+    print(suppression.id)
+
+
+async def _ex_116() -> None:
+    suppression = client.sms_suppressions.get("sup_abc123")
+    print(suppression.reason, suppression.blocking)
+
+
+async def _ex_117() -> None:
+    for suppression in client.sms_suppressions.list():
+        print(suppression.originator, suppression.destination, suppression.reason)
+
+
+async def _ex_118() -> None:
+    # Only a `manual` suppression can be ended: a subscriber's own stop keyword and
+    # a carrier's opt-out are refused.
+    client.sms_suppressions.remove("sup_abc123")
+
+
+async def _ex_119() -> None:
     result = client.verify.verifications.check(
         to={"phone_number": "+15551234567"}, code="123456"
     )
     print(result.success)
 
 
-async def _ex_94() -> None:
+async def _ex_120() -> None:
     verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
     print(verification.id, verification.status)
 
 
-async def _ex_95() -> None:
+async def _ex_121() -> None:
     verification = client.verify.verifications.next_channel(
         to={"phone_number": "+15551234567"}
     )
     print(verification.last_channel)
 
 
-async def _ex_96() -> None:
+async def _ex_122() -> None:
     call = client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
     # A call still ringing or connected carries no economics yet.
     print(call.status, call.duration_ms, call.cost)
 
 
-async def _ex_97() -> None:
+async def _ex_123() -> None:
     for call in client.voice.list(status=["ringing", "in_progress"]):
         print(call.id, call.status)
 
 
-async def _ex_98() -> None:
+async def _ex_124() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_99() -> None:
+async def _ex_125() -> None:
     msg = client.whatsapp.get("wa_abc123")
     print(msg.id, msg.status)
 
 
-async def _ex_100() -> None:
+async def _ex_126() -> None:
     for msg in client.whatsapp.list(status=["delivered"]):
         print(msg.id, msg.status)
 
 
-async def _ex_101() -> None:
+async def _ex_127() -> None:
     events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_102() -> None:
+async def _ex_128() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",

@@ -49,7 +49,7 @@ class Voice(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[VoiceCall]:
-        """List the workspace's calls, newest first. Filter to `ringing`/`in_progress` for the calls in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-call records: for rates and totals over a period use voice_stats_summary rather than summing them here, and voice_get to follow one call to settlement.
+        """List the workspace's calls, newest first. Filter to `ringing`/`in_progress` for the calls in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-call records and do not include aggregate rates or totals. Use `voice.get` to follow one call to settlement.
 
         ```python
         for call in client.voice.list(status=["ringing", "in_progress"]):
@@ -78,7 +78,7 @@ class Voice(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceCall:
-        """Fetch one call by id, at any point in its lifecycle. A call still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and this same id then answers with the settled record. Poll here to watch one known call; use voice_list to find calls in the first place. When a call was refused, `rejection_reason` names the gate that turned it away.
+        """Fetch one call by ID, at any point in its lifecycle. A call still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known call; use `voice.list` to find calls in the first place. When a call was refused, `rejection_reason` names the gate that turned it away.
 
         ```python
         call = client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
@@ -112,7 +112,7 @@ class AsyncVoice(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[VoiceCall]:
-        """List the workspace's calls, newest first. Filter to `ringing`/`in_progress` for the calls in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-call records: for rates and totals over a period use voice_stats_summary rather than summing them here, and voice_get to follow one call to settlement.
+        """List the workspace's calls, newest first. Filter to `ringing`/`in_progress` for the calls in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-call records and do not include aggregate rates or totals. Use `voice.get` to follow one call to settlement.
 
         ```python
         async for call in client.voice.list(status=["ringing", "in_progress"]):
@@ -141,7 +141,7 @@ class AsyncVoice(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceCall:
-        """Fetch one call by id, at any point in its lifecycle. A call still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and this same id then answers with the settled record. Poll here to watch one known call; use voice_list to find calls in the first place. When a call was refused, `rejection_reason` names the gate that turned it away.
+        """Fetch one call by ID, at any point in its lifecycle. A call still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known call; use `voice.list` to find calls in the first place. When a call was refused, `rejection_reason` names the gate that turned it away.
 
         ```python
         call = await client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")

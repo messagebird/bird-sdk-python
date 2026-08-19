@@ -30,7 +30,7 @@ class SmsTemplates(Resource):
         language: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSTemplateList:
-        """List the SMS templates available to your workspace, including Bird's built-in templates. Filter by scope, category, or language. The catalogue is small and returned in full; this list is not paginated. Use sms_templates_get to read one template's variables before sending with it.
+        """List the SMS templates available to your workspace, including our built-in templates. Filter by scope, category, or language. The catalog is small and returned in full; this list is not paginated. Use `sms_templates.get` to read one template's variables before sending with it.
 
         ```python
         templates = client.sms_templates.list(scope="system")
@@ -55,7 +55,7 @@ class SmsTemplates(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSTemplate:
-        """Get one SMS template by its slug or id, including its body and the variables it expects. Fetch it before sms_send to see which parameter keys a template send requires.
+        """Get one SMS template by its slug or ID, including its body and the variables it expects. Fetch it before `sms.send` to see which parameter keys a template send requires.
 
         ```python
         template = client.sms_templates.get("bird_otp_verification")
@@ -79,7 +79,7 @@ class AsyncSmsTemplates(AsyncResource):
         language: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSTemplateList:
-        """List the SMS templates available to your workspace, including Bird's built-in templates. Filter by scope, category, or language. The catalogue is small and returned in full; this list is not paginated. Use sms_templates_get to read one template's variables before sending with it.
+        """List the SMS templates available to your workspace, including our built-in templates. Filter by scope, category, or language. The catalog is small and returned in full; this list is not paginated. Use `sms_templates.get` to read one template's variables before sending with it.
 
         ```python
         templates = await client.sms_templates.list(scope="system")
@@ -104,7 +104,7 @@ class AsyncSmsTemplates(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSTemplate:
-        """Get one SMS template by its slug or id, including its body and the variables it expects. Fetch it before sms_send to see which parameter keys a template send requires.
+        """Get one SMS template by its slug or ID, including its body and the variables it expects. Fetch it before `sms.send` to see which parameter keys a template send requires.
 
         ```python
         template = await client.sms_templates.get("bird_otp_verification")

@@ -16,7 +16,7 @@ class ErrorDetail(BaseModel):
     param: Annotated[
         str,
         Field(
-            description='Dotted field path (e.g. "to[0].email", "subject", ".").',
+            description="Dotted field path, such as `to[0].email`, `subject`, or `.`.",
             min_length=1,
         ),
     ]
@@ -32,7 +32,7 @@ class NextAction(BaseModel):
     kind: Annotated[
         str,
         Field(
-            description="What you do about this step. `operation` means call the operation named in `operation`, then read again. `external` means act somewhere this API does not reach, then read again. `wait` means nothing is asked of you, so read again later. `terminal` means nothing you do resolves this, so stop retrying. Tolerate a value you do not recognize: show the `description` and offer no action.\n",
+            description="What you do about this step.\n\n- `operation`: call the operation named in `operation`, then\n  read again.\n- `external`: act somewhere this API does not reach, then read\n  again.\n- `wait`: nothing is asked of you, so read again later.\n- `terminal`: nothing you do resolves this, so stop retrying.\n\nTolerate a value you do not recognize: show the `description` and\noffer no action.\n",
             min_length=1,
         ),
     ]
@@ -62,36 +62,6 @@ class NextAction(BaseModel):
             description="A URL to open. Present only when `kind` is `external`, and only when the step has one. An external step whose `description` says to go and do something with no URL to open is normal.\n"
         ),
     ] = None
-
-
-class UnmetGate(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    slug: Annotated[
-        str,
-        Field(
-            description="Stable identifier for the verification requirement.",
-            min_length=1,
-        ),
-    ]
-    name: Annotated[
-        str,
-        Field(
-            description="Human-readable name of the verification requirement.",
-            min_length=1,
-        ),
-    ]
-    status: Annotated[
-        str,
-        Field(
-            description="The requirement's current state — for example, not yet started, in review, or previously revoked.",
-            min_length=1,
-        ),
-    ]
-    remediation_kind: Annotated[
-        str, Field(description="How to resolve this requirement.", min_length=1)
-    ]
 
 
 class Type(str, Enum):
@@ -159,14 +129,14 @@ class ErrorBody(BaseModel):
     request_id: Annotated[
         str,
         Field(
-            description="Request correlation ID. Also returned as the X-Request-Id response header.",
+            description="Request correlation ID for support and troubleshooting. Also returned in the `X-Request-Id` response header.",
             min_length=1,
         ),
     ]
     vendor_code: Annotated[
         str | None,
         Field(
-            description="Verbatim error code returned by a downstream system (for example, an SMTP response code from a recipient's mail server, or a payment-provider decline code). Present only when Bird is surfacing a code from an external system that the caller may want to act on directly.\n",
+            description="Verbatim error code from an external system, such as an SMTP response code or a payment decline code. Present only when the code may help you resolve the error.\n",
             min_length=1,
         ),
     ] = None
@@ -189,12 +159,6 @@ class ErrorBody(BaseModel):
             description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.\n"
         ),
     ] = None
-    unmet_gates: Annotated[
-        list[UnmetGate] | None,
-        Field(
-            description="The verification requirements blocking this action, each with the flow that resolves it. Present only when an action is blocked pending verification."
-        ),
-    ] = None
 
 
 class Error(BaseModel):
@@ -211,19 +175,19 @@ class FieldListEnvelope(BaseModel):
     next_cursor: Annotated[
         str | None,
         Field(
-            description="Cursor for the next page. Pass back as `starting_after` to advance forward. Null when no next page exists."
+            description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists."
         ),
     ]
     prev_cursor: Annotated[
         str | None,
         Field(
-            description="Cursor for the previous page. Pass back as `ending_before` to step backward. Null when no previous page exists."
+            description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists."
         ),
     ]
     refresh_cursor: Annotated[
         str | None,
         Field(
-            description="Refresh anchor. Pass back as `ending_before` later to fetch items that have appeared since this response. Non-null whenever `data` is non-empty; null only on an empty page. Distinct from `prev_cursor`."
+            description="Refresh anchor. Pass back as `ending_before` later to fetch items that have appeared since this response. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`."
         ),
     ]
 
@@ -235,7 +199,7 @@ class FieldListEnvelopeWithTotal(FieldListEnvelope):
     total: Annotated[
         int | None,
         Field(
-            description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise null.",
+            description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
             ge=0,
         ),
     ] = None
@@ -277,7 +241,7 @@ class RealtimeChannelName(RootModel[str]):
     root: Annotated[
         str,
         Field(
-            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels, or `private-encrypted-` for channels whose payloads are end-to-end encrypted with a key only you hold.",
             examples=["orders-42"],
             max_length=164,
             min_length=1,
@@ -307,7 +271,7 @@ class RealtimePublish(BaseModel):
     channels: Annotated[
         list[RealtimeChannelName],
         Field(
-            description="The channels to deliver the event to (up to 100 per call). Prefix with `private-` or `presence-` for authenticated channels.\n",
+            description="The channels to deliver the event to (up to 100 per call). Prefix with `private-` or `presence-` for authenticated channels. A `private-encrypted-` channel must be the only channel in its publish: each encrypted channel has its own key, so a fan-out would hand the other channels unreadable ciphertext.\n",
             examples=[["orders", "orders-42"]],
             max_length=100,
             min_length=1,
@@ -316,7 +280,7 @@ class RealtimePublish(BaseModel):
     data: Annotated[
         Any | None,
         Field(
-            description="Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized."
+            description="Arbitrary JSON payload delivered as the event data: an object, array, or scalar. Cap: 10 KB serialized."
         ),
     ] = None
     exclude_connection_id: Annotated[
@@ -330,7 +294,7 @@ class RealtimePublish(BaseModel):
     include: Annotated[
         list[RealtimeChannelInclude] | None,
         Field(
-            description="Per-channel attributes to return alongside the publish, reflecting each channel's state at publish time (same semantics and validation errors as on the channel endpoints: `member_count` is presence-channels only, `connection_count` requires the app's connection-counting flag). Requesting attributes counts as one additional message toward usage."
+            description="Per-channel attributes to return alongside the publish, reflecting each channel's state at publish time. `member_count` is available only for presence channels. `connection_count` requires the app's connection-counting flag. Requesting attributes counts as one additional message toward usage."
         ),
     ] = None
 
@@ -342,13 +306,13 @@ class RealtimeChannelCounts(BaseModel):
     member_count: Annotated[
         int | None,
         Field(
-            description="Distinct members (presence channels only; requires include=member_count)."
+            description="Distinct members (presence channels only; requires `include=member_count`)."
         ),
     ] = None
     connection_count: Annotated[
         int | None,
         Field(
-            description="Connections currently subscribed to this channel (requires include=connection_count and the app's connection-counting flag). Channel-scoped — distinct from the app-wide peak connections metric."
+            description="Connections currently subscribed to this channel (requires `include=connection_count` and the app's connection-counting flag). Channel-scoped: distinct from the app-wide peak connections metric."
         ),
     ] = None
 
@@ -360,7 +324,7 @@ class RealtimeChannelListItem(RealtimeChannelCounts):
     name: Annotated[
         str,
         Field(
-            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels, or `private-encrypted-` for channels whose payloads are end-to-end encrypted with a key only you hold.",
             examples=["orders-42"],
             max_length=164,
             min_length=1,
@@ -397,7 +361,7 @@ class RealtimeBatchEvent(BaseModel):
     channel: Annotated[
         str,
         Field(
-            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels, or `private-encrypted-` for channels whose payloads are end-to-end encrypted with a key only you hold.",
             examples=["orders-42"],
             max_length=164,
             min_length=1,
@@ -407,7 +371,7 @@ class RealtimeBatchEvent(BaseModel):
     data: Annotated[
         Any | None,
         Field(
-            description="Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized."
+            description="Arbitrary JSON payload delivered as the event data: an object, array, or scalar. Cap: 10 KB serialized."
         ),
     ] = None
     exclude_connection_id: Annotated[
@@ -443,7 +407,7 @@ class RealtimeBatchPublishResultItem(RealtimeChannelCounts):
     channel: Annotated[
         str,
         Field(
-            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels.",
+            description="A Realtime channel name. Only letters, digits, and _ - = @ , . ; Prefix with `private-` or `presence-` for authenticated channels, or `private-encrypted-` for channels whose payloads are end-to-end encrypted with a key only you hold.",
             examples=["orders-42"],
             max_length=164,
             min_length=1,
@@ -490,7 +454,7 @@ class RealtimeChannelMember(BaseModel):
     member_id: Annotated[
         str,
         Field(
-            description='An app-defined member id — the identity of your application\'s end user ("member"), assigned when your auth server authorizes them. Never a Bird user. Max 128 characters, restricted to URL-safe characters because member ids appear directly in API request paths. Broader than a channel name — allows `+ : @ . _ -` etc. for real identifiers (phone numbers, emails, `member:42`), but excludes `/ ? # %` and whitespace.',
+            description="An app-defined member ID for your application's end user, assigned when your auth server authorizes them. Use up to 128 URL-safe characters because member IDs appear directly in API request paths. The value can include `+ : @ . _ -`, but not `/ ? # %` or whitespace.",
             max_length=128,
             min_length=1,
             pattern="^[A-Za-z0-9._~!$&'()*+,;=:@-]+$",
@@ -521,7 +485,7 @@ class RealtimeMemberPublish(BaseModel):
     data: Annotated[
         Any | None,
         Field(
-            description="Arbitrary JSON payload delivered as the event data — an object, array, or scalar. Cap: 10 KB serialized."
+            description="Arbitrary JSON payload delivered as the event data: an object, array, or scalar. Cap: 10 KB serialized."
         ),
     ] = None
 
@@ -931,7 +895,7 @@ class EmailTemplateSend1(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable the template's `variables` lists needs a value here. A send that leaves one out is rejected rather than delivered with a blank in it. Send values for everything in that list rather than only what you expect the language you are sending to use, because languages do not have to use the same variables and a value no language uses is simply ignored.\n\n`bird` is reserved for the values we fill in ourselves, so a send that sets it is rejected. `parameters` is capped at 16 KB once serialized.\n",
+            description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable in the template's `variables` list needs a value. A send\nthat omits one is rejected. Languages can use different variables, and a\nvalue unused by the selected language is ignored.\n\nThe API supplies values under the reserved `bird` key, so a send that sets\nit is rejected. `parameters` is capped at 16 KB once serialized.\n",
             examples=[{"animal": "otter"}],
         ),
     ] = None
@@ -972,7 +936,7 @@ class EmailTemplateSend2(BaseModel):
     parameters: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable the template's `variables` lists needs a value here. A send that leaves one out is rejected rather than delivered with a blank in it. Send values for everything in that list rather than only what you expect the language you are sending to use, because languages do not have to use the same variables and a value no language uses is simply ignored.\n\n`bird` is reserved for the values we fill in ourselves, so a send that sets it is rejected. `parameters` is capped at 16 KB once serialized.\n",
+            description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable in the template's `variables` list needs a value. A send\nthat omits one is rejected. Languages can use different variables, and a\nvalue unused by the selected language is ignored.\n\nThe API supplies values under the reserved `bird` key, so a send that sets\nit is rejected. `parameters` is capped at 16 KB once serialized.\n",
             examples=[{"animal": "otter"}],
         ),
     ] = None
@@ -994,21 +958,21 @@ class EmailAttachment(BaseModel):
     content: Annotated[
         Base64Str,
         Field(
-            description="The file's bytes, base64-encoded. What you send here counts toward the message's 20 MB limit after encoding and MIME wrapping, not at its raw size.",
+            description="Base64-encoded file bytes. The encoded value and MIME wrapping count toward the 20 MB message limit.",
             min_length=1,
         ),
     ]
     content_type: Annotated[
         str | None,
         Field(
-            description="The file's MIME type. Leave it out and we work it out from the extension on `filename`. This is what we check against the list of executable and script types we refuse.",
+            description="The file's MIME type. If omitted, the API infers it from the extension in `filename`. The API rejects executable and script types based on this value.",
             examples=["application/pdf"],
         ),
     ] = None
     content_id: Annotated[
         str | None,
         Field(
-            description='An RFC 2392 Content-ID for the file. Set it and the attachment is shown inline, so your HTML body can point at it with `<img src="cid:{content_id}"/>`. Leave it out and the file arrives as an ordinary attachment the recipient downloads.',
+            description='An RFC 2392 Content-ID for an inline file. Reference it from the HTML body with `<img src="cid:{content_id}"/>`. Omit it to send a downloadable attachment.',
             examples=["invoice-logo"],
             max_length=128,
             min_length=1,
@@ -1083,7 +1047,7 @@ class EmailMessageSendRequest(BaseModel):
     headers: Annotated[
         dict[str, str] | None,
         Field(
-            description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`. Set the message's addressing and subject through the dedicated fields (`from`, `to`, `cc`, `bcc`, `reply_to`, `subject`) rather than here, and the headers generated for you automatically (`Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path`) cannot be overridden. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends. On a `marketing` send a compliant unsubscribe header is set for you, so supplying either one there is rejected with a `422`. Header values may not contain carriage-return or line-feed characters. Up to 25 headers per send, each value up to 998 characters.\n",
+            description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`. Set the message's addressing and subject through the dedicated fields: `from`, `to`, `cc`, `bcc`, `reply_to`, and `subject`. The API automatically generates `Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path`. You cannot override these generated headers. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends. Marketing sends receive a compliant unsubscribe header, so supplying either one is rejected with a `422`. Header values may not contain carriage-return or line-feed characters. Up to 25 headers per send, each value up to 998 characters.\n",
             max_length=25,
         ),
     ] = None
@@ -1097,7 +1061,7 @@ class EmailMessageSendRequest(BaseModel):
     metadata: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Arbitrary JSON object **stored, returned on API reads, and echoed in webhook payloads**. Path-queryable in analytics (for example, filter on `metadata.order_id`) but not surfaced as a first-class dashboard filter dimension. Cap: 2 KB serialized. Use metadata for per-send context like internal IDs, foreign keys, and structured payloads you want round-tripped through events. For low-cardinality filterable labels, use `tags` instead.\n"
+            description="Arbitrary JSON object returned on API reads and included in webhook payloads. You can query its paths in analytics, such as `metadata.order_id`, but it is not a dashboard filter. The serialized object is limited to 2 KB. Use metadata for per-send context such as order IDs, customer references, and structured event data. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
     parameters: Annotated[
@@ -1142,7 +1106,7 @@ class EmailMessageSendRequest(BaseModel):
     scheduled_at: Annotated[
         str | None,
         Field(
-            description="Schedule the message to send at a future time instead of immediately. Must be at least 30 seconds and at most 30 days ahead. Outside that range the request is rejected with `422`. The message returns with status `accepted` and shows as `scheduled` on reads until it sends. Cancel it before then with the message cancel endpoint. Scheduled sends count against your plan's monthly scheduled-email allowance. Exceeding it is rejected with a `422`. A scheduled message has inline content: `scheduled_at` and `template` are mutually exclusive, and combining them is rejected with a `422`. This field is only accepted on a single send, not on a batch item.\n"
+            description="Schedule the message to send at a future time instead of immediately. Must be at least 30 seconds and at most 30 days ahead. Outside that range the request is rejected with `422`. The message returns with status `accepted` and shows as `scheduled` on reads until it sends. Cancel it before then with the message cancel endpoint. Scheduled sends count against your plan's monthly scheduled-email allowance. Exceeding it is rejected with a `422`. A scheduled message has inline content: `scheduled_at` and `template` are mutually exclusive, and combining them is rejected with a `422`. This field is accepted only on a single send. Batch items reject it.\n"
         ),
     ] = None
 
@@ -1282,7 +1246,7 @@ class AudienceRef(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="ID of the referenced audience (`adn_`-prefixed).",
+            description="ID of the referenced audience.",
             examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
@@ -1301,7 +1265,7 @@ class Contact(Timestamps):
     id: Annotated[
         str,
         Field(
-            description="ID of the contact (`con_`-prefixed), accepted by every operation that takes a `contact_id`.",
+            description="ID of the contact, accepted by every operation that takes a `contact_id`.",
             examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
@@ -1310,14 +1274,14 @@ class Contact(Timestamps):
     email: Annotated[
         str | None,
         Field(
-            description="The contact's email address, in its stored form, trimmed and lowercased before uniqueness is checked. Unique within the workspace. Null when the contact has no email address.",
+            description="The contact's email address, in its stored form, trimmed and lowercased before uniqueness is checked. Unique within the workspace. `null` when the contact has no email address.",
             max_length=254,
         ),
     ]
     phone_number: Annotated[
         str | None,
         Field(
-            description="The contact's phone number in normalized international form (a leading `+` and four to 15 digits), which may differ from the form it was supplied in. Bird normalizes formatting but does not verify the number against numbering-plan metadata. Unique within the workspace. Carriers recycle disconnected numbers, so a long-stored number can come to belong to someone else; `external_id` is the durable key for your own records. Null when the contact has no phone number.",
+            description="The contact's phone number in normalized international form: a leading `+` and four to 15 digits. We normalize formatting but do not verify the number against numbering-plan metadata. The number is unique within the workspace. Because carriers recycle disconnected numbers, use `external_id` as the durable key for your own records. `null` when the contact has no phone number.",
             max_length=16,
             min_length=5,
         ),
@@ -1346,7 +1310,7 @@ class Contact(Timestamps):
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values for this contact, available in broadcast templates as `bird.contact.<key>`. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
+            description="Custom property values for this contact, available in broadcast templates as `bird.contact.<key>`. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to `500` characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
         ),
     ] = None
     audiences: Annotated[
@@ -1401,7 +1365,7 @@ class ContactCreateRequest(BaseModel):
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values for this contact. Each key must be a property created via the contact properties API, and each value must be a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters); a null value is ignored. Unregistered or archived keys are rejected with a validation error. Total size is capped at 2 KB serialized.\n"
+            description="Custom property values for this contact. Each key must be an active contact property. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters, and a `null` value is ignored. Unregistered or archived keys return a validation error. The serialized data is limited to 2 KB."
         ),
     ] = None
 
@@ -1440,13 +1404,13 @@ class ContactUpsertRequest(BaseModel):
     match_on: Annotated[
         ContactMatchKey | None,
         Field(
-            description="Optional. Forces every entry to be matched to an existing contact by this one field, which every entry must then carry. When omitted, each entry is matched automatically against every identifier it supplies: no match creates a contact, one match updates it, and an entry whose identifiers belong to more than one contact fails with an error naming each.\n"
+            description="Optional field used to match every entry to an existing contact. Every entry must include this field when set. When omitted, each entry is matched against all identifiers it supplies. No match creates a contact, one match updates it, and identifiers that match multiple contacts return an error naming each contact."
         ),
     ] = None
     data_mode: Annotated[
         DataMode | None,
         Field(
-            description="How a supplied `data` object is applied to an existing contact. `merge` (the default) merges the supplied keys onto the contact's stored custom values, and a key with a `null` value deletes that one key. `replace` overwrites the whole stored `data` map with the supplied one. In both modes a contact that omits `data` keeps its stored values unchanged, so an import that touches one attribute never wipes the others.\n"
+            description="How a supplied `data` object is applied to an existing contact. The default `merge` mode adds the supplied keys to the contact's stored custom values. A key with a `null` value deletes that key. The `replace` mode overwrites the whole stored `data` map with the supplied map. In both modes a contact that omits `data` keeps its stored values unchanged, so an import that touches one attribute never wipes the others.\n"
         ),
     ] = "merge"
 
@@ -1458,13 +1422,13 @@ class ContactUpsertEntry(BaseModel):
     email: Annotated[
         str | None,
         Field(
-            description="Email address this entry carried, trimmed and lowercased. Null when the entry carried none."
+            description="Email address this entry carried, trimmed and lowercased. `null` when the entry carried none."
         ),
     ]
     phone_number: Annotated[
         str | None,
         Field(
-            description="Phone number this entry carried, in its normalized international form. Null when the entry carried none. A row rejected for an invalid phone echoes the value as sent, trimmed, since no normalized form exists."
+            description="Phone number this entry carried, in its normalized international form. `null` when the entry carried none. A row rejected for an invalid phone echoes the value as sent, trimmed, since no normalized form exists."
         ),
     ]
     external_id: Annotated[
@@ -1496,7 +1460,7 @@ class ContactUpsertError(BaseModel):
     code: Annotated[
         str,
         Field(
-            description="The specific error code for this entry, from the same catalog as the top-level error `code`: the discriminator within a category. `E04058` (the entry matched two different contacts, a human must decide) and `E04055` (the phone belongs to another contact, retry with different data) are both `conflict_error`; the code tells a sync which one it hit.",
+            description="Specific error code for this entry, from the same catalog as the top-level error `code`. `E04058` means the entry matched two contacts and requires review. `E04055` means the phone number belongs to another contact and you must retry with different data. Both are `conflict_error` errors; the code distinguishes them.",
             min_length=6,
             pattern="^E\\d{5}$",
         ),
@@ -1524,13 +1488,13 @@ class ContactUpsertResultItem(BaseModel):
     matched_on: Annotated[
         ContactMatchedOn,
         Field(
-            description="Which identifier matched this entry to an existing contact. Null when the entry created a new contact."
+            description="Which identifier matched this entry to an existing contact. `null` when the entry created a new contact."
         ),
     ]
     status: Annotated[
         Status1,
         Field(
-            description="What happened to this contact. `created` means a new contact was created for the address; `updated` means an existing contact with the address was updated; `failed` means the entry was rejected and `error` explains why. A failed entry does not affect the other entries in the request."
+            description="What happened to this contact.\n\n- `created`: a new contact was created for the address.\n- `updated`: an existing contact with the address was updated.\n- `failed`: the entry was rejected and `error` explains why. A failed entry\n  does not affect the other entries in the request.\n"
         ),
     ]
     contact_id: Annotated[
@@ -1565,41 +1529,42 @@ class ContactUpdateRequest(BaseModel):
     email: Annotated[
         str | None,
         Field(
-            description="New email address for the contact. Trimmed and lowercased before it is stored and checked for uniqueness. Must not be in use by another contact in the workspace. Omit to keep the current address; set to null to remove it, as long as the contact keeps at least one identifier.",
+            description="New email address for the contact. Trimmed and lowercased before it is stored and checked for uniqueness. Must not be in use by another contact in the workspace. Omit to keep the current address; set to `null` to remove it, as long as the contact keeps at least one identifier.",
             max_length=254,
         ),
     ] = None
     phone_number: Annotated[
         str | None,
         Field(
-            description="New phone number for the contact, in E.164 format with the leading `+` and country code. Spaces and punctuation are accepted and stripped. Stored in its canonical form, which may differ from what you send, and unique within the workspace. Omit to keep the current number; set to null to remove it, as long as the contact keeps at least one identifier. An empty string behaves as null.",
+            description="New phone number for the contact, in E.164 format with the leading `+` and country code. Spaces and punctuation are accepted and stripped. Stored in its canonical form, which may differ from what you send, and unique within the workspace. Omit to keep the current number; set to `null` to remove it, as long as the contact keeps at least one identifier. An empty string behaves as `null`.",
             max_length=32,
         ),
     ] = None
     first_name: Annotated[
         str | None,
         Field(
-            description="The contact's first name. Set to null to clear.",
+            description="The contact's first name. Set to `null` to clear.",
             max_length=100,
         ),
     ] = None
     last_name: Annotated[
         str | None,
         Field(
-            description="The contact's last name. Set to null to clear.", max_length=100
+            description="The contact's last name. Set to `null` to clear.",
+            max_length=100,
         ),
     ] = None
     external_id: Annotated[
         str | None,
         Field(
-            description="Your own identifier for this contact. Unique within the workspace when set. Set to null to clear.",
+            description="Your own identifier for this contact. Unique within the workspace when set. Set to `null` to clear.",
             max_length=254,
         ),
     ] = None
     data: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Custom property values to change, merged into the contact's existing data. Keys you supply are set, keys set to null are removed, and keys you omit are left unchanged. Each key must be a property created via the contact properties API, and each value must be a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to 500 characters); writing an unregistered or archived key returns a validation error. The merged result is capped at 2 KB serialized.\n"
+            description="Custom property values to merge into the contact's existing data. Supplied keys are set, keys with a `null` value are removed, and omitted keys remain unchanged. Each key must be an active contact property. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters. An unregistered or archived key returns a validation error. The serialized result is limited to 2 KB."
         ),
     ] = None
 
@@ -1615,7 +1580,7 @@ class Audience(Timestamps):
     id: Annotated[
         str,
         Field(
-            description="ID of the audience (`adn_`-prefixed), accepted by every operation that takes an `audience_id`.",
+            description="ID of the audience, accepted by every operation that takes an `audience_id`.",
             examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
@@ -1664,7 +1629,7 @@ class ContactProperty(Timestamps):
     id: Annotated[
         str,
         Field(
-            description="ID of the property (`prp_`-prefixed), accepted by every operation that takes a `property_id`.",
+            description="ID of the property, accepted by every operation that takes a `property_id`.",
             examples=["prp_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^prp_[0-9a-hjkmnp-tv-z]{26}$",
@@ -1683,7 +1648,7 @@ class ContactProperty(Timestamps):
     fallback_value: Annotated[
         Any | None,
         Field(
-            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to 500 characters), or null when no fallback is set.",
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to `500` characters), or `null` when no fallback is set.",
             max_length=500,
         ),
     ] = None
@@ -1723,7 +1688,7 @@ class ContactPropertyCreateRequest(BaseModel):
     fallback_value: Annotated[
         Any | None,
         Field(
-            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to 500 characters), or null for no fallback; a value of another type returns a validation error.",
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to `500` characters), or `null` for no fallback; a value of another type returns a validation error.",
             max_length=500,
         ),
     ] = None
@@ -1736,7 +1701,7 @@ class ContactPropertyUpdateRequest(BaseModel):
     fallback_value: Annotated[
         Any | None,
         Field(
-            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to 500 characters); a value of another type returns a validation error. Set to null to remove the fallback.",
+            description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to `500` characters); a value of another type returns a validation error. Set to `null` to remove the fallback.",
             max_length=500,
         ),
     ] = None
@@ -1859,6 +1824,17 @@ class SMSMessageCategory(str, Enum):
     service = "service"
 
 
+class SMSMessageID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
 class SMSMessageStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
@@ -1891,7 +1867,7 @@ class SMSSegments(BaseModel):
     encoding: Annotated[
         Encoding,
         Field(
-            description="Encoding used for the body. `GSM_7BIT` fits 160 characters in a single segment (153 per part when multi-segment); `UCS2` is used when the body contains any character outside the GSM 03.38 alphabet (emoji, CJK, some accented characters) and fits 70 characters in a single segment (67 per part when multi-segment).\n"
+            description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 characters in one segment, or 153 per part in a multi-segment message. The `UCS2` encoding applies when the body contains a character outside the GSM 03.38 alphabet, including emoji, CJK, and some accented characters. It fits 70 characters in one segment, or 67 per part in a multi-segment message.\n"
         ),
     ]
     characters: Annotated[
@@ -1927,14 +1903,14 @@ class MessageCost(BaseModel):
     transaction_amount: Annotated[
         str | None,
         Field(
-            description='What Bird charged to carry the message, as a decimal string. Null when this component was not priced; `"0.00000"` when it priced at zero.\n',
+            description='What we charged to carry the message, as a decimal string. `null` when this component was not priced; `"0.00000"` when it priced at zero.\n',
             examples=["0.00790"],
         ),
     ]
     passthrough_amount: Annotated[
         str | None,
         Field(
-            description='Third-party fees Bird passes on, as a decimal string, such as US 10DLC carrier surcharges. Null when this component was not priced; `"0.00000"` when it priced at zero.\n',
+            description='Third-party fees we pass on, as a decimal string, such as US 10DLC carrier surcharges. `null` when this component was not priced; `"0.00000"` when it priced at zero.\n',
             examples=["0.00200"],
         ),
     ]
@@ -2002,7 +1978,7 @@ class SMSMessage(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="ID of the message (`sms_`-prefixed), assigned when the send is accepted. Pass it as `message_id` to the get-message endpoint.\n",
+            description="ID of the message, assigned when the send is accepted. Pass it as `message_id` to the get-message endpoint.\n",
             examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
@@ -2027,7 +2003,7 @@ class SMSMessage(BaseModel):
         str,
         Field(
             alias="from",
-            description="Where the message came from. On an outbound message this is the sender you sent it from (an E.164 number, an alphanumeric sender ID, or a short code); on an inbound one it is the phone number that sent it to you.\n",
+            description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound message, this is the phone number that sent it to you.\n",
             examples=["+15557654321"],
             min_length=1,
         ),
@@ -2035,7 +2011,7 @@ class SMSMessage(BaseModel):
     text: Annotated[
         str | None,
         Field(
-            description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, Bird just does not persist it for later reads.\n",
+            description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, but the API does not retain it for later reads.\n",
             examples=["Your order has shipped and is on its way."],
             min_length=1,
         ),
@@ -2313,7 +2289,7 @@ class SMSMessageSendRequest1(BaseModel):
         str | None,
         Field(
             alias="from",
-            description="Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n",
+            description="Sender to send from. Use an E.164 number such as `+15557654321`, or a short code of 5-6 digits. You can also use an alphanumeric sender ID of 1-11 letters, digits, spaces, dashes, or underscores. It must contain at least one letter, for example `MyBrand`. A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n",
             examples=["+15557654321"],
             min_length=1,
         ),
@@ -2321,7 +2297,7 @@ class SMSMessageSendRequest1(BaseModel):
     text: Annotated[
         str,
         Field(
-            description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n",
+            description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The cap applies to segments because GSM-7 and UCS-2 encodings differ in characters per segment.\n",
             examples=["Your verification code is 123456."],
             min_length=1,
         ),
@@ -2437,7 +2413,7 @@ class SMSMessageSendRequest2(BaseModel):
         str | None,
         Field(
             alias="from",
-            description="Sender to send from: an E.164 number (`+15557654321`), an alphanumeric sender ID (1-11 letters, digits, spaces, dashes, or underscores, at least one of them a letter, for example `MyBrand`), or a short code (5-6 digits). A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n",
+            description="Sender to send from. Use an E.164 number such as `+15557654321`, or a short code of 5-6 digits. You can also use an alphanumeric sender ID of 1-11 letters, digits, spaces, dashes, or underscores. It must contain at least one letter, for example `MyBrand`. A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.\n",
             examples=["+15557654321"],
             min_length=1,
         ),
@@ -2445,7 +2421,7 @@ class SMSMessageSendRequest2(BaseModel):
     text: Annotated[
         str | None,
         Field(
-            description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The limit is on segment count, not characters, because GSM-7 and UCS-2 encodings differ in characters per segment.\n",
+            description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The cap applies to segments because GSM-7 and UCS-2 encodings differ in characters per segment.\n",
             examples=["Your verification code is 123456."],
             min_length=1,
         ),
@@ -2584,6 +2560,64 @@ class SMSMessageBatchResponse(BaseModel):
     ]
 
 
+class SMSEvent(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Unique identifier for this event, stable across repeated fetches of the message.",
+            examples=["evt_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^evt_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    type: Annotated[
+        str,
+        Field(
+            description="Lifecycle event type. The `sms.accepted` event means the API accepted the request. The `sms.sent` event means the message reached the carrier. The `sms.delivered` event confirms delivery. The `sms.undelivered`, `sms.failed`, and `sms.expired` events describe delivery failures. The `sms.rejected` event means the message was refused before carrier handoff. This is an open enum. Accept unrecognized values.\n",
+            examples=["sms.delivered"],
+            min_length=1,
+        ),
+    ]
+    occurred_at: Annotated[
+        str, Field(description="When this event occurred.", min_length=1)
+    ]
+    carrier: Annotated[
+        str | None,
+        Field(
+            description="Carrier that handled the message. Present on `sms.sent` and `sms.delivered` once identified, absent otherwise.",
+            examples=["Verizon"],
+        ),
+    ] = None
+    mcc_mnc: Annotated[
+        str | None,
+        Field(
+            description="Mobile country code and mobile network code of the carrier. Present on `sms.sent` and `sms.delivered` once identified, absent otherwise.",
+            examples=["311480"],
+        ),
+    ] = None
+    error: Annotated[
+        SMSError | None,
+        Field(
+            description="Failure detail. Present only on `sms.failed`, `sms.undelivered`, `sms.rejected`, and `sms.expired` events."
+        ),
+    ] = None
+
+
+class SMSEventList(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: Annotated[
+        list[SMSEvent],
+        Field(
+            description="Timeline events for this SMS message, in chronological order. The bounded timeline is returned in full and is not paginated."
+        ),
+    ]
+
+
 class TemplateScope(str, Enum):
     system = "system"
     workspace = "workspace"
@@ -2618,7 +2652,7 @@ class TemplateVariable(BaseModel):
     required: Annotated[
         bool,
         Field(
-            description="Whether the slot must be supplied when sending. On SMS and WhatsApp a missing required value is rejected with a `422`. On email it is advisory: a missing value renders as empty rather than rejecting the send.\n"
+            description="Whether the send must supply this variable. Omitting a required value returns `422` on email, SMS, and WhatsApp sends.\n"
         ),
     ]
     constraint: Annotated[
@@ -2683,7 +2717,7 @@ class SMSTemplate(BaseModel):
     slug: Annotated[
         str,
         Field(
-            description="The template's permanent handle. Pass it (or the id) as the template reference when sending. Handles beginning with `bird_` are reserved for Bird's built-in templates.\n",
+            description="The template's permanent handle. Pass it (or the id) as the template reference when sending. Handles beginning with `bird_` are reserved for our built-in templates.\n",
             examples=["bird_otp_verification"],
             max_length=63,
             min_length=1,
@@ -2792,7 +2826,7 @@ class SMSTemplate(BaseModel):
     last_submitted_at: Annotated[
         str | None,
         Field(
-            description="When this template was last submitted. Null for a built-in `system` template: Bird ships it ready to send, so there is nothing submitted to date.\n"
+            description="When this template was last submitted. Null for a built-in `system` template, which is already available to send.\n"
         ),
     ]
     created_at: Annotated[
@@ -2816,9 +2850,648 @@ class SMSTemplateList(BaseModel):
     data: Annotated[
         list[SMSTemplate],
         Field(
-            description="The templates available to your workspace. The catalogue is small and returned in full; this list is not paginated."
+            description="The templates available to your workspace. The catalog is returned in full and is not paginated."
         ),
     ]
+
+
+class SMSSuppressionReasonFilter(str, Enum):
+    keyword_stop = "keyword_stop"
+    carrier_opted_out = "carrier_opted_out"
+    manual = "manual"
+
+
+class SMSSuppressionReason(str, Enum):
+    keyword_stop = "keyword_stop"
+    carrier_opted_out = "carrier_opted_out"
+    manual = "manual"
+
+
+class SMSSuppressionOrigin(str, Enum):
+    keyword = "keyword"
+    dlr_event = "dlr_event"
+    api_key = "api_key"
+    user = "user"
+
+
+class SMSSuppressionCoverage(str, Enum):
+    all = "all"
+    non_transactional = "non_transactional"
+
+
+class SMSSuppressionEndReason(str, Enum):
+    keyword_start = "keyword_start"
+    api_key = "api_key"
+    user = "user"
+    carrier_cleared = "carrier_cleared"
+
+
+class SMSSuppression(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            examples=["ssu_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^ssu_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    destination: Annotated[
+        str,
+        Field(
+            description="The subscriber, in E.164 format.",
+            examples=["+15550001234"],
+            max_length=20,
+            min_length=2,
+        ),
+    ]
+    originator: Annotated[
+        str,
+        Field(
+            description="The sender this stops. A suppression covers one sender, so your other senders still reach this subscriber. Opting out of one of your programs does not opt out of the others.\n",
+            examples=["+15557654321"],
+            max_length=20,
+            min_length=1,
+        ),
+    ]
+    reason: Annotated[
+        Union[SMSSuppressionReason, str], Field(union_mode="left_to_right")
+    ]
+    origin: Annotated[
+        Union[SMSSuppressionOrigin, str], Field(union_mode="left_to_right")
+    ]
+    applies_to: Annotated[
+        Union[SMSSuppressionCoverage, str], Field(union_mode="left_to_right")
+    ]
+    blocking: Annotated[
+        bool,
+        Field(
+            description="Whether this is stopping messages right now. Always true in a list, which carries only the suppressions in force; false when you fetch one by ID that has since ended, which is also when `ended_at` is set.\n"
+        ),
+    ]
+    source_sms_id: Annotated[
+        SMSMessageID | None,
+        Field(
+            description="The inbound message the subscriber opted out with, or the outbound message whose delivery report reported the opt-out. Null when neither applies.\n"
+        ),
+    ] = None
+    effective_at: Annotated[
+        str,
+        Field(
+            description="When the subscriber opted out, as reported by whoever reported it. This is what orders one subscriber's history, and it can be earlier than `created_at` when a message reached us late.\n",
+            min_length=1,
+        ),
+    ]
+    ended_at: Annotated[
+        str | None,
+        Field(
+            description="When this stopped applying. Null while it is still stopping messages."
+        ),
+    ] = None
+    ended_reason: Annotated[
+        Annotated[
+            Union[SMSSuppressionEndReason, str], Field(union_mode="left_to_right")
+        ]
+        | None,
+        Field(description="What ended it. Null while it is still stopping messages."),
+    ] = None
+    ended_effective_at: Annotated[
+        str | None,
+        Field(
+            description="When the subscriber opted back in, as reported. Null while it is still stopping messages."
+        ),
+    ] = None
+    source_end_sms_id: Annotated[
+        SMSMessageID | None,
+        Field(
+            description="The inbound message the subscriber opted back in with, when there was one. Null while it is still stopping messages, and when something other than a start keyword ended it.\n"
+        ),
+    ] = None
+    created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
+    last_asserted_at: Annotated[
+        str,
+        Field(
+            description="When we last recorded the subscriber opting out of this sender. Later than `created_at` when they texted a stop keyword again while already suppressed, which adds no new record but does earn another confirmation reply.\n",
+            min_length=1,
+        ),
+    ]
+
+
+class SMSSuppressionList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: Annotated[
+        list[SMSSuppression],
+        Field(description="Page of suppressions, most recent opt-out first."),
+    ]
+
+
+class SMSSuppressionCreate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    destination: Annotated[
+        str,
+        Field(
+            description="The subscriber to stop messaging, in E.164 format.",
+            examples=["+15550001234"],
+            max_length=20,
+            min_length=2,
+        ),
+    ]
+    originator: Annotated[
+        str,
+        Field(
+            description="The sender to stop. Your other senders keep reaching this subscriber, so stopping every one of them means one call per sender.\n",
+            examples=["+15557654321"],
+            max_length=20,
+            min_length=1,
+        ),
+    ]
+
+
+class SMSKeywordOperation(str, Enum):
+    stop = "stop"
+    start = "start"
+    help = "help"
+    custom = "custom"
+
+
+class SMSKeywordRuleScope(str, Enum):
+    system = "system"
+    workspace = "workspace"
+
+
+class Keyword(RootModel[str]):
+    root: Annotated[str, Field(min_length=1)]
+
+
+class EffectiveKeyword(RootModel[str]):
+    root: Annotated[str, Field(min_length=1)]
+
+
+class SMSKeywordRule(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Identifier of a keyword rule. An `sks_` id is one of Bird's defaults, which you can read but not change; an `skw_` id is a rule your workspace created.\n",
+            examples=["skw_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^(sks|skw)_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    scope: SMSKeywordRuleScope
+    operation: Annotated[
+        Union[SMSKeywordOperation, str], Field(union_mode="left_to_right")
+    ]
+    country: Annotated[
+        str | None,
+        Field(
+            description="The country the rule applies in, as an ISO 3166-1 alpha-2 code. A rule for `NL` covers messages received on your Dutch numbers, and messages from a subscriber whose own number is Dutch whichever of your numbers they text. Rules for the country a message arrives in always outrank rules for the country its sender is in; within each, your rule wins over Bird's keywords for that country. `number` confines a rule to one number. Null means the rule applies worldwide, which is allowed for `custom` operations only.\n",
+            examples=["NL"],
+            max_length=2,
+            min_length=2,
+        ),
+    ] = None
+    language: Annotated[
+        str | None,
+        Field(
+            description="The language this rule covers, in countries where Bird ships keywords in more than one. Canada has separate English and French rules, so a Canadian rule names which one it replaces and the other keeps Bird's reply. Null in countries with a single set.\n",
+            examples=["fr"],
+            min_length=2,
+        ),
+    ] = None
+    number: Annotated[
+        str | None,
+        Field(
+            description="Narrows the rule to one of your numbers in E.164 format, instead of every number you hold in the country. Null means it applies to all of them.\n",
+            examples=["+18005551234"],
+            min_length=1,
+        ),
+    ] = None
+    keywords: Annotated[
+        list[Keyword],
+        Field(
+            description="The keywords this rule adds. For one of Bird's defaults this is the full set Bird ships. For a rule you created it is only what you added on top. It never restates or removes Bird's keywords, so `effective_keywords` is what actually matches.\n",
+            examples=[["pizza", "menu"]],
+        ),
+    ]
+    effective_keywords: Annotated[
+        list[EffectiveKeyword],
+        Field(
+            description="Every keyword that matches this rule: Bird's keywords for the same operation, country and language, plus the ones you added. This is what an inbound message is compared against. Keywords Bird adds later join it without you changing anything.\n",
+            examples=[["stop", "stoppen", "afmelden"]],
+        ),
+    ]
+    reply: Annotated[
+        str | None,
+        Field(
+            description="The message sent back when one of the keywords matches, except on a `confirm` rule, which never sends one. Null when the auto-reply is switched off, which `reply_disabled_at` distinguishes from a rule that has not been given one.\n",
+            examples=[
+                "You have been unsubscribed and will receive no further messages."
+            ],
+            min_length=1,
+        ),
+    ] = None
+    reply_suffix: Annotated[
+        str | None,
+        Field(
+            description="Text appended to your reply that you cannot change: the rates and opt-out wording carriers require on a help response. Your reply is sent in front of it, and both count against the length a single message allows. Null when the operation carries none.\n",
+            examples=["Msg&data rates may apply. Reply STOP to unsubscribe."],
+            min_length=1,
+        ),
+    ] = None
+    reply_disabled_at: Annotated[
+        str | None,
+        Field(
+            description="When the auto-reply for this rule was switched off, or null if it is on. Switching it off records that you send this reply from your own system, which is what Bird points to if a carrier asks why no reply went out.\n",
+            examples=["2026-08-12 09:00:00+00:00"],
+        ),
+    ] = None
+    mandatory: Annotated[
+        bool,
+        Field(
+            description="Whether what this operation does is fixed. When true you can change the reply but not the behavior. An opt-out keyword always unsubscribes the sender, whichever rule matched it, because carriers and regulators require it.\n",
+            examples=[True],
+        ),
+    ]
+    created_at: Annotated[
+        str,
+        Field(
+            description="When the rule was created.",
+            examples=["2026-08-12 09:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    updated_at: Annotated[
+        str,
+        Field(
+            description="When the rule was last changed. On one of Bird's defaults this is when Bird last changed the keywords or the reply for that country.",
+            examples=["2026-08-12 09:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+
+
+class SMSKeywordRuleList(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: Annotated[
+        list[SMSKeywordRule],
+        Field(
+            description="The keyword rules that apply to your workspace, Bird's defaults included. Ordered most specific first, so the first rule whose keywords match an inbound message is the one that runs. The set is small and returned in full; this list is not paginated.\n"
+        ),
+    ]
+
+
+class SMSKeywordRuleCreate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    operation: Annotated[
+        Union[SMSKeywordOperation, str], Field(union_mode="left_to_right")
+    ]
+    country: Annotated[
+        str | None,
+        Field(
+            description="The country this rule applies in, as an ISO 3166-1 alpha-2 code. It matches a message two ways: one received on any of your numbers in this country, and one sent by a subscriber whose own number is in it, wherever they text you. Rules for the country a message arrives in always outrank rules for the country its sender is in; within each, your rule wins over Bird's keywords for that country. To confine a rule to one of your numbers, set `number` instead. Required for `stop`, `start` and `help`, because those replace what Bird ships for one country and a worldwide rule would replace every country's. Omit it only for `custom`, which then applies everywhere you send. Derived from `number` when you supply an E.164 number and leave this out; a short code carries no country, so a rule for one must name it.\n",
+            examples=["NL"],
+            max_length=2,
+            min_length=2,
+        ),
+    ] = None
+    language: Annotated[
+        str | None,
+        Field(
+            description="Which language this rule replaces, in countries where Bird ships keywords in more than one. Required there and rejected elsewhere. Listing the country's rules shows whether it applies and which languages are available.\n",
+            examples=["fr"],
+            min_length=2,
+        ),
+    ] = None
+    number: Annotated[
+        str | None,
+        Field(
+            description="Narrows the rule to one number you hold, in E.164 format or as a short code. Omit to cover every number you hold in the country. The number must be one of yours and able to receive messages.\n",
+            examples=["+18005551234"],
+            min_length=1,
+        ),
+    ] = None
+    keywords: Annotated[
+        list[Keyword] | None,
+        Field(
+            description="Extra keywords to match, on top of the ones Bird already ships for this operation and country. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. You cannot remove one of Bird's keywords, and a keyword Bird has bound to another operation cannot be reused here. Required for `custom`, which inherits none.\n",
+            examples=[["pizza", "menu"]],
+        ),
+    ] = None
+    reply: Annotated[
+        str | None,
+        Field(
+            description="The message to send back when a keyword matches, except on a `confirm` rule, which never sends one whatever this is set to. Set it to null together with `confirmed_self_managed` to send nothing at all.\n",
+            examples=[
+                "You have been unsubscribed and will receive no further messages."
+            ],
+            min_length=1,
+        ),
+    ] = None
+    confirmed_self_managed: Annotated[
+        bool | None,
+        Field(
+            description="Set this with `reply: null` to confirm you send this reply from your own system, which switches Bird's auto-reply off for the rule. Required to send no reply, and rejected when a reply is given, so the two can never disagree.\n",
+            examples=[True],
+        ),
+    ] = None
+
+
+class SMSKeywordRuleUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    keywords: Annotated[
+        list[Keyword] | None,
+        Field(
+            description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.\n",
+            examples=[["pizza", "menu"]],
+        ),
+    ] = None
+    reply: Annotated[
+        str | None,
+        Field(
+            description="Replaces the message sent back when a keyword matches, except on a `confirm` rule, which never sends one whatever this is set to. Set it to null together with `confirmed_self_managed` to switch the auto-reply off. Omit to leave it unchanged.\n",
+            examples=[
+                "You have been unsubscribed and will receive no further messages."
+            ],
+            min_length=1,
+        ),
+    ] = None
+    confirmed_self_managed: Annotated[
+        bool | None,
+        Field(
+            description="Set this with `reply: null` to confirm you send this reply from your own system. Required to switch the auto-reply off, and rejected when a reply is given.\n",
+            examples=[True],
+        ),
+    ] = None
+
+
+class StatsComparePeriod(str, Enum):
+    previous_period = "previous_period"
+
+
+class SMSStatsSummaryPeriod(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    from_: Annotated[
+        str,
+        Field(
+            alias="from",
+            description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+            examples=["2026-05-01"],
+            min_length=1,
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+        ),
+    ]
+    to: Annotated[
+        str,
+        Field(
+            description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+            examples=["2026-05-25"],
+            min_length=1,
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+        ),
+    ]
+    data_as_of: Annotated[
+        str | None,
+        Field(
+            description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.\n",
+            examples=["2026-05-25 14:03:10+00:00"],
+        ),
+    ] = None
+
+
+class SMSDeliveryStats(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    accepted: Annotated[
+        int,
+        Field(
+            description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
+            examples=[14820],
+            ge=0,
+        ),
+    ]
+    sent: Annotated[
+        int,
+        Field(
+            description="Distinct messages handed off to the carrier for delivery.",
+            examples=[14810],
+            ge=0,
+        ),
+    ]
+    delivered: Annotated[
+        int,
+        Field(
+            description="Distinct messages the carrier confirmed as delivered to the handset.",
+            examples=[14720],
+            ge=0,
+        ),
+    ]
+    undelivered: Annotated[
+        int,
+        Field(
+            description="Distinct messages the carrier reported as not delivered.",
+            examples=[60],
+            ge=0,
+        ),
+    ]
+    failed: Annotated[
+        int,
+        Field(
+            description="Distinct messages that failed during sending.",
+            examples=[25],
+            ge=0,
+        ),
+    ]
+    rejected: Annotated[
+        int,
+        Field(
+            description="Distinct messages rejected before any send attempt, for example by sending policy or a message-generation failure.",
+            examples=[10],
+            ge=0,
+        ),
+    ]
+    expired: Annotated[
+        int,
+        Field(
+            description="Distinct messages that could not be delivered within their validity window and expired.",
+            examples=[5],
+            ge=0,
+        ),
+    ]
+    delivery_rate: Annotated[
+        float | None,
+        Field(
+            description="Share of accepted messages that were delivered, computed as `delivered / accepted`. Null when no messages were accepted in scope.\n",
+            examples=[0.9932],
+            ge=0.0,
+            le=1.0,
+        ),
+    ]
+    failure_rate: Annotated[
+        float | None,
+        Field(
+            description="Share of accepted messages that ultimately failed, computed as `(undelivered + failed + expired) / accepted`. Null when no messages were accepted in scope.\n",
+            examples=[0.0061],
+            ge=0.0,
+        ),
+    ]
+
+
+class SMSLatencyQuantiles(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    p50_ms: Annotated[
+        int | None,
+        Field(
+            description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+            examples=[420],
+            ge=0,
+        ),
+    ]
+    p95_ms: Annotated[
+        int | None,
+        Field(
+            description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+            examples=[1820],
+            ge=0,
+        ),
+    ]
+    p99_ms: Annotated[
+        int | None,
+        Field(
+            description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+            examples=[4920],
+            ge=0,
+        ),
+    ]
+
+
+class SMSLatencyStats(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    processing: SMSLatencyQuantiles | None = None
+    delivery: SMSLatencyQuantiles | None = None
+    total: SMSLatencyQuantiles | None = None
+
+
+class SMSStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    accepted_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+            examples=[0.508],
+        ),
+    ]
+    sent_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in sent messages (`delivery.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+            examples=[0.121],
+        ),
+    ]
+    delivered_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in delivered messages (`delivery.delivered`) versus the previous period, as a signed fraction. Null when the previous period delivered none.",
+            examples=[0.122],
+        ),
+    ]
+    undelivered_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in undelivered messages (`delivery.undelivered`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+            examples=[-0.031],
+        ),
+    ]
+    failed_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in failed messages (`delivery.failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+            examples=[-0.018],
+        ),
+    ]
+    rejected_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+            examples=[0],
+        ),
+    ]
+    expired_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in expired messages (`delivery.expired`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+            examples=[0.04],
+        ),
+    ]
+    delivery_rate_pp: Annotated[
+        float | None,
+        Field(
+            description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
+            examples=[0.004],
+            ge=-1.0,
+            le=1.0,
+        ),
+    ]
+    failure_rate_pp: Annotated[
+        float | None,
+        Field(
+            description="Signed difference between the current and previous failure-rate fractions. Multiply by 100 for percentage points. The value can fall outside `[-1, 1]` because a message can contribute to more than one failure outcome and high-volume counts are approximate. Null when either rate is undefined.\n",
+            examples=[-0.0008],
+        ),
+    ]
+
+
+class SMSStatsComparison(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="Equal-length window ending immediately before the requested start."
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    delta: SMSStatsComparisonDelta
+
+
+class SMSStatsSummary(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The window the response covers (echoed back from the request, day or hour grain), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    comparison: SMSStatsComparison | None = None
 
 
 class StatsGrain(str, Enum):
@@ -2826,9 +3499,712 @@ class StatsGrain(str, Enum):
     hour = "hour"
 
 
+class SMSStatsSeriesPeriod(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    from_: Annotated[
+        str,
+        Field(
+            alias="from",
+            description="Inclusive start of the window. A calendar day (YYYY-MM-DD) on the day grain, an RFC 3339 instant rounded to the hour on the hour grain.",
+            examples=["2026-05-01"],
+            min_length=1,
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+        ),
+    ]
+    to: Annotated[
+        str,
+        Field(
+            description="Inclusive end of the window. A calendar day (YYYY-MM-DD) on the day grain, an RFC 3339 instant rounded to the hour on the hour grain.",
+            examples=["2026-05-31"],
+            min_length=1,
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+        ),
+    ]
+    grain: StatsGrain
+    data_as_of: Annotated[
+        str | None,
+        Field(
+            description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.\n",
+            examples=["2026-05-25 14:03:10+00:00"],
+        ),
+    ] = None
+
+
+class SMSDeliveryCounts(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    accepted: Annotated[
+        int,
+        Field(
+            description="Distinct messages accepted for sending after admission checks.",
+            examples=[14820],
+            ge=0,
+        ),
+    ]
+    sent: Annotated[
+        int,
+        Field(
+            description="Distinct messages handed off to the carrier for delivery.",
+            examples=[14810],
+            ge=0,
+        ),
+    ]
+    delivered: Annotated[
+        int,
+        Field(
+            description="Distinct messages the carrier confirmed as delivered to the handset.",
+            examples=[14720],
+            ge=0,
+        ),
+    ]
+    undelivered: Annotated[
+        int,
+        Field(
+            description="Distinct messages the carrier reported as not delivered.",
+            examples=[60],
+            ge=0,
+        ),
+    ]
+    failed: Annotated[
+        int,
+        Field(
+            description="Distinct messages that failed during sending.",
+            examples=[25],
+            ge=0,
+        ),
+    ]
+    rejected: Annotated[
+        int,
+        Field(
+            description="Distinct messages rejected before any send attempt, for example by sending policy or a message-generation failure.",
+            examples=[10],
+            ge=0,
+        ),
+    ]
+    expired: Annotated[
+        int,
+        Field(
+            description="Distinct messages that could not be delivered within their validity window and expired.",
+            examples=[5],
+            ge=0,
+        ),
+    ]
+
+
+class SMSStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    bucket: Annotated[
+        str,
+        Field(
+            description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+            examples=["2026-05-25"],
+            min_length=1,
+        ),
+    ]
+    delivery: SMSDeliveryCounts
+
+
+class SMSStatsResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: SMSStatsSeriesPeriod
+    data: Annotated[
+        list[SMSStatsPoint],
+        Field(
+            description="One row per day or hour in chronological order. Buckets with no activity contain zero counts."
+        ),
+    ]
+
+
+class SMSStatsSortMetric(str, Enum):
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    undelivered = "undelivered"
+    failed = "failed"
+    rejected = "rejected"
+    expired = "expired"
+    delivery_rate = "delivery_rate"
+    failure_rate = "failure_rate"
+
+
 class StatsTrendGrain(str, Enum):
     daily = "daily"
     hourly = "hourly"
+
+
+class SMSOriginatorStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    originator: Annotated[
+        str,
+        Field(
+            description="Sender address this row aggregates, either an alphanumeric sender ID or a phone number. Matches the message `from` value.",
+            examples=["BirdSMS"],
+            min_length=1,
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[
+        list[SMSStatsPoint] | None,
+        Field(
+            description="Per-bucket lifecycle counts for this originator, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
+        ),
+    ] = None
+
+
+class SMSStatsByOriginatorResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSOriginatorStatsPoint],
+        Field(
+            description="Originator breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct originators with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            examples=[42],
+            ge=0,
+        ),
+    ]
+
+
+class SMSCountryStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    country: Annotated[
+        str,
+        Field(
+            description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code.",
+            examples=["US"],
+            min_length=1,
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[
+        list[SMSStatsPoint] | None,
+        Field(
+            description="Per-bucket lifecycle counts for this country, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
+        ),
+    ] = None
+
+
+class SMSStatsByCountryResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSCountryStatsPoint],
+        Field(
+            description="Country breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct destination countries with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            examples=[42],
+            ge=0,
+        ),
+    ]
+
+
+class SMSCategoryStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    category: Annotated[
+        str,
+        Field(
+            description="The category this row aggregates, as set at send time. `transactional` is one-to-one messaging triggered by a user action; `marketing` is bulk sending. New categories may be added over time.",
+            examples=["transactional"],
+            min_length=1,
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[
+        list[SMSStatsPoint] | None,
+        Field(
+            description="Per-bucket lifecycle counts for this category, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
+        ),
+    ] = None
+
+
+class SMSStatsByCategoryResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSCategoryStatsPoint],
+        Field(
+            description="Category breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            examples=[8],
+            ge=0,
+        ),
+    ]
+
+
+class SMSStatsLifecycleSortMetric(str, Enum):
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    undelivered = "undelivered"
+    failed = "failed"
+    rejected = "rejected"
+    expired = "expired"
+
+
+class SMSErrorCodeStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    error_code: Annotated[
+        Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")],
+        Field(
+            description="Standardized failure reason this row aggregates. Matches the `error_code` message-list filter."
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[
+        list[SMSStatsPoint] | None,
+        Field(
+            description="Per-bucket lifecycle counts for this error code, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
+        ),
+    ] = None
+
+
+class SMSStatsByErrorCodeResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSErrorCodeStatsPoint],
+        Field(
+            description="Error-code breakdown rows, ranked by the `sort` metric (default `failed`) descending. Empty when no delivery failures occurred in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            examples=[17],
+            ge=0,
+        ),
+    ]
+
+
+class SMSCarrierStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    carrier: Annotated[
+        str,
+        Field(
+            description="The delivery carrier this row aggregates, as resolved for the destination handset.",
+            examples=["Verizon"],
+            min_length=1,
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[
+        list[SMSStatsPoint] | None,
+        Field(
+            description="Per-bucket lifecycle counts for this carrier, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
+        ),
+    ] = None
+
+
+class SMSStatsByCarrierResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSCarrierStatsPoint],
+        Field(
+            description="Carrier breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct carriers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            examples=[24],
+            ge=0,
+        ),
+    ]
+
+
+class SMSTagStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    tag: Annotated[
+        str,
+        Field(
+            description="The tag this row aggregates, in `name:value` form. Each distinct name-and-value pair is its own row, and a message carrying several tags is counted once under each of them, so rows do not sum to the period total.\n",
+            examples=["campaign:summer_sale"],
+            min_length=1,
+        ),
+    ]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[
+        list[SMSStatsPoint] | None,
+        Field(
+            description="Per-bucket lifecycle-count series for this tag over the window, bucketed by `trend_grain`. Sparse, so only buckets with activity are present rather than zero-filled, unlike the daily and hourly series. Present only when `include_trend=true`.\n"
+        ),
+    ] = None
+
+
+class SMSStatsByTagResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSTagStatsPoint],
+        Field(
+            description="Tag breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no tagged messages were sent in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct tags with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.\n",
+            examples=[18],
+            ge=0,
+        ),
+    ]
+
+
+class Status2(str, Enum):
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    undelivered = "undelivered"
+    failed = "failed"
+    rejected = "rejected"
+    expired = "expired"
+
+
+class SMSStatusStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Status2,
+        Field(
+            description="The lifecycle status this row counts. These are successive lifecycle stages. The `accepted` status was admitted for sending, `sent` was handed to the carrier, and `delivered` was confirmed by the carrier. The `undelivered`, `failed`, and `expired` statuses are failure outcomes. The `rejected` status was refused before a send attempt. Counted outcomes are a subset of the full message status vocabulary. The pre-send `scheduled`, cancellation `canceled`, and inbound-only `received` statuses are not send outcomes, so they never appear here.\n",
+            examples=["delivered"],
+        ),
+    ]
+    count: Annotated[
+        int,
+        Field(
+            description="Distinct messages that reached this lifecycle status in the period, attributed to the message's send time rather than the event's own.",
+            examples=[14720],
+            ge=0,
+        ),
+    ]
+
+
+class SMSStatsByStatusResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
+        ),
+    ]
+    data: Annotated[
+        list[SMSStatusStatsPoint],
+        Field(
+            description="Status breakdown rows, one per lifecycle status with activity, ordered by count descending. Empty when no messages had activity in the period."
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Number of distinct lifecycle statuses with activity in the period (at most seven). Equal to the number of rows returned, since this breakdown is never capped.",
+            examples=[5],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    received_pct_change: Annotated[
+        float | None,
+        Field(
+            description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
+            examples=[0.058],
+        ),
+    ]
+
+
+class SMSInboundStatsComparison(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: Annotated[
+        SMSStatsSummaryPeriod,
+        Field(
+            description="Equal-length window ending immediately before the requested start."
+        ),
+    ]
+    received: Annotated[
+        int,
+        Field(
+            description="Distinct messages received in the preceding period.",
+            examples=[3980],
+            ge=0,
+        ),
+    ]
+    delta: SMSInboundStatsComparisonDelta
+
+
+class SMSInboundStatsSummaryResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: SMSStatsSummaryPeriod
+    received: Annotated[
+        int,
+        Field(
+            description="Distinct messages received in the period, counted by the time the carrier received them.",
+            examples=[4210],
+            ge=0,
+        ),
+    ]
+    comparison: SMSInboundStatsComparison | None = None
+
+
+class SMSInboundStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    bucket: Annotated[
+        str,
+        Field(
+            description="Start of the bucket this row covers, as a calendar day (YYYY-MM-DD) for the daily series or an hour boundary (RFC 3339) for the hourly one.",
+            examples=["2026-05-01"],
+            min_length=1,
+            pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+        ),
+    ]
+    received: Annotated[
+        int,
+        Field(
+            description="Distinct messages received in this bucket, counted by the time the carrier received them.",
+            examples=[128],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundStatsResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: SMSStatsSeriesPeriod
+    data: Annotated[
+        list[SMSInboundStatsPoint],
+        Field(
+            description="One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with a count of zero, so the series charts continuously without client-side gap handling."
+        ),
+    ]
+
+
+class SMSInboundCountryStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    country: Annotated[
+        str,
+        Field(
+            description="The country of the Bird number the messages arrived on, as an ISO 3166-1 alpha-2 code. This identifies where the message was received. It does not identify the sender's country.",
+            examples=["US"],
+            min_length=1,
+        ),
+    ]
+    received: Annotated[
+        int,
+        Field(
+            description="Distinct messages received on numbers in this country during the period.",
+            examples=[1840],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundStatsByCountryResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: SMSStatsSummaryPeriod
+    data: Annotated[
+        list[SMSInboundCountryStatsPoint],
+        Field(
+            description="One row per country with activity in the period, most messages first, capped at the requested `limit`. A country with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.\n"
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct countries the messages arrived in with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+            examples=[12],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundOperatorStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    mcc_mnc: Annotated[
+        str,
+        Field(
+            description="Mobile country code and mobile network code of the network the sending subscriber is on. The breakdown keys on this rather than on an operator name because the carrier reports a name only where a surcharge applies, which would leave most of the world in one unnamed bucket.",
+            examples=["311480"],
+            min_length=1,
+        ),
+    ]
+    received: Annotated[
+        int,
+        Field(
+            description="Distinct messages received from senders on this operator during the period.",
+            examples=[640],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundStatsByOperatorResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: SMSStatsSummaryPeriod
+    data: Annotated[
+        list[SMSInboundOperatorStatsPoint],
+        Field(
+            description="One row per operator with activity in the period, most messages first, capped at the requested `limit`. An operator with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.\n"
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct sending operators with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+            examples=[38],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundNumberStatsPoint(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    number: Annotated[
+        str,
+        Field(
+            description="The Bird number the messages arrived on, in E.164, or the short code they were sent to. This is the same value the message resource exposes as `to`.",
+            examples=["+14155557701"],
+            min_length=1,
+        ),
+    ]
+    received: Annotated[
+        int,
+        Field(
+            description="Distinct messages received on this number during the period.",
+            examples=[412],
+            ge=0,
+        ),
+    ]
+
+
+class SMSInboundStatsByNumberResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    period: SMSStatsSummaryPeriod
+    data: Annotated[
+        list[SMSInboundNumberStatsPoint],
+        Field(
+            description="One row per number with activity in the period, most messages first, capped at the requested `limit`. A number with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.\n"
+        ),
+    ]
+    total: Annotated[
+        int,
+        Field(
+            description="Total number of distinct numbers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+            examples=[6],
+            ge=0,
+        ),
+    ]
 
 
 class LookupProperty(str, Enum):
@@ -2854,7 +4230,7 @@ class PhoneNumberLookupRequest(BaseModel):
     type: Annotated[
         list[LookupProperty] | None,
         Field(
-            description="The paid properties to enrich the answer with. Omit it, or send an empty array, to get the free baseline and make no vendor call.\n\nEach delivered property is billed on top of the lookup itself. A property that could not be answered is reported in `properties` and is not billed.\n"
+            description="Properties to add to the base lookup. Omit this field or send an empty\narray to request only the base lookup.\n\nEach delivered property is billed in addition to the base lookup. A\nproperty that could not be answered is returned with its status and is\nnot billed.\n"
         ),
     ] = None
 
@@ -2958,7 +4334,7 @@ class LookupPresence(BaseModel):
     reachable: Annotated[
         bool | None,
         Field(
-            description="Whether the number is registered on a network and able to receive traffic. False means the network answered and reported the number as not currently reachable, which is different from us being unable to find out. Present only when `status` is `ok`.\n"
+            description="Whether the number is registered on a network and able to receive traffic. A `false` value means the network answered and reported the number as currently unreachable. This differs from the API being unable to find out. Present only when `status` is `ok`.\n"
         ),
     ] = None
 
@@ -3024,7 +4400,7 @@ class LookupPortingEvent(BaseModel):
     occurred_at: Annotated[
         str | None,
         Field(
-            description="When the move was recorded, null when the record carries no date."
+            description="When the move was recorded, `null` when the record carries no date."
         ),
     ]
     action: Annotated[
@@ -3045,7 +4421,7 @@ class LookupPorting(BaseModel):
     ported: Annotated[
         bool | None,
         Field(
-            description="Whether the number has ever moved network. False is a positive finding rather than a lack of one: the registry was consulted and holds no move for this number. Present only when `status` is `ok`.\n"
+            description="Whether the number has ever moved network. `false` is a positive finding rather than a lack of one: the registry was consulted and holds no move for this number. Present only when `status` is `ok`.\n"
         ),
     ] = None
     last_ported_at: Annotated[
@@ -3057,7 +4433,7 @@ class LookupPorting(BaseModel):
     last_ported_at_is_approximate: Annotated[
         bool | None,
         Field(
-            description="Whether `last_ported_at` is an approximation. Some registries record only the period a move happened in, not the day."
+            description="Whether `last_ported_at` is an approximation. Some registries record the period of a move without its exact day."
         ),
     ] = None
     history: Annotated[
@@ -3078,7 +4454,7 @@ class LookupScore(BaseModel):
     value: Annotated[
         int | None,
         Field(
-            description="Credibility from 0 (low) to 100 (high). A low score means the number looks less credible than a typical subscriber line in the same range; it is a signal to weigh, not a verdict. It is a composite and is not derivable from the other properties. Present only when `status` is `ok`.\n",
+            description="Credibility from 0 (low) to 100 (high). A low score means the number looks less credible than a typical subscriber line in the same range. Treat it as one signal instead of a verdict. It is a composite and is not derivable from the other properties. Present only when `status` is `ok`.\n",
             ge=0,
             le=100,
         ),
@@ -3165,7 +4541,7 @@ class EmailLookupRequest(BaseModel):
     email: Annotated[
         str,
         Field(
-            description="The email address to look up. Send it exactly as you hold it: the part before the `@` is case-sensitive, so nothing is lowercased for you, and a display-name form such as `Aisha <aisha@example.com>` is rejected rather than unwrapped.\n",
+            description="The email address to look up. Send it exactly as you hold it. The part before the `@` is case-sensitive, so the API does not lowercase it. A display-name form such as `Aisha <aisha@example.com>` is rejected rather than unwrapped.\n",
             max_length=254,
             min_length=3,
         ),
@@ -3325,7 +4701,7 @@ class WhatsAppTemplateCategory(str, Enum):
     marketing = "marketing"
 
 
-class Status8(str, Enum):
+class Status9(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -3347,9 +4723,9 @@ class Verification(Timestamps):
         ),
     ]
     status: Annotated[
-        Status8,
+        Status9,
         Field(
-            description="The verification's current state: `pending` (the initial state, awaiting a correct passcode), `verified` (a correct passcode was submitted), `failed` (too many incorrect attempts), `expired` (the time window elapsed before a correct passcode), `canceled` (the verification was canceled before completing), or `blocked` (it was stopped by a fraud or abuse control)."
+            description="The verification's current state:\n\n- `pending`: Awaiting a correct passcode.\n- `verified`: A correct passcode was submitted.\n- `failed`: Too many incorrect attempts were submitted.\n- `expired`: The validity window elapsed before a correct passcode.\n- `canceled`: The verification was canceled before completion.\n- `blocked`: A fraud or abuse control stopped the verification."
         ),
     ]
     reason: Annotated[
@@ -3358,7 +4734,7 @@ class Verification(Timestamps):
         ]
         | None,
         Field(
-            description="Why the verification reached its final state, or null while `pending` and once `verified`. See the enum for the values it can take."
+            description="Why the verification reached its final state, or `null` while `pending` and once `verified`. See the enum for the values it can take."
         ),
     ] = None
     to: VerificationTo
@@ -3372,7 +4748,7 @@ class Verification(Timestamps):
     last_channel: Annotated[
         str | None,
         Field(
-            description="The channel the most recent passcode was sent on, or null before the first send. Open enum; new channels may be added over time, so treat any unrecognized value as a future channel rather than an error."
+            description="The channel the most recent passcode was sent on, or `null` before the first send. Open enum; new channels may be added over time, so treat any unrecognized value as a future channel rather than an error."
         ),
     ] = None
     metadata: Annotated[
@@ -3390,7 +4766,7 @@ class Verification(Timestamps):
     verified_at: Annotated[
         str | None,
         Field(
-            description="When the verification was completed, or null if it is not yet verified."
+            description="When the verification was completed, or `null` if it is not yet verified."
         ),
     ] = None
     created_at: str
@@ -3444,7 +4820,7 @@ class VerificationCheckRequest(BaseModel):
     code: Annotated[
         str,
         Field(
-            description="The passcode the recipient received. Passcodes are numeric; submit the digits exactly as delivered. An incorrect value is a normal `200` outcome with `success: false`, not an error.",
+            description="The passcode the recipient received. Passcodes are numeric; submit the digits exactly as delivered. An incorrect value is a normal `200` outcome with `success: false`. It does not return an error.",
             examples=["123456"],
             max_length=12,
             min_length=4,
@@ -3465,14 +4841,14 @@ class VerificationCheckResult(BaseModel):
     reason: Annotated[
         str | None,
         Field(
-            description="Why the check did not succeed, or null when `success` is true: `incorrect_code` means the passcode was wrong and attempts remain; `expired` means the time window elapsed; `attempts_exhausted` means too many incorrect attempts. Open enum; treat any unrecognized value as a future reason."
+            description="Why the check did not succeed:\n\n- `incorrect_code`: The passcode was wrong and attempts remain.\n- `expired`: The validity window elapsed.\n- `attempts_exhausted`: Too many incorrect attempts were submitted.\n\n`null` when `success` is `true`. Treat unrecognized values as reasons added\nlater."
         ),
     ] = None
     verification: Verification
     attempts_remaining: Annotated[
         int | None,
         Field(
-            description="The number of check attempts left while the verification is still pending, or null once it has reached a final state.",
+            description="The number of check attempts left while the verification is still pending, or `null` once it has reached a final state.",
             ge=0,
         ),
     ] = None
@@ -3527,6 +4903,46 @@ class WhatsAppTemplateParameterType(str, Enum):
     location = "location"
 
 
+class WhatsAppLocationSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    latitude: Annotated[
+        float,
+        Field(
+            description="Latitude in decimal degrees.",
+            examples=[52.3702],
+            ge=-90.0,
+            le=90.0,
+        ),
+    ]
+    longitude: Annotated[
+        float,
+        Field(
+            description="Longitude in decimal degrees.",
+            examples=[4.8952],
+            ge=-180.0,
+            le=180.0,
+        ),
+    ]
+    name: Annotated[
+        str | None,
+        Field(
+            description="Name of the place, shown above the address.",
+            examples=["Bird HQ"],
+            max_length=1000,
+        ),
+    ] = None
+    address: Annotated[
+        str | None,
+        Field(
+            description="Street address of the place. Shown only when `name` is also set.",
+            examples=["Keizersgracht 117, Amsterdam"],
+            max_length=1000,
+        ),
+    ] = None
+
+
 class WhatsAppMessageTemplateComponentParameter(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -3554,6 +4970,12 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
             min_length=1,
         ),
     ] = None
+    location: Annotated[
+        WhatsAppLocationSend | None,
+        Field(
+            description="The point on the map a location header opens. Send it on a `location` parameter."
+        ),
+    ] = None
     name: Annotated[
         str | None,
         Field(
@@ -3570,7 +4992,7 @@ class WhatsAppMessageTemplateCardComponent(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Which part of the card this fills in: `header` for the card's image or video, `body` for its text, `button` for a button's variable.\n",
+            description="Which part of the card this fills in.\n\n- `header`: the card's image or video.\n- `body`: its text.\n- `button`: a button's variable.\n",
             examples=["header"],
             min_length=1,
         ),
@@ -3600,7 +5022,7 @@ class WhatsAppMessageTemplateComponent(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Which part of the template this fills in: `body` for the main text, `button` for a button's variable, `header` for the header's text, media or location, `carousel` for the cards.\n",
+            description="Which part of the template this fills in.\n\n- `body`: the main text.\n- `button`: a button's variable.\n- `header`: the header's text, media or location.\n- `carousel`: the cards.\n",
             min_length=1,
         ),
     ]
@@ -3659,6 +5081,174 @@ class WhatsAppMessageTemplate(BaseModel):
     ]
 
 
+class WhatsAppText(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    body: Annotated[
+        str,
+        Field(
+            description="The message text.",
+            examples=["Does it come in another color?"],
+            min_length=1,
+        ),
+    ]
+
+
+class WhatsAppMedia(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str | None,
+        Field(
+            description="ID of the stored file, to pass as `media_id` when fetching it. Absent on an outbound message, whose file we never stored.\n",
+            examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ] = None
+    url: Annotated[
+        str | None,
+        Field(
+            description="Where to fetch the media. On an inbound message this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On an outbound message it is the URL the sender supplied, whose availability is the sender's to guarantee.\n",
+            examples=[
+                "https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"
+            ],
+        ),
+    ] = None
+    mime_type: Annotated[
+        str | None,
+        Field(
+            description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on outbound messages.\n",
+            examples=["image/jpeg"],
+        ),
+    ] = None
+
+
+class WhatsAppImage(WhatsAppMedia):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    caption: Annotated[
+        str | None,
+        Field(
+            description="Text shown beneath the image. Absent when the sender wrote none.",
+            examples=["Your receipt for order A1B2C3"],
+        ),
+    ] = None
+
+
+class WhatsAppVideo(WhatsAppMedia):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    caption: Annotated[
+        str | None,
+        Field(
+            description="Text shown beneath the video. Absent when the sender wrote none.",
+            examples=["How to set it up"],
+        ),
+    ] = None
+
+
+class WhatsAppAudio(WhatsAppMedia):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    voice: Annotated[
+        bool | None,
+        Field(
+            description="Whether this is a voice note rather than an attached audio file. A voice note auto-downloads in the WhatsApp client and can be transcribed for the recipient.\n",
+            examples=[True],
+        ),
+    ] = None
+
+
+class WhatsAppSticker(WhatsAppMedia):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    animated: Annotated[
+        bool | None,
+        Field(
+            description="Whether the sticker is animated. Absent on an outbound message.\n",
+            examples=[False],
+        ),
+    ] = None
+
+
+class WhatsAppDocument(WhatsAppMedia):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    caption: Annotated[
+        str | None,
+        Field(
+            description="Text shown beneath the document. Absent when the sender wrote none.",
+            examples=["Signed contract"],
+        ),
+    ] = None
+    filename: Annotated[
+        str | None,
+        Field(
+            description="The sender's own name for the file.",
+            examples=["contract-a1b2c3.pdf"],
+        ),
+    ] = None
+
+
+class WhatsAppLocation(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    latitude: Annotated[
+        float | None,
+        Field(description="Latitude in decimal degrees.", examples=[52.3702]),
+    ] = None
+    longitude: Annotated[
+        float | None,
+        Field(description="Longitude in decimal degrees.", examples=[4.8952]),
+    ] = None
+    name: Annotated[
+        str | None,
+        Field(
+            description="Name of the place. Absent when the sender shared a plain pin.",
+            examples=["Bird HQ"],
+        ),
+    ] = None
+    address: Annotated[
+        str | None,
+        Field(
+            description="Street address of the place. Shown only when `name` is also set.",
+            examples=["Keizersgracht 117, Amsterdam"],
+        ),
+    ] = None
+    url: Annotated[
+        str | None,
+        Field(
+            description="Link to the place, which WhatsApp includes mainly for business locations. Present on an inbound message when the sender's client supplied one, and absent on a message you sent, since sending a location does not support this field.\n",
+            examples=[
+                "https://www.google.com/maps/place/Statue+of+Liberty/@40.6246301,-74.5291919,124716m/"
+            ],
+        ),
+    ] = None
+
+
+class WhatsAppUnsupported(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Annotated[
+        str,
+        Field(
+            description="The WhatsApp content type we did not model. `unsupported` is not a placeholder here: WhatsApp reports its own `unsupported` type for a message its own clients cannot render, and that arrives as this value. Open enum: WhatsApp adds content types over time, so treat an unrecognized value as a future type rather than an error.\n",
+            examples=["reaction"],
+            min_length=1,
+        ),
+    ]
+
+
 class WhatsAppErrorCode(str, Enum):
     insufficient_balance = "insufficient_balance"
     price_not_found = "price_not_found"
@@ -3701,7 +5291,7 @@ class WhatsAppMessage(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="ID of the message (`wam_`-prefixed), assigned when the send is accepted. Pass it as `message_id` to the get-message and list-events endpoints.\n",
+            description="ID of the message, assigned when the send is accepted. Pass it as `message_id` to the get-message and list-events endpoints.\n",
             examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
@@ -3730,6 +5320,33 @@ class WhatsAppMessage(BaseModel):
         WhatsAppMessageTemplate | None,
         Field(
             description="The template the message was sent from. For authentication templates the filled-in values are not returned."
+        ),
+    ] = None
+    text: Annotated[
+        WhatsAppText | None, Field(description="Text the message carried.")
+    ] = None
+    image: Annotated[
+        WhatsAppImage | None, Field(description="Image the message carried.")
+    ] = None
+    video: Annotated[
+        WhatsAppVideo | None, Field(description="Video the message carried.")
+    ] = None
+    audio: Annotated[
+        WhatsAppAudio | None, Field(description="Audio the message carried.")
+    ] = None
+    sticker: Annotated[
+        WhatsAppSticker | None, Field(description="Sticker the message carried.")
+    ] = None
+    document: Annotated[
+        WhatsAppDocument | None, Field(description="Document the message carried.")
+    ] = None
+    location: Annotated[
+        WhatsAppLocation | None, Field(description="Location the message carried.")
+    ] = None
+    unsupported: Annotated[
+        WhatsAppUnsupported | None,
+        Field(
+            description="Set when the contact sent content we do not model, naming the WhatsApp content type so the message is not silently empty. Inbound only.\n"
         ),
     ] = None
     status: WhatsAppMessageStatus
@@ -3866,6 +5483,136 @@ class WhatsAppTemplateSend2(BaseModel):
     ] = None
 
 
+class WhatsAppTextSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    body: Annotated[
+        str,
+        Field(
+            description="The message text. The WhatsApp client turns any URL it contains into a clickable link.\n",
+            examples=["Your driver is 2 minutes away."],
+            max_length=4096,
+            min_length=1,
+        ),
+    ]
+    preview_url: Annotated[
+        bool | None,
+        Field(
+            description="Whether the WhatsApp client renders a preview of the first URL in `body`. A URL must begin with `http://` or `https://`, only the first one is previewed, and the client falls back to a plain link when it cannot fetch a preview. Not returned when the message is read back, because WhatsApp does not report whether a preview rendered.\n"
+        ),
+    ] = False
+
+
+class WhatsAppImageSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str,
+        Field(
+            description="Public `https` URL of the image. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. JPEG and PNG only, up to 5 MB.\n",
+            examples=["https://cdn.example.com/receipts/a1b2c3.png"],
+            min_length=1,
+        ),
+    ]
+    caption: Annotated[
+        str | None,
+        Field(
+            description="Text shown beneath the image.",
+            examples=["Your receipt for order A1B2C3"],
+            max_length=1024,
+        ),
+    ] = None
+
+
+class WhatsAppVideoSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str,
+        Field(
+            description="Public `https` URL of the video. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. MP4 with H.264 video and AAC audio, up to 16 MB.\n",
+            examples=["https://cdn.example.com/unboxing.mp4"],
+            min_length=1,
+        ),
+    ]
+    caption: Annotated[
+        str | None,
+        Field(
+            description="Text shown beneath the video.",
+            examples=["How to set it up"],
+            max_length=1024,
+        ),
+    ] = None
+
+
+class WhatsAppAudioSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str,
+        Field(
+            description="Public `https` URL of the audio file. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. AAC, AMR, MP3, M4A and OGG (OPUS codec, mono) are supported, up to 16 MB.\n",
+            examples=["https://cdn.example.com/voice/9f2e4a.ogg"],
+            min_length=1,
+        ),
+    ]
+    voice: Annotated[
+        bool | None,
+        Field(
+            description="Whether to send this as a voice note rather than a basic audio message. A voice note auto-downloads, shows the sender's profile picture, and can be transcribed for the recipient. It requires an `.ogg` file encoded with the OPUS codec; any other format makes transcription fail. Leave it false for an ordinary audio attachment.\n"
+        ),
+    ] = False
+
+
+class WhatsAppStickerSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str,
+        Field(
+            description="Public `https` URL of the sticker. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. WebP only: up to 100 KB for a static sticker and 500 KB for an animated one. A sticker carries no caption.\n",
+            examples=["https://cdn.example.com/stickers/thumbs-up.webp"],
+            min_length=1,
+        ),
+    ]
+
+
+class WhatsAppDocumentSend(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str,
+        Field(
+            description="Public `https` URL of the document. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. Up to 100 MB. PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client; other file types are transmitted but WhatsApp does not support them.\n",
+            examples=["https://cdn.example.com/invoices/a1b2c3.pdf"],
+            min_length=1,
+        ),
+    ]
+    caption: Annotated[
+        str | None,
+        Field(
+            description="Text shown beneath the document.",
+            examples=["Your invoice for order A1B2C3"],
+            max_length=1024,
+        ),
+    ] = None
+    filename: Annotated[
+        str | None,
+        Field(
+            description="Name the recipient sees, including the extension. WhatsApp derives one from the URL when you omit it.\n",
+            examples=["invoice-a1b2c3.pdf"],
+            max_length=100,
+            min_length=1,
+        ),
+    ] = None
+
+
 class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -3878,10 +5625,19 @@ class WhatsAppMessageSendRequest(BaseModel):
             min_length=1,
         ),
     ]
+    from_: Annotated[
+        str | None,
+        Field(
+            alias="from",
+            description="The business phone number to send from, in E.164 format. Omit it for a Bird-managed template, which selects its own number from its category: setting it there returns a `422` `WhatsAppSenderNotAllowed`. Every other send, whether free-form content of any kind or a template your workspace authored, requires it, and the number must be one this workspace owns. Omitting it returns a `422` `WhatsAppSenderRequired`, and naming a number this workspace cannot send from returns a `422` `WhatsAppSenderNotFound`. Naming a number this workspace owns but that sits on a different WhatsApp Business Account than an authored template returns a `422` `WhatsAppSenderWABAMismatch`.\n",
+            examples=["+13124495648"],
+            min_length=1,
+        ),
+    ] = None
     template: Annotated[
         WhatsAppTemplateSend1 | WhatsAppTemplateSend2 | None,
         Field(
-            description="The template to send. For a Bird-managed template, Bird selects the sender number from the template's category, so `from` must be omitted. A template is the only content deliverable outside a customer service window.\n",
+            description="The template to send. A Bird-managed template selects the sender number from the template's category, so `from` must be omitted. A template is the only content deliverable outside a customer service window.\n",
             examples=[
                 {
                     "id": "wat_01ky4x8e4genzb7way45txfkm1",
@@ -3927,6 +5683,48 @@ class WhatsAppMessageSendRequest(BaseModel):
             ],
         ),
     ] = None
+    text: Annotated[
+        WhatsAppTextSend | None,
+        Field(
+            description="Free-form text to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
+    image: Annotated[
+        WhatsAppImageSend | None,
+        Field(
+            description="A free-form image to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
+    video: Annotated[
+        WhatsAppVideoSend | None,
+        Field(
+            description="A free-form video to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
+    audio: Annotated[
+        WhatsAppAudioSend | None,
+        Field(
+            description="Free-form audio to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
+    sticker: Annotated[
+        WhatsAppStickerSend | None,
+        Field(
+            description="A free-form sticker to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
+    document: Annotated[
+        WhatsAppDocumentSend | None,
+        Field(
+            description="A free-form document to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
+    location: Annotated[
+        WhatsAppLocationSend | None,
+        Field(
+            description="A free-form location to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+        ),
+    ] = None
     tags: Annotated[
         list[Tag] | None,
         Field(
@@ -3947,6 +5745,7 @@ class WhatsAppEventType(str, Enum):
     whatsapp_delivered = "whatsapp.delivered"
     whatsapp_failed = "whatsapp.failed"
     whatsapp_read = "whatsapp.read"
+    whatsapp_received = "whatsapp.received"
     whatsapp_rejected = "whatsapp.rejected"
     whatsapp_sent = "whatsapp.sent"
 
@@ -3958,7 +5757,7 @@ class WhatsAppEvent(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="ID of the event (`ev_`-prefixed), unique within the message's timeline.",
+            description="ID of the event, unique within the message's timeline.",
             examples=["ev_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4176,7 +5975,7 @@ class EmailDeliveryStats(BaseModel):
     oob_bounces: Annotated[
         int,
         Field(
-            description="Out-of-band bounce events: distinct failure notifications received after the receiving server had initially confirmed delivery. Counted as deduplicated events, not unique recipients.\n",
+            description="Out-of-band bounce events: distinct failure notifications received after the receiving server had initially confirmed delivery. The count represents deduplicated events rather than unique recipients.\n",
             examples=[2],
             ge=0,
         ),
@@ -4184,7 +5983,7 @@ class EmailDeliveryStats(BaseModel):
     effective_delivered: Annotated[
         int,
         Field(
-            description="Recipients who remain in-inbox in this scope after all bounce signals resolve, computed as `delivered - oob_bounces`. Use this as the base for engagement-rate denominators. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
+            description="Recipients who remain delivered after all bounce signals resolve, computed as `delivered - oob_bounces`. Use this as the base for engagement-rate denominators. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
             examples=[14718],
             ge=0,
         ),
@@ -4209,7 +6008,7 @@ class EmailDeliveryStats(BaseModel):
     delivery_rate: Annotated[
         float | None,
         Field(
-            description="Share of this scope's delivery attempts that resulted in a message remaining in-inbox, computed as `effective_delivered / (delivered + bounced)`. Null when there were no attempts.\n",
+            description="Share of this scope's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when there were no attempts.\n",
             examples=[0.9939],
             ge=0.0,
             le=1.0,
@@ -4722,7 +6521,7 @@ class EmailStatsSummary(BaseModel):
     sends_accepted: Annotated[
         int,
         Field(
-            description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) and summed per bucket across the period. This counts messages, not recipients, so it is not comparable to `delivery.accepted`, which counts recipients (a single message to 500 recipients is 1 here and up to 500 there).",
+            description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) and summed per bucket across the period. This field counts messages. `delivery.accepted` counts recipients, so the two values are not comparable (a single message to 500 recipients is 1 here and up to 500 there).",
             examples=[12410],
             ge=0,
         ),
@@ -4791,7 +6590,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     effective_delivered: Annotated[
         int,
         Field(
-            description="Recipients on this IP who remain in-inbox after all bounce signals resolve, computed as `delivered - oob_bounces`. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
+            description="Recipients on this IP who remain delivered after all bounce signals resolve, computed as `delivered - oob_bounces`. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
             examples=[8287],
             ge=0,
         ),
@@ -4817,7 +6616,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
     delivery_rate: Annotated[
         float | None,
         Field(
-            description="Share of this IP's delivery attempts that resulted in a message remaining in-inbox, computed as `effective_delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).\n",
+            description="Share of this IP's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero.\n",
             examples=[0.9844],
             ge=0.0,
             le=1.0,
@@ -5105,7 +6904,7 @@ class EmailMailboxProviderStatsPoint(BaseModel):
     mailbox_provider: Annotated[
         str,
         Field(
-            description="The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`). The set is open and grows as new providers are categorized.",
+            description="The recipient mailbox provider this row aggregates, as a lowercase classifier such as `gmail`, `yahoo`, `microsoft`, or `apple`. New classifiers may be added over time.",
             examples=["gmail"],
             min_length=1,
         ),
@@ -5154,7 +6953,7 @@ class EmailMailboxProviderRegionStatsPoint(BaseModel):
     mailbox_provider: Annotated[
         str,
         Field(
-            description="The recipient mailbox provider this row aggregates, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`).",
+            description="The recipient mailbox provider this row aggregates, as a lowercase classifier such as `gmail`, `yahoo`, `microsoft`, or `apple`.",
             examples=["gmail"],
             min_length=1,
         ),
@@ -5284,19 +7083,19 @@ class EmailStatsByTemplateResponse(BaseModel):
     period: Annotated[
         EmailStatsPeriod,
         Field(
-            description="The date range this response covers, echoed back from what you requested, plus `data_as_of`: how far the underlying data is currently up to date.\n"
+            description="The date range the response covers (echoed back from the request), plus `data_as_of`, the freshness boundary the data is current to."
         ),
     ]
     data: Annotated[
         list[EmailTemplateStatsPoint],
         Field(
-            description="One row per template, ranked by the `sort` metric (`processed` by default) descending. Empty when no messages were sent with a template during the period.\n"
+            description="Template breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no messages were sent with a template in the period."
         ),
     ]
     total: Annotated[
         int,
         Field(
-            description="How many distinct templates had activity in the period, regardless of `limit`. When this is higher than the number of rows in `data`, the ranking got cut off. Raise `limit` (up to 200), or narrow the date range, to see the rest.\n",
+            description="Total number of distinct templates with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.\n",
             examples=[42],
             ge=0,
         ),
@@ -5498,7 +7297,7 @@ class EmailBounceStats(BaseModel):
     admin: Annotated[
         int,
         Field(
-            description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain. Fixing these usually means changing your content or your sender configuration, not cleaning up the recipient list.\n",
+            description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain. Fix these by changing your content or sender configuration. Cleaning the recipient list does not usually help.\n",
             examples=[4],
             ge=0,
         ),
@@ -5669,13 +7468,13 @@ class DomainSettings(BaseModel):
     click_tracking: Annotated[
         bool | None,
         Field(
-            description="Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n"
+            description="Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified; it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n"
         ),
     ] = False
     open_tracking: Annotated[
         bool | None,
         Field(
-            description="Insert a tracking pixel in HTML email to record opens. You can enable this before your tracking domain has verified — it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n"
+            description="Insert a tracking pixel in HTML email to record opens. You can enable this before your tracking domain has verified: it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.\n"
         ),
     ] = False
 
@@ -5692,7 +7491,7 @@ class DomainDKIM(BaseModel):
     mode: Annotated[
         Mode,
         Field(
-            description="How the DKIM public key is published in your DNS. `txt` — you publish the key as a TXT record. `delegated` — you publish a single CNAME and Bird hosts and rotates the key.\n"
+            description="How the DKIM public key is published in your DNS. `txt`: you publish the key as a TXT record. `delegated`: you publish a single CNAME and we host and rotate the key.\n"
         ),
     ]
     selector: Annotated[
@@ -5708,7 +7507,7 @@ class DomainDKIM(BaseModel):
     ]
 
 
-class Status9(str, Enum):
+class Status10(str, Enum):
     pending = "pending"
     failed = "failed"
     temporary_failure = "temporary_failure"
@@ -5721,21 +7520,21 @@ class DomainCapabilityPending(BaseModel):
     domain: Annotated[
         str,
         Field(
-            description="Hostname the capability will use once the staged change verifies.",
+            description="Hostname the capability uses after the staged change verifies.",
             examples=["rp.mail.acme.com"],
             min_length=1,
         ),
     ]
     status: Annotated[
-        Status9,
+        Status10,
         Field(
-            description="Verification status of the staged change. `pending` — waiting for the DNS records to be detected. `failed` — the records resolved with wrong values; correct them or submit a different change. `temporary_failure` — DNS lookup failed transiently and will be retried.\n",
+            description="Verification status of the staged change.\n\n- `pending`: the DNS records have not been detected yet.\n- `failed`: the records resolved with wrong values; correct them\n  or submit a different change.\n- `temporary_failure`: the DNS lookup failed transiently and is\n  queued for retry.\n",
             examples=["pending"],
         ),
     ]
 
 
-class Status10(str, Enum):
+class Status11(str, Enum):
     pending = "pending"
     verified = "verified"
     warning = "warning"
@@ -5749,23 +7548,23 @@ class DomainCapability(BaseModel):
         extra="allow",
     )
     status: Annotated[
-        Status10,
+        Status11,
         Field(
-            description="Capability verification status.\n- `pending` — verification has not run, or is currently running. - `verified` — all DNS records for this capability resolved with the\n  expected values.\n- `warning` — a record for this capability verified before and a recent\n  check no longer matches, but it is still within the grace period.\n  Sending is not yet affected; fix it before the grace period ends.\n- `failed` — DNS records resolved but at least one value is wrong.\n  Update your DNS to recover.\n- `temporary_failure` — DNS lookup failed transiently. Verification is\n  queued for retry; don't change DNS records yet.\n- `not_configured` — the capability is not set up on this domain\n  (e.g. no tracking domain configured).\n",
+            description="Capability verification status.\n\n- `pending`: verification has not run, or is currently running.\n- `verified`: all DNS records for this capability resolved with the\n  expected values.\n- `warning`: a record for this capability verified before and a recent\n  check no longer matches, but it is still within the grace period.\n  Sending is not yet affected; fix it before the grace period ends.\n- `failed`: DNS records resolved but at least one value is wrong.\n  Update your DNS to recover.\n- `temporary_failure`: DNS lookup failed transiently. Verification retries\n  automatically; do not change DNS records unless they are incorrect.\n- `not_configured`: the capability is not set up on this domain\n  (for example, no tracking domain configured).\n",
             examples=["verified"],
         ),
     ]
     domain: Annotated[
         str | None,
         Field(
-            description="Hostname this capability is configured with — the return-path domain, the tracking domain, or the domain where the DMARC policy was found. Null when not applicable or not configured.\n"
+            description="Hostname this capability is configured with: the return-path domain, the tracking domain, or the domain where the DMARC policy was found. `null` when not applicable or not configured.\n"
         ),
     ] = None
     pending: DomainCapabilityPending | None = None
     reason: Annotated[
         str | None,
         Field(
-            description="Machine-readable reason code for a failed capability status. Only set when `status` is `failed`. Use this to display a specific message to users rather than a generic failure message.\n- `tracking_domain_in_use` — the link tracking subdomain is already claimed\n  by another organization.\n"
+            description="Machine-readable reason code for a failed capability status. Only set when\n`status` is `failed`. Use this to display a specific message to users rather\nthan a generic failure message.\n\n- `tracking_domain_in_use`: the link tracking subdomain is already claimed\n  by another organization.\n"
         ),
     ] = None
 
@@ -5783,13 +7582,13 @@ class DomainCapabilities(BaseModel):
     return_path: Annotated[
         DomainCapability,
         Field(
-            description="Return-path (bounce) CNAME verification. The return-path domain receives bounce and complaint notifications and is what mailbox providers check for SPF — no separate SPF record is needed.\n"
+            description="Return-path (bounce) CNAME verification. The return-path domain receives bounce and complaint notifications and is what mailbox providers check for SPF: no separate SPF record is needed.\n"
         ),
     ]
     dmarc: Annotated[
         DomainCapability,
         Field(
-            description="DMARC policy check. Satisfied by any valid DMARC record covering the sending domain — on the domain itself or on its registered (organizational) domain; `domain` reports where the policy was found. A minimal policy of `p=none` is sufficient.\n"
+            description="DMARC policy check. Satisfied by any valid DMARC record covering the sending domain: on the domain itself or on its registered (organizational) domain; `domain` reports where the policy was found. A minimal policy of `p=none` is sufficient.\n"
         ),
     ]
     tracking: Annotated[
@@ -5801,7 +7600,7 @@ class DomainCapabilities(BaseModel):
     inbound: Annotated[
         DomainCapability | None,
         Field(
-            description="Inbound mail receiving. `not_configured` until receiving is enabled on this domain (see `DomainUpdate.inbound`), then `pending` while the published MX records are checked, and `verified` once they resolve to Bird. The MX records to publish are always listed under `dns_records` (`purpose: inbound_mx`) as a regional reference, even while this is `not_configured` — enabling is what actually starts delivery.\n"
+            description="Inbound mail receiving. `not_configured` until receiving is enabled on this domain (see `DomainUpdate.inbound`), then `pending` while the published MX records are checked, and `verified` once they resolve to us. The MX records to publish are always listed under `dns_records` (`purpose: inbound_mx`) as a regional reference, even while this is `not_configured`: enabling is what actually starts delivery.\n"
         ),
     ] = None
 
@@ -5826,7 +7625,7 @@ class State(str, Enum):
     deprecated = "deprecated"
 
 
-class Status11(str, Enum):
+class Status12(str, Enum):
     pending = "pending"
     verified = "verified"
     warning = "warning"
@@ -5837,62 +7636,67 @@ class DNSRecord(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    type: Type4
+    type: Annotated[
+        Type4,
+        Field(
+            description="The DNS record type to publish, determined by `purpose`.\n\n- `TXT`: used for the `dkim` and `dmarc` purposes.\n- `CNAME`: used for the `return_path` and `tracking` purposes.\n- `MX`: used for the `inbound_mx` purpose.\n"
+        ),
+    ]
     name: Annotated[
         str,
         Field(
-            description='The record name — the part you enter in your DNS provider\'s "Name" or "Host" field, relative to the DNS zone the record belongs in (your registered domain). For a sending domain `mail.acme.com` the DKIM record name is `bird1._domainkey.mail`, entered in the `acme.com` zone. `@` for records at the zone apex.\n',
+            description="The record name: the part you enter in your DNS provider's `Name` or `Host` field, relative to the DNS zone the record belongs in (your registered domain). For a sending domain `mail.acme.com` the DKIM record name is `bird1._domainkey.mail`, entered in the `acme.com` zone. `@` for records at the zone apex.\n",
             min_length=1,
         ),
     ]
     host: Annotated[
         str,
         Field(
-            description="The fully qualified hostname for this record (e.g. `bird1._domainkey.mail.acme.com`).\n",
+            description="The fully qualified hostname for this record (for example, `bird1._domainkey.mail.acme.com`).\n",
             min_length=1,
         ),
     ]
     value: Annotated[
         str,
         Field(
-            description='The value to publish, as entered in your DNS provider\'s "Value" or "Content" field: the full record content for `TXT`, the target hostname for `CNAME`, and the priority followed by the mail server hostname for `MX`.\n',
+            description="The value to publish, as entered in your DNS provider's `Value` or `Content` field. For `TXT`, enter the full record content. For `CNAME`, enter the target hostname. For `MX`, enter the priority followed by the mail server hostname.\n",
             min_length=1,
         ),
     ]
     purpose: Annotated[
         Purpose,
         Field(
-            description="What this record is for.\n- `dkim` — signs outbound mail and proves domain ownership. - `return_path` — return-path (bounce) CNAME for sending. - `tracking` — branded open/click tracking CNAME (optional). - `dmarc` — advisory DMARC policy record. - `inbound_mx` — MX record routing mail to Bird for receiving. Always\n  present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own — see `DomainUpdate.inbound`.\n"
+            description="What this record is for.\n\n- `dkim`: signs outbound mail and proves domain ownership.\n- `return_path`: identifies the return-path (bounce) CNAME for sending.\n- `tracking`: identifies the optional branded open/click tracking CNAME.\n- `inbound_mx`: identifies the MX record routing mail to us for receiving.\n  Always present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own: see `DomainUpdate.inbound`.\n- `dmarc`: identifies the advisory DMARC policy record.\n"
         ),
     ]
     state: Annotated[
         State,
         Field(
-            description="Lifecycle state of this record.\n- `active` — the record backs the domain's current configuration. - `pending` — the record belongs to a staged configuration change;\n  publish it to complete the change.\n- `deprecated` — the record belonged to a previous configuration.\n  Keep it in DNS until `safe_to_remove` is `true`; in-flight mail and\n  previously sent tracked links may still resolve through it.\n"
+            description="Lifecycle state of this record.\n\n- `active`: the record backs the domain's current configuration.\n- `pending`: the record belongs to a staged configuration change;\n  publish it to complete the change.\n- `deprecated`: the record belonged to a previous configuration.\n  Keep it in DNS until `safe_to_remove` is `true`; in-flight mail and\n  previously sent tracked links may still resolve through it.\n"
         ),
     ]
     optional: Annotated[
         bool,
         Field(
-            description="Whether this record can be skipped. Optional records enable extra functionality (e.g. tracking) but are not required for sending.\n"
+            description="Whether this record can be skipped. Optional records enable extra functionality (for example, tracking) but are not required for sending.\n"
         ),
     ]
     status: Annotated[
-        Status11,
+        Status12,
         Field(
-            description="Verification status of this record's most recent DNS check.\n- `pending` — the record has not verified yet; publish it (or correct it)\n  and it will verify on the next check.\n- `verified` — the most recent check matched the expected value. - `warning` — the record verified before and a recent check no longer\n  matched, but it is still within the grace period. Sending is not yet\n  affected; fix the record before the grace period ends to avoid it\n  being blocked.\n- `failed` — the record verified before but later checks kept failing\n  past the grace period; the configuration has regressed and needs\n  attention.\n"
+            description="Verification status of this record's most recent DNS check.\n\n- `pending`: the record has not verified yet; publish it (or correct it)\n  and it verifies on the next check.\n- `verified`: the most recent check matched the expected value.\n- `warning`: the record verified before and a recent check no longer\n  matched, but it is still within the grace period. Sending is not yet\n  affected; fix the record before the grace period ends to avoid it\n  being blocked.\n- `failed`: the record verified before but later checks kept failing\n  past the grace period; the configuration has regressed and needs\n  attention.\n"
         ),
     ]
     error: Annotated[
         str | None,
         Field(
-            description="Human-readable detail for a failed check on this record — what was found in DNS and why it did not match. Null when the record is verified or not yet checked.\n"
+            description="Human-readable detail for a failed check on this record: what was found in DNS and why it did not match. `null` when the record is verified or not yet checked.\n"
         ),
     ] = None
     safe_to_remove: Annotated[
         bool | None,
         Field(
-            description="Only set on `deprecated` records: `true` once the record is no longer referenced by in-flight mail or live tracked links and can be deleted from your DNS. Null on `active` and `pending` records.\n"
+            description="Only set on `deprecated` records: `true` once the record is no longer referenced by in-flight mail or live tracked links and can be deleted from your DNS. `null` on `active` and `pending` records.\n"
         ),
     ] = None
 
@@ -5909,7 +7713,7 @@ class Vendor(str, Enum):
     squarespace = "squarespace"
 
 
-class Status12(str, Enum):
+class Status13(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -5948,34 +7752,40 @@ class Domain(BaseModel):
     vendor: Annotated[
         Vendor,
         Field(
-            description="The DNS provider hosting this domain's nameservers, so you know which provider's dashboard to manage the required DNS records in. Returns \"other\" when the provider has not been detected or is not recognized.\n"
+            description="The DNS provider hosting this domain's nameservers, so you know which provider's dashboard to manage the required DNS records in. Returns `other` when the provider has not been detected or is not recognized.\n"
         ),
     ]
     status: Annotated[
-        Status12,
+        Status13,
         Field(
-            description="Domain ownership verification, proven by the DKIM record. Readiness to send or track is reported separately per capability under `capabilities.*.status`.\n- `pending` — the DKIM record has not been published yet. - `verified` — the DKIM record is in place; ownership is confirmed. - `failed` — a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure` — DNS resolution failed transiently (timeout,\n  unreachable nameserver). Verification is queued for retry on a 72h\n  cadence; customer should not edit DNS records before the retry runs.\n- `rejected` — the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n"
+            description="Domain ownership verification, proven by the DKIM record. Readiness to\nsend or track is reported separately per capability under\n`capabilities.*.status`.\n\n- `pending`: the DKIM record has not been published yet.\n- `verified`: the DKIM record is in place; ownership is confirmed.\n- `failed`: a DKIM record exists but does not match the expected\n  value (for example a stale record from an earlier setup), or a\n  previously verified record was removed. Correct the record to\n  recover.\n- `temporary_failure`: DNS resolution failed transiently, such as from a\n  timeout or unreachable nameserver. Verification retries automatically;\n  do not change the DNS records unless they are incorrect.\n- `rejected`: the domain was refused for policy reasons and cannot be\n  used for sending. Contact support if you believe this is an error.\n"
         ),
     ]
     settings: DomainSettings
+    next: Annotated[
+        list[NextAction] | None,
+        Field(
+            description="What to do next about this domain, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nThis answers whether you own the domain, which is what `status` reports. What each\ncapability still needs before it can send or receive is reported separately under\n`capabilities`, so an empty list here does not on its own mean the domain is ready.\n"
+        ),
+    ] = None
     dkim: DomainDKIM
     capabilities: DomainCapabilities
     dns_records: Annotated[
         list[DNSRecord],
         Field(
-            description="The domain's DNS records and their individual verification state, returned in full on both the list and single-domain responses. This is the complete set to publish across DKIM, return-path, DMARC, tracking, and inbound; records for a staged change carry `state: pending`. Inbound MX records are always included as a regional reference, even while receiving is off (`capabilities.inbound.status` is `not_configured`) — their presence alone does not mean receiving is enabled (see `DomainUpdate.inbound`).\n"
+            description="The domain's DNS records and their individual verification state, returned in full on both the list and single-domain responses. This is the complete set to publish across DKIM, return-path, DMARC, tracking, and inbound; records for a staged change carry `state: pending`. Inbound MX records are always included as a regional reference, even while receiving is off and `capabilities.inbound.status` is `not_configured`. Their presence alone does not mean receiving is enabled; see `DomainUpdate.inbound`.\n"
         ),
     ]
     last_checked_at: Annotated[
         str | None,
         Field(
-            description="When Bird last checked this domain's DNS records, whether or not the outcome changed. Updated on every verification — your manual refresh and the periodic automatic re-checks alike. Null if the domain has never been checked.\n"
+            description="When we last checked this domain's DNS records, whether or not the outcome changed. Updated on every verification: your manual refresh and the periodic automatic re-checks alike. `null` if the domain has never been checked.\n"
         ),
     ] = None
     verified_at: Annotated[
         str | None,
         Field(
-            description="When the domain's ownership was confirmed — the moment `status` became `verified` via the DKIM record. Unchanged by later re-checks while it stays verified. Null if the domain has never been verified.\n"
+            description="When the domain's ownership was confirmed: the moment `status` became `verified` via the DKIM record. Unchanged by later re-checks while it stays verified. `null` if the domain has never been verified.\n"
         ),
     ] = None
     created_at: Annotated[str, Field(description="When the domain was added.")]
@@ -6036,7 +7846,7 @@ class DomainDKIMConfig(BaseModel):
     mode: Annotated[
         Mode | None,
         Field(
-            description="How the DKIM public key is published in your DNS.\n- `txt` — you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated` — preview, currently unavailable; supplying it returns\n  `422`. When available, you publish a single CNAME and Bird hosts\n  and rotates the key with no further DNS changes on your side.\n"
+            description="How the DKIM public key is published in your DNS.\n\n- `txt` (default): you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated`: you publish a CNAME that points to a DKIM key we host and\n  rotate. This mode is unavailable for new configurations; supplying it\n  returns `422`.\n"
         ),
     ] = "txt"
 
@@ -6048,7 +7858,7 @@ class DomainCreate(BaseModel):
     domain: Annotated[
         str,
         Field(
-            description="The domain you will send from — the domain of your `from` addresses. Use a dedicated subdomain (e.g. `mail.acme.com`) rather than your registered domain so sending reputation stays separate from other services on the domain.\n",
+            description="The domain you send from: the domain of your `from` addresses. Use a dedicated subdomain (for example, `mail.acme.com`) rather than your registered domain so sending reputation stays separate from other services on the domain.\n",
             examples=["mail.acme.com"],
             min_length=1,
             pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]{0,61}[A-Za-z0-9])$",
@@ -6081,13 +7891,13 @@ class DomainUpdate(BaseModel):
     return_path: Annotated[
         DomainReturnPathConfig | None,
         Field(
-            description="Change the return-path name part. Cannot be removed — the return-path is required for sending.\n"
+            description="Change the return-path name part. Cannot be removed: the return-path is required for sending.\n"
         ),
     ] = None
     tracking: Annotated[
         DomainTrackingConfig | None,
         Field(
-            description="Set or change the tracking name part, or remove tracking by passing null. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.\n"
+            description="Set or change the tracking name part, or remove tracking by passing `null`. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.\n"
         ),
     ] = None
     dkim: Annotated[
@@ -6099,7 +7909,7 @@ class DomainUpdate(BaseModel):
     inbound: Annotated[
         DomainInboundConfig | None,
         Field(
-            description="Enable or disable receiving on this domain. Enabling claims the domain for inbound and moves `capabilities.inbound.status` from `not_configured` to `pending`, then `verified` once the MX records resolve to Bird. The MX records to publish are always present under `dns_records` (`purpose: inbound_mx`) as a regional reference, so their presence does not mean receiving is on — a domain still needs enabling whenever `capabilities.inbound.status` is `not_configured`. Enabling requires the domain's DKIM to be verified first (ownership proof): a fresh enable on a domain whose DKIM is not verified returns `422` `E05019` and claims nothing. A domain already receiving inbound for another organization returns `422` `E05018`.\n"
+            description="Enable or disable receiving on this domain. Enabling claims the domain for inbound and moves `capabilities.inbound.status` from `not_configured` to `pending`, then `verified` once the MX records resolve to us. The MX records to publish are always present under `dns_records` (`purpose: inbound_mx`) as a regional reference. Their presence does not mean receiving is enabled; enable the domain whenever `capabilities.inbound.status` is `not_configured`. Enabling requires the domain's DKIM to be verified first. A fresh enable on a domain whose DKIM is not verified returns `422` with `E05019` and claims nothing. A domain already receiving inbound for another organization returns `422` with `E05018`.\n"
         ),
     ] = None
 
@@ -6170,7 +7980,7 @@ class Mailbox(BaseModel):
     display_name: Annotated[
         str | None,
         Field(
-            description="Display name used as the sender name on mail from this mailbox. Null when unset.",
+            description="Display name used as the sender name on mail from this mailbox. `null` when unset.",
             examples=["Acme Concierge"],
             max_length=255,
         ),
@@ -6178,7 +7988,7 @@ class Mailbox(BaseModel):
     default_reply_to: Annotated[
         str | None,
         Field(
-            description="Default Reply-To address stamped on mail sent from this mailbox. Null when unset."
+            description="Default `Reply-To` address stamped on mail sent from this mailbox. `null` when unset."
         ),
     ]
     receive_policy: Annotated[
@@ -6220,7 +8030,7 @@ class Mailbox(BaseModel):
     unread_thread_count: Annotated[
         int | None,
         Field(
-            description="Number of threads with unread messages in this mailbox, excluding trash. Null on create/update responses.\n"
+            description="Number of threads with unread messages in this mailbox, excluding trash. `null` on create/update responses.\n"
         ),
     ] = None
     metadata: Annotated[
@@ -6244,7 +8054,7 @@ class Mailbox(BaseModel):
     deleted_at: Annotated[
         str | None,
         Field(
-            description="When the mailbox was deleted, or null if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and its remembered messages are permanently removed."
+            description="When the mailbox was deleted, or `null` if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and its remembered messages are permanently removed."
         ),
     ] = None
 
@@ -6267,7 +8077,7 @@ class MailboxCreate(BaseModel):
     local_part: Annotated[
         str | None,
         Field(
-            description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens. Stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits (no leading, trailing, or repeated separators), reserved names such as `postmaster` or `abuse` are unavailable, and choosing your own local part uses one of your plan's custom-handle allowance slots (generated addresses are always available). Omit it and we generate a random local part.",
+            description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens. Stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits. Leading, trailing, and repeated separators are not allowed. Reserved names such as `postmaster` and `abuse` are unavailable. Choosing your own local part uses one of your plan's custom-handle allowance slots; generated addresses remain available. Omit this field to generate a random local part.",
             examples=["concierge"],
             max_length=64,
             min_length=1,
@@ -6277,7 +8087,7 @@ class MailboxCreate(BaseModel):
     domain: Annotated[
         str | None,
         Field(
-            description="The domain the address lives under. Defaults to `inbox.ai`, our shared mailbox domain, where creating the mailbox claims the address for your organization: first come, first served, and permanently reserved to your organization even after the mailbox is deleted. May instead name one of your own domains that is enabled for receiving email.",
+            description="The domain the address lives under. Defaults to `inbox.ai`, our shared mailbox domain. Creating a mailbox claims the shared address for your organization on a first-come, first-served basis. The address remains reserved to your organization after the mailbox is deleted. You can instead use one of your own domains enabled for receiving email.",
             examples=["mail.acme.com"],
             max_length=255,
             min_length=1,
@@ -6295,7 +8105,7 @@ class MailboxCreate(BaseModel):
     default_reply_to: Annotated[
         str | None,
         Field(
-            description="Default Reply-To address stamped on mail sent from this mailbox.",
+            description="Default `Reply-To` address stamped on mail sent from this mailbox.",
             min_length=5,
         ),
     ] = None
@@ -6326,19 +8136,21 @@ class MailboxUpdate(BaseModel):
     display_name: Annotated[
         str | None,
         Field(
-            description="Display name used as the sender name on mail from this mailbox. Null clears it.",
+            description="Display name used as the sender name on mail from this mailbox. `null` clears it.",
             max_length=255,
         ),
     ] = None
     default_reply_to: Annotated[
         str | None,
         Field(
-            description="Default Reply-To address stamped on mail sent from this mailbox. Null clears it."
+            description="Default `Reply-To` address stamped on mail sent from this mailbox. `null` clears it."
         ),
     ] = None
     receive_policy: Annotated[
         ReceivePolicy | None,
-        Field(description="Which inbound mail the mailbox accepts."),
+        Field(
+            description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.\n"
+        ),
     ] = None
     retention_tier: Annotated[
         RetentionTier1 | None,
@@ -6386,7 +8198,7 @@ class MailboxStatsPoint(BaseModel):
     bucket: Annotated[
         str,
         Field(
-            description="The day (YYYY-MM-DD) or instant (RFC 3339, on the bucket boundary) this point covers, matching the period's grain.",
+            description="The day (`YYYY-MM-DD`) or instant (RFC 3339, on the bucket boundary) this point covers, matching the period's grain.",
             examples=["2026-07-21"],
             min_length=1,
         ),
@@ -6443,7 +8255,7 @@ class ReceiveRule(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="Receive rule ID.",
+            description="Identifies this rule for deletion. There is no update operation.",
             examples=["erl_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^erl_[0-9a-hjkmnp-tv-z]{26}$",
@@ -6461,7 +8273,7 @@ class ReceiveRule(BaseModel):
     action: Annotated[
         Action,
         Field(
-            description="What the rule does when it matches. Block rules always win — over allow rules and over the reply admission on allowlist mailboxes."
+            description="What the rule does when it matches. Block rules always win: over allow rules and over the reply admission on allowlist mailboxes."
         ),
     ]
     entry: Annotated[
@@ -6479,7 +8291,7 @@ class ReceiveRule(BaseModel):
     note: Annotated[
         str | None,
         Field(
-            description="Your own note about why the rule exists. Null when unset.",
+            description="Your own note about why the rule exists. `null` when unset.",
             max_length=512,
         ),
     ]
@@ -6705,7 +8517,7 @@ class EmailThreadUpdateRequest(BaseModel):
     ] = None
 
 
-class Status13(str, Enum):
+class Status14(str, Enum):
     delivered = "delivered"
     failed = "failed"
 
@@ -6716,7 +8528,7 @@ class EmailThreadMessageRecipient(BaseModel):
     )
     address: Annotated[str, Field(description="Recipient address.", min_length=1)]
     status: Annotated[
-        Status13,
+        Status14,
         Field(
             description="Terminal outcome: `delivered`, or `failed` (bounce or provider rejection)."
         ),
@@ -6864,7 +8676,7 @@ class EmailThreadMessage(BaseModel):
     status: Annotated[
         str | None,
         Field(
-            description="Folded delivery status of a sent message:\n\n- `accepted`: Accepted for sending.\n- `sent`: Handed off to the provider.\n- `delivered`: All attempted recipients delivered.\n- `failed`: Terminal failure.\n\nNull for received messages.\n"
+            description="Aggregate delivery status of a sent message:\n\n- `accepted`: Accepted for sending.\n- `sent`: Handed off to the provider.\n- `delivered`: All attempted recipients delivered.\n- `failed`: Terminal failure.\n\nNull for received messages.\n"
         ),
     ]
     recipients: Annotated[
@@ -6876,7 +8688,7 @@ class EmailThreadMessage(BaseModel):
     authentication: Annotated[
         Authentication | None,
         Field(
-            description="Whether the sender of a received message was authenticated. `pass` means the sender's identity was verified. `fail` means it was checked and did not verify. `unknown` means no verdict could be determined, and the sender should not be treated as verified. Null for sent messages. This field is readable for the mailbox's full retention tier, so the verdict is still available after the 30-day received-message log has expired.\n"
+            description="Whether the sender of a received message was authenticated.\n\n- `pass`: the sender's identity was verified.\n- `fail`: it was checked and did not verify.\n- `unknown`: no verdict could be determined, so do not treat the\n  sender as verified.\n\nNull for sent messages. This field is readable for the mailbox's full\nretention tier, so the verdict is still available after the 30-day\nreceived-message log has expired.\n"
         ),
     ]
     spf_pass: Annotated[
@@ -6900,7 +8712,7 @@ class EmailThreadMessage(BaseModel):
     purge_at: Annotated[
         str,
         Field(
-            description='When the message will be permanently deleted: the end of the mailbox\'s retention tier, pulled nearer (at most 30 days out) while the message is in the trash. Restore a trashed message before then with `PATCH {"labels": {"remove": ["trash"]}}`.\n',
+            description='Scheduled permanent-deletion time. This is the end of the mailbox\'s retention tier, moved to no more than 30 days in the future while the message is in the trash. Restore a trashed message before then with `PATCH {"labels": {"remove": ["trash"]}}`.\n',
             min_length=1,
         ),
     ]
@@ -7166,6 +8978,7 @@ class WebhookEventType(str, Enum):
     whatsapp_delivered = "whatsapp.delivered"
     whatsapp_failed = "whatsapp.failed"
     whatsapp_read = "whatsapp.read"
+    whatsapp_received = "whatsapp.received"
     whatsapp_rejected = "whatsapp.rejected"
     whatsapp_sent = "whatsapp.sent"
 
@@ -7312,7 +9125,7 @@ class EventEmailBase(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -7365,7 +9178,7 @@ class EventEmailAccepted(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="Time Bird accepted the send.",
+            description="Time the API accepted the send.",
             examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
@@ -7457,7 +9270,7 @@ class EventEmailMessageBase(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -7829,7 +9642,7 @@ class EventEmailProcessed(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="Time Bird processed the message and queued it for SMTP delivery.",
+            description="Time the message was prepared for delivery.",
             examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
@@ -7853,7 +9666,7 @@ class EventEmailReceivedData(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -7892,14 +9705,14 @@ class EventEmailReceivedData(BaseModel):
     in_reply_to: Annotated[
         str | None,
         Field(
-            description="In-Reply-To header — the Message-ID this message replies to, or null when it is not a reply.",
+            description="`In-Reply-To` header containing the `Message-ID` this message replies to, or null when it is not a reply.",
             examples=["<previous-message@example.com>"],
         ),
     ] = None
     authentication: Annotated[
         Authentication | None,
         Field(
-            description="Whether the sender of the received message was authenticated. `pass` means the sender's identity was verified; `fail` means it was checked and did not verify; `unknown` means no verdict is available and the sender should not be treated as verified.\n"
+            description="Whether the sender of the received message was authenticated.\n\n- `pass`: the sender's identity was verified.\n- `fail`: it was checked and did not verify.\n- `unknown`: no verdict is available, so do not treat the sender\n  as verified.\n"
         ),
     ] = None
     spf_pass: Annotated[
@@ -7943,7 +9756,7 @@ class EventEmailReceived(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="When Bird received the message.",
+            description="When the API received the message.",
             examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
@@ -8064,7 +9877,7 @@ class EventEmailMailboxMessageDeliveredData(BaseModel):
     message_id: Annotated[
         str,
         Field(
-            description="ID of the delivered message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.",
+            description="ID of the delivered message. Per-recipient `email.*` events use this value as `email_id`. Use it to deduplicate events when you subscribe to both event families.",
             examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8120,7 +9933,7 @@ class EventEmailMailboxMessageFailedData(BaseModel):
     message_id: Annotated[
         str,
         Field(
-            description="ID of the failed message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.",
+            description="ID of the failed message. Per-recipient `email.*` events use this value as `email_id`. Use it to deduplicate events when you subscribe to both event families.",
             examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8147,7 +9960,7 @@ class EventEmailMailboxMessageFailedData(BaseModel):
     reason: Annotated[
         str,
         Field(
-            description="Why the send folded to failed.",
+            description="Why the message reached a terminal delivery failure.",
             examples=["all recipients bounced"],
             min_length=1,
         ),
@@ -8184,7 +9997,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     message_id: Annotated[
         str,
         Field(
-            description="ID of the received message. The same message fires email.received with this ID as inbound_message_id — when you subscribe to both families, dedupe by this ID.",
+            description="ID of the received message. The corresponding `email.received` event uses this value as `inbound_message_id`. Use it to deduplicate events when you subscribe to both event families.",
             examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^rem_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8241,20 +10054,20 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     extracted_text: Annotated[
         str | None,
         Field(
-            description="Plain-text body with quoted history stripped, capped at 64 KB (see truncated_text). Null when extraction produced nothing. This copy is what the mailbox durably retains.",
+            description="Plain-text body with quoted history removed, capped at 64 KB. See `truncated_text` to check whether the value was truncated. Null when extraction produces no text.",
             examples=["Sounds good — can you send the invoice?"],
         ),
     ] = None
     truncated_text: Annotated[
         bool | None,
         Field(
-            description="True when extracted_text was truncated to the 64 KB cap; fetch the full text via the thread-member endpoint."
+            description="True when `extracted_text` was truncated to the 64 KB cap. Fetch the full text through the thread-member endpoint."
         ),
     ] = False
     attachment_count: Annotated[
         int,
         Field(
-            description="Number of attachments on the message. Metadata is durable; bytes are fetchable while within the 30-day original-source window.",
+            description="Number of attachments on the message. Attachment content remains available during the 30-day original-source retention window.",
             examples=[1],
             ge=0,
         ),
@@ -8262,7 +10075,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     authentication: Annotated[
         Authentication | None,
         Field(
-            description="Whether the sender of the received message was authenticated. `pass` means the sender's identity was verified; `fail` means it was checked and did not verify; `unknown` means no verdict is available and the sender should not be treated as verified.\n"
+            description="Whether the sender of the received message was authenticated.\n\n- `pass`: the sender's identity was verified.\n- `fail`: it was checked and did not verify.\n- `unknown`: no verdict is available, so do not treat the sender\n  as verified.\n"
         ),
     ] = None
     spf_pass: Annotated[
@@ -8315,7 +10128,7 @@ class EventEmailMailboxMessageSentData(BaseModel):
     message_id: Annotated[
         str,
         Field(
-            description="ID of the sent message. The same send fires the per-recipient email.* lifecycle events with this ID as email_id — when you subscribe to both families, dedupe by this ID.",
+            description="ID of the sent message. Per-recipient `email.*` events use this value as `email_id`. Use it to deduplicate events when you subscribe to both event families.",
             examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8431,7 +10244,7 @@ class EventEmailMailboxThreadCreatedData(BaseModel):
     mailbox_id: Annotated[
         str,
         Field(
-            description="ID of the mailbox.",
+            description="ID of the mailbox the thread was created in.",
             examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8497,7 +10310,7 @@ class EventEmailSuppressionCreatedData(BaseModel):
     reason: Annotated[
         str,
         Field(
-            description="Why the address was suppressed. This list grows over time — treat unknown values as informational rather than rejecting the event.\n",
+            description="Why the address was suppressed. New values may be added over time; treat unknown values as informational.\n",
             examples=["hard_bounce"],
             min_length=1,
         ),
@@ -8552,7 +10365,7 @@ class EventSMSBase(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8591,7 +10404,7 @@ class EventSMSBase(BaseModel):
     cost: Annotated[
         MessageCost | None,
         Field(
-            description="What the message had cost as of this event, split into Bird's charge and any third-party fees passed through. Null on an event that priced nothing.\n\nComponents are named so you can merge them per component rather than replacing the object: webhook delivery is not ordered, so an older event arriving late would otherwise overwrite a newer figure. Take the latest `occurred_at` you have seen for each component. `amount` is the sum of the components in THIS payload, not a settled total.\n"
+            description="Message cost as of this event, split into the platform charge and any\nthird-party fees passed through. Null on an event that priced nothing.\n\nComponents are named so you can merge them per component rather than replacing the\nobject: webhook delivery is not ordered, so an older event arriving late would\notherwise overwrite a newer figure. Take the latest `occurred_at` you have seen for\neach component. `amount` is the sum of the components in this payload and does not\nrepresent a settled total.\n"
         ),
     ] = None
 
@@ -8602,9 +10415,7 @@ class EventSMSAcceptedData(EventSMSBase):
     )
     segments: Annotated[
         SMSSegments,
-        Field(
-            description="Segment breakdown of the body Bird accepted, which is what the send is billed on."
-        ),
+        Field(description="Segment breakdown used to calculate the message charge."),
     ]
 
 
@@ -8623,7 +10434,7 @@ class EventSMSAccepted(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="Time Bird accepted the request.",
+            description="Time the API accepted the request.",
             examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
@@ -9003,7 +10814,7 @@ class EventVerifyBase(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -9353,7 +11164,7 @@ class EventVoiceBase(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -9436,7 +11247,7 @@ class EventVoiceCallEndedData(EventVoiceBase):
     duration_ms: Annotated[
         int,
         Field(
-            description="Total call duration in milliseconds, measured from the first INVITE to the BYE or final response.",
+            description="Total call duration in milliseconds, measured from the first SIP `INVITE` to the `BYE` or final response.",
             examples=[65000],
             ge=0,
         ),
@@ -9466,7 +11277,7 @@ class EventVoiceCallEnded(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="When the call ended (BYE or final non-2xx response).",
+            description="Time either party hung up or call setup failed.",
             examples=["2026-05-21 12:00:00+00:00"],
             min_length=1,
         ),
@@ -9524,7 +11335,7 @@ class EventWhatsAppBase(BaseModel):
     workspace_id: Annotated[
         str,
         Field(
-            description="ID of the workspace.",
+            description="ID of the workspace that owns this event.",
             examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
@@ -9585,7 +11396,7 @@ class EventWhatsAppAccepted(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="Time Bird accepted and charged the send request.",
+            description="Time the API accepted and charged the send request.",
             examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
@@ -9683,6 +11494,59 @@ class EventWhatsAppRead(BaseModel):
     data: EventWhatsAppReadData
 
 
+class WhatsAppReceivedEventType(str, Enum):
+    whatsapp_received = "whatsapp.received"
+
+
+class EventWhatsAppReceivedData(EventWhatsAppBase):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    text: Annotated[
+        WhatsAppText | None, Field(description="Text the contact sent.")
+    ] = None
+    image: Annotated[
+        WhatsAppImage | None, Field(description="Image the contact sent.")
+    ] = None
+    video: Annotated[
+        WhatsAppVideo | None, Field(description="Video the contact sent.")
+    ] = None
+    audio: Annotated[
+        WhatsAppAudio | None, Field(description="Audio the contact sent.")
+    ] = None
+    sticker: Annotated[
+        WhatsAppSticker | None, Field(description="Sticker the contact sent.")
+    ] = None
+    document: Annotated[
+        WhatsAppDocument | None, Field(description="Document the contact sent.")
+    ] = None
+    location: Annotated[
+        WhatsAppLocation | None, Field(description="Location the contact sent.")
+    ] = None
+    unsupported: Annotated[
+        WhatsAppUnsupported | None,
+        Field(
+            description="Set when the contact sent content the API does not model, naming the WhatsApp content type.\n"
+        ),
+    ] = None
+
+
+class EventWhatsAppReceived(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["whatsapp.received"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="Time the contact sent the message, as reported by WhatsApp.",
+            examples=["2026-07-16 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppReceivedData
+
+
 class EventWhatsAppRejectedData(EventWhatsAppBase):
     model_config = ConfigDict(
         extra="allow",
@@ -9737,7 +11601,7 @@ class EventWhatsAppSent(BaseModel):
     timestamp: Annotated[
         str,
         Field(
-            description="Time Bird handed the message to Meta for delivery.",
+            description="Time the API handed the message to Meta for delivery.",
             examples=["2026-07-16 12:00:00+00:00"],
             min_length=1,
         ),
@@ -9752,7 +11616,7 @@ class AuditLogActor(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="Actor identifier.",
+            description="ID of the user, API key, or system process that performed the action.",
             examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
         ),
@@ -9760,7 +11624,7 @@ class AuditLogActor(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Actor type (e.g. user, api_key, system).",
+            description="Type of actor, such as `user`, `api_key`, or `system`.",
             examples=["user"],
             min_length=1,
         ),
@@ -9768,7 +11632,7 @@ class AuditLogActor(BaseModel):
     display_name: Annotated[
         str | None,
         Field(
-            description="Display name of the actor — the user's email address for user actors, or the API key's name for API-key actors. Absent when it could not be resolved.\n"
+            description="Display name of the actor. This is the user's email address for a `user` actor or the API key name for an `api_key` actor. Absent when it could not be resolved.\n"
         ),
     ] = None
 
@@ -9830,7 +11694,7 @@ class VoiceMediaQuality(BaseModel):
     round_trip_time_ms: Annotated[
         int,
         Field(
-            description="Round-trip time between the two ends, in milliseconds. It does not distort the audio, but above roughly 300 ms the two parties start talking over each other.",
+            description="Round-trip time between the two ends, in milliseconds. It does not distort the audio. Above roughly 300 ms, the two parties start talking over each other.",
             examples=[42],
             ge=0,
         ),
@@ -9853,7 +11717,7 @@ class VoiceCall(BaseModel):
     session_id: Annotated[
         VoiceSessionID | None,
         Field(
-            description="Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. Null when session correlation is not available for the call."
+            description="Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. `null` when session correlation is not available for the call."
         ),
     ] = None
     workspace_id: Annotated[
@@ -9885,20 +11749,20 @@ class VoiceCall(BaseModel):
     actor: Annotated[
         AuditLogActor | None,
         Field(
-            description="Who placed the call. Either the API key whose credentials it used, or the user who placed it from a browser or the Bird CLI. Absent when the call was admitted by its source IP address alone, since no credential identifies a caller there, and for calls placed before Bird started recording this."
+            description="Who placed the call: either the API key whose credentials it used or the user who placed it from a browser or the CLI. Absent when the call was admitted only by its source IP address, or when no actor was recorded."
         ),
     ] = None
     sip_trunk_id: Annotated[
         SIPTrunkID | None,
         Field(
-            description="Identifier of the SIP trunk that originated this call. Null when no trunk is associated."
+            description="Identifier of the SIP trunk that originated this call. `null` when no trunk is associated."
         ),
     ] = None
     status: VoiceCallStatus
     sip_response_code: Annotated[
         int | None,
         Field(
-            description="Final SIP response code received from the carrier. Null when no SIP response was received, for example on timeout or DNS failure.",
+            description="Final SIP response code received from the carrier. `null` when no SIP response was received, for example on timeout or DNS failure.",
             examples=[200],
             ge=100,
         ),
@@ -9906,7 +11770,7 @@ class VoiceCall(BaseModel):
     rejection_reason: Annotated[
         VoiceCallRejectionReason | None,
         Field(
-            description="Why Bird refused the call before dialing a carrier. Absent when Bird did not refuse it, meaning the call either connected or it failed at the carrier, where `sip_response_code` is the whole story."
+            description="Why we refused the call before dialing a carrier. Absent when the call connected or failed at the carrier; see `sip_response_code` for the carrier response."
         ),
     ] = None
     started_at: Annotated[
@@ -9915,19 +11779,19 @@ class VoiceCall(BaseModel):
     answered_at: Annotated[
         str | None,
         Field(
-            description="When the call was answered (200 OK received). Null for unanswered calls."
+            description="When the call was answered (`200` OK received). `null` for unanswered calls."
         ),
     ] = None
     ended_at: Annotated[
         str | None,
         Field(
-            description="When the call ended (BYE or final non-2xx response). Null for calls that ended abnormally without a recorded end event."
+            description="When the call ended (BYE or final non-2xx response). `null` for calls that ended abnormally without a recorded end event."
         ),
     ] = None
     duration_ms: Annotated[
         int | None,
         Field(
-            description="Total call duration in milliseconds, measured from the first INVITE to the BYE or final response. Null while the call is still in progress and has no final duration yet.",
+            description="Total call duration in milliseconds, measured from the first INVITE to the BYE or final response. `null` while the call is still in progress and has no final duration yet.",
             examples=[65000],
             ge=0,
         ),
@@ -9935,7 +11799,7 @@ class VoiceCall(BaseModel):
     pdd_ms: Annotated[
         int | None,
         Field(
-            description='Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the call "not going through". Absent when the call never rang, either because it failed first or because the carrier answered it immediately.\n',
+            description="Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the call `not going through`. Absent when the call never rang, either because it failed first or because the carrier answered it immediately.\n",
             examples=[850],
             ge=0,
         ),
@@ -9943,7 +11807,7 @@ class VoiceCall(BaseModel):
     billable_ms: Annotated[
         int | None,
         Field(
-            description="Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls, and null while the call is still in progress.",
+            description="Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls, and `null` while the call is still in progress.",
             examples=[60000],
             ge=0,
         ),
@@ -10015,6 +11879,7 @@ class WebhookEvent(
         | EventWhatsAppDelivered
         | EventWhatsAppFailed
         | EventWhatsAppRead
+        | EventWhatsAppReceived
         | EventWhatsAppRejected
         | EventWhatsAppSent
     ]
@@ -10064,10 +11929,11 @@ class WebhookEvent(
         | EventWhatsAppDelivered
         | EventWhatsAppFailed
         | EventWhatsAppRead
+        | EventWhatsAppReceived
         | EventWhatsAppRejected
         | EventWhatsAppSent,
         Field(
-            description="Discriminated union of every webhook event the Bird platform emits.\n\nEach variant is the full delivery body: `type` names the event, `timestamp` is when the\nevent occurred, and `data` carries the event-specific payload. The `type` property\nselects the variant, and the generated SDK types narrow on it, so your code can switch\non the event id and read the variant-specific payload fields without casting.\n\nDelivery metadata (the event id and per-attempt signature headers) rides in HTTP headers\nper Standard Webhooks and is handled by the SDK's webhook verification helper, which\nreturns one of these variants. See the [webhooks guide](/docs/guides/webhooks) for\nheader names and the verification recipe.\n",
+            description="Webhook delivery body. `type` identifies the event variant, `timestamp` is when the event occurred, and `data` contains the event-specific payload. See the [webhooks guide](/docs/guides/webhooks) for signature verification.\n",
             discriminator="type",
         ),
     ]

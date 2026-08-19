@@ -44,7 +44,7 @@ class WhatsappBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> WhatsAppMessage:
-        """Get one WhatsApp message by id: current delivery status, sent/delivered/read timestamps, the template it was sent from, and failure detail if it failed. For the per-event timeline use whatsapp_list_events.
+        """Get one WhatsApp message by id: current delivery status, sent/delivered/read timestamps, the one content it was built from (a template, or free-form text, image, video, audio, sticker, document or location), and failure detail if it failed. For the per-event timeline use whatsapp_list_events.
 
         ```python
         msg = client.whatsapp.get("wa_abc123")
@@ -74,7 +74,7 @@ class WhatsappBase(Resource):
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, template category, or tag. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document or location. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, template category, or tag. Use whatsapp_get for one message's current state.
 
         ```python
         for msg in client.whatsapp.list(status=["delivered"]):
@@ -103,7 +103,7 @@ class WhatsappBase(Resource):
         type: str | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppEventList:
-        """Get one WhatsApp message's delivery timeline, oldest first: whatsapp.accepted, whatsapp.sent, whatsapp.delivered, whatsapp.read, and whatsapp.failed events, with failure detail on failed events. Not paginated; an unknown message id is a 404. Use whatsapp_get for the condensed current status.
+        """Get one WhatsApp message's delivery timeline, oldest first: whatsapp.accepted, whatsapp.sent, whatsapp.delivered, whatsapp.read, and whatsapp.failed events, with failure detail on failed events. Not paginated; an unknown message ID returns `404`. Use `whatsapp.get` for the condensed current status.
 
         ```python
         events = client.whatsapp.list_events("wa_abc123")
@@ -128,7 +128,7 @@ class AsyncWhatsappBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> WhatsAppMessage:
-        """Get one WhatsApp message by id: current delivery status, sent/delivered/read timestamps, the template it was sent from, and failure detail if it failed. For the per-event timeline use whatsapp_list_events.
+        """Get one WhatsApp message by id: current delivery status, sent/delivered/read timestamps, the one content it was built from (a template, or free-form text, image, video, audio, sticker, document or location), and failure detail if it failed. For the per-event timeline use whatsapp_list_events.
 
         ```python
         msg = await client.whatsapp.get("wa_abc123")
@@ -158,7 +158,7 @@ class AsyncWhatsappBase(AsyncResource):
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, template category, or tag. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document or location. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, template category, or tag. Use whatsapp_get for one message's current state.
 
         ```python
         async for msg in client.whatsapp.list(status=["delivered"]):
@@ -187,7 +187,7 @@ class AsyncWhatsappBase(AsyncResource):
         type: str | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppEventList:
-        """Get one WhatsApp message's delivery timeline, oldest first: whatsapp.accepted, whatsapp.sent, whatsapp.delivered, whatsapp.read, and whatsapp.failed events, with failure detail on failed events. Not paginated; an unknown message id is a 404. Use whatsapp_get for the condensed current status.
+        """Get one WhatsApp message's delivery timeline, oldest first: whatsapp.accepted, whatsapp.sent, whatsapp.delivered, whatsapp.read, and whatsapp.failed events, with failure detail on failed events. Not paginated; an unknown message ID returns `404`. Use `whatsapp.get` for the condensed current status.
 
         ```python
         events = await client.whatsapp.list_events("wa_abc123")

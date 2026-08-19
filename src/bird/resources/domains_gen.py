@@ -238,7 +238,7 @@ class Domains(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a sending domain by id. Revokes its sender authorization: new sends from the domain are rejected afterward, while historical statistics and events for past sends are preserved. Destructive.
+        """Delete a sending domain by ID. Revokes its sender authorization: new sends from the domain are rejected afterward, while historical statistics and events for past sends are preserved. Destructive.
 
         ```python
         client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")
@@ -401,7 +401,7 @@ class AsyncDomains(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a sending domain by id. Revokes its sender authorization: new sends from the domain are rejected afterward, while historical statistics and events for past sends are preserved. Destructive.
+        """Delete a sending domain by ID. Revokes its sender authorization: new sends from the domain are rejected afterward, while historical statistics and events for past sends are preserved. Destructive.
 
         ```python
         await client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")

@@ -7,6 +7,7 @@ from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
+    SMSEventList,
     SMSMessage,
 )
 from bird._resource import AsyncResource, Resource
@@ -31,6 +32,12 @@ class SmsListParams(TypedDict, total=False):
     tag: Sequence[str]
 
 
+class SmsListEventsParams(TypedDict, total=False):
+    """Query params for ``client.sms.list_events``. Every key is optional."""
+
+    type: str
+
+
 class SmsBase(Resource):
     def get(
         self,
@@ -38,7 +45,7 @@ class SmsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Get one SMS message by id: its current delivery status, segment breakdown, cost, and failure detail if it failed.
+        """Get one SMS message by ID: its current delivery status, segment breakdown, cost, and failure detail if it failed.
 
         ```python
         message = client.sms.get("sms_abc123")
@@ -69,7 +76,7 @@ class SmsBase(Resource):
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[SMSMessage]:
-        """List SMS messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, category, recipient, sender, or tag.
+        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, or tag.
 
         ```python
         for message in client.sms.list(direction="outbound"):
@@ -92,6 +99,30 @@ class SmsBase(Resource):
         }
         return SyncPage(self._client, "/v1/sms/messages", query, SMSMessage, options)
 
+    def list_events(
+        self,
+        message_id: str,
+        *,
+        type: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSEventList:
+        """The lifecycle event timeline for one SMS, oldest first: what happened to it and when. Filter with `type` (for example `sms.delivered`) to keep one kind of event. Use `sms.get` for the message's current state and `sms.list` to find its ID.
+
+        ```python
+        events = client.sms.list_events("sms_abc123")
+        for event in events.data:
+            print(event.type, event.occurred_at)
+        ```
+        """
+        return self._get(
+            f"/v1/sms/messages/{quote(message_id, safe='')}/events",
+            {
+                "type": type,
+            },
+            SMSEventList,
+            options,
+        )
+
 
 class AsyncSmsBase(AsyncResource):
     async def get(
@@ -100,7 +131,7 @@ class AsyncSmsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Get one SMS message by id: its current delivery status, segment breakdown, cost, and failure detail if it failed.
+        """Get one SMS message by ID: its current delivery status, segment breakdown, cost, and failure detail if it failed.
 
         ```python
         message = await client.sms.get("sms_abc123")
@@ -131,7 +162,7 @@ class AsyncSmsBase(AsyncResource):
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[SMSMessage]:
-        """List SMS messages, newest first, as a cursor page ({data, next_cursor, …}). Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, category, recipient, sender, or tag.
+        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, or tag.
 
         ```python
         async for message in client.sms.list(direction="outbound"):
@@ -153,3 +184,27 @@ class AsyncSmsBase(AsyncResource):
             "tag": tag,
         }
         return AsyncPage(self._client, "/v1/sms/messages", query, SMSMessage, options)
+
+    async def list_events(
+        self,
+        message_id: str,
+        *,
+        type: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSEventList:
+        """The lifecycle event timeline for one SMS, oldest first: what happened to it and when. Filter with `type` (for example `sms.delivered`) to keep one kind of event. Use `sms.get` for the message's current state and `sms.list` to find its ID.
+
+        ```python
+        events = await client.sms.list_events("sms_abc123")
+        for event in events.data:
+            print(event.type, event.occurred_at)
+        ```
+        """
+        return await self._get(
+            f"/v1/sms/messages/{quote(message_id, safe='')}/events",
+            {
+                "type": type,
+            },
+            SMSEventList,
+            options,
+        )

@@ -138,6 +138,11 @@ from bird._open_enums import (
     LookupFlag,
     LookupPropertyStatus,
     SMSErrorCode,
+    SMSKeywordOperation,
+    SMSSuppressionCoverage,
+    SMSSuppressionEndReason,
+    SMSSuppressionOrigin,
+    SMSSuppressionReason,
     TemplateLanguageStatus,
     TemplateStatus,
     VerificationAttemptFailureReason,
@@ -148,6 +153,7 @@ from bird._open_enums import (
     WhatsAppTemplateCategory,
     WhatsAppTemplateParameterType,
 )
+from bird.resources.realtime import ChannelAuthorization
 from bird.resources.webhooks import GenericWebhookEvent
 from bird._exceptions import (
     APIConnectionError,
@@ -159,7 +165,6 @@ from bird._exceptions import (
     ErrorType,
     NextAction,
     RateLimitError,
-    UnmetGate,
     ValidationError,
     WebhookVerificationError,
 )
@@ -259,6 +264,7 @@ __all__ = [
     "RealtimeChannelMembers",
     "RealtimeChannelMember",
     "RealtimeChannelInclude",
+    "ChannelAuthorization",
     "SmsSendParams",
     "SMSMessage",
     "SMSMessageBatchResponse",
@@ -287,6 +293,11 @@ __all__ = [
     "LookupFlag",
     "LookupPropertyStatus",
     "SMSErrorCode",
+    "SMSKeywordOperation",
+    "SMSSuppressionCoverage",
+    "SMSSuppressionEndReason",
+    "SMSSuppressionOrigin",
+    "SMSSuppressionReason",
     "TemplateLanguageStatus",
     "TemplateStatus",
     "VerificationAttemptFailureReason",
@@ -307,6 +318,5 @@ __all__ = [
     "ErrorDetail",
     "ErrorType",
     "NextAction",
-    "UnmetGate",
     "__version__",
 ]

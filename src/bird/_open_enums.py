@@ -86,6 +86,48 @@ class SMSErrorCode:
     UNREACHABLE: Final = "unreachable"
 
 
+class SMSKeywordOperation:
+    """Values of SMSKeywordOperation known at this SDK version (open enum)."""
+
+    CUSTOM: Final = "custom"
+    HELP: Final = "help"
+    START: Final = "start"
+    STOP: Final = "stop"
+
+
+class SMSSuppressionCoverage:
+    """Values of SMSSuppressionCoverage known at this SDK version (open enum)."""
+
+    ALL: Final = "all"
+    NON_TRANSACTIONAL: Final = "non_transactional"
+
+
+class SMSSuppressionEndReason:
+    """Values of SMSSuppressionEndReason known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    CARRIER_CLEARED: Final = "carrier_cleared"
+    KEYWORD_START: Final = "keyword_start"
+    USER: Final = "user"
+
+
+class SMSSuppressionOrigin:
+    """Values of SMSSuppressionOrigin known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    DLR_EVENT: Final = "dlr_event"
+    KEYWORD: Final = "keyword"
+    USER: Final = "user"
+
+
+class SMSSuppressionReason:
+    """Values of SMSSuppressionReason known at this SDK version (open enum)."""
+
+    CARRIER_OPTED_OUT: Final = "carrier_opted_out"
+    KEYWORD_STOP: Final = "keyword_stop"
+    MANUAL: Final = "manual"
+
+
 class TemplateLanguageStatus:
     """Values of TemplateLanguageStatus known at this SDK version (open enum)."""
 
@@ -151,6 +193,7 @@ class WhatsAppEventType:
     WHATSAPP_DELIVERED: Final = "whatsapp.delivered"
     WHATSAPP_FAILED: Final = "whatsapp.failed"
     WHATSAPP_READ: Final = "whatsapp.read"
+    WHATSAPP_RECEIVED: Final = "whatsapp.received"
     WHATSAPP_REJECTED: Final = "whatsapp.rejected"
     WHATSAPP_SENT: Final = "whatsapp.sent"
 
@@ -182,6 +225,11 @@ __all__ = [
     "LookupFlag",
     "LookupPropertyStatus",
     "SMSErrorCode",
+    "SMSKeywordOperation",
+    "SMSSuppressionCoverage",
+    "SMSSuppressionEndReason",
+    "SMSSuppressionOrigin",
+    "SMSSuppressionReason",
     "TemplateLanguageStatus",
     "TemplateStatus",
     "VerificationAttemptFailureReason",

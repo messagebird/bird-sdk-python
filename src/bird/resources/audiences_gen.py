@@ -156,7 +156,7 @@ class Audiences(Resource):
         description: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> Audience:
-        """Update an audience's name or description. Omitted fields are unchanged; a null description clears it.
+        """Update an audience's name or description. Omitted fields are unchanged; a `null` description clears it.
 
         ```python
         audience = client.audiences.update("adn_01krdgeqcxet5s7t44vh8rt9mg", name="Renamed")
@@ -374,7 +374,7 @@ class AsyncAudiences(AsyncResource):
         description: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> Audience:
-        """Update an audience's name or description. Omitted fields are unchanged; a null description clears it.
+        """Update an audience's name or description. Omitted fields are unchanged; a `null` description clears it.
 
         ```python
         audience = await client.audiences.update("adn_01krdgeqcxet5s7t44vh8rt9mg", name="Renamed")

@@ -141,7 +141,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Read one mailbox by ID. A mailbox deleted within its 30-day restore window is still returned, with a non-null `deleted_at`. Once that window closes it is gone and this returns 404.
+        """Read one mailbox by ID. A mailbox deleted within its 30-day restore window is still returned, with `deleted_at` set. Once that window closes it is gone and this returns `404`.
 
         ```python
         mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -219,7 +219,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns 404. A mailbox that is not deleted returns 409.
+        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns `404`. A mailbox that is not deleted returns `409`.
 
         ```python
         mailbox = client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -239,7 +239,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Resume a suspended mailbox so it can send and receive again and its conversations become visible. Fails if your plan does not have room for another active mailbox (or another custom inbox.ai handle). Delete an active mailbox or upgrade first. A mailbox that is not suspended returns 409.
+        """Resume a suspended mailbox so it can send and receive again and its conversations become visible. Fails if your plan does not have room for another active mailbox (or another custom inbox.ai handle). Delete an active mailbox or upgrade first. A mailbox that is not suspended returns `409`.
 
         ```python
         mailbox = client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -382,7 +382,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Read one mailbox by ID. A mailbox deleted within its 30-day restore window is still returned, with a non-null `deleted_at`. Once that window closes it is gone and this returns 404.
+        """Read one mailbox by ID. A mailbox deleted within its 30-day restore window is still returned, with `deleted_at` set. Once that window closes it is gone and this returns `404`.
 
         ```python
         mailbox = await client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -460,7 +460,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns 404. A mailbox that is not deleted returns 409.
+        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns `404`. A mailbox that is not deleted returns `409`.
 
         ```python
         mailbox = await client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -480,7 +480,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Resume a suspended mailbox so it can send and receive again and its conversations become visible. Fails if your plan does not have room for another active mailbox (or another custom inbox.ai handle). Delete an active mailbox or upgrade first. A mailbox that is not suspended returns 409.
+        """Resume a suspended mailbox so it can send and receive again and its conversations become visible. Fails if your plan does not have room for another active mailbox (or another custom inbox.ai handle). Delete an active mailbox or upgrade first. A mailbox that is not suspended returns `409`.
 
         ```python
         mailbox = await client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")

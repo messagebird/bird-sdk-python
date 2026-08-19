@@ -40,7 +40,13 @@ Repository = "https://github.com/messagebird/bird-sdk-python.git"
 Issues = "https://github.com/messagebird/bird-sdk-python/issues"
 
 [project.optional-dependencies]
+# XSalsa20-Poly1305 for Realtime private-encrypted- channels. Optional because it
+# is the only non-pure-Python dependency in the tree and only encrypted publishing
+# needs it — deriving a channel's shared_secret and signing a channel auth are
+# stdlib hashlib/hmac.
+realtime-encryption = ["pynacl>=1.5"]
 dev = [
+    "pynacl>=1.5",
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "respx>=0.21",

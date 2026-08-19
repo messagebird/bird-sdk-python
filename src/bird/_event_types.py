@@ -58,5 +58,6 @@ class WebhookEventType:
     WHATSAPP_DELIVERED: Final = "whatsapp.delivered"
     WHATSAPP_FAILED: Final = "whatsapp.failed"
     WHATSAPP_READ: Final = "whatsapp.read"
+    WHATSAPP_RECEIVED: Final = "whatsapp.received"
     WHATSAPP_REJECTED: Final = "whatsapp.rejected"
     WHATSAPP_SENT: Final = "whatsapp.sent"

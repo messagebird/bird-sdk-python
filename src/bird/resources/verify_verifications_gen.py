@@ -64,7 +64,7 @@ class VerifyVerifications(Resource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS, WhatsApp and Telegram delivery all draw on the workspace's balance.
+        """Start a verification and send a one-time passcode to the email address, phone number, or both in `to`. Delivery uses one planned channel at a time and fails over when necessary. Calling again for the same recipient reuses the verification in progress and sends after the resend cooldown. The passcode is never returned; submit the recipient's code with `verify.verifications.check`. SMS, WhatsApp, and Telegram delivery draw on the workspace's balance.
 
         ```python
         verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
@@ -94,7 +94,7 @@ class VerifyVerifications(Resource):
         code: str,
         options: RequestOptions | None = None,
     ) -> VerificationCheckResult:
-        """Check a passcode a recipient submitted. Identify the verification by the same `to` recipient used to start it; no verification id needed. A wrong or expired code returns HTTP 200 with `success: false` and a `reason` (for example `incorrect_code` or `expired`), not an error. A verification that has already reached a final state is no longer checkable and returns 404, as does a missing verification; malformed input or rate limiting is also an error status.
+        """Check a passcode a recipient submitted. Identify the verification by the same `to` recipient used to start it; no verification ID is needed. A wrong or expired code returns HTTP 200 with `success: false` and a `reason` (for example `incorrect_code` or `expired`). A verification that has already reached a final state is no longer checkable and returns 404, as does a missing verification; malformed input or rate limiting is also an error status.
 
         ```python
         result = client.verify.verifications.check(
@@ -124,7 +124,7 @@ class VerifyVerifications(Resource):
         to: VerificationTo,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Advance an in-progress verification to the next channel in its plan and send a fresh passcode there: the "I didn't receive my code" action. The verification is identified by the same `to` recipient used to start it, with no verification id needed. The send bypasses the resend cooldown, and earlier passcodes stay valid. Returns the verification with `last_channel` set to the channel the new code went to; when concurrent advances race for the same recipient, the response reflects committed state: `last_channel` names the most recent completed send, and the racing call that completed the newer send is authoritative. A plan with no further channel returns a 422 named NoNextChannel, after which only re-creating the verification will resend.
+        """Advance an in-progress verification to its next channel and send a fresh passcode. Identify it with the same `to` recipient used to create it; no verification ID is required. This bypasses the resend cooldown, and earlier passcodes remain valid. `last_channel` identifies the most recent completed send. `422 NoNextChannel` means the plan is exhausted; create the verification again to resend on the current channel.
 
         ```python
         verification = client.verify.verifications.next_channel(
@@ -157,7 +157,7 @@ class AsyncVerifyVerifications(AsyncResource):
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Start a verification: generate a one-time passcode and send it to the recipient in `to` (a phone number over the phone channels enabled for its destination country; an email address over email; or both). It is sent over one channel at a time and fails over to the next in the plan, never over two at once. Calling again for the same recipient reuses the in-progress verification and sends a fresh code after the resend cooldown; it does not start a second one, so use this both to send and to resend. The passcode is never returned; submit what the recipient enters with verify_verifications_check. SMS, WhatsApp and Telegram delivery all draw on the workspace's balance.
+        """Start a verification and send a one-time passcode to the email address, phone number, or both in `to`. Delivery uses one planned channel at a time and fails over when necessary. Calling again for the same recipient reuses the verification in progress and sends after the resend cooldown. The passcode is never returned; submit the recipient's code with `verify.verifications.check`. SMS, WhatsApp, and Telegram delivery draw on the workspace's balance.
 
         ```python
         verification = await client.verify.verifications.create(to={"phone_number": "+15551234567"})
@@ -187,7 +187,7 @@ class AsyncVerifyVerifications(AsyncResource):
         code: str,
         options: RequestOptions | None = None,
     ) -> VerificationCheckResult:
-        """Check a passcode a recipient submitted. Identify the verification by the same `to` recipient used to start it; no verification id needed. A wrong or expired code returns HTTP 200 with `success: false` and a `reason` (for example `incorrect_code` or `expired`), not an error. A verification that has already reached a final state is no longer checkable and returns 404, as does a missing verification; malformed input or rate limiting is also an error status.
+        """Check a passcode a recipient submitted. Identify the verification by the same `to` recipient used to start it; no verification ID is needed. A wrong or expired code returns HTTP 200 with `success: false` and a `reason` (for example `incorrect_code` or `expired`). A verification that has already reached a final state is no longer checkable and returns 404, as does a missing verification; malformed input or rate limiting is also an error status.
 
         ```python
         result = await client.verify.verifications.check(
@@ -217,7 +217,7 @@ class AsyncVerifyVerifications(AsyncResource):
         to: VerificationTo,
         options: RequestOptions | None = None,
     ) -> Verification:
-        """Advance an in-progress verification to the next channel in its plan and send a fresh passcode there: the "I didn't receive my code" action. The verification is identified by the same `to` recipient used to start it, with no verification id needed. The send bypasses the resend cooldown, and earlier passcodes stay valid. Returns the verification with `last_channel` set to the channel the new code went to; when concurrent advances race for the same recipient, the response reflects committed state: `last_channel` names the most recent completed send, and the racing call that completed the newer send is authoritative. A plan with no further channel returns a 422 named NoNextChannel, after which only re-creating the verification will resend.
+        """Advance an in-progress verification to its next channel and send a fresh passcode. Identify it with the same `to` recipient used to create it; no verification ID is required. This bypasses the resend cooldown, and earlier passcodes remain valid. `last_channel` identifies the most recent completed send. `422 NoNextChannel` means the plan is exhausted; create the verification again to resend on the current channel.
 
         ```python
         verification = await client.verify.verifications.next_channel(

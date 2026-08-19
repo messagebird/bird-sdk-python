@@ -108,7 +108,7 @@ def _send_body(
         "metadata":     metadata     if metadata     is not None else d.get("metadata"),
         "track_opens":  track_opens  if track_opens  is not None else d.get("track_opens"),
         "track_clicks": track_clicks if track_clicks is not None else d.get("track_clicks"),
-        "ip_pool_id":      ip_pool_id,
+        "ip_pool_id":   ip_pool_id   if ip_pool_id   is not None else d.get("ip_pool_id"),
         "category":     category     if category     is not None else d.get("category"),
         "attachments":  attachments,
         "scheduled_at": scheduled_at.isoformat() if isinstance(scheduled_at, datetime) else scheduled_at,
@@ -168,7 +168,7 @@ class Email(EmailBase):
         super().__init__(client)
         self._defaults = defaults
         self.stats = EmailStats(client)
-        self.mailboxes = EmailMailboxes(client)
+        self.mailboxes = EmailMailboxes(client, defaults)
         self.threads = EmailThreads(client)
 
     @property
@@ -346,7 +346,7 @@ class AsyncEmail(AsyncEmailBase):
         super().__init__(client)
         self._defaults = defaults
         self.stats = AsyncEmailStats(client)
-        self.mailboxes = AsyncEmailMailboxes(client)
+        self.mailboxes = AsyncEmailMailboxes(client, defaults)
         self.threads = AsyncEmailThreads(client)
 
     @property

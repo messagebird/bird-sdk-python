@@ -1,10 +1,10 @@
-"""The WhatsApp channel: ``client.whatsapp`` — send a template message, read a
-message back, list the message log, and list a single message's event timeline.
+"""The WhatsApp channel: ``client.whatsapp`` — send a message, read one back,
+list the message log, and list a single message's event timeline.
 
-Templates are currently the only supported content type, so every send must
-include one; free-text content will be added in a future release. Bird selects
-the sender number from the template's category, so there is no sender field
-on a send.
+A send carries exactly one kind of content: a template, or free-form ``text``,
+``image``, ``video``, ``audio``, ``sticker``, ``document`` or ``location``.
+Free-form content is deliverable only inside an open 24-hour customer service
+window.
 """
 
 from __future__ import annotations
@@ -22,11 +22,23 @@ _PATH = "/v1/whatsapp/messages"
 def _send_body(
     *,
     to: str,
+    from_: str | None = None,
     template: str | None = None,
     language: str | None = None,
     components: Sequence[Mapping[str, Any]] | None = None,
+    text: Mapping[str, Any] | None = None,
+    image: Mapping[str, Any] | None = None,
+    video: Mapping[str, Any] | None = None,
+    audio: Mapping[str, Any] | None = None,
+    sticker: Mapping[str, Any] | None = None,
+    document: Mapping[str, Any] | None = None,
+    location: Mapping[str, Any] | None = None,
+    tags: Sequence[Mapping[str, str]] | None = None,
+    metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {"to": to}
+    if from_ is not None:
+        body["from"] = from_
     if template is not None:
         # A wat_-prefixed value is the id; anything else is the slug handle.
         tmpl: dict[str, Any] = {"id" if template.startswith("wat_") else "slug": template}
@@ -35,6 +47,22 @@ def _send_body(
         if components is not None:
             tmpl["components"] = components
         body["template"] = tmpl
+    content: dict[str, Mapping[str, Any] | None] = {
+        "text": text,
+        "image": image,
+        "video": video,
+        "audio": audio,
+        "sticker": sticker,
+        "document": document,
+        "location": location,
+    }
+    for name, value in content.items():
+        if value is not None:
+            body[name] = value
+    if tags is not None:
+        body["tags"] = tags
+    if metadata is not None:
+        body["metadata"] = metadata
     return body
 
 
@@ -45,14 +73,26 @@ class Whatsapp(WhatsappBase):
         self,
         *,
         to: str,
+        from_: str | None = None,
         template: str | None = None,
         language: str | None = None,
         components: Sequence[Mapping[str, Any]] | None = None,
+        text: Mapping[str, Any] | None = None,
+        image: Mapping[str, Any] | None = None,
+        video: Mapping[str, Any] | None = None,
+        audio: Mapping[str, Any] | None = None,
+        sticker: Mapping[str, Any] | None = None,
+        document: Mapping[str, Any] | None = None,
+        location: Mapping[str, Any] | None = None,
+        tags: Sequence[Mapping[str, str]] | None = None,
+        metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppMessage:
-        """Send a template message to a single recipient, naming the template
-        by its id (``wat_…``) or its slug. The result is ``accepted``, not yet
-        delivered — read it back with ``get`` or follow its timeline with
+        """Send one message to a single recipient, carrying exactly one kind of
+        content: a template named by its id (``wat_…``) or slug, or a free-form
+        arm shaped like its wire object (``text={"body": …}``). Every send but a
+        Bird-managed template needs ``from_``. The result is ``accepted``, not
+        yet delivered — read it back with ``get`` or follow its timeline with
         ``list_events``.
 
         ```python
@@ -65,7 +105,22 @@ class Whatsapp(WhatsappBase):
         print(msg.id, msg.status)
         ```
         """
-        body = _send_body(to=to, template=template, language=language, components=components)
+        body = _send_body(
+            to=to,
+            from_=from_,
+            template=template,
+            language=language,
+            components=components,
+            text=text,
+            image=image,
+            video=video,
+            audio=audio,
+            sticker=sticker,
+            document=document,
+            location=location,
+            tags=tags,
+            metadata=metadata,
+        )
         return self._write("POST", _PATH, body, WhatsAppMessage, options)
 
 
@@ -76,11 +131,36 @@ class AsyncWhatsapp(AsyncWhatsappBase):
         self,
         *,
         to: str,
+        from_: str | None = None,
         template: str | None = None,
         language: str | None = None,
         components: Sequence[Mapping[str, Any]] | None = None,
+        text: Mapping[str, Any] | None = None,
+        image: Mapping[str, Any] | None = None,
+        video: Mapping[str, Any] | None = None,
+        audio: Mapping[str, Any] | None = None,
+        sticker: Mapping[str, Any] | None = None,
+        document: Mapping[str, Any] | None = None,
+        location: Mapping[str, Any] | None = None,
+        tags: Sequence[Mapping[str, str]] | None = None,
+        metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppMessage:
-        """Send a template message to a single recipient."""
-        body = _send_body(to=to, template=template, language=language, components=components)
+        """Send one WhatsApp message to a single recipient."""
+        body = _send_body(
+            to=to,
+            from_=from_,
+            template=template,
+            language=language,
+            components=components,
+            text=text,
+            image=image,
+            video=video,
+            audio=audio,
+            sticker=sticker,
+            document=document,
+            location=location,
+            tags=tags,
+            metadata=metadata,
+        )
         return await self._write("POST", _PATH, body, WhatsAppMessage, options)

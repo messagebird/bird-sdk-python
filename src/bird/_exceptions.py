@@ -66,16 +66,6 @@ class NextAction:
     url: str | None = None
 
 
-@dataclass(frozen=True)
-class UnmetGate:
-    """One verification requirement blocking the action, with the flow that
-    resolves it. Present on ``unmet_gates`` when an action is blocked pending
-    verification."""
-
-    slug: str
-    name: str
-    status: str
-    remediation_kind: str
 
 
 class BirdError(Exception):
@@ -133,7 +123,6 @@ class APIStatusError(APIError):
         vendor_code: str | None = None,
         remediation: str | None = None,
         next: list[NextAction] | None = None,
-        unmet_gates: list[UnmetGate] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -146,7 +135,6 @@ class APIStatusError(APIError):
         self.vendor_code = vendor_code
         self.remediation = remediation
         self.next = next or []
-        self.unmet_gates = unmet_gates or []
 
     def __str__(self) -> str:
         return f"{self.message} (status {self.status_code}, type {self.type}, request_id {self.request_id})"
@@ -243,16 +231,6 @@ def from_response(status_code: int, body: bytes | str, headers: Mapping[str, str
             )
             for n in (data.get("next") or [])  # `or []` handles both an absent key and an explicit null
             if isinstance(n, dict)
-        ],
-        "unmet_gates": [
-            UnmetGate(
-                slug=g.get("slug", ""),
-                name=g.get("name", ""),
-                status=g.get("status", ""),
-                remediation_kind=g.get("remediation_kind", ""),
-            )
-            for g in (data.get("unmet_gates") or [])  # `or []` handles both an absent key and an explicit null
-            if isinstance(g, dict)
         ],
     }
 

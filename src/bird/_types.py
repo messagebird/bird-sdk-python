@@ -45,6 +45,7 @@ class EmailDefaults(TypedDict, total=False):
     headers: Mapping[str, str]
     tags: Sequence[Mapping[str, str]]
     metadata: Mapping[str, Any]
+    ip_pool_id: str
 
 
 class _AttachmentRequired(TypedDict):
@@ -154,13 +155,25 @@ class _WhatsappSendRequired(TypedDict):
 
 
 class WhatsappSendParams(_WhatsappSendRequired, total=False):
-    """Params for ``client.whatsapp.send``. ``to`` is required. A send must
-    currently include a ``template`` (the only supported content type);
-    ``language`` and ``components`` personalize it."""
+    """Params for ``client.whatsapp.send``. ``to`` is required. A send carries
+    exactly one kind of content: a ``template`` (personalized by ``language``
+    and ``components``), or one free-form arm (``text``, ``image``, ``video``,
+    ``audio``, ``sticker``, ``document``, ``location``) shaped like its wire
+    object."""
 
+    from_: str
     template: str
     language: str
     components: Sequence[Mapping[str, Any]]
+    text: Mapping[str, Any]
+    image: Mapping[str, Any]
+    video: Mapping[str, Any]
+    audio: Mapping[str, Any]
+    sticker: Mapping[str, Any]
+    document: Mapping[str, Any]
+    location: Mapping[str, Any]
+    tags: Sequence[Mapping[str, str]]
+    metadata: Mapping[str, Any]
 
 
 class _ContactPropertyCreateRequired(TypedDict):

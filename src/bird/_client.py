@@ -28,6 +28,8 @@ from bird.resources.email import AsyncEmail, Email
 from bird.resources.lookup_gen import AsyncLookup, Lookup
 from bird.resources.realtime import AsyncRealtime, Realtime
 from bird.resources.sms import AsyncSms, Sms
+from bird.resources.sms_keyword_rules_gen import AsyncSmsKeywordRules, SmsKeywordRules
+from bird.resources.sms_suppressions_gen import AsyncSmsSuppressions, SmsSuppressions
 from bird.resources.sms_templates_gen import AsyncSmsTemplates, SmsTemplates
 from bird.resources.verify import AsyncVerify, Verify
 from bird.resources.voice_gen import AsyncVoice, Voice
@@ -127,6 +129,7 @@ class Bird(SyncAPIClient):
         webhook_secret: str | None = None,
         realtime_key: str | None = None,
         realtime_secret: str | None = None,
+        realtime_encryption_master_key: str | None = None,
         email_defaults: EmailDefaults | None = None,
         timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -143,6 +146,7 @@ class Bird(SyncAPIClient):
             "webhook_secret": webhook_secret,
             "realtime_key": realtime_key,
             "realtime_secret": realtime_secret,
+            "realtime_encryption_master_key": realtime_encryption_master_key,
             "email_defaults": email_defaults,
             "timeout": timeout,
             "max_retries": max_retries,
@@ -151,7 +155,7 @@ class Bird(SyncAPIClient):
             "http_client": http_client,
         }
         # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")}
+        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "realtime_encryption_master_key", "email_defaults", "region")}
         # The extra credentials some operations require, keyed by the security scheme
         # that names them. A generated method names its schemes; the base client
         # resolves them from here.
@@ -164,6 +168,8 @@ class Bird(SyncAPIClient):
         self.email = Email(self, email_defaults)
         self.sms = Sms(self)
         self.sms_templates = SmsTemplates(self)
+        self.sms_suppressions = SmsSuppressions(self)
+        self.sms_keyword_rules = SmsKeywordRules(self)
         self.whatsapp = Whatsapp(self)
         self.voice = Voice(self)
         self.verify = Verify(self)
@@ -173,7 +179,7 @@ class Bird(SyncAPIClient):
         self.domains = Domains(self)
         self.lookup = Lookup(self)
         self.webhooks = Webhooks(webhook_secret)
-        self.realtime = Realtime(self)
+        self.realtime = Realtime(self, realtime_key, realtime_secret, realtime_encryption_master_key)
 
     def with_options(
         self,
@@ -185,6 +191,7 @@ class Bird(SyncAPIClient):
         webhook_secret: str | None | Omit = omit,
         realtime_key: str | None | Omit = omit,
         realtime_secret: str | None | Omit = omit,
+        realtime_encryption_master_key: str | None | Omit = omit,
         email_defaults: EmailDefaults | None | Omit = omit,
         timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int | Omit = omit,
@@ -201,7 +208,9 @@ class Bird(SyncAPIClient):
         return Bird(**_with_overrides(self._config, self._client, {
             "api_key": api_key, "region": region, "base_url": base_url, "api_version": api_version,
             "webhook_secret": webhook_secret, "realtime_key": realtime_key,
-            "realtime_secret": realtime_secret, "email_defaults": email_defaults, "timeout": timeout,
+            "realtime_secret": realtime_secret,
+            "realtime_encryption_master_key": realtime_encryption_master_key,
+            "email_defaults": email_defaults, "timeout": timeout,
             "max_retries": max_retries, "default_headers": default_headers, "default_query": default_query,
             "http_client": http_client,
         }))
@@ -244,6 +253,7 @@ class AsyncBird(AsyncAPIClient):
         webhook_secret: str | None = None,
         realtime_key: str | None = None,
         realtime_secret: str | None = None,
+        realtime_encryption_master_key: str | None = None,
         email_defaults: EmailDefaults | None = None,
         timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -260,6 +270,7 @@ class AsyncBird(AsyncAPIClient):
             "webhook_secret": webhook_secret,
             "realtime_key": realtime_key,
             "realtime_secret": realtime_secret,
+            "realtime_encryption_master_key": realtime_encryption_master_key,
             "email_defaults": email_defaults,
             "timeout": timeout,
             "max_retries": max_retries,
@@ -268,7 +279,7 @@ class AsyncBird(AsyncAPIClient):
             "http_client": http_client,
         }
         # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "email_defaults", "region")}
+        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "realtime_encryption_master_key", "email_defaults", "region")}
         # The extra credentials some operations require, keyed by the security scheme
         # that names them. A generated method names its schemes; the base client
         # resolves them from here.
@@ -281,6 +292,8 @@ class AsyncBird(AsyncAPIClient):
         self.email = AsyncEmail(self, email_defaults)
         self.sms = AsyncSms(self)
         self.sms_templates = AsyncSmsTemplates(self)
+        self.sms_suppressions = AsyncSmsSuppressions(self)
+        self.sms_keyword_rules = AsyncSmsKeywordRules(self)
         self.whatsapp = AsyncWhatsapp(self)
         self.voice = AsyncVoice(self)
         self.verify = AsyncVerify(self)
@@ -290,7 +303,7 @@ class AsyncBird(AsyncAPIClient):
         self.domains = AsyncDomains(self)
         self.lookup = AsyncLookup(self)
         self.webhooks = AsyncWebhooks(webhook_secret)
-        self.realtime = AsyncRealtime(self)
+        self.realtime = AsyncRealtime(self, realtime_key, realtime_secret, realtime_encryption_master_key)
 
     def with_options(
         self,
@@ -302,6 +315,7 @@ class AsyncBird(AsyncAPIClient):
         webhook_secret: str | None | Omit = omit,
         realtime_key: str | None | Omit = omit,
         realtime_secret: str | None | Omit = omit,
+        realtime_encryption_master_key: str | None | Omit = omit,
         email_defaults: EmailDefaults | None | Omit = omit,
         timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int | Omit = omit,
@@ -318,7 +332,9 @@ class AsyncBird(AsyncAPIClient):
         return AsyncBird(**_with_overrides(self._config, self._client, {
             "api_key": api_key, "region": region, "base_url": base_url, "api_version": api_version,
             "webhook_secret": webhook_secret, "realtime_key": realtime_key,
-            "realtime_secret": realtime_secret, "email_defaults": email_defaults, "timeout": timeout,
+            "realtime_secret": realtime_secret,
+            "realtime_encryption_master_key": realtime_encryption_master_key,
+            "email_defaults": email_defaults, "timeout": timeout,
             "max_retries": max_retries, "default_headers": default_headers, "default_query": default_query,
             "http_client": http_client,
         }))

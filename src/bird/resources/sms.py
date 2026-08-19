@@ -1,8 +1,8 @@
-"""The SMS channel: ``client.sms`` — send an SMS (free text or by stored
-template), read a message back, and list the message log.
+"""Use the ``client.sms`` channel to send an SMS (free text or by stored
+template), read a message, and list the message log.
 
-A send carries either ``text`` (with a ``category``) or a ``template`` (by id or
-slug, with its ``parameters``); the two are mutually exclusive.
+A send carries either ``text`` (with ``category`` and ``from_``) or a ``template``
+(by id or slug, with its ``parameters``). The two are mutually exclusive.
 """
 
 from __future__ import annotations
@@ -10,9 +10,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._generated import SMSMessage, SMSMessageBatchResponse
 from bird._types import RequestOptions
 from bird.resources.sms_gen import AsyncSmsBase, SmsBase
+from bird.resources.sms_stats import AsyncSmsStats, SmsStats
 
 _PATH = "/v1/sms/messages"
 _BATCH_PATH = "/v1/sms/batches"
@@ -82,6 +84,10 @@ def _message_body(m: Mapping[str, Any]) -> dict[str, Any]:
 class Sms(SmsBase):
     """Send and read SMS messages. Reach it via ``client.sms``."""
 
+    def __init__(self, client: SyncAPIClient) -> None:
+        super().__init__(client)
+        self.stats = SmsStats(client)
+
     def send(
         self,
         *,
@@ -98,11 +104,13 @@ class Sms(SmsBase):
         options: RequestOptions | None = None,
     ) -> SMSMessage:
         """Send one SMS to a single recipient. Supply either ``text`` (with a
-        ``category``) or a stored ``template`` (by id or slug, with ``parameters``).
-        The result is ``accepted``, not yet delivered — read it back with ``get``.
+        ``category`` and ``from_``) or a stored ``template`` (by id or slug, with
+        ``parameters``). The API accepts the message for delivery. Read it back
+        with ``get`` for the latest status.
 
         ```python
         msg = client.sms.send(
+            from_="+15557654321",
             to="+15551234567",
             text="Your verification code is 123456.",
             category="authentication",
@@ -134,8 +142,18 @@ class Sms(SmsBase):
         ```python
         batch = client.sms.send_batch(
             messages=[
-                {"to": "+15551111111", "text": "Hi Alice!", "category": "marketing"},
-                {"to": "+15552222222", "text": "Hi Bob!", "category": "marketing"},
+                {
+                    "from_": "+15557654321",
+                    "to": "+15551111111",
+                    "text": "Hi Alice!",
+                    "category": "marketing",
+                },
+                {
+                    "from_": "+15557654321",
+                    "to": "+15552222222",
+                    "text": "Hi Bob!",
+                    "category": "marketing",
+                },
             ]
         )
         for msg in batch.data:
@@ -151,6 +169,10 @@ class Sms(SmsBase):
 
 class AsyncSms(AsyncSmsBase):
     """Async mirror of `Sms`: ``await`` each call, ``async for`` over a list."""
+
+    def __init__(self, client: AsyncAPIClient) -> None:
+        super().__init__(client)
+        self.stats = AsyncSmsStats(client)
 
     async def send(
         self,
@@ -182,5 +204,3 @@ class AsyncSms(AsyncSmsBase):
         body = [_message_body(m) for m in messages]
         response = await self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return SMSMessageBatchResponse.model_validate(response.json())
-
-
