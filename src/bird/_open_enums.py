@@ -183,6 +183,7 @@ class VerificationAttemptFailureReason:
     CHANNEL_UNAVAILABLE: Final = "channel_unavailable"
     DELIVERY_TIMEOUT: Final = "delivery_timeout"
     HARD_BOUNCE: Final = "hard_bounce"
+    NOT_BILLABLE: Final = "not_billable"
     SOFT_BOUNCE: Final = "soft_bounce"
     UNDELIVERED: Final = "undelivered"
 
@@ -201,6 +202,7 @@ class VerificationTerminalReason:
 
     ATTEMPTS_EXHAUSTED: Final = "attempts_exhausted"
     TTL_ELAPSED: Final = "ttl_elapsed"
+    UNDELIVERABLE: Final = "undeliverable"
 
 
 class WhatsAppErrorCode:

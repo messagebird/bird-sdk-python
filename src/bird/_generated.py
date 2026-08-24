@@ -4632,6 +4632,7 @@ class EmailLookup(BaseModel):
 class VerificationTerminalReason(str, Enum):
     attempts_exhausted = "attempts_exhausted"
     ttl_elapsed = "ttl_elapsed"
+    undeliverable = "undeliverable"
 
 
 class VerificationTo(BaseModel):
@@ -4680,6 +4681,7 @@ class VerificationAttemptFailureReason(str, Enum):
     channel_unavailable = "channel_unavailable"
     channel_disabled = "channel_disabled"
     delivery_timeout = "delivery_timeout"
+    not_billable = "not_billable"
 
 
 class WhatsAppTemplateCategory(str, Enum):
@@ -4712,7 +4714,7 @@ class Verification(Timestamps):
     status: Annotated[
         Status9,
         Field(
-            description="The verification's current state:\n\n- `pending`: Awaiting a correct passcode.\n- `verified`: A correct passcode was submitted.\n- `failed`: Too many incorrect attempts were submitted.\n- `expired`: The validity window elapsed before a correct passcode.\n- `canceled`: The verification was canceled before completion.\n- `blocked`: A fraud or abuse control stopped the verification."
+            description="The verification's current state:\n\n- `pending`: Awaiting a correct passcode.\n- `verified`: A correct passcode was submitted.\n- `failed`: The verification cannot be completed. Either too many\n  incorrect passcodes were submitted, or no planned channel could\n  deliver one. Read `reason` to tell those apart.\n- `expired`: The validity window elapsed before a correct passcode.\n- `canceled`: The verification was canceled before completion.\n- `blocked`: A fraud or abuse control stopped the verification."
         ),
     ]
     reason: Annotated[
@@ -8958,6 +8960,7 @@ class WebhookEventType(str, Enum):
     verify_attempt_sent = "verify.attempt.sent"
     verify_attempt_undelivered = "verify.attempt.undelivered"
     verify_verification_created = "verify.verification.created"
+    verify_verification_failed = "verify.verification.failed"
     verify_verification_verified = "verify.verification.verified"
     voice_call_answered = "voice_call.answered"
     voice_call_ended = "voice_call.ended"
@@ -11061,6 +11064,75 @@ class EventVerifyVerificationCreated(BaseModel):
     data: EventVerifyVerificationCreatedData
 
 
+class VerifyVerificationFailedEventType(str, Enum):
+    verify_verification_failed = "verify.verification.failed"
+
+
+class EventVerifyVerificationFailedData(EventVerifyBase):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        str,
+        Field(
+            description="The verification's state, always `failed`. Open enum for forward compatibility.",
+            examples=["failed"],
+            min_length=1,
+        ),
+    ]
+    reason: Annotated[
+        Annotated[
+            Union[VerificationTerminalReason, str], Field(union_mode="left_to_right")
+        ],
+        Field(
+            description="Why the verification ended. Always `undeliverable` on this event: no planned channel delivered a passcode.",
+            examples=["undeliverable"],
+        ),
+    ]
+    channel: Annotated[
+        Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]
+        | None,
+        Field(
+            description="The last channel the verification tried, the one whose failure left it with nowhere else to go. Null when no channel was attributed.",
+            examples=["sms"],
+        ),
+    ]
+    last_attempt_reason: Annotated[
+        Annotated[
+            Union[VerificationAttemptFailureReason, str],
+            Field(union_mode="left_to_right"),
+        ],
+        Field(
+            description="Why that last send did not deliver. This is the actionable half of the event: `not_billable` means the workspace balance could not cover the send, while the delivery reasons point at the recipient or the channel.",
+            examples=["not_billable"],
+        ),
+    ]
+    failed_at: Annotated[
+        str,
+        Field(
+            description="Time the verification was resolved.",
+            examples=["2026-07-24 12:00:05+00:00"],
+            min_length=1,
+        ),
+    ]
+
+
+class EventVerifyVerificationFailed(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["verify.verification.failed"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="Time the verification was resolved.",
+            examples=["2026-07-24 12:00:05+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventVerifyVerificationFailedData
+
+
 class EventVerifyVerificationVerifiedData(EventVerifyBase):
     model_config = ConfigDict(
         extra="allow",
@@ -12160,6 +12232,7 @@ class WebhookEvent(
         | EventVerifyAttemptSent
         | EventVerifyAttemptUndelivered
         | EventVerifyVerificationCreated
+        | EventVerifyVerificationFailed
         | EventVerifyVerificationVerified
         | EventVoiceCallAnswered
         | EventVoiceCallEnded
@@ -12210,6 +12283,7 @@ class WebhookEvent(
         | EventVerifyAttemptSent
         | EventVerifyAttemptUndelivered
         | EventVerifyVerificationCreated
+        | EventVerifyVerificationFailed
         | EventVerifyVerificationVerified
         | EventVoiceCallAnswered
         | EventVoiceCallEnded

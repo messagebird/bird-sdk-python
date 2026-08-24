@@ -50,6 +50,7 @@ class WebhookEventType:
     VERIFY_ATTEMPT_SENT: Final = "verify.attempt.sent"
     VERIFY_ATTEMPT_UNDELIVERED: Final = "verify.attempt.undelivered"
     VERIFY_VERIFICATION_CREATED: Final = "verify.verification.created"
+    VERIFY_VERIFICATION_FAILED: Final = "verify.verification.failed"
     VERIFY_VERIFICATION_VERIFIED: Final = "verify.verification.verified"
     VOICE_CALL_ANSWERED: Final = "voice_call.answered"
     VOICE_CALL_ENDED: Final = "voice_call.ended"
