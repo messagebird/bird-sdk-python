@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.0
+
+- Email broadcasts report `started_at` and `canceled_at`: when sending began, and when cancellation was requested.
+
 ## 0.31.0
 
 - Numbers are now available on the public API. Search a country's available numbers, order one, list and read the numbers your workspace holds, and release a dedicated number you no longer want.
