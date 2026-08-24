@@ -7904,6 +7904,34 @@ class DomainUpdate(BaseModel):
     ] = None
 
 
+class Actor(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Actor identifier.",
+            examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+        ),
+    ]
+    type: Annotated[
+        str,
+        Field(
+            description="Who or what performed the action: `user` for a member's own session, `oauth_token` for a token issued to a caller on a member's behalf, `api_key` for a workspace API key, `system` for our own automation, `sso` for an organization's SSO connection, and `service_account` for a workspace's connected Integration acting with no member behind it. Open enum: new actor types may be added over time, so treat any unrecognized value as a future type rather than an error.",
+            examples=["user"],
+            min_length=1,
+        ),
+    ]
+    display_name: Annotated[
+        str | None,
+        Field(
+            description="The label the actor is shown under: typically a member's name or email address, or the API key's name. Null when it could not be resolved.\n"
+        ),
+    ] = None
+
+
 class Type5(str, Enum):
     workspace = "workspace"
 
@@ -11669,34 +11697,6 @@ class EventWhatsAppSent(BaseModel):
     data: EventWhatsAppSentData
 
 
-class AuditLogActor(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    id: Annotated[
-        str,
-        Field(
-            description="ID of the user, API key, integration, or system process that performed the action.",
-            examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-        ),
-    ]
-    type: Annotated[
-        str,
-        Field(
-            description="Type of actor, such as `user`, `api_key`, `service_account`, or `system`.",
-            examples=["user"],
-            min_length=1,
-        ),
-    ]
-    display_name: Annotated[
-        str | None,
-        Field(
-            description="Display name of the actor. This is the user's email address for a `user` actor, or the name of the API key or integration that acted. Absent when it could not be resolved.\n"
-        ),
-    ] = None
-
-
 class NumberType(str, Enum):
     mobile = "mobile"
     local = "local"
@@ -12108,7 +12108,7 @@ class VoiceCall(BaseModel):
         ),
     ]
     actor: Annotated[
-        AuditLogActor | None,
+        Actor | None,
         Field(
             description="Who placed the call: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the call was admitted only by its source IP address, or when no actor was recorded."
         ),
