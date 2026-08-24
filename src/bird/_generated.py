@@ -175,19 +175,26 @@ class FieldListEnvelope(BaseModel):
     next_cursor: Annotated[
         str | None,
         Field(
-            description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists."
+            description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+            examples=[
+                "eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"
+            ],
         ),
     ]
     prev_cursor: Annotated[
         str | None,
         Field(
-            description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists."
+            description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+            examples=[None],
         ),
     ]
     refresh_cursor: Annotated[
         str | None,
         Field(
-            description="Refresh anchor. Pass back as `ending_before` later to fetch items that have appeared since this response. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`."
+            description="Refresh anchor. Pass back as `ending_before` later to fetch items that have appeared since this response. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+            examples=[
+                "eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"
+            ],
         ),
     ]
 
@@ -222,8 +229,12 @@ class Timestamps(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    created_at: Annotated[str, Field(min_length=1)]
-    updated_at: Annotated[str, Field(min_length=1)]
+    created_at: Annotated[
+        str, Field(examples=["2026-05-20 09:14:52+00:00"], min_length=1)
+    ]
+    updated_at: Annotated[
+        str, Field(examples=["2026-05-25 16:42:01+00:00"], min_length=1)
+    ]
 
 
 class RealtimeAppID(RootModel[str]):
@@ -4661,30 +4672,6 @@ class VerificationChannelEntry(BaseModel):
     ]
 
 
-class Money(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    amount: Annotated[
-        str,
-        Field(
-            description="Decimal amount as a string, in major currency units.",
-            examples=["0.00995"],
-            min_length=1,
-        ),
-    ]
-    currency_code: Annotated[
-        str,
-        Field(
-            description="ISO 4217 currency code.",
-            examples=["USD"],
-            max_length=3,
-            min_length=3,
-            pattern="^[A-Z]{3}$",
-        ),
-    ]
-
-
 class VerificationAttemptFailureReason(str, Enum):
     carrier_rejected = "carrier_rejected"
     hard_bounce = "hard_bounce"
@@ -5257,6 +5244,7 @@ class WhatsAppErrorCode(str, Enum):
     service_window_expired = "service_window_expired"
     rate_limited = "rate_limited"
     recipient_suppressed = "recipient_suppressed"
+    media_rejected = "media_rejected"
 
 
 class WhatsAppError(BaseModel):
@@ -5629,7 +5617,7 @@ class WhatsAppMessageSendRequest(BaseModel):
         str | None,
         Field(
             alias="from",
-            description="The business phone number to send from, in E.164 format. Omit it for a Bird-managed template, which selects its own number from its category: setting it there returns a `422` `WhatsAppSenderNotAllowed`. Every other send, whether free-form content of any kind or a template your workspace authored, requires it, and the number must be one this workspace owns. Omitting it returns a `422` `WhatsAppSenderRequired`, and naming a number this workspace cannot send from returns a `422` `WhatsAppSenderNotFound`. Naming a number this workspace owns but that sits on a different WhatsApp Business Account than an authored template returns a `422` `WhatsAppSenderWABAMismatch`.\n",
+            description="The business phone number to send from, in E.164 format. Omit it for a Bird-managed template, which selects its own number from its category: setting it there returns a `422` `WhatsAppSenderNotAllowed`. Every other send, whether free-form content of any kind or a template your workspace authored, requires it, and the number must be one this workspace owns. Omitting it returns a `422` `WhatsAppSenderRequired`, and naming a number this workspace cannot send from returns a `422` `WhatsAppSenderNotFound`. Naming a number this workspace owns but that sits on a different WhatsApp Business Account than an authored template returns a `422` `WhatsAppSenderWABAMismatch`. A number this workspace holds but has not finished connecting returns a `422` `WhatsAppSenderNotConnected`.\n",
             examples=["+13124495648"],
             min_length=1,
         ),
@@ -7666,7 +7654,7 @@ class DNSRecord(BaseModel):
     purpose: Annotated[
         Purpose,
         Field(
-            description="What this record is for.\n\n- `dkim`: signs outbound mail and proves domain ownership.\n- `return_path`: identifies the return-path (bounce) CNAME for sending.\n- `tracking`: identifies the optional branded open/click tracking CNAME.\n- `inbound_mx`: identifies the MX record routing mail to us for receiving.\n  Always present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own: see `DomainUpdate.inbound`.\n- `dmarc`: identifies the advisory DMARC policy record.\n"
+            description="What this record is for.\n\n- `dkim`: signs outbound mail and proves domain ownership.\n- `return_path`: identifies the return-path (bounce) CNAME for sending.\n- `tracking`: identifies the optional branded open/click tracking CNAME.\n- `inbound_mx`: identifies the MX record routing mail to us for receiving.\n  Always present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own: see `DomainUpdate.inbound`. It is\n  `optional` until receiving is enabled, and publishing it before then\n  is destructive: on a domain at the zone apex it replaces the MX\n  records that carry the domain's existing mail.\n- `dmarc`: identifies the advisory DMARC policy record.\n"
         ),
     ]
     state: Annotated[
@@ -7678,7 +7666,7 @@ class DNSRecord(BaseModel):
     optional: Annotated[
         bool,
         Field(
-            description="Whether this record can be skipped. Optional records enable extra functionality (for example, tracking) but are not required for sending.\n"
+            description="Whether this record can be skipped. An optional record enables extra functionality (branded tracking, or receiving) rather than sending, so publish one only when you want what it enables. The `inbound_mx` records are optional until you enable receiving on the domain, and publishing one before then changes where mail to the domain is delivered.\n"
         ),
     ]
     status: Annotated[
@@ -10910,7 +10898,7 @@ class EventVerifyAttemptSentData(EventVerifyBase):
         str,
         Field(
             description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
-            examples=["+15551234567"],
+            examples=["+14155550100"],
             min_length=1,
         ),
     ]
@@ -10919,7 +10907,7 @@ class EventVerifyAttemptSentData(EventVerifyBase):
         Field(
             alias="from",
             description="The sender the passcode was sent from: a phone number, alphanumeric sender ID, short code, or email address. Null when the channel exposes no sender.",
-            examples=["Authifly"],
+            examples=["29999"],
         ),
     ]
     sent_at: Annotated[
@@ -11616,7 +11604,7 @@ class AuditLogActor(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="ID of the user, API key, or system process that performed the action.",
+            description="ID of the user, API key, integration, or system process that performed the action.",
             examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
         ),
@@ -11624,7 +11612,7 @@ class AuditLogActor(BaseModel):
     type: Annotated[
         str,
         Field(
-            description="Type of actor, such as `user`, `api_key`, or `system`.",
+            description="Type of actor, such as `user`, `api_key`, `service_account`, or `system`.",
             examples=["user"],
             min_length=1,
         ),
@@ -11632,9 +11620,265 @@ class AuditLogActor(BaseModel):
     display_name: Annotated[
         str | None,
         Field(
-            description="Display name of the actor. This is the user's email address for a `user` actor or the API key name for an `api_key` actor. Absent when it could not be resolved.\n"
+            description="Display name of the actor. This is the user's email address for a `user` actor, or the name of the API key or integration that acted. Absent when it could not be resolved.\n"
         ),
     ] = None
+
+
+class NumberType(str, Enum):
+    mobile = "mobile"
+    local = "local"
+    national = "national"
+    short_code = "short_code"
+    short_code_fteu = "short_code_fteu"
+    toll_free = "toll_free"
+
+
+class NumberCapability(str, Enum):
+    sms = "sms"
+    mms = "mms"
+    voice = "voice"
+
+
+class NumberOwnership(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    satisfied: Annotated[
+        bool,
+        Field(
+            description="Whether the paperwork is accepted. Read `next` for what advances it while this is false. Whether sending is currently refused is reported by `blocked_at` instead: a number bought before its country asked for anything is unsatisfied and still usable until a review says otherwise.\n"
+        ),
+    ]
+    blocked_at: Annotated[
+        str | None,
+        Field(
+            description="When the number stopped being able to carry traffic, and null while it can. Always null when `satisfied` is true, but null does not imply it: a number whose country began asking after you bought it is usable with its paperwork still outstanding. A number can also arrive blocked, and one that was usable can be blocked again if its approval is withdrawn.\n"
+        ),
+    ] = None
+    next: Annotated[
+        list[NextAction],
+        Field(
+            description="What you do about it, in the order to do it. Empty only when `satisfied` is true, so while anything is outstanding there is always at least one step. When what you already sent is being reviewed and nothing is needed from you, that step has kind `wait` and says so. Re-read it after each call rather than caching the first list you saw.\n"
+        ),
+    ]
+
+
+class Kind(str, Enum):
+    dedicated = "dedicated"
+    shared = "shared"
+
+
+class Status15(str, Enum):
+    active = "active"
+    pending_compliance = "pending_compliance"
+    released = "released"
+
+
+class Number(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Identifier of this allocated number. Pass it as `number_id` to read this number, or to release it when kind is dedicated.",
+            examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    kind: Annotated[
+        Kind,
+        Field(
+            description="How this number is allocated. `dedicated` is allocated to this workspace alone and billed as a subscription. `shared` is a shortcode allocated to several workspaces at once and managed by us."
+        ),
+    ]
+    number: Annotated[
+        str, Field(description="Phone number in E.164 format.", min_length=1)
+    ]
+    country_code: Annotated[
+        str,
+        Field(
+            description="ISO 3166-1 alpha-2 country code.",
+            examples=["US"],
+            max_length=2,
+            min_length=2,
+            pattern="^[A-Za-z]{2}$",
+        ),
+    ]
+    number_type: Annotated[
+        Annotated[Union[NumberType, str], Field(union_mode="left_to_right")],
+        Field(description="Physical type of this phone number."),
+    ]
+    capabilities: Annotated[
+        list[
+            Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]
+        ],
+        Field(description="Channel capabilities supported by this number."),
+    ]
+    status: Annotated[
+        Status15,
+        Field(
+            description="Whether this number can carry traffic.\n\n- `active` means this number is allocated to your workspace and usable.\n- `pending_compliance` means this number is allocated to your workspace and billed,\n  but it cannot carry traffic until the ownership paperwork its country requires is\n  accepted. Read `ownership.next` for what advances it, and re-read later if\n  `ownership` is momentarily `null`.\n- `released` means this number is no longer allocated to your workspace.\n\nAn allocated number is not always enough to send from it: some destination\ncountries also require an approved registration for the sender.\n"
+        ),
+    ]
+    allocated_at: Annotated[
+        str,
+        Field(
+            description="When this number was allocated to your workspace.",
+            min_length=1,
+        ),
+    ]
+    released_at: Annotated[
+        str | None,
+        Field(
+            description="When this number was released. `null` while it is still allocated to your workspace."
+        ),
+    ] = None
+    ownership: Annotated[
+        NumberOwnership | None,
+        Field(
+            description="Where this number stands with the ownership paperwork its country requires. `null` when the country requires none, which is the usual case: a number with no `ownership` object is usable as soon as it is allocated. Also `null` when that standing cannot be established right now; `status` still reads `pending_compliance` while the number is blocked, so re-read this field rather than caching its absence. We manage the paperwork for shared short codes, so this field is always `null` for them.\n"
+        ),
+    ] = None
+
+
+class NumberList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: list[Number]
+
+
+class AvailableNumber(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    number: Annotated[
+        str, Field(description="Phone number in E.164 format.", min_length=1)
+    ]
+    country_code: Annotated[
+        str,
+        Field(
+            description="ISO 3166-1 alpha-2 country code.",
+            examples=["US"],
+            max_length=2,
+            min_length=2,
+            pattern="^[A-Za-z]{2}$",
+        ),
+    ]
+    number_type: Annotated[
+        Annotated[Union[NumberType, str], Field(union_mode="left_to_right")],
+        Field(description="Physical type of this phone number."),
+    ]
+    capabilities: Annotated[
+        list[
+            Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]
+        ],
+        Field(description="Channel capabilities supported by this number."),
+    ]
+
+
+class AvailableNumberList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: list[AvailableNumber]
+
+
+class NumbersOrderStatus(str, Enum):
+    charging = "charging"
+    ordering = "ordering"
+    pending = "pending"
+    completed = "completed"
+    failed = "failed"
+
+
+class NumbersDedicatedAllocationID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^nda_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
+class NumbersOrder(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Identifier of this purchase order.",
+            examples=["nor_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^nor_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    number: Annotated[
+        str,
+        Field(description="The number being acquired, in E.164 format.", min_length=1),
+    ]
+    country_code: Annotated[
+        str,
+        Field(
+            description="ISO 3166-1 alpha-2 country code.",
+            examples=["US"],
+            max_length=2,
+            min_length=2,
+            pattern="^[A-Za-z]{2}$",
+        ),
+    ]
+    number_type: Annotated[
+        Annotated[Union[NumberType, str], Field(union_mode="left_to_right")],
+        Field(description="Physical type of the number being acquired."),
+    ]
+    status: Annotated[Union[NumbersOrderStatus, str], Field(union_mode="left_to_right")]
+    number_id: Annotated[
+        NumbersDedicatedAllocationID | None,
+        Field(
+            description="Identifier of the number this order produced, set when `status` is `completed`. Pass it as `number_id` to `GET /v1/numbers/{number_id}` or `DELETE /v1/numbers/{number_id}`. `null` until the order completes.\n"
+        ),
+    ] = None
+    failure_reason: Annotated[
+        str | None,
+        Field(
+            description="Human-readable reason the purchase failed. `null` unless status is failed. An order can fail some time after it was created, so `updated_at` tells you when the failure was recorded rather than when the order was placed.\n"
+        ),
+    ] = None
+    completed_at: Annotated[
+        str | None,
+        Field(
+            description="When the purchase completed and the number became owned (status completed). `null` for orders still in progress or failed.\n"
+        ),
+    ] = None
+    created_at: Annotated[str, Field(min_length=1)]
+    updated_at: Annotated[str, Field(min_length=1)]
+
+
+class NumbersOrderList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: list[NumbersOrder]
+
+
+class NumbersOrderCreate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    number: Annotated[
+        str,
+        Field(
+            description="The number to acquire, in E.164 format, as returned by `GET /v1/numbers/available`.",
+            examples=["+18005550100"],
+            min_length=1,
+        ),
+    ]
 
 
 class SIPTrunkID(RootModel[str]):
@@ -11701,6 +11945,51 @@ class VoiceMediaQuality(BaseModel):
     ]
 
 
+class VoiceCallCost(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    amount: Annotated[
+        str,
+        Field(
+            description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.\n",
+            examples=["0.013000"],
+            min_length=1,
+        ),
+    ]
+    currency_code: Annotated[
+        str,
+        Field(
+            description="ISO 4217 currency code. Every component is denominated in this currency.",
+            examples=["USD"],
+            max_length=3,
+            min_length=3,
+            pattern="^[A-Z]{3}$",
+        ),
+    ]
+    outbound_amount: Annotated[
+        str | None,
+        Field(
+            description="What we charged to carry the call to the destination network, as a decimal string. `null` until this component is priced.\n",
+            examples=["0.013000"],
+        ),
+    ]
+    inbound_amount: Annotated[
+        str | None,
+        Field(
+            description="What we charged to receive the call from the originating network, as a decimal string. Only a call that arrived at your number can carry it. `null` until this component is priced.\n",
+            examples=[None],
+        ),
+    ]
+    call_handling_amount: Annotated[
+        str | None,
+        Field(
+            description="What we charged for handling the call itself, as a decimal string. A call is charged for handling once, however many legs it has, so only one leg's record carries it. `null` until this component is priced.\n",
+            examples=[None],
+        ),
+    ]
+
+
 class VoiceCall(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -11749,7 +12038,7 @@ class VoiceCall(BaseModel):
     actor: Annotated[
         AuditLogActor | None,
         Field(
-            description="Who placed the call: either the API key whose credentials it used or the user who placed it from a browser or the CLI. Absent when the call was admitted only by its source IP address, or when no actor was recorded."
+            description="Who placed the call: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the call was admitted only by its source IP address, or when no actor was recorded."
         ),
     ] = None
     sip_trunk_id: Annotated[
@@ -11819,9 +12108,9 @@ class VoiceCall(BaseModel):
         ),
     ] = None
     cost: Annotated[
-        Money | None,
+        VoiceCallCost | None,
         Field(
-            description="Amount billed for this call, net of tax, at full precision. Absent until the call has been rated; unanswered or unpriced calls have no cost."
+            description="What the call cost, net of tax, at full precision, split into the components that make it up. Absent until the call has been rated; unanswered or unpriced calls have no cost."
         ),
     ] = None
 

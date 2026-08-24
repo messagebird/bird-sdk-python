@@ -70,6 +70,35 @@ class LookupPropertyStatus:
     UNAVAILABLE: Final = "unavailable"
 
 
+class NumberCapability:
+    """Values of NumberCapability known at this SDK version (open enum)."""
+
+    MMS: Final = "mms"
+    SMS: Final = "sms"
+    VOICE: Final = "voice"
+
+
+class NumberType:
+    """Values of NumberType known at this SDK version (open enum)."""
+
+    LOCAL: Final = "local"
+    MOBILE: Final = "mobile"
+    NATIONAL: Final = "national"
+    SHORT_CODE: Final = "short_code"
+    SHORT_CODE_FTEU: Final = "short_code_fteu"
+    TOLL_FREE: Final = "toll_free"
+
+
+class NumbersOrderStatus:
+    """Values of NumbersOrderStatus known at this SDK version (open enum)."""
+
+    CHARGING: Final = "charging"
+    COMPLETED: Final = "completed"
+    FAILED: Final = "failed"
+    ORDERING: Final = "ordering"
+    PENDING: Final = "pending"
+
+
 class SMSErrorCode:
     """Values of SMSErrorCode known at this SDK version (open enum)."""
 
@@ -179,6 +208,7 @@ class WhatsAppErrorCode:
 
     INSUFFICIENT_BALANCE: Final = "insufficient_balance"
     INTERNAL_ERROR: Final = "internal_error"
+    MEDIA_REJECTED: Final = "media_rejected"
     PRICE_NOT_FOUND: Final = "price_not_found"
     RATE_LIMITED: Final = "rate_limited"
     RECIPIENT_SUPPRESSED: Final = "recipient_suppressed"
@@ -224,6 +254,9 @@ __all__ = [
     "EmailLookupResult",
     "LookupFlag",
     "LookupPropertyStatus",
+    "NumberCapability",
+    "NumberType",
+    "NumbersOrderStatus",
     "SMSErrorCode",
     "SMSKeywordOperation",
     "SMSSuppressionCoverage",

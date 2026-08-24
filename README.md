@@ -92,6 +92,27 @@ for message in client.whatsapp.list(status=["delivered"]):
     print(message.id, message.status)
 ```
 
+## Lookup
+
+Every answer is billed. A phone number lookup bills once for the base answer plus once per **delivered** property; an email lookup bills once per answered address. Nothing is billed for a failed lookup or an unanswered property, so read `status` before you read a value.
+
+```python
+# What is this number? The base answer is always present and always billed.
+number = client.lookup.phone_number(phone_number="+31612345678", type=["porting", "score"])
+print(number.country_code, number.line_type)
+
+# Only a block whose status is "ok" carries a value, and only that one is billed.
+if number.score is not None and number.score.status == "ok":
+    print(number.score.value)
+
+# Is this address worth sending to? `result` is an open vocabulary, so fall back
+# on delivery_confidence (0-100, always present) for a verdict you don't know.
+address = client.lookup.email(email="aisha.khan@example.com")
+print(address.result, address.delivery_confidence)
+```
+
+Pass an idempotency key so a retry replays the stored answer instead of buying a second one.
+
 ## Realtime
 
 Every Realtime call is scoped to one Realtime app and authenticated with that app's own key and secret — separate from your Bird API key — configured once on the client. Calling a Realtime method without them raises `BirdError` before any request is sent.
