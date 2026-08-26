@@ -3028,6 +3028,8 @@ class SMSKeywordOperation(str, Enum):
     stop = "stop"
     start = "start"
     help = "help"
+    info = "info"
+    confirm = "confirm"
     custom = "custom"
 
 

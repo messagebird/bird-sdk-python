@@ -118,8 +118,10 @@ class SMSErrorCode:
 class SMSKeywordOperation:
     """Values of SMSKeywordOperation known at this SDK version (open enum)."""
 
+    CONFIRM: Final = "confirm"
     CUSTOM: Final = "custom"
     HELP: Final = "help"
+    INFO: Final = "info"
     START: Final = "start"
     STOP: Final = "stop"
 
