@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.34.0
+
+- **Breaking:** the API now rejects a request that carries a query parameter an operation does not declare, with a 422 `E01029`, instead of silently ignoring it. This affects `extra_query`/`default_query` on `bird.Client`/`bird.AsyncClient` (Python), the `query` option on `bird.request` (Node), the `$query` argument on generated resource methods (PHP), and a query string written into the path passed to `Client.Get` and its sibling verb methods (Go): an unrecognized key that previously had no effect now fails the call. Check any code passing one of these against the operation's documented query parameters.
+- Listing WhatsApp messages now takes `to` and `from` filters (`from_` in Python, where `from` is reserved), each matching an E.164 phone number or a business-scoped user ID. The `phone_number` filter is deprecated; use the new pair instead.
+
 ## 0.33.1
 
 - A voice call's `actor` now documents the values its `type` can take: `user`, `oauth_token`, `api_key`, `system`, `sso`, and `service_account`. The enum stays open, so treat an unrecognized value as a newer type rather than an error.

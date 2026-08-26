@@ -16,7 +16,7 @@ class ErrorDetail(BaseModel):
     param: Annotated[
         str,
         Field(
-            description="Dotted field path, such as `to[0].email`, `subject`, or `.`.",
+            description="Dotted field path, such as `to[0].email`, `subject`, or `.`. When the request was rejected for a query parameter the endpoint does not declare, this carries that parameter's name instead of a field path.\n",
             min_length=1,
         ),
     ]
@@ -5777,6 +5777,17 @@ class WhatsAppEventList(BaseModel):
     ]
 
 
+class NumbersDedicatedAllocationID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^nda_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
 class EmailStatsSeriesPeriod(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -10866,7 +10877,7 @@ class EventVerifyAttemptDeliveredData(EventVerifyBase):
         str,
         Field(
             description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
-            examples=["+15551234567"],
+            examples=["+14155550100"],
             min_length=1,
         ),
     ]
@@ -10986,7 +10997,7 @@ class EventVerifyAttemptUndeliveredData(EventVerifyBase):
         str,
         Field(
             description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
-            examples=["+15551234567"],
+            examples=["+14155550100"],
             min_length=1,
         ),
     ]
@@ -11004,7 +11015,7 @@ class EventVerifyAttemptUndeliveredData(EventVerifyBase):
         str | None,
         Field(
             description="Diagnostic text describing the failure, for display only. Null when none was reported.",
-            examples=["550: mailbox unavailable"],
+            examples=["Carrier rejected the message before delivery"],
         ),
     ]
     failed_at: Annotated[
@@ -11865,17 +11876,6 @@ class NumbersOrderStatus(str, Enum):
     pending = "pending"
     completed = "completed"
     failed = "failed"
-
-
-class NumbersDedicatedAllocationID(RootModel[str]):
-    root: Annotated[
-        str,
-        Field(
-            examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
-            min_length=1,
-            pattern="^nda_[0-9a-hjkmnp-tv-z]{26}$",
-        ),
-    ]
 
 
 class NumbersOrder(BaseModel):

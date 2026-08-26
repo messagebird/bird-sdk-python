@@ -25,6 +25,8 @@ class WhatsappListParams(TypedDict, total=False):
     created_before: str
     status: Sequence[str]
     direction: str
+    to: str
+    from_: str
     phone_number: str
     bsuid: str
     category: str
@@ -68,13 +70,15 @@ class WhatsappBase(Resource):
         created_before: str | None = None,
         status: Sequence[str] | None = None,
         direction: str | None = None,
+        to: str | None = None,
+        from_: str | None = None,
         phone_number: str | None = None,
         bsuid: str | None = None,
         category: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document or location. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, template category, or tag. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document or location. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Use whatsapp_get for one message's current state.
 
         ```python
         for msg in client.whatsapp.list(status=["delivered"]):
@@ -89,6 +93,8 @@ class WhatsappBase(Resource):
             "created_before": created_before,
             "status": status,
             "direction": direction,
+            "to": to,
+            "from": from_,
             "phone_number": phone_number,
             "bsuid": bsuid,
             "category": category,
@@ -152,13 +158,15 @@ class AsyncWhatsappBase(AsyncResource):
         created_before: str | None = None,
         status: Sequence[str] | None = None,
         direction: str | None = None,
+        to: str | None = None,
+        from_: str | None = None,
         phone_number: str | None = None,
         bsuid: str | None = None,
         category: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document or location. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, contact phone number, bsuid, template category, or tag. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document or location. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Use whatsapp_get for one message's current state.
 
         ```python
         async for msg in client.whatsapp.list(status=["delivered"]):
@@ -173,6 +181,8 @@ class AsyncWhatsappBase(AsyncResource):
             "created_before": created_before,
             "status": status,
             "direction": direction,
+            "to": to,
+            "from": from_,
             "phone_number": phone_number,
             "bsuid": bsuid,
             "category": category,
