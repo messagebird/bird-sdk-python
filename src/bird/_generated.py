@@ -8995,6 +8995,7 @@ class WebhookEventType(str, Enum):
     sms_rejected = "sms.rejected"
     sms_sent = "sms.sent"
     sms_undelivered = "sms.undelivered"
+    sms_suppression_created = "sms_suppression.created"
     verify_attempt_delivered = "verify.attempt.delivered"
     verify_attempt_sent = "verify.attempt.sent"
     verify_attempt_undelivered = "verify.attempt.undelivered"
@@ -10828,6 +10829,71 @@ class EventSMSUndelivered(BaseModel):
     data: EventSMSUndeliveredData
 
 
+class SMSSuppressionCreatedEventType(str, Enum):
+    sms_suppression_created = "sms_suppression.created"
+
+
+class EventSMSSuppressionCreatedData(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    suppression_id: Annotated[
+        str,
+        Field(
+            description="The suppression episode that was opened.",
+            examples=["ssu_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^ssu_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    destination: Annotated[
+        str,
+        Field(
+            description="The subscriber, in E.164 format.",
+            examples=["+15550001234"],
+            max_length=20,
+            min_length=2,
+        ),
+    ]
+    originator: Annotated[
+        str,
+        Field(
+            description="The sender this stops. An SMS suppression is the exact (sender, recipient) pair, so your other senders still reach this subscriber.",
+            examples=["+15557654321"],
+            max_length=20,
+            min_length=1,
+        ),
+    ]
+    reason: Annotated[
+        Union[SMSSuppressionReason, str], Field(union_mode="left_to_right")
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description="The workspace the suppression belongs to.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
+class EventSMSSuppressionCreated(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["sms_suppression.created"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="When the episode's opening statement took effect (`effective_at`).",
+            examples=["2026-08-12 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventSMSSuppressionCreatedData
+
+
 class EventVerifyBase(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -12228,6 +12294,7 @@ class WebhookEvent(
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered
+        | EventSMSSuppressionCreated
         | EventVerifyAttemptDelivered
         | EventVerifyAttemptSent
         | EventVerifyAttemptUndelivered
@@ -12279,6 +12346,7 @@ class WebhookEvent(
         | EventSMSRejected
         | EventSMSSent
         | EventSMSUndelivered
+        | EventSMSSuppressionCreated
         | EventVerifyAttemptDelivered
         | EventVerifyAttemptSent
         | EventVerifyAttemptUndelivered

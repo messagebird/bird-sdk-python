@@ -45,6 +45,7 @@ class WebhookEventType:
     SMS_RECEIVED: Final = "sms.received"
     SMS_REJECTED: Final = "sms.rejected"
     SMS_SENT: Final = "sms.sent"
+    SMS_SUPPRESSION_CREATED: Final = "sms_suppression.created"
     SMS_UNDELIVERED: Final = "sms.undelivered"
     VERIFY_ATTEMPT_DELIVERED: Final = "verify.attempt.delivered"
     VERIFY_ATTEMPT_SENT: Final = "verify.attempt.sent"
