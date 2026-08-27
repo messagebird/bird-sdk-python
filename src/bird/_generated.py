@@ -11866,7 +11866,7 @@ class Number(BaseModel):
         list[
             Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]
         ],
-        Field(description="Channel capabilities supported by this number."),
+        Field(description="Capabilities supported by this number."),
     ]
     status: Annotated[
         Status15,
@@ -11927,7 +11927,7 @@ class AvailableNumber(BaseModel):
         list[
             Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]
         ],
-        Field(description="Channel capabilities supported by this number."),
+        Field(description="Capabilities supported by this number."),
     ]
 
 
@@ -12200,6 +12200,13 @@ class VoiceCall(BaseModel):
         VoiceCallRejectionReason | None,
         Field(
             description="Why we refused the call before dialing a carrier. Absent when the call connected or failed at the carrier; see `sip_response_code` for the carrier response."
+        ),
+    ] = None
+    tags: Annotated[
+        list[Tag] | None,
+        Field(
+            description="Your own `{name, value}` labels for this call, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise calls by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a call is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the call still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the call carried none, and on calls recorded before this field existed.",
+            max_length=5,
         ),
     ] = None
     started_at: Annotated[

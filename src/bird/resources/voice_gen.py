@@ -24,6 +24,7 @@ class VoiceListParams(TypedDict, total=False):
     from_: str
     to: str
     number: str
+    tag: Sequence[str]
     started_after: str
     started_before: str
     limit: int
@@ -42,6 +43,7 @@ class Voice(Resource):
         from_: str | None = None,
         to: str | None = None,
         number: str | None = None,
+        tag: Sequence[str] | None = None,
         started_after: str | None = None,
         started_before: str | None = None,
         limit: int | None = None,
@@ -64,6 +66,7 @@ class Voice(Resource):
             "from": from_,
             "to": to,
             "number": number,
+            "tag": tag,
             "started_after": started_after,
             "started_before": started_before,
             "limit": limit,
@@ -105,6 +108,7 @@ class AsyncVoice(AsyncResource):
         from_: str | None = None,
         to: str | None = None,
         number: str | None = None,
+        tag: Sequence[str] | None = None,
         started_after: str | None = None,
         started_before: str | None = None,
         limit: int | None = None,
@@ -127,6 +131,7 @@ class AsyncVoice(AsyncResource):
             "from": from_,
             "to": to,
             "number": number,
+            "tag": tag,
             "started_after": started_after,
             "started_before": started_before,
             "limit": limit,
