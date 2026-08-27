@@ -229,12 +229,8 @@ class Timestamps(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    created_at: Annotated[
-        str, Field(examples=["2026-05-20 09:14:52+00:00"], min_length=1)
-    ]
-    updated_at: Annotated[
-        str, Field(examples=["2026-05-25 16:42:01+00:00"], min_length=1)
-    ]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
 
 class RealtimeAppID(RootModel[str]):
@@ -3316,7 +3312,7 @@ class SMSKeywordRule(BaseModel):
         str | None,
         Field(
             description="When the auto-reply for this rule was switched off, or null if it is on. Switching it off records that you send this reply from your own system, which is what Bird points to if a carrier asks why no reply went out.\n",
-            examples=["2026-08-12 09:00:00+00:00"],
+            examples=["2026-08-12T09:00:00Z"],
         ),
     ] = None
     mandatory: Annotated[
@@ -3330,7 +3326,7 @@ class SMSKeywordRule(BaseModel):
         str,
         Field(
             description="When the rule was created.",
-            examples=["2026-08-12 09:00:00+00:00"],
+            examples=["2026-08-12T09:00:00Z"],
             min_length=1,
         ),
     ]
@@ -3338,7 +3334,7 @@ class SMSKeywordRule(BaseModel):
         str,
         Field(
             description="When the rule was last changed. On one of Bird's defaults this is when Bird last changed the keywords or the reply for that country.",
-            examples=["2026-08-12 09:00:00+00:00"],
+            examples=["2026-08-12T09:00:00Z"],
             min_length=1,
         ),
     ]
@@ -3475,7 +3471,7 @@ class SMSStatsSummaryPeriod(BaseModel):
         str | None,
         Field(
             description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.\n",
-            examples=["2026-05-25 14:03:10+00:00"],
+            examples=["2026-05-25T14:03:10Z"],
         ),
     ] = None
 
@@ -3641,7 +3637,7 @@ class SMSStatsComparisonDelta(BaseModel):
         float | None,
         Field(
             description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-            examples=[0],
+            examples=[0.0],
         ),
     ]
     expired_pct_change: Annotated[
@@ -3732,7 +3728,7 @@ class SMSStatsSeriesPeriod(BaseModel):
         str | None,
         Field(
             description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.\n",
-            examples=["2026-05-25 14:03:10+00:00"],
+            examples=["2026-05-25T14:03:10Z"],
         ),
     ] = None
 
@@ -5870,43 +5866,43 @@ class WhatsAppMessageSendRequest(BaseModel):
     text: Annotated[
         WhatsAppTextSend | None,
         Field(
-            description="Free-form text to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="Free-form text to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     image: Annotated[
         WhatsAppImageSend | None,
         Field(
-            description="A free-form image to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="A free-form image to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     video: Annotated[
         WhatsAppVideoSend | None,
         Field(
-            description="A free-form video to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="A free-form video to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     audio: Annotated[
         WhatsAppAudioSend | None,
         Field(
-            description="Free-form audio to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="Free-form audio to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     sticker: Annotated[
         WhatsAppStickerSend | None,
         Field(
-            description="A free-form sticker to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="A free-form sticker to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     document: Annotated[
         WhatsAppDocumentSend | None,
         Field(
-            description="A free-form document to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="A free-form document to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     location: Annotated[
         WhatsAppLocationSend | None,
         Field(
-            description="A free-form location to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. We do not track the window, so a send outside one is accepted and then fails, with `service_window_expired` on the message's `last_error`.\n"
+            description="A free-form location to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.\n"
         ),
     ] = None
     tags: Annotated[
@@ -6010,7 +6006,7 @@ class EmailStatsSeriesPeriod(BaseModel):
         str | None,
         Field(
             description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n",
-            examples=["2026-05-25 14:03:10+00:00"],
+            examples=["2026-05-25T14:03:10Z"],
         ),
     ] = None
 
@@ -6449,7 +6445,7 @@ class EmailStatsPeriod(BaseModel):
         str | None,
         Field(
             description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
-            examples=["2026-05-25 14:03:10+00:00"],
+            examples=["2026-05-25T14:03:10Z"],
         ),
     ] = None
 
@@ -6587,7 +6583,7 @@ class EmailStatsSummaryPeriod(BaseModel):
         str | None,
         Field(
             description='The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example "as of 14:03") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.\n',
-            examples=["2026-05-25 14:03:10+00:00"],
+            examples=["2026-05-25T14:03:10Z"],
         ),
     ] = None
 
@@ -9267,7 +9263,7 @@ class EventDomainFailed(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9322,7 +9318,7 @@ class EventDomainVerified(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9408,7 +9404,7 @@ class EventEmailAccepted(BaseModel):
         str,
         Field(
             description="Time the API accepted the send.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9476,7 +9472,7 @@ class EventEmailBounced(BaseModel):
         str,
         Field(
             description="Time the bounce was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9542,7 +9538,7 @@ class EventEmailCanceled(BaseModel):
         str,
         Field(
             description="Time the scheduled send was canceled.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9593,7 +9589,7 @@ class EventEmailClicked(BaseModel):
         str,
         Field(
             description="Time the click was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9629,7 +9625,7 @@ class EventEmailComplained(BaseModel):
         str,
         Field(
             description="Time the complaint was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9682,7 +9678,7 @@ class EventEmailDeferred(BaseModel):
         str,
         Field(
             description="Time the deferral was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9711,7 +9707,7 @@ class EventEmailDelivered(BaseModel):
         str,
         Field(
             description="Time the recipient's mail server accepted the message.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9740,7 +9736,7 @@ class EventEmailListUnsubscribed(BaseModel):
         str,
         Field(
             description="Time the unsubscribe was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9783,7 +9779,7 @@ class EventEmailOpened(BaseModel):
         str,
         Field(
             description="Time the open was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9843,7 +9839,7 @@ class EventEmailOutOfBandBounce(BaseModel):
         str,
         Field(
             description="Time the bounce notification was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9872,7 +9868,7 @@ class EventEmailProcessed(BaseModel):
         str,
         Field(
             description="Time the message was prepared for delivery.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -9986,7 +9982,7 @@ class EventEmailReceived(BaseModel):
         str,
         Field(
             description="When the API received the message.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10026,7 +10022,7 @@ class EventEmailRejected(BaseModel):
         str,
         Field(
             description="Time the rejection was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10041,7 +10037,7 @@ class EventEmailScheduledData(EventEmailMessageBase):
         str,
         Field(
             description="When the message is scheduled to send.",
-            examples=["2026-05-22 09:00:00+00:00"],
+            examples=["2026-05-22T09:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10063,7 +10059,7 @@ class EventEmailScheduled(BaseModel):
         str,
         Field(
             description="Time the send was scheduled.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10092,7 +10088,7 @@ class EventEmailUnsubscribed(BaseModel):
         str,
         Field(
             description="Time the unsubscribe was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10148,7 +10144,7 @@ class EventEmailMailboxMessageDelivered(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-07-08 12:00:00+00:00"],
+            examples=["2026-07-08T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10212,7 +10208,7 @@ class EventEmailMailboxMessageFailed(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-07-08 12:00:00+00:00"],
+            examples=["2026-07-08T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10343,7 +10339,7 @@ class EventEmailMailboxMessageReceived(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-07-08 12:00:00+00:00"],
+            examples=["2026-07-08T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10399,7 +10395,7 @@ class EventEmailMailboxMessageSent(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-07-08 12:00:00+00:00"],
+            examples=["2026-07-08T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10445,7 +10441,7 @@ class EventEmailMailboxSuspended(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-07-08 12:00:00+00:00"],
+            examples=["2026-07-08T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10508,7 +10504,7 @@ class EventEmailMailboxThreadCreated(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-07-08 12:00:00+00:00"],
+            examples=["2026-07-08T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10571,7 +10567,7 @@ class EventEmailSuppressionCreated(BaseModel):
         str,
         Field(
             description="When the event occurred.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10652,7 +10648,7 @@ class EventPreferenceDeleted(BaseModel):
         str,
         Field(
             description="When the delete took effect (`effective_at`), not when it was recorded.",
-            examples=["2026-08-12 12:00:00+00:00"],
+            examples=["2026-08-12T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10678,7 +10674,7 @@ class EventPreferenceGranted(BaseModel):
         str,
         Field(
             description="When the statement took effect (`effective_at`), not when it was recorded.",
-            examples=["2026-08-12 12:00:00+00:00"],
+            examples=["2026-08-12T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10704,7 +10700,7 @@ class EventPreferenceRevoked(BaseModel):
         str,
         Field(
             description="When the statement took effect (`effective_at`), not when it was recorded.",
-            examples=["2026-08-12 12:00:00+00:00"],
+            examples=["2026-08-12T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10797,7 +10793,7 @@ class EventSMSAccepted(BaseModel):
         str,
         Field(
             description="Time the API accepted the request.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10840,7 +10836,7 @@ class EventSMSDelivered(BaseModel):
         str,
         Field(
             description="Time the carrier confirmed delivery.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10875,7 +10871,7 @@ class EventSMSExpired(BaseModel):
         str,
         Field(
             description="Time the message expired.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -10906,7 +10902,7 @@ class EventSMSFailed(BaseModel):
         str,
         Field(
             description="Time the failure was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11043,7 +11039,7 @@ class EventSMSReceived(BaseModel):
         str,
         Field(
             description="Time the sender sent the message.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11079,7 +11075,7 @@ class EventSMSRejected(BaseModel):
         str,
         Field(
             description="Time the rejection was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11121,7 +11117,7 @@ class EventSMSSent(BaseModel):
         str,
         Field(
             description="Time the message was handed to the carrier.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11153,7 +11149,7 @@ class EventSMSUndelivered(BaseModel):
         str,
         Field(
             description="Time the non-delivery was recorded.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11218,7 +11214,7 @@ class EventSMSSuppressionCreated(BaseModel):
         str,
         Field(
             description="When the episode's opening statement took effect (`effective_at`).",
-            examples=["2026-08-12 12:00:00+00:00"],
+            examples=["2026-08-12T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11296,7 +11292,7 @@ class EventVerifyAttemptDeliveredData(EventVerifyBase):
         str,
         Field(
             description="Time delivery was confirmed.",
-            examples=["2026-07-24 12:00:05+00:00"],
+            examples=["2026-07-24T12:00:05Z"],
             min_length=1,
         ),
     ]
@@ -11318,7 +11314,7 @@ class EventVerifyAttemptDelivered(BaseModel):
         str,
         Field(
             description="Time delivery was confirmed.",
-            examples=["2026-07-24 12:00:05+00:00"],
+            examples=["2026-07-24T12:00:05Z"],
             min_length=1,
         ),
     ]
@@ -11353,7 +11349,7 @@ class EventVerifyAttemptSentData(EventVerifyBase):
         str,
         Field(
             description="Time the passcode was dispatched.",
-            examples=["2026-07-24 12:00:01+00:00"],
+            examples=["2026-07-24T12:00:01Z"],
             min_length=1,
         ),
     ]
@@ -11375,7 +11371,7 @@ class EventVerifyAttemptSent(BaseModel):
         str,
         Field(
             description="Time the passcode was dispatched.",
-            examples=["2026-07-24 12:00:01+00:00"],
+            examples=["2026-07-24T12:00:01Z"],
             min_length=1,
         ),
     ]
@@ -11419,7 +11415,7 @@ class EventVerifyAttemptUndeliveredData(EventVerifyBase):
         str,
         Field(
             description="Time the failure was recorded.",
-            examples=["2026-07-24 12:00:05+00:00"],
+            examples=["2026-07-24T12:00:05Z"],
             min_length=1,
         ),
     ]
@@ -11441,7 +11437,7 @@ class EventVerifyAttemptUndelivered(BaseModel):
         str,
         Field(
             description="Time the failure was recorded.",
-            examples=["2026-07-24 12:00:05+00:00"],
+            examples=["2026-07-24T12:00:05Z"],
             min_length=1,
         ),
     ]
@@ -11471,7 +11467,7 @@ class EventVerifyVerificationCreatedData(EventVerifyBase):
         str,
         Field(
             description="Time the verification session was created.",
-            examples=["2026-07-24 12:00:00+00:00"],
+            examples=["2026-07-24T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11493,7 +11489,7 @@ class EventVerifyVerificationCreated(BaseModel):
         str,
         Field(
             description="Time the verification session was created.",
-            examples=["2026-07-24 12:00:00+00:00"],
+            examples=["2026-07-24T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11547,7 +11543,7 @@ class EventVerifyVerificationFailedData(EventVerifyBase):
         str,
         Field(
             description="Time the verification was resolved.",
-            examples=["2026-07-24 12:00:05+00:00"],
+            examples=["2026-07-24T12:00:05Z"],
             min_length=1,
         ),
     ]
@@ -11562,7 +11558,7 @@ class EventVerifyVerificationFailed(BaseModel):
         str,
         Field(
             description="Time the verification was resolved.",
-            examples=["2026-07-24 12:00:05+00:00"],
+            examples=["2026-07-24T12:00:05Z"],
             min_length=1,
         ),
     ]
@@ -11593,7 +11589,7 @@ class EventVerifyVerificationVerifiedData(EventVerifyBase):
         str,
         Field(
             description="Time the verification was verified.",
-            examples=["2026-07-24 12:01:00+00:00"],
+            examples=["2026-07-24T12:01:00Z"],
             min_length=1,
         ),
     ]
@@ -11615,7 +11611,7 @@ class EventVerifyVerificationVerified(BaseModel):
         str,
         Field(
             description="Time the verification was verified.",
-            examples=["2026-07-24 12:01:00+00:00"],
+            examples=["2026-07-24T12:01:00Z"],
             min_length=1,
         ),
     ]
@@ -11708,7 +11704,7 @@ class EventVoiceCallAnswered(BaseModel):
         str,
         Field(
             description="Time the call was answered.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11774,7 +11770,7 @@ class EventVoiceCallEnded(BaseModel):
         str,
         Field(
             description="Time either party hung up or call setup failed.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11803,7 +11799,7 @@ class EventVoiceCallInitiated(BaseModel):
         str,
         Field(
             description="Time the call was initiated.",
-            examples=["2026-05-21 12:00:00+00:00"],
+            examples=["2026-05-21T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11893,7 +11889,7 @@ class EventWhatsAppAccepted(BaseModel):
         str,
         Field(
             description="Time the API accepted and charged the send request.",
-            examples=["2026-07-16 12:00:00+00:00"],
+            examples=["2026-07-16T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11922,7 +11918,7 @@ class EventWhatsAppDelivered(BaseModel):
         str,
         Field(
             description="Time the message was delivered to the recipient's device.",
-            examples=["2026-07-16 12:00:00+00:00"],
+            examples=["2026-07-16T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11954,7 +11950,7 @@ class EventWhatsAppFailed(BaseModel):
         str,
         Field(
             description="Time the failure was recorded.",
-            examples=["2026-07-16 12:00:00+00:00"],
+            examples=["2026-07-16T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -11983,7 +11979,7 @@ class EventWhatsAppRead(BaseModel):
         str,
         Field(
             description="Time the recipient read the message.",
-            examples=["2026-07-16 12:00:00+00:00"],
+            examples=["2026-07-16T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -12036,7 +12032,7 @@ class EventWhatsAppReceived(BaseModel):
         str,
         Field(
             description="Time the contact sent the message, as reported by WhatsApp.",
-            examples=["2026-07-16 12:00:00+00:00"],
+            examples=["2026-07-16T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -12069,7 +12065,7 @@ class EventWhatsAppRejected(BaseModel):
         str,
         Field(
             description="Time the rejection was recorded.",
-            examples=["2026-07-23 12:00:00+00:00"],
+            examples=["2026-07-23T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -12098,7 +12094,7 @@ class EventWhatsAppSent(BaseModel):
         str,
         Field(
             description="Time the API handed the message to Meta for delivery.",
-            examples=["2026-07-16 12:00:00+00:00"],
+            examples=["2026-07-16T12:00:00Z"],
             min_length=1,
         ),
     ]
@@ -12164,7 +12160,7 @@ class EventWhatsAppSuppressionCreated(BaseModel):
         str,
         Field(
             description="When the episode's opening statement took effect (`effective_at`).",
-            examples=["2026-08-12 12:00:00+00:00"],
+            examples=["2026-08-12T12:00:00Z"],
             min_length=1,
         ),
     ]

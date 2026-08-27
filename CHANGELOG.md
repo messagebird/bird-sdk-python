@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.38.1
+
+- Example values on `date`, `date-time` and numeric fields now match the examples the API declares (`2026-05-01` for a `date` field, `0.0` for a nullable number).
+
 ## 0.38.0
 
 - Add the `preferences` resource — list, get, create, and delete stated messaging preferences (consent grants and opt-outs) across email, SMS, and WhatsApp — plus `contacts.preferences.list` for the rows keyed to a contact's own handles, and typed webhook events for `preference.granted`, `preference.revoked`, `preference.deleted`, and `whatsapp_suppression.created`.
