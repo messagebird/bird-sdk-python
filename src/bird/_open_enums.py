@@ -99,6 +99,26 @@ class NumbersOrderStatus:
     PENDING: Final = "pending"
 
 
+class PreferenceChannel:
+    """Values of PreferenceChannel known at this SDK version (open enum)."""
+
+    EMAIL: Final = "email"
+    SMS: Final = "sms"
+    WHATSAPP: Final = "whatsapp"
+
+
+class PreferenceOrigin:
+    """Values of PreferenceOrigin known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    IMPORT: Final = "import"
+    KEYWORD: Final = "keyword"
+    PREFERENCE_PAGE: Final = "preference_page"
+    UNSUBSCRIBE_EVENT: Final = "unsubscribe_event"
+    UNSUBSCRIBE_LINK: Final = "unsubscribe_link"
+    USER: Final = "user"
+
+
 class SMSErrorCode:
     """Values of SMSErrorCode known at this SDK version (open enum)."""
 
@@ -261,6 +281,8 @@ __all__ = [
     "NumberCapability",
     "NumberType",
     "NumbersOrderStatus",
+    "PreferenceChannel",
+    "PreferenceOrigin",
     "SMSErrorCode",
     "SMSKeywordOperation",
     "SMSSuppressionCoverage",

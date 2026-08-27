@@ -120,30 +120,35 @@ async def _ex_20() -> None:
 
 
 async def _ex_21() -> None:
+    for preference in client.contacts.preferences.list("con_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(preference.channel, preference.status)
+
+
+async def _ex_22() -> None:
     contact = client.contacts.update("con_01krdgeqcxet5s7t44vh8rt9mg", first_name="Jane")
     print(contact.first_name)
 
 
-async def _ex_22() -> None:
+async def _ex_23() -> None:
     domain = client.domains.create(domain="mail.acme.com")
     print(domain.id, domain.status)
 
 
-async def _ex_23() -> None:
+async def _ex_24() -> None:
     client.domains.delete("dom_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_24() -> None:
+async def _ex_25() -> None:
     domain = client.domains.get("dom_01krdgeqcxet5s7t44vh8rt9mg")
     print(domain.domain)
 
 
-async def _ex_25() -> None:
+async def _ex_26() -> None:
     for domain in client.domains.list():
         print(domain.id, domain.status)
 
 
-async def _ex_26() -> None:
+async def _ex_27() -> None:
     domain = client.domains.update(
         "dom_01krdgeqcxet5s7t44vh8rt9mg",
         settings={"click_tracking": True, "open_tracking": True},
@@ -152,16 +157,16 @@ async def _ex_26() -> None:
     print(domain.id)
 
 
-async def _ex_27() -> None:
+async def _ex_28() -> None:
     domain = client.domains.verify("dom_01krdgeqcxet5s7t44vh8rt9mg")
     print(domain.status)
 
 
-async def _ex_28() -> None:
+async def _ex_29() -> None:
     client.email.cancel("em_abc123")
 
 
-async def _ex_29() -> None:
+async def _ex_30() -> None:
     try:
         client.email.send(
             from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
@@ -177,55 +182,55 @@ async def _ex_29() -> None:
         print(err.status_code, err.code, err.request_id)
 
 
-async def _ex_30() -> None:
+async def _ex_31() -> None:
     message = client.email.get("em_abc123")
     print(message.id, message.status, message.delivered_count)
 
 
-async def _ex_31() -> None:
+async def _ex_32() -> None:
     async with AsyncBird() as client:
         async for message in client.email.list(status="delivered"):
             print(message.id)
 
 
-async def _ex_32() -> None:
+async def _ex_33() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
 
 
-async def _ex_33() -> None:
+async def _ex_34() -> None:
     for message in client.email.list(status="delivered"):
         print(message.id)
     page = client.email.list(status="delivered")  # page.data, page.next_cursor
     print(len(page.data), page.next_cursor)
 
 
-async def _ex_34() -> None:
+async def _ex_35() -> None:
     mailbox = client.email.mailboxes.create(display_name="Acme Support")
     print(mailbox.id)
 
 
-async def _ex_35() -> None:
+async def _ex_36() -> None:
     client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_36() -> None:
+async def _ex_37() -> None:
     mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(mailbox.address)
 
 
-async def _ex_37() -> None:
+async def _ex_38() -> None:
     labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     for label in labels.data:
         print(label.name)
 
 
-async def _ex_38() -> None:
+async def _ex_39() -> None:
     for mailbox in client.email.mailboxes.list():
         print(mailbox.id, mailbox.address)
 
 
-async def _ex_39() -> None:
+async def _ex_40() -> None:
     msg = client.email.mailboxes.messages.create(
         "mbx_01krdgeqcxet5s7t44vh8rt9mg",
         to=[{"address": "user@example.com"}],
@@ -235,47 +240,47 @@ async def _ex_39() -> None:
     print(msg.id, msg.thread_id)
 
 
-async def _ex_40() -> None:
+async def _ex_41() -> None:
     rule = client.email.mailboxes.receive_rules.create(
         "mbx_01krdgeqcxet5s7t44vh8rt9mg", action="block", entry="spam.example.com"
     )
     print(rule.id)
 
 
-async def _ex_41() -> None:
+async def _ex_42() -> None:
     client.email.mailboxes.receive_rules.delete(
         "mbx_01krdgeqcxet5s7t44vh8rt9mg", "rrule_01krdgeqcxet5s7t44vh8rt9mg"
     )
 
 
-async def _ex_42() -> None:
+async def _ex_43() -> None:
     for rule in client.email.mailboxes.receive_rules.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
         print(rule.id, rule.action)
 
 
-async def _ex_43() -> None:
+async def _ex_44() -> None:
     mailbox = client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(mailbox.id)
 
 
-async def _ex_44() -> None:
+async def _ex_45() -> None:
     mailbox = client.email.mailboxes.resume("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(mailbox.state)
 
 
-async def _ex_45() -> None:
+async def _ex_46() -> None:
     stats = client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(stats.summary)
 
 
-async def _ex_46() -> None:
+async def _ex_47() -> None:
     mailbox = client.email.mailboxes.update(
         "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
     )
     print(mailbox.display_name)
 
 
-async def _ex_47() -> None:
+async def _ex_48() -> None:
     client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -285,7 +290,7 @@ async def _ex_47() -> None:
     )
 
 
-async def _ex_48() -> None:
+async def _ex_49() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -295,7 +300,7 @@ async def _ex_48() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_49() -> None:
+async def _ex_50() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["bounce+signup-flow@messagebird.dev"],
@@ -307,7 +312,7 @@ async def _ex_49() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_50() -> None:
+async def _ex_51() -> None:
     batch = client.email.send_batch(
         messages=[
             {
@@ -328,7 +333,7 @@ async def _ex_50() -> None:
         print(item.id, item.status)
 
 
-async def _ex_51() -> None:
+async def _ex_52() -> None:
     msg = client.email.send(
         from_={"email": "onboarding@messagebird.dev", "name": "Bird"},
         to=["delivered@messagebird.dev"],
@@ -339,25 +344,25 @@ async def _ex_51() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_52() -> None:
+async def _ex_53() -> None:
     stats = client.email.stats.by_bounce_code(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_53() -> None:
+async def _ex_54() -> None:
     stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_54() -> None:
+async def _ex_55() -> None:
     stats = client.email.stats.by_category(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_55() -> None:
+async def _ex_56() -> None:
     stats = client.email.stats.by_client(
         from_="2026-05-01", to="2026-05-25", group_by="email_client",
     )
@@ -365,13 +370,13 @@ async def _ex_55() -> None:
         print(row)
 
 
-async def _ex_56() -> None:
+async def _ex_57() -> None:
     stats = client.email.stats.by_complaint_type(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_57() -> None:
+async def _ex_58() -> None:
     stats = client.email.stats.by_location(
         from_="2026-05-01", to="2026-05-25", group_by="country",
     )
@@ -379,31 +384,31 @@ async def _ex_57() -> None:
         print(row)
 
 
-async def _ex_58() -> None:
+async def _ex_59() -> None:
     stats = client.email.stats.by_mailbox_provider(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_59() -> None:
+async def _ex_60() -> None:
     stats = client.email.stats.by_mailbox_provider_region(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_60() -> None:
+async def _ex_61() -> None:
     stats = client.email.stats.by_recipient_domain(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_61() -> None:
+async def _ex_62() -> None:
     stats = client.email.stats.by_sending_domain(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_62() -> None:
+async def _ex_63() -> None:
     stats = client.email.stats.by_sending_ip(
         from_="2026-05-01", to="2026-05-25", sort="bounces.block",
     )
@@ -411,26 +416,26 @@ async def _ex_62() -> None:
         print(row)
 
 
-async def _ex_63() -> None:
+async def _ex_64() -> None:
     stats = client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
     for row in stats.data:
         print(row)
     print(stats.total)
 
 
-async def _ex_64() -> None:
+async def _ex_65() -> None:
     stats = client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
     for row in stats.data:
         print(row)
 
 
-async def _ex_65() -> None:
+async def _ex_66() -> None:
     stats = client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
     for point in stats.data:
         print(point.bucket, point.sends_accepted)
 
 
-async def _ex_66() -> None:
+async def _ex_67() -> None:
     stats = client.email.stats.hourly(
         from_="2026-05-25T00:00:00Z",
         to="2026-05-25T23:59:59Z",
@@ -439,26 +444,26 @@ async def _ex_66() -> None:
         print(point.bucket, point.delivery)
 
 
-async def _ex_67() -> None:
+async def _ex_68() -> None:
     summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
     print(summary.sends_accepted, summary.delivery)
 
 
-async def _ex_68() -> None:
+async def _ex_69() -> None:
     client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
 
 
-async def _ex_69() -> None:
+async def _ex_70() -> None:
     thread = client.email.threads.get("thr_01krdgeqcxet5s7t44vh8rt9mg")
     print(thread.subject)
 
 
-async def _ex_70() -> None:
+async def _ex_71() -> None:
     for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
         print(thread.id, thread.subject)
 
 
-async def _ex_71() -> None:
+async def _ex_72() -> None:
     result = client.email.threads.messages.attachments(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
@@ -466,26 +471,26 @@ async def _ex_71() -> None:
         print(attachment.filename, attachment.size)
 
 
-async def _ex_72() -> None:
+async def _ex_73() -> None:
     body = client.email.threads.messages.body(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(body.html)
 
 
-async def _ex_73() -> None:
+async def _ex_74() -> None:
     message = client.email.threads.messages.get(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
     )
     print(message.subject)
 
 
-async def _ex_74() -> None:
+async def _ex_75() -> None:
     for message in client.email.threads.messages.list("thr_01krdgeqcxet5s7t44vh8rt9mg"):
         print(message.id, message.subject)
 
 
-async def _ex_75() -> None:
+async def _ex_76() -> None:
     reply = client.email.threads.messages.reply(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", "rem_01krdgeqcxet5s7t44vh8rt9mg",
         text="Thanks for reaching out!",
@@ -493,20 +498,20 @@ async def _ex_75() -> None:
     print(reply.id)
 
 
-async def _ex_76() -> None:
+async def _ex_77() -> None:
     thread = client.email.threads.update(
         "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
     )
     print(thread.id)
 
 
-async def _ex_77() -> None:
+async def _ex_78() -> None:
     answer = client.lookup.email(email="aisha.khan@example.com")
     # result is an open vocabulary; delivery_confidence is always comparable.
     print(answer.result, answer.delivery_confidence)
 
 
-async def _ex_78() -> None:
+async def _ex_79() -> None:
     answer = client.lookup.phone_number(
         phone_number="+31612345678", type=["classification", "score"]
     )
@@ -516,33 +521,33 @@ async def _ex_78() -> None:
         print(answer.score.value)
 
 
-async def _ex_79() -> None:
+async def _ex_80() -> None:
     # A number a carrier supplies is only on sale while the carrier still has
     # it, so a 404 here means someone else took it.
     candidate = client.numbers.available.get("+447700900201")
     print(candidate.country_code, candidate.capabilities)
 
 
-async def _ex_80() -> None:
+async def _ex_81() -> None:
     # The search is always country-scoped, so country_code is required.
     page = client.numbers.available.list(country_code="GB", capabilities=["sms", "voice"])
     for candidate in page.data:
         print(candidate.number, candidate.number_type)
 
 
-async def _ex_81() -> None:
+async def _ex_82() -> None:
     allocated = client.numbers.get("nda_01krdgeqcxet5s7t44vh8rt9mg")
     # A country that asks for ownership paperwork answers here; most answer None.
     print(allocated.status, allocated.ownership or "no paperwork required")
 
 
-async def _ex_82() -> None:
+async def _ex_83() -> None:
     for allocated in client.numbers.list(country_code="GB"):
         # kind distinguishes a number you bought from one Bird manages.
         print(allocated.number, allocated.kind, allocated.status)
 
 
-async def _ex_83() -> None:
+async def _ex_84() -> None:
     order = client.numbers.orders.create(number="+447700900201")
     # Most orders finish inside the request. One that has to wait on a carrier
     # comes back without a number_id. Poll it until completed or failed.
@@ -552,32 +557,60 @@ async def _ex_83() -> None:
         print("still", order.status, "; poll", order.id)
 
 
-async def _ex_84() -> None:
+async def _ex_85() -> None:
     order = client.numbers.orders.get("nor_01krdgeqcxet5s7t44vh8rt9mg")
     # failure_reason says what went wrong, and only ever on a failed order.
     print(order.status, order.failure_reason or "")
 
 
-async def _ex_85() -> None:
+async def _ex_86() -> None:
     page = client.numbers.orders.list(status="failed")
     for order in page.data:
         print(order.number, order.failure_reason or "")
 
 
-async def _ex_86() -> None:
+async def _ex_87() -> None:
     # Releasing stops the monthly charge and the number stops working for you.
     # Only a dedicated number can be released; a shared one answers E14002.
     client.numbers.release("nda_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_87() -> None:
+async def _ex_88() -> None:
+    result = client.preferences.create(
+        channel="email",
+        handle="jane@acme.com",
+        status="granted",
+        consented_at="2026-08-20T14:03:10Z",
+        source="signup-form-v2",
+    )
+    if result.preference:
+        print(result.applied, result.preference.id)
+
+
+async def _ex_89() -> None:
+    result = client.preferences.delete("prf_01krdgeqcxet5s7t44vh8rt9mg")
+    if not result.applied and result.preference:
+        print("refused, current statement:", result.preference.status)
+
+
+async def _ex_90() -> None:
+    preference = client.preferences.get("prf_01krdgeqcxet5s7t44vh8rt9mg")
+    print(preference.status, preference.coverage)
+
+
+async def _ex_91() -> None:
+    for preference in client.preferences.list(channel="email"):
+        print(preference.id, preference.handle, preference.status)
+
+
+async def _ex_92() -> None:
     channel = client.realtime.channels.get(
         "rap_01krdgeqcxet5s7t44vh8rt9mg", "presence-lobby", include=["member_count"]
     )
     print(channel.occupied, channel.member_count)
 
 
-async def _ex_88() -> None:
+async def _ex_93() -> None:
     channels = client.realtime.channels.list(
         "rap_01krdgeqcxet5s7t44vh8rt9mg", prefix="presence-", include=["member_count"]
     )
@@ -585,7 +618,7 @@ async def _ex_88() -> None:
         print(channel.name, channel.member_count)
 
 
-async def _ex_89() -> None:
+async def _ex_94() -> None:
     members = client.realtime.channels.members(
         "rap_01krdgeqcxet5s7t44vh8rt9mg", "presence-lobby"
     )
@@ -593,11 +626,11 @@ async def _ex_89() -> None:
         print(member.member_id)
 
 
-async def _ex_90() -> None:
+async def _ex_95() -> None:
     client.realtime.members.disconnect("rap_01krdgeqcxet5s7t44vh8rt9mg", "user_42")
 
 
-async def _ex_91() -> None:
+async def _ex_96() -> None:
     client.realtime.members.send(
         "rap_01krdgeqcxet5s7t44vh8rt9mg",
         "user_42",
@@ -606,7 +639,7 @@ async def _ex_91() -> None:
     )
 
 
-async def _ex_92() -> None:
+async def _ex_97() -> None:
     result = client.realtime.publish(
         "rap_01krdgeqcxet5s7t44vh8rt9mg",
         event="order.updated",
@@ -616,7 +649,7 @@ async def _ex_92() -> None:
     print(result.data)
 
 
-async def _ex_93() -> None:
+async def _ex_98() -> None:
     client.realtime.publish_batch(
         "rap_01krdgeqcxet5s7t44vh8rt9mg",
         events=[
@@ -626,23 +659,23 @@ async def _ex_93() -> None:
     )
 
 
-async def _ex_94() -> None:
+async def _ex_99() -> None:
     message = client.sms.get("sms_abc123")
     print(message.id, message.status)
 
 
-async def _ex_95() -> None:
+async def _ex_100() -> None:
     for message in client.sms.list(direction="outbound"):
         print(message.id, message.status)
 
 
-async def _ex_96() -> None:
+async def _ex_101() -> None:
     events = client.sms.list_events("sms_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_97() -> None:
+async def _ex_102() -> None:
     msg = client.sms.send(
         from_="+15557654321",
         to="+15551234567",
@@ -652,7 +685,7 @@ async def _ex_97() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_98() -> None:
+async def _ex_103() -> None:
     batch = client.sms.send_batch(
         messages=[
             {
@@ -673,7 +706,7 @@ async def _ex_98() -> None:
         print(msg.id, msg.status)
 
 
-async def _ex_99() -> None:
+async def _ex_104() -> None:
     client.sms.send(
         to="+15551234567",
         template="bird_otp_verification",
@@ -681,44 +714,44 @@ async def _ex_99() -> None:
     )
 
 
-async def _ex_100() -> None:
+async def _ex_105() -> None:
     stats = client.sms.stats.by_carrier(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.carrier, row.delivery)
 
 
-async def _ex_101() -> None:
+async def _ex_106() -> None:
     stats = client.sms.stats.by_category(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.category, row.delivery)
 
 
-async def _ex_102() -> None:
+async def _ex_107() -> None:
     stats = client.sms.stats.by_country(from_="2026-05-01", to="2026-05-31", sort="delivery_rate")
     for row in stats.data or []:
         print(row.country, row.delivery)
 
 
-async def _ex_103() -> None:
+async def _ex_108() -> None:
     stats = client.sms.stats.by_error_code(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         # The same value as the error_code filter on client.sms.list.
         print(row.error_code, row.delivery)
 
 
-async def _ex_104() -> None:
+async def _ex_109() -> None:
     stats = client.sms.stats.by_originator(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.originator, row.delivery)
 
 
-async def _ex_105() -> None:
+async def _ex_110() -> None:
     stats = client.sms.stats.by_status(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.status, row.count)
 
 
-async def _ex_106() -> None:
+async def _ex_111() -> None:
     stats = client.sms.stats.by_tag(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         # A message carrying several tags counts once under each, so rows do not
@@ -726,31 +759,31 @@ async def _ex_106() -> None:
         print(row.tag, row.delivery)
 
 
-async def _ex_107() -> None:
+async def _ex_112() -> None:
     stats = client.sms.stats.daily(from_="2026-05-01", to="2026-05-31")
     for point in stats.data or []:
         print(point.bucket, point.delivery)
 
 
-async def _ex_108() -> None:
+async def _ex_113() -> None:
     stats = client.sms.stats.hourly(from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z")
     for point in stats.data or []:
         print(point.bucket, point.delivery)
 
 
-async def _ex_109() -> None:
+async def _ex_114() -> None:
     stats = client.sms.stats.inbound.by_country(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.country, row.received)
 
 
-async def _ex_110() -> None:
+async def _ex_115() -> None:
     stats = client.sms.stats.inbound.by_number(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.number, row.received)
 
 
-async def _ex_111() -> None:
+async def _ex_116() -> None:
     stats = client.sms.stats.inbound.by_operator(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         # Messages whose operator the carrier did not report are excluded, so these
@@ -758,13 +791,13 @@ async def _ex_111() -> None:
         print(row.mcc_mnc, row.received)
 
 
-async def _ex_112() -> None:
+async def _ex_117() -> None:
     stats = client.sms.stats.inbound.daily(from_="2026-05-01", to="2026-05-31")
     for point in stats.data or []:
         print(point.bucket, point.received)
 
 
-async def _ex_113() -> None:
+async def _ex_118() -> None:
     stats = client.sms.stats.inbound.hourly(
         from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z"
     )
@@ -772,28 +805,28 @@ async def _ex_113() -> None:
         print(point.bucket, point.received)
 
 
-async def _ex_114() -> None:
+async def _ex_119() -> None:
     summary = client.sms.stats.inbound.summary(from_="2026-05-01", to="2026-05-31")
     print(summary.received)
 
 
-async def _ex_115() -> None:
+async def _ex_120() -> None:
     summary = client.sms.stats.summary(from_="2026-05-01", to="2026-05-31")
     print(summary.delivery, summary.latency)
 
 
-async def _ex_116() -> None:
+async def _ex_121() -> None:
     template = client.sms_templates.get("bird_otp_verification")
     print(template.body, template.variables)
 
 
-async def _ex_117() -> None:
+async def _ex_122() -> None:
     templates = client.sms_templates.list(scope="system")
     for template in templates.data:
         print(template.id, template.slug)
 
 
-async def _ex_118() -> None:
+async def _ex_123() -> None:
     rule = client.sms_keyword_rules.create(
         operation="stop",
         country="NL",
@@ -803,22 +836,22 @@ async def _ex_118() -> None:
     print(rule.id, rule.effective_keywords)
 
 
-async def _ex_119() -> None:
+async def _ex_124() -> None:
     client.sms_keyword_rules.delete("skr_abc123")
 
 
-async def _ex_120() -> None:
+async def _ex_125() -> None:
     rule = client.sms_keyword_rules.get("skr_abc123")
     print(rule.operation, rule.reply)
 
 
-async def _ex_121() -> None:
+async def _ex_126() -> None:
     rules = client.sms_keyword_rules.list(country="NL")
     for rule in rules.data:
         print(rule.operation, rule.keywords)
 
 
-async def _ex_122() -> None:
+async def _ex_127() -> None:
     # Omitting keywords leaves the set alone; an empty list clears your additions
     # back to Bird's.
     rule = client.sms_keyword_rules.update(
@@ -827,7 +860,7 @@ async def _ex_122() -> None:
     print(rule.reply)
 
 
-async def _ex_123() -> None:
+async def _ex_128() -> None:
     # A suppression covers one sender and one subscriber, so stopping every sender
     # means one call per sender.
     suppression = client.sms_suppressions.add(
@@ -836,76 +869,76 @@ async def _ex_123() -> None:
     print(suppression.id)
 
 
-async def _ex_124() -> None:
+async def _ex_129() -> None:
     suppression = client.sms_suppressions.get("sup_abc123")
     print(suppression.reason, suppression.blocking)
 
 
-async def _ex_125() -> None:
+async def _ex_130() -> None:
     for suppression in client.sms_suppressions.list():
         print(suppression.originator, suppression.destination, suppression.reason)
 
 
-async def _ex_126() -> None:
+async def _ex_131() -> None:
     # Only a `manual` suppression can be ended: a subscriber's own stop keyword and
     # a carrier's opt-out are refused.
     client.sms_suppressions.remove("sup_abc123")
 
 
-async def _ex_127() -> None:
+async def _ex_132() -> None:
     result = client.verify.verifications.check(
         to={"phone_number": "+15551234567"}, code="123456"
     )
     print(result.success)
 
 
-async def _ex_128() -> None:
+async def _ex_133() -> None:
     verification = client.verify.verifications.create(to={"phone_number": "+15551234567"})
     print(verification.id, verification.status)
 
 
-async def _ex_129() -> None:
+async def _ex_134() -> None:
     verification = client.verify.verifications.next_channel(
         to={"phone_number": "+15551234567"}
     )
     print(verification.last_channel)
 
 
-async def _ex_130() -> None:
+async def _ex_135() -> None:
     call = client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
     # A call still ringing or connected carries no economics yet.
     print(call.status, call.duration_ms, call.cost)
 
 
-async def _ex_131() -> None:
+async def _ex_136() -> None:
     for call in client.voice.list(status=["ringing", "in_progress"]):
         print(call.id, call.status)
 
 
-async def _ex_132() -> None:
+async def _ex_137() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_133() -> None:
+async def _ex_138() -> None:
     msg = client.whatsapp.get("wa_abc123")
     print(msg.id, msg.status)
 
 
-async def _ex_134() -> None:
+async def _ex_139() -> None:
     for msg in client.whatsapp.list(status=["delivered"]):
         print(msg.id, msg.status)
 
 
-async def _ex_135() -> None:
+async def _ex_140() -> None:
     events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_136() -> None:
+async def _ex_141() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",

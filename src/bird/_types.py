@@ -249,6 +249,23 @@ class RealtimeChannelGetParams(TypedDict, total=False):
     include: Sequence[str]
 
 
+class _PreferenceCreateRequired(TypedDict):
+    channel: str
+    handle: str
+    status: str
+
+
+class PreferenceCreateParams(_PreferenceCreateRequired, total=False):
+    """Params for ``client.preferences.create``. ``channel``, ``handle``, and
+    ``status`` are required. ``consented_at`` accepts a timezone-aware
+    ``datetime`` (serialized to RFC 3339) or an already-wire string."""
+
+    coverage: str
+    sender_scope: str
+    source: str
+    consented_at: Union[str, datetime]
+
+
 class Omit:
     """Sentinel for an argument the caller left unset, distinct from an explicit
     ``None``: a value sets it, ``None`` sends JSON ``null`` (clearing a nullable

@@ -67,7 +67,7 @@ class ContactBatchParams(_ContactBatchRequired, total=False):
     data_mode: str
 
 
-class Contacts(Resource):
+class ContactsBase(Resource):
     def list(
         self,
         *,
@@ -249,7 +249,7 @@ class Contacts(Resource):
         )
 
 
-class AsyncContacts(AsyncResource):
+class AsyncContactsBase(AsyncResource):
     def list(
         self,
         *,

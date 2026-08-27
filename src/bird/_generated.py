@@ -1626,6 +1626,198 @@ class AudienceList(FieldListEnvelope):
     data: Annotated[list[Audience], Field(description="Page of audience objects.")]
 
 
+class PreferenceChannel(str, Enum):
+    email = "email"
+    sms = "sms"
+    whatsapp = "whatsapp"
+
+
+class PreferenceStatus(str, Enum):
+    granted = "granted"
+    revoked = "revoked"
+
+
+class PreferenceCoverage(str, Enum):
+    all = "all"
+    non_transactional = "non_transactional"
+
+
+class PreferenceOrigin(str, Enum):
+    unsubscribe_link = "unsubscribe_link"
+    unsubscribe_event = "unsubscribe_event"
+    keyword = "keyword"
+    preference_page = "preference_page"
+    api_key = "api_key"
+    user = "user"
+    import_ = "import"
+
+
+class Preference(Timestamps):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^prf_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
+    handle: Annotated[
+        str,
+        Field(
+            description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+            examples=["+15550001234"],
+            max_length=320,
+            min_length=1,
+        ),
+    ]
+    sender_scope: Annotated[
+        str | None,
+        Field(
+            description="The sender the statement is limited to, or null when it covers the whole channel. On SMS this is the originator the person replied to; on WhatsApp it identifies the business account that messaged them. Email preferences are always channel-wide, so it is always null there.",
+            examples=["+15557654321"],
+        ),
+    ]
+    topic_id: Annotated[
+        str | None,
+        Field(
+            description="The topic the statement is limited to, or null when it covers every topic. Part of the key that identifies a statement, alongside `sender_scope`.",
+            examples=[None],
+        ),
+    ]
+    status: PreferenceStatus
+    coverage: PreferenceCoverage
+    effective_at: Annotated[
+        str,
+        Field(
+            description="When the statement was made, as reported by whoever made it. This is what orders one key's statements: a write dated before this moment is refused rather than applied.",
+            min_length=1,
+        ),
+    ]
+    origin: Annotated[Union[PreferenceOrigin, str], Field(union_mode="left_to_right")]
+    source: Annotated[
+        str | None,
+        Field(
+            description="Free-form note on where the statement came from, as supplied when it was recorded: a form name, an import batch, a campaign. Null when none was given.",
+            examples=["signup-form-v2"],
+            max_length=255,
+        ),
+    ] = None
+    consented_at: Annotated[
+        str | None,
+        Field(
+            description="When the person consented, as evidenced by whoever asserted the grant. Null on statements that carry no consent evidence, including every opt-out."
+        ),
+    ] = None
+    contact_id: Annotated[
+        ContactID | None,
+        Field(
+            description="The contact whose handle matched when the statement was recorded. Null when no contact matched at that moment; it is not updated when contacts change later."
+        ),
+    ] = None
+
+
+class PreferenceList(FieldListEnvelope):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: Annotated[
+        list[Preference],
+        Field(description="Page of preferences, most recently created first."),
+    ]
+
+
+class PreferenceStatement(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
+    status: PreferenceStatus
+    coverage: Annotated[
+        PreferenceCoverage | None,
+        Field(
+            description="How much traffic the statement covers. Defaults to `non_transactional`, which keeps transactional messages such as receipts and verification codes flowing."
+        ),
+    ] = "non_transactional"
+    sender_scope: Annotated[
+        str | None,
+        Field(
+            description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account. Not supported on email, where preferences are always channel-wide.",
+            examples=["+15557654321"],
+            max_length=255,
+            min_length=1,
+        ),
+    ] = None
+    source: Annotated[
+        str | None,
+        Field(
+            description="Free-form note on where the statement came from: a form name, an import batch, a campaign. Stored verbatim and returned on the preference.",
+            examples=["signup-form-v2"],
+            max_length=255,
+            min_length=1,
+        ),
+    ] = None
+    consented_at: Annotated[
+        str | None,
+        Field(
+            description="When the person consented, on a `granted` statement. Required evidence when granting over a stored opt-out: the grant applies only if this is later than the opt-out it reverses. May not be in the future."
+        ),
+    ] = None
+
+
+class PreferenceCreate(PreferenceStatement):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    handle: Annotated[
+        str,
+        Field(
+            description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+            examples=["+15550001234"],
+            max_length=320,
+            min_length=1,
+        ),
+    ]
+
+
+class PreferenceTransitionID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=["prt_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^prt_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
+class PreferenceWriteResult(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    applied: Annotated[
+        bool,
+        Field(
+            description="Whether the request took effect. False only when it was refused as out of order; the surviving, newer statement is returned in `preference`."
+        ),
+    ]
+    transition_id: Annotated[
+        PreferenceTransitionID | None,
+        Field(
+            description="Identifies this write on the key's record, for applied and refused requests alike. Null when the write was a repeat of the current statement and recorded nothing new."
+        ),
+    ]
+    preference: Annotated[
+        Preference | None,
+        Field(
+            description="The key's surviving statement. Null after an applied delete, when the key is back to having no record."
+        ),
+    ]
+
+
 class ContactPropertyType(str, Enum):
     ContactPropertyTypeString = "string"
     ContactPropertyTypeNumber = "number"
@@ -7977,7 +8169,7 @@ class State1(str, Enum):
     suspended = "suspended"
 
 
-class Channel(str, Enum):
+class Channel1(str, Enum):
     email = "email"
 
 
@@ -8035,7 +8227,7 @@ class Mailbox(BaseModel):
         ),
     ]
     channel: Annotated[
-        Channel,
+        Channel1,
         Field(description="The channel this mailbox receives on. Always `email`."),
     ]
     owner: MailboxOwner
@@ -8989,6 +9181,9 @@ class WebhookEventType(str, Enum):
     email_mailbox_suspended = "email_mailbox.suspended"
     email_mailbox_thread_created = "email_mailbox.thread_created"
     email_suppression_created = "email_suppression.created"
+    preference_deleted = "preference.deleted"
+    preference_granted = "preference.granted"
+    preference_revoked = "preference.revoked"
     sms_accepted = "sms.accepted"
     sms_delivered = "sms.delivered"
     sms_expired = "sms.expired"
@@ -9014,6 +9209,7 @@ class WebhookEventType(str, Enum):
     whatsapp_received = "whatsapp.received"
     whatsapp_rejected = "whatsapp.rejected"
     whatsapp_sent = "whatsapp.sent"
+    whatsapp_suppression_created = "whatsapp_suppression.created"
 
 
 class EventDomainFailedData(BaseModel):
@@ -10380,6 +10576,139 @@ class EventEmailSuppressionCreated(BaseModel):
         ),
     ]
     data: EventEmailSuppressionCreatedData
+
+
+class PreferenceDeletedEventType(str, Enum):
+    preference_deleted = "preference.deleted"
+
+
+class EventPreferenceBase(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    preference_id: Annotated[
+        str,
+        Field(
+            description="The preference key this write applied to.",
+            examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^prf_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    transition_id: Annotated[
+        str,
+        Field(
+            description="The ledger entry this write appended.",
+            examples=["prt_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^prt_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
+    handle: Annotated[
+        str,
+        Field(
+            description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+            examples=["+15550001234"],
+            max_length=320,
+            min_length=1,
+        ),
+    ]
+    sender_scope: Annotated[
+        str | None,
+        Field(
+            description="The sender the statement is limited to, or null when it covers the whole channel. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
+            examples=["+15557654321"],
+        ),
+    ]
+    topic_id: Annotated[
+        str | None,
+        Field(
+            description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
+            examples=[None],
+        ),
+    ]
+    coverage: PreferenceCoverage
+    contact_id: Annotated[
+        ContactID | None,
+        Field(
+            description="The contact whose handle matched when the statement was recorded. Null when no contact matched at that moment."
+        ),
+    ]
+
+
+class EventPreferenceDeletedData(EventPreferenceBase):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
+
+class EventPreferenceDeleted(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["preference.deleted"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="When the delete took effect (`effective_at`), not when it was recorded.",
+            examples=["2026-08-12 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventPreferenceDeletedData
+
+
+class PreferenceGrantedEventType(str, Enum):
+    preference_granted = "preference.granted"
+
+
+class EventPreferenceGrantedData(EventPreferenceBase):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
+
+class EventPreferenceGranted(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["preference.granted"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="When the statement took effect (`effective_at`), not when it was recorded.",
+            examples=["2026-08-12 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventPreferenceGrantedData
+
+
+class PreferenceRevokedEventType(str, Enum):
+    preference_revoked = "preference.revoked"
+
+
+class EventPreferenceRevokedData(EventPreferenceBase):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
+
+class EventPreferenceRevoked(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["preference.revoked"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="When the statement took effect (`effective_at`), not when it was recorded.",
+            examples=["2026-08-12 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventPreferenceRevokedData
 
 
 class EventSMSBase(BaseModel):
@@ -11776,6 +12105,72 @@ class EventWhatsAppSent(BaseModel):
     data: EventWhatsAppSentData
 
 
+class WhatsAppSuppressionCreatedEventType(str, Enum):
+    whatsapp_suppression_created = "whatsapp_suppression.created"
+
+
+class EventWhatsAppSuppressionCreatedData(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    suppression_id: Annotated[
+        str,
+        Field(
+            description="The suppression episode that was opened.",
+            examples=["was_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^was_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    address: Annotated[
+        str,
+        Field(
+            description="The suppressed WhatsApp address. For a phone number this is canonical E.164 with a leading plus sign, such as `+5511977670804`.",
+            examples=["+5511977670804"],
+            min_length=1,
+        ),
+    ]
+    waba: Annotated[
+        str | None,
+        Field(
+            description="The WhatsApp Business Account the suppression is limited to, identified by its WhatsApp-issued account ID, or null when it covers the whole workspace.",
+            examples=[None],
+        ),
+    ]
+    reason: Annotated[
+        str,
+        Field(
+            description="Why the address is suppressed. `manual` means it was added directly rather than created automatically from a delivery outcome. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+            min_length=1,
+        ),
+    ]
+    workspace_id: Annotated[
+        str,
+        Field(
+            description="The workspace the suppression belongs to.",
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
+class EventWhatsAppSuppressionCreated(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    type: Literal["whatsapp_suppression.created"]
+    timestamp: Annotated[
+        str,
+        Field(
+            description="When the episode's opening statement took effect (`effective_at`).",
+            examples=["2026-08-12 12:00:00+00:00"],
+            min_length=1,
+        ),
+    ]
+    data: EventWhatsAppSuppressionCreatedData
+
+
 class NumberType(str, Enum):
     mobile = "mobile"
     local = "local"
@@ -12295,6 +12690,9 @@ class WebhookEvent(
         | EventEmailMailboxSuspended
         | EventEmailMailboxThreadCreated
         | EventEmailSuppressionCreated
+        | EventPreferenceDeleted
+        | EventPreferenceGranted
+        | EventPreferenceRevoked
         | EventSMSAccepted
         | EventSMSDelivered
         | EventSMSExpired
@@ -12320,6 +12718,7 @@ class WebhookEvent(
         | EventWhatsAppReceived
         | EventWhatsAppRejected
         | EventWhatsAppSent
+        | EventWhatsAppSuppressionCreated
     ]
 ):
     root: Annotated[
@@ -12347,6 +12746,9 @@ class WebhookEvent(
         | EventEmailMailboxSuspended
         | EventEmailMailboxThreadCreated
         | EventEmailSuppressionCreated
+        | EventPreferenceDeleted
+        | EventPreferenceGranted
+        | EventPreferenceRevoked
         | EventSMSAccepted
         | EventSMSDelivered
         | EventSMSExpired
@@ -12371,7 +12773,8 @@ class WebhookEvent(
         | EventWhatsAppRead
         | EventWhatsAppReceived
         | EventWhatsAppRejected
-        | EventWhatsAppSent,
+        | EventWhatsAppSent
+        | EventWhatsAppSuppressionCreated,
         Field(
             description="Webhook delivery body. `type` identifies the event variant, `timestamp` is when the event occurred, and `data` contains the event-specific payload. See the [webhooks guide](/docs/guides/webhooks) for signature verification.\n",
             discriminator="type",

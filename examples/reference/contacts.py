@@ -38,3 +38,8 @@ def contacts_batch() -> None:
 def contacts_list() -> None:
     for contact in client.contacts.list(q="acme.com"):
         print(contact.id, contact.email)
+
+
+def contacts_preferences_list() -> None:
+    for preference in client.contacts.preferences.list("con_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(preference.channel, preference.status)
