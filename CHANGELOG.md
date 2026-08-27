@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.38.2
+
+- Sending a WhatsApp template: the `parameters` field now documents which button types take no value, so no component is sent for them.
+
 ## 0.38.1
 
 - Example values on `date`, `date-time` and numeric fields now match the examples the API declares (`2026-05-01` for a `date` field, `0.0` for a nullable number).

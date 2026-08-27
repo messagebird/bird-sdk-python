@@ -5208,7 +5208,7 @@ class WhatsAppMessageTemplateComponent(BaseModel):
     parameters: Annotated[
         list[WhatsAppMessageTemplateComponentParameter] | None,
         Field(
-            description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning. Send it on every part except `carousel`, which carries its values on `cards`.\n"
+            description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning. Send it on every part except `carousel`, which carries its values on `cards`. Send no `button` part at all for a button that takes no value, such as a `quick_reply` or `request_contact_info` button, or a `url` button whose address has no placeholder: a part the template has no slot for is refused here, before the message is sent and charged.\n"
         ),
     ] = None
     cards: Annotated[
