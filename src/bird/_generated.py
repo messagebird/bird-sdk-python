@@ -11842,7 +11842,7 @@ class Number(BaseModel):
     kind: Annotated[
         Kind,
         Field(
-            description="How this number is allocated. `dedicated` is allocated to this workspace alone and billed as a subscription. `shared` is a shortcode allocated to several workspaces at once and managed by us."
+            description="How this number is allocated. `dedicated` belongs to your workspace and is billed as a subscription. `shared` is provided through Bird-managed shared infrastructure and is not owned or billed as a workspace subscription."
         ),
     ]
     number: Annotated[

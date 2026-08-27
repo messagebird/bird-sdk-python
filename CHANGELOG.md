@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.37.1
+
+- `Number.kind` documentation now distinguishes workspace-owned subscriptions from Bird-managed shared numbers.
+
 ## 0.37.0
 
 - Voice call records carry a `tags` array, and the voice call list takes a repeatable `tag` filter (`name` or `name:value`). On the CLI that is `bird voice list --tag campaign:spring --tag queue`.

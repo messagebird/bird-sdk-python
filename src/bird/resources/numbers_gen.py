@@ -45,8 +45,7 @@ class NumbersBase(Resource):
 
         ```python
         for allocated in client.numbers.list(country_code="GB"):
-            # kind tells a number you bought from one Bird manages for several
-            # workspaces.
+            # kind distinguishes a number you bought from one Bird manages.
             print(allocated.number, allocated.kind, allocated.status)
         ```
         """
@@ -118,8 +117,7 @@ class AsyncNumbersBase(AsyncResource):
 
         ```python
         async for allocated in client.numbers.list(country_code="GB"):
-            # kind tells a number you bought from one Bird manages for several
-            # workspaces.
+            # kind distinguishes a number you bought from one Bird manages.
             print(allocated.number, allocated.kind, allocated.status)
         ```
         """
