@@ -67,6 +67,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/domains": {"get", "post"},
     "/v1/email/domains/{domain_id}": {"delete", "get", "patch"},
     "/v1/email/domains/{domain_id}/verify": {"post"},
+    "/v1/workspace": {"get"},
     "/v1/preferences": {"get", "post"},
     "/v1/preferences/{preference_id}": {"delete", "get"},
     "/v1/contacts": {"get", "post"},

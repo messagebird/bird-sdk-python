@@ -225,12 +225,57 @@ class CountryCode(RootModel[str]):
     ]
 
 
+class WorkspaceNotificationEmails(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    operational: Annotated[
+        List[str] | None,
+        Field(
+            description="Addresses for operational notifications about this workspace (sending domain authentication failures, webhook endpoint degradation). When empty, these notifications go to the organization owners. Maximum 10 addresses.",
+            examples=[["alerts@example.com"]],
+        ),
+    ] = None
+
+
 class Timestamps(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class Workspace(Timestamps):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    organization_id: Annotated[
+        str,
+        Field(
+            examples=["org_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^org_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    name: Annotated[str, Field(examples=["Production"], min_length=1)]
+    notification_emails: WorkspaceNotificationEmails
+    logo_url: Annotated[
+        str | None,
+        Field(
+            description="HTTPS URL to the current workspace logo. `null` when unset."
+        ),
+    ] = None
+    created_at: str
+    updated_at: str
 
 
 class RealtimeAppID(RootModel[str]):

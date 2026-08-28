@@ -946,3 +946,8 @@ async def _ex_141() -> None:
         components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
     )
     print(msg.id, msg.status)
+
+
+async def _ex_142() -> None:
+    workspace = client.workspace.get()
+    print(workspace.id, workspace.name)

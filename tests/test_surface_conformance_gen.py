@@ -84,6 +84,7 @@ def test_surface_conformance() -> None:
     assert callable(client.domains.verify)
     assert callable(client.domains.update)
     assert callable(client.domains.delete)
+    assert callable(client.workspace.get)
     assert callable(client.webhooks.unwrap)
     assert callable(client.preferences.list)
     assert callable(client.preferences.get)
