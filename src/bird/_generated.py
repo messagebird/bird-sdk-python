@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Union, Any, Literal
+from typing import Annotated, Union, Any, Dict, List, Literal
 
 from bird._models import BaseModel
 from pydantic import Base64Str, ConfigDict, Field, RootModel, constr
@@ -51,7 +51,7 @@ class NextAction(BaseModel):
         ),
     ] = None
     params: Annotated[
-        dict[str, str] | None,
+        Dict[str, str] | None,
         Field(
             description='The parameters that address the operation, by name: `{"sender_id": "…"}` for an operation on `/v1/sms/senders/{sender_id}/requirements`. A parameter the operation takes in its query string is given the same way, so an operation addressed as `?subject_id=` carries `{"subject_id": "…"}`. Every parameter the call needs is here, whether its value came from the thing you were acting on or is fixed for this step, so you can make the call from this object alone. Present only when `kind` is `operation` and the operation names a subject. A request body, when the operation takes one, is described by the operation\'s own schema and never appears here.\n'
         ),
@@ -141,7 +141,7 @@ class ErrorBody(BaseModel):
         ),
     ] = None
     details: Annotated[
-        list[ErrorDetail] | None,
+        List[ErrorDetail] | None,
         Field(
             description="Per-field validation errors. Present only on validation_error responses."
         ),
@@ -154,7 +154,7 @@ class ErrorBody(BaseModel):
         ),
     ] = None
     next: Annotated[
-        list[NextAction] | None,
+        List[NextAction] | None,
         Field(
             description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.\n"
         ),
@@ -276,7 +276,7 @@ class RealtimePublish(BaseModel):
         ),
     ]
     channels: Annotated[
-        list[RealtimeChannelName],
+        List[RealtimeChannelName],
         Field(
             description="The channels to deliver the event to (up to 100 per call). Prefix with `private-` or `presence-` for authenticated channels. A `private-encrypted-` channel must be the only channel in its publish: each encrypted channel has its own key, so a fan-out would hand the other channels unreadable ciphertext.\n",
             examples=[["orders", "orders-42"]],
@@ -299,7 +299,7 @@ class RealtimePublish(BaseModel):
         ),
     ] = None
     include: Annotated[
-        list[RealtimeChannelInclude] | None,
+        List[RealtimeChannelInclude] | None,
         Field(
             description="Per-channel attributes to return alongside the publish, reflecting each channel's state at publish time. `member_count` is available only for presence channels. `connection_count` requires the app's connection-counting flag. Requesting attributes counts as one additional message toward usage."
         ),
@@ -345,7 +345,7 @@ class RealtimePublishResult(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[RealtimeChannelListItem] | None,
+        List[RealtimeChannelListItem] | None,
         Field(
             description="Per-channel attributes at publish time, present only when the request asked for them via `include`; one item per distinct target channel, sorted by name."
         ),
@@ -390,7 +390,7 @@ class RealtimeBatchEvent(BaseModel):
         ),
     ] = None
     include: Annotated[
-        list[RealtimeChannelInclude] | None,
+        List[RealtimeChannelInclude] | None,
         Field(
             description="Attributes of this event's channel to return alongside the publish (same semantics and validation errors as on the channel endpoints). Requesting attributes counts as one additional message toward usage."
         ),
@@ -402,7 +402,7 @@ class RealtimeBatchPublish(BaseModel):
         extra="allow",
     )
     events: Annotated[
-        list[RealtimeBatchEvent],
+        List[RealtimeBatchEvent],
         Field(description="Up to 10 events per batch.", max_length=10, min_length=1),
     ]
 
@@ -428,7 +428,7 @@ class RealtimeBatchPublishResult(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[RealtimeBatchPublishResultItem] | None,
+        List[RealtimeBatchPublishResultItem] | None,
         Field(
             description="Per-event channel attributes at publish time, present only when at least one event asked for them via `include`. Positional: one item per event, in request order."
         ),
@@ -440,7 +440,7 @@ class RealtimeChannelsList(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[RealtimeChannelListItem],
+        List[RealtimeChannelListItem],
         Field(description="The occupied channels, sorted by name."),
     ]
 
@@ -473,7 +473,7 @@ class RealtimeChannelMembers(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    members: list[RealtimeChannelMember]
+    members: List[RealtimeChannelMember]
 
 
 class RealtimeMemberPublish(BaseModel):
@@ -672,15 +672,15 @@ class EmailMessage(BaseModel):
         ),
     ]
     to: Annotated[
-        list[EmailAddress],
+        List[EmailAddress],
         Field(
             description="Primary recipients. Length is the recipient count. Use the broadcasts endpoint for audience-targeted sends. Each entry's `name` is present when a display name was provided on the send.",
             max_length=50,
             min_length=1,
         ),
     ]
-    cc: Annotated[list[EmailAddress] | None, Field(description="CC recipients.")] = None
-    bcc: Annotated[list[EmailAddress] | None, Field(description="BCC recipients.")] = (
+    cc: Annotated[List[EmailAddress] | None, Field(description="CC recipients.")] = None
+    bcc: Annotated[List[EmailAddress] | None, Field(description="BCC recipients.")] = (
         None
     )
     subject: Annotated[
@@ -692,7 +692,7 @@ class EmailMessage(BaseModel):
     ]
     category: EmailMessageCategory
     reply_to: Annotated[
-        list[EmailAddress] | None,
+        List[EmailAddress] | None,
         Field(
             description="Reply-To addresses, if set on the send. Empty/null when no Reply-To was provided.",
             max_length=25,
@@ -790,25 +790,25 @@ class EmailMessage(BaseModel):
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Labels on this message, each one a `name` and a `value`, that you can filter and search messages by. Use tags for anything you want to find messages by later, and `metadata` for data you only want handed back to you."
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead."
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.\n"
         ),
     ] = None
     attachments: Annotated[
-        list[EmailAttachmentRef] | None,
+        List[EmailAttachmentRef] | None,
         Field(
             description="Attachment metadata for the send. Empty when no attachments were included. Raw content is not echoed. When content storage is enabled, download an attachment by its `id` via the message's attachment endpoint."
         ),
@@ -850,7 +850,7 @@ class EmailMessageList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: Annotated[list[EmailMessage], Field(description="Page of message objects.")]
+    data: Annotated[List[EmailMessage], Field(description="Page of message objects.")]
 
 
 class EmailAddressInput1(RootModel[str]):
@@ -900,7 +900,7 @@ class EmailTemplateSend1(BaseModel):
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable in the template's `variables` list needs a value. A send\nthat omits one is rejected. Languages can use different variables, and a\nvalue unused by the selected language is ignored.\n\nThe API supplies values under the reserved `bird` key, so a send that sets\nit is rejected. `parameters` is capped at 16 KB once serialized.\n",
             examples=[{"animal": "otter"}],
@@ -941,7 +941,7 @@ class EmailTemplateSend2(BaseModel):
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable in the template's `variables` list needs a value. A send\nthat omits one is rejected. Languages can use different variables, and a\nvalue unused by the selected language is ignored.\n\nThe API supplies values under the reserved `bird` key, so a send that sets\nit is rejected. `parameters` is capped at 16 KB once serialized.\n",
             examples=[{"animal": "otter"}],
@@ -1000,7 +1000,7 @@ class EmailMessageSendRequest(BaseModel):
         ),
     ]
     to: Annotated[
-        list[EmailAddressInput1 | EmailAddress],
+        List[EmailAddressInput1 | EmailAddress],
         Field(
             description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
@@ -1008,14 +1008,14 @@ class EmailMessageSendRequest(BaseModel):
         ),
     ]
     cc: Annotated[
-        list[EmailAddressInput1 | EmailAddress] | None,
+        List[EmailAddressInput1 | EmailAddress] | None,
         Field(
             description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     bcc: Annotated[
-        list[EmailAddressInput1 | EmailAddress] | None,
+        List[EmailAddressInput1 | EmailAddress] | None,
         Field(
             description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
@@ -1044,7 +1044,7 @@ class EmailMessageSendRequest(BaseModel):
         ),
     ] = None
     reply_to: Annotated[
-        list[EmailAddressInput1 | EmailAddress] | None,
+        List[EmailAddressInput1 | EmailAddress] | None,
         Field(
             description="Reply-To addresses, each a plain email string, an RFC 5322 mailbox string, or an object with an optional display name. RFC 5322 allows multiple. Every recipient reply hits all listed addresses, so 1-2 is typical. The 25 cap exists to prevent header sizes that some receiving mail servers reject.\n",
             max_length=25,
@@ -1052,27 +1052,27 @@ class EmailMessageSendRequest(BaseModel):
         ),
     ] = None
     headers: Annotated[
-        dict[str, str] | None,
+        Dict[str, str] | None,
         Field(
             description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`. Set the message's addressing and subject through the dedicated fields: `from`, `to`, `cc`, `bcc`, `reply_to`, and `subject`. The API automatically generates `Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path`. You cannot override these generated headers. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends. Marketing sends receive a compliant unsubscribe header, so supplying either one is rejected with a `422`. Header values may not contain carriage-return or line-feed characters. Up to 25 headers per send, each value up to 998 characters.\n",
             max_length=25,
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions:\n\n- Filter the list endpoint by tag name.\n- Slice analytics rollups by tag.\n- Surface in webhook payloads.\n\nCap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON object returned on API reads and included in webhook payloads. You can query its paths in analytics, such as `metadata.order_id`, but it is not a dashboard filter. The serialized object is limited to 2 KB. Use metadata for per-send context such as order IDs, customer references, and structured event data. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Parameter values used to personalize inline content. A parameter is a single word, and a token in the subject or body (for example `{{ animal }}`) is replaced with the value of that name at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.\n"
         ),
@@ -1104,7 +1104,7 @@ class EmailMessageSendRequest(BaseModel):
         ),
     ] = "marketing"
     attachments: Annotated[
-        list[EmailAttachment] | None,
+        List[EmailAttachment] | None,
         Field(
             description="Files to attach, up to 20 per message. A message can be at most 20 MB once it has been generated, and we refuse a send that would go over. That figure covers the HTML body, the text body and every attachment and inline image, all measured after base64 encoding, which adds roughly a third. So 15 MB of raw files already accounts for most of the budget, and the body competes for the same space. A batch send is held to the same 20 MB per message, and the whole request body is capped at 20 MB as well.\n",
             max_length=20,
@@ -1118,9 +1118,9 @@ class EmailMessageSendRequest(BaseModel):
     ] = None
 
 
-class EmailMessageBatchRequest(RootModel[list[EmailMessageSendRequest]]):
+class EmailMessageBatchRequest(RootModel[List[EmailMessageSendRequest]]):
     root: Annotated[
-        list[EmailMessageSendRequest],
+        List[EmailMessageSendRequest],
         Field(
             description="Batch of email message send requests. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.\n",
             examples=[
@@ -1208,7 +1208,7 @@ class EmailMessageBatchResponse(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[EmailMessageBatchItem],
+        List[EmailMessageBatchItem],
         Field(description="One entry per message in the batch, in submission order."),
     ]
 
@@ -1315,13 +1315,13 @@ class Contact(Timestamps):
         ),
     ] = None
     data: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Custom property values for this contact, available in broadcast templates as `bird.contact.<key>`. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to `500` characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.\n"
         ),
     ] = None
     audiences: Annotated[
-        list[AudienceRef] | None,
+        List[AudienceRef] | None,
         Field(
             description="The audiences this contact belongs to, most-recently-joined first. Only present when listing contacts; omitted from every other contact operation."
         ),
@@ -1334,7 +1334,7 @@ class ContactList(FieldListEnvelopeWithTotal):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: Annotated[list[Contact], Field(description="Page of contact objects.")]
+    data: Annotated[List[Contact], Field(description="Page of contact objects.")]
 
 
 class ContactCreateRequest(BaseModel):
@@ -1370,7 +1370,7 @@ class ContactCreateRequest(BaseModel):
         ),
     ] = None
     data: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Custom property values for this contact. Each key must be an active contact property. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters, and a `null` value is ignored. Unregistered or archived keys return a validation error. The serialized data is limited to 2 KB."
         ),
@@ -1393,7 +1393,7 @@ class ContactUpsertRequest(BaseModel):
         extra="allow",
     )
     contacts: Annotated[
-        list[ContactCreateRequest],
+        List[ContactCreateRequest],
         Field(
             description="Contacts to create or update, matched automatically against every identifier an entry supplies. Existing contacts are updated with the fields each entry supplies; omitted fields keep their stored values, so an entry can set fields but never clear them. Unmatched entries create contacts.",
             max_length=1000,
@@ -1401,7 +1401,7 @@ class ContactUpsertRequest(BaseModel):
         ),
     ]
     audience_ids: Annotated[
-        list[AudienceID] | None,
+        List[AudienceID] | None,
         Field(
             description="Audiences every contact in this request is added to. Contacts that are already members are left in place. Every listed audience must exist, or the whole request fails with a validation error and nothing is written.",
             max_length=10,
@@ -1524,7 +1524,7 @@ class ContactUpsertResult(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[ContactUpsertResultItem],
+        List[ContactUpsertResultItem],
         Field(description="One entry per contact in the request, in submission order."),
     ]
 
@@ -1569,7 +1569,7 @@ class ContactUpdateRequest(BaseModel):
         ),
     ] = None
     data: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Custom property values to merge into the contact's existing data. Supplied keys are set, keys with a `null` value are removed, and omitted keys remain unchanged. Each key must be an active contact property. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters. An unregistered or archived key returns a validation error. The serialized result is limited to 2 KB."
         ),
@@ -1619,7 +1619,7 @@ class AudienceList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: Annotated[list[Audience], Field(description="Page of audience objects.")]
+    data: Annotated[List[Audience], Field(description="Page of audience objects.")]
 
 
 class PreferenceChannel(str, Enum):
@@ -1721,7 +1721,7 @@ class PreferenceList(FieldListEnvelope):
         extra="allow",
     )
     data: Annotated[
-        list[Preference],
+        List[Preference],
         Field(description="Page of preferences, most recently created first."),
     ]
 
@@ -1866,7 +1866,7 @@ class ContactPropertyList(FieldListEnvelope):
         extra="allow",
     )
     data: Annotated[
-        list[ContactProperty], Field(description="Page of contact property objects.")
+        List[ContactProperty], Field(description="Page of contact property objects.")
     ]
 
 
@@ -1964,7 +1964,7 @@ class AudienceMember(BaseModel):
         ),
     ]
     audiences: Annotated[
-        list[AudienceRef] | None,
+        List[AudienceRef] | None,
         Field(
             description="The audiences this contact belongs to, including the one being listed, most-recently-joined first."
         ),
@@ -1976,7 +1976,7 @@ class AudienceMemberList(FieldListEnvelope):
         extra="allow",
     )
     data: Annotated[
-        list[AudienceMember],
+        List[AudienceMember],
         Field(
             description="Page of audience members, each a contact paired with the time it joined the audience."
         ),
@@ -1988,7 +1988,7 @@ class AudienceContactsAddRequest(BaseModel):
         extra="allow",
     )
     contact_ids: Annotated[
-        list[ContactID],
+        List[ContactID],
         Field(
             description="Contacts to add to the audience. Adding a contact that is already a member has no effect and keeps its original join time. Duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no contacts are added.",
             max_length=1000,
@@ -2002,7 +2002,7 @@ class AudienceContactsRemoveRequest(BaseModel):
         extra="allow",
     )
     contact_ids: Annotated[
-        list[ContactID],
+        List[ContactID],
         Field(
             description="Contacts to remove from the audience. Removing a contact that is not a member has no effect. Duplicate IDs in the list are collapsed. If any ID does not exist in the workspace, the whole request fails with a validation error and no memberships are removed.",
             max_length=1000,
@@ -2149,7 +2149,7 @@ class SMSError(BaseModel):
     description: Annotated[
         str,
         Field(
-            description="Human-readable explanation of the failure.",
+            description="The failure in words, from whatever refused the message: the carrier's own reason text on a delivery receipt, or ours on a message stopped before a carrier saw it. Free-form, so branch on `code` and show this to a human.",
             examples=["Carrier filtered as spam"],
             min_length=1,
         ),
@@ -2231,13 +2231,13 @@ class SMSMessage(BaseModel):
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` filter labels applied to this message."
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON metadata stored on the message and echoed in webhook payloads."
         ),
@@ -2245,13 +2245,13 @@ class SMSMessage(BaseModel):
     options: Annotated[
         SMSMessageEffectiveOptions | None,
         Field(
-            description="Settings Bird applied to this message, with any option you omitted filled in with the default that was in force when you sent it. Absent on inbound messages, and on outbound messages sent before Bird began recording these settings.\n"
+            description="The settings applied to this message, with any option you omitted filled in with the default in force when you sent it. Absent on inbound messages, and on any outbound message for which no settings were recorded.\n"
         ),
     ] = None
     validity_period: Annotated[
         int | None,
         Field(
-            description="How long, in seconds, Bird keeps trying to deliver before the message transitions to `expired`."
+            description="Preview feature: how long, in seconds, the carrier may keep attempting delivery before the message is marked `expired`. Not returned yet."
         ),
     ] = None
     carrier: Annotated[
@@ -2297,7 +2297,7 @@ class SMSMessageList(FieldListEnvelope):
         extra="allow",
     )
     data: Annotated[
-        list[SMSMessage], Field(description="Page of SMS messages, newest first.")
+        List[SMSMessage], Field(description="Page of SMS messages, newest first.")
     ]
 
 
@@ -2366,7 +2366,7 @@ class SMSTemplateSend1(BaseModel):
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.\n",
             examples=[{"code": "493021", "ttl": "10"}],
@@ -2415,7 +2415,7 @@ class SMSTemplateSend2(BaseModel):
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.\n",
             examples=[{"code": "493021", "ttl": "10"}],
@@ -2464,7 +2464,7 @@ class SMSTemplateSend3(BaseModel):
         ),
     ] = None
     parameters: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.\n",
             examples=[{"code": "493021", "ttl": "10"}],
@@ -2504,26 +2504,26 @@ class SMSMessageSendRequest1(BaseModel):
     category: Annotated[
         SMSMessageCategory | None,
         Field(
-            description="Content classification. Tells Bird and carriers why you're sending; per-country compliance rules (opt-out policy, quiet hours) key on it as they roll out. Required on a free-text send; omit it on a template send, where the category is derived from the template.\n"
+            description="Content classification: why you are sending. Required on a free-text send; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.\n"
         ),
     ] = None
     validity_period: Annotated[
         int | None,
         Field(
-            description="Preview feature: how long, in seconds (60-172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n",
+            description="Preview feature: how long, in seconds (60-172800), the carrier may keep attempting delivery before the message is marked `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n",
             ge=60,
             le=172800,
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
@@ -2535,7 +2535,7 @@ class SMSMessageSendRequest1(BaseModel):
         ),
     ] = None
     media_urls: Annotated[
-        list[str] | None,
+        List[str] | None,
         Field(
             description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
@@ -2589,7 +2589,7 @@ class SMSMessageSendRequest1(BaseModel):
         ),
     ] = None
     personalization: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
@@ -2628,26 +2628,26 @@ class SMSMessageSendRequest2(BaseModel):
     category: Annotated[
         SMSMessageCategory | None,
         Field(
-            description="Content classification. Tells Bird and carriers why you're sending; per-country compliance rules (opt-out policy, quiet hours) key on it as they roll out. Required on a free-text send; omit it on a template send, where the category is derived from the template.\n"
+            description="Content classification: why you are sending. Required on a free-text send; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.\n"
         ),
     ] = None
     validity_period: Annotated[
         int | None,
         Field(
-            description="Preview feature: how long, in seconds (60-172800), Bird keeps trying to deliver before the message transitions to `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n",
+            description="Preview feature: how long, in seconds (60-172800), the carrier may keep attempting delivery before the message is marked `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.\n",
             ge=60,
             le=172800,
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
@@ -2659,7 +2659,7 @@ class SMSMessageSendRequest2(BaseModel):
         ),
     ] = None
     media_urls: Annotated[
-        list[str] | None,
+        List[str] | None,
         Field(
             description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
@@ -2713,7 +2713,7 @@ class SMSMessageSendRequest2(BaseModel):
         ),
     ] = None
     personalization: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`."
         ),
@@ -2721,10 +2721,10 @@ class SMSMessageSendRequest2(BaseModel):
 
 
 class SMSMessageBatchRequest(
-    RootModel[list[SMSMessageSendRequest1 | SMSMessageSendRequest2]]
+    RootModel[List[SMSMessageSendRequest1 | SMSMessageSendRequest2]]
 ):
     root: Annotated[
-        list[SMSMessageSendRequest1 | SMSMessageSendRequest2],
+        List[SMSMessageSendRequest1 | SMSMessageSendRequest2],
         Field(
             description="Batch of SMS message send requests. All items are validated before any are queued.",
             max_length=100,
@@ -2751,7 +2751,7 @@ class SMSMessageBatchResponse(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[SMSMessage],
+        List[SMSMessage],
         Field(description="One entry per message in the batch, in submission order."),
     ]
     summary: Annotated[
@@ -2810,7 +2810,7 @@ class SMSEventList(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[SMSEvent],
+        List[SMSEvent],
         Field(
             description="Timeline events for this SMS message, in chronological order. The bounded timeline is returned in full and is not paginated."
         ),
@@ -2907,7 +2907,7 @@ class SMSTemplate(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="Unique identifier for the template.",
+            description="The template's generated identifier. Accepted anywhere a template is referenced: the `{template_ref}` path segment, and `template.id` on a send. The `slug` works in the same places and is more readable.",
             examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
             min_length=1,
             pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
@@ -2956,7 +2956,7 @@ class SMSTemplate(BaseModel):
         ),
     ]
     variables: Annotated[
-        list[TemplateVariable],
+        List[TemplateVariable],
         Field(
             description="The typed slots this template fills in from the values you supply in `parameters` when sending. Every language of a template declares the same slots, so this list holds for whichever one a send resolves to.\n"
         ),
@@ -2971,14 +2971,14 @@ class SMSTemplate(BaseModel):
         ),
     ]
     available_languages: Annotated[
-        list[LanguageTag],
+        List[LanguageTag],
         Field(
             description="The languages a send can resolve right now, as BCP-47 tags. The set may shrink for reasons other than editing, so read it rather than assuming it matches what you last saw.\n",
             examples=[["en"]],
         ),
     ]
     languages: Annotated[
-        dict[constr(min_length=2, max_length=35), SMSTemplateLanguageState],
+        Dict[constr(min_length=2, max_length=35), SMSTemplateLanguageState],
         Field(
             description="Where each of the template's languages stands, keyed by BCP-47 language tag. Content is not here: `body` previews the default language, and a send resolves the one it needs.\n",
             examples=[{"en": {"status": "live"}, "nl": {"status": "live"}}],
@@ -3047,7 +3047,7 @@ class SMSTemplateList(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[SMSTemplate],
+        List[SMSTemplate],
         Field(
             description="The templates available to your workspace. The catalog is returned in full and is not paginated."
         ),
@@ -3183,7 +3183,7 @@ class SMSSuppressionList(FieldListEnvelope):
         extra="allow",
     )
     data: Annotated[
-        list[SMSSuppression],
+        List[SMSSuppression],
         Field(description="Page of suppressions, most recent opt-out first."),
     ]
 
@@ -3277,14 +3277,14 @@ class SMSKeywordRule(BaseModel):
         ),
     ] = None
     keywords: Annotated[
-        list[Keyword],
+        List[Keyword],
         Field(
             description="The keywords this rule adds. For one of Bird's defaults this is the full set Bird ships. For a rule you created it is only what you added on top. It never restates or removes Bird's keywords, so `effective_keywords` is what actually matches.\n",
             examples=[["pizza", "menu"]],
         ),
     ]
     effective_keywords: Annotated[
-        list[EffectiveKeyword],
+        List[EffectiveKeyword],
         Field(
             description="Every keyword that matches this rule: Bird's keywords for the same operation, country and language, plus the ones you added. This is what an inbound message is compared against. Keywords Bird adds later join it without you changing anything.\n",
             examples=[["stop", "stoppen", "afmelden"]],
@@ -3345,7 +3345,7 @@ class SMSKeywordRuleList(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[SMSKeywordRule],
+        List[SMSKeywordRule],
         Field(
             description="The keyword rules that apply to your workspace, Bird's defaults included. Ordered most specific first, so the first rule whose keywords match an inbound message is the one that runs. The set is small and returned in full; this list is not paginated.\n"
         ),
@@ -3385,7 +3385,7 @@ class SMSKeywordRuleCreate(BaseModel):
         ),
     ] = None
     keywords: Annotated[
-        list[Keyword] | None,
+        List[Keyword] | None,
         Field(
             description="Extra keywords to match, on top of the ones Bird already ships for this operation and country. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. You cannot remove one of Bird's keywords, and a keyword Bird has bound to another operation cannot be reused here. Required for `custom`, which inherits none.\n",
             examples=[["pizza", "menu"]],
@@ -3415,7 +3415,7 @@ class SMSKeywordRuleUpdate(BaseModel):
         extra="allow",
     )
     keywords: Annotated[
-        list[Keyword] | None,
+        List[Keyword] | None,
         Field(
             description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.\n",
             examples=[["pizza", "menu"]],
@@ -3816,7 +3816,7 @@ class SMSStatsResponse(BaseModel):
     )
     period: SMSStatsSeriesPeriod
     data: Annotated[
-        list[SMSStatsPoint],
+        List[SMSStatsPoint],
         Field(
             description="One row per day or hour in chronological order. Buckets with no activity contain zero counts."
         ),
@@ -3855,7 +3855,7 @@ class SMSOriginatorStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[
-        list[SMSStatsPoint] | None,
+        List[SMSStatsPoint] | None,
         Field(
             description="Per-bucket lifecycle counts for this originator, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
         ),
@@ -3873,7 +3873,7 @@ class SMSStatsByOriginatorResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSOriginatorStatsPoint],
+        List[SMSOriginatorStatsPoint],
         Field(
             description="Originator breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
         ),
@@ -3903,7 +3903,7 @@ class SMSCountryStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[
-        list[SMSStatsPoint] | None,
+        List[SMSStatsPoint] | None,
         Field(
             description="Per-bucket lifecycle counts for this country, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
         ),
@@ -3921,7 +3921,7 @@ class SMSStatsByCountryResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSCountryStatsPoint],
+        List[SMSCountryStatsPoint],
         Field(
             description="Country breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
         ),
@@ -3951,7 +3951,7 @@ class SMSCategoryStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[
-        list[SMSStatsPoint] | None,
+        List[SMSStatsPoint] | None,
         Field(
             description="Per-bucket lifecycle counts for this category, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
         ),
@@ -3969,7 +3969,7 @@ class SMSStatsByCategoryResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSCategoryStatsPoint],
+        List[SMSCategoryStatsPoint],
         Field(
             description="Category breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
         ),
@@ -4007,7 +4007,7 @@ class SMSErrorCodeStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[
-        list[SMSStatsPoint] | None,
+        List[SMSStatsPoint] | None,
         Field(
             description="Per-bucket lifecycle counts for this error code, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
         ),
@@ -4025,7 +4025,7 @@ class SMSStatsByErrorCodeResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSErrorCodeStatsPoint],
+        List[SMSErrorCodeStatsPoint],
         Field(
             description="Error-code breakdown rows, ranked by the `sort` metric (default `failed`) descending. Empty when no delivery failures occurred in the period."
         ),
@@ -4055,7 +4055,7 @@ class SMSCarrierStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[
-        list[SMSStatsPoint] | None,
+        List[SMSStatsPoint] | None,
         Field(
             description="Per-bucket lifecycle counts for this carrier, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`."
         ),
@@ -4073,7 +4073,7 @@ class SMSStatsByCarrierResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSCarrierStatsPoint],
+        List[SMSCarrierStatsPoint],
         Field(
             description="Carrier breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period."
         ),
@@ -4103,7 +4103,7 @@ class SMSTagStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[
-        list[SMSStatsPoint] | None,
+        List[SMSStatsPoint] | None,
         Field(
             description="Per-bucket lifecycle-count series for this tag over the window, bucketed by `trend_grain`. Sparse, so only buckets with activity are present rather than zero-filled, unlike the daily and hourly series. Present only when `include_trend=true`.\n"
         ),
@@ -4121,7 +4121,7 @@ class SMSStatsByTagResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSTagStatsPoint],
+        List[SMSTagStatsPoint],
         Field(
             description="Tag breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no tagged messages were sent in the period."
         ),
@@ -4178,7 +4178,7 @@ class SMSStatsByStatusResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[SMSStatusStatsPoint],
+        List[SMSStatusStatsPoint],
         Field(
             description="Status breakdown rows, one per lifecycle status with activity, ordered by count descending. Empty when no messages had activity in the period."
         ),
@@ -4272,7 +4272,7 @@ class SMSInboundStatsResponse(BaseModel):
     )
     period: SMSStatsSeriesPeriod
     data: Annotated[
-        list[SMSInboundStatsPoint],
+        List[SMSInboundStatsPoint],
         Field(
             description="One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with a count of zero, so the series charts continuously without client-side gap handling."
         ),
@@ -4307,7 +4307,7 @@ class SMSInboundStatsByCountryResponse(BaseModel):
     )
     period: SMSStatsSummaryPeriod
     data: Annotated[
-        list[SMSInboundCountryStatsPoint],
+        List[SMSInboundCountryStatsPoint],
         Field(
             description="One row per country with activity in the period, most messages first, capped at the requested `limit`. A country with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.\n"
         ),
@@ -4350,7 +4350,7 @@ class SMSInboundStatsByOperatorResponse(BaseModel):
     )
     period: SMSStatsSummaryPeriod
     data: Annotated[
-        list[SMSInboundOperatorStatsPoint],
+        List[SMSInboundOperatorStatsPoint],
         Field(
             description="One row per operator with activity in the period, most messages first, capped at the requested `limit`. An operator with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.\n"
         ),
@@ -4393,7 +4393,7 @@ class SMSInboundStatsByNumberResponse(BaseModel):
     )
     period: SMSStatsSummaryPeriod
     data: Annotated[
-        list[SMSInboundNumberStatsPoint],
+        List[SMSInboundNumberStatsPoint],
         Field(
             description="One row per number with activity in the period, most messages first, capped at the requested `limit`. A number with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.\n"
         ),
@@ -4429,7 +4429,7 @@ class PhoneNumberLookupRequest(BaseModel):
         ),
     ]
     type: Annotated[
-        list[LookupProperty] | None,
+        List[LookupProperty] | None,
         Field(
             description="Properties to add to the base lookup. Omit this field or send an empty\narray to request only the base lookup.\n\nEach delivered property is billed in addition to the base lookup. A\nproperty that could not be answered is returned with its status and is\nnot billed.\n"
         ),
@@ -4638,7 +4638,7 @@ class LookupPorting(BaseModel):
         ),
     ] = None
     history: Annotated[
-        list[LookupPortingEvent] | None,
+        List[LookupPortingEvent] | None,
         Field(
             description="Every move on record, oldest first. Absent when the number has never ported or when its registry publishes no history."
         ),
@@ -4691,7 +4691,7 @@ class PhoneNumberLookup(BaseModel):
         ),
     ] = None
     flags: Annotated[
-        list[Annotated[Union[LookupFlag, str], Field(union_mode="left_to_right")]],
+        List[Annotated[Union[LookupFlag, str], Field(union_mode="left_to_right")]],
         Field(
             description="Notable characteristics of the number. Empty when none apply."
         ),
@@ -4797,7 +4797,7 @@ class EmailLookup(BaseModel):
         ),
     ]
     flags: Annotated[
-        list[Annotated[Union[EmailLookupFlag, str], Field(union_mode="left_to_right")]],
+        List[Annotated[Union[EmailLookupFlag, str], Field(union_mode="left_to_right")]],
         Field(
             description="Notable characteristics of the address. Empty when none apply."
         ),
@@ -4918,7 +4918,7 @@ class Verification(Timestamps):
     ] = None
     to: VerificationTo
     channels: Annotated[
-        list[VerificationChannelEntry],
+        List[VerificationChannelEntry],
         Field(
             description="The channels this verification uses to deliver the passcode, in attempt order: the first entry is tried first and later entries are fallbacks. An email recipient is verified over email; a phone recipient is verified over the phone channels enabled for its destination country, in the order that country's configuration sets.",
             min_length=1,
@@ -4931,7 +4931,7 @@ class Verification(Timestamps):
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The key/value pairs attached when the verification was created."
         ),
@@ -4965,7 +4965,7 @@ class VerificationOptions(BaseModel):
         ),
     ] = None
     channels: Annotated[
-        list[
+        List[
             Annotated[
                 Union[VerificationChannel, str], Field(union_mode="left_to_right")
             ]
@@ -4984,7 +4984,7 @@ class VerificationCreateRequest(BaseModel):
     to: VerificationTo
     options: VerificationOptions | None = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification."
         ),
@@ -5177,7 +5177,7 @@ class WhatsAppMessageTemplateCardComponent(BaseModel):
         ),
     ]
     parameters: Annotated[
-        list[WhatsAppMessageTemplateComponentParameter] | None,
+        List[WhatsAppMessageTemplateComponentParameter] | None,
         Field(
             description="The values that fill this part's placeholders, in placeholder order."
         ),
@@ -5189,7 +5189,7 @@ class WhatsAppMessageTemplateCard(BaseModel):
         extra="allow",
     )
     components: Annotated[
-        list[WhatsAppMessageTemplateCardComponent],
+        List[WhatsAppMessageTemplateCardComponent],
         Field(description="The values that fill this card's blocks."),
     ]
 
@@ -5206,13 +5206,13 @@ class WhatsAppMessageTemplateComponent(BaseModel):
         ),
     ]
     parameters: Annotated[
-        list[WhatsAppMessageTemplateComponentParameter] | None,
+        List[WhatsAppMessageTemplateComponentParameter] | None,
         Field(
             description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning. Send it on every part except `carousel`, which carries its values on `cards`. Send no `button` part at all for a button that takes no value, such as a `quick_reply` or `request_contact_info` button, or a `url` button whose address has no placeholder: a part the template has no slot for is refused here, before the message is sent and charged.\n"
         ),
     ] = None
     cards: Annotated[
-        list[WhatsAppMessageTemplateCard] | None,
+        List[WhatsAppMessageTemplateCard] | None,
         Field(
             description="The values that fill each card of a carousel. Send it only on a `carousel` part. A carousel sends exactly the number of cards its template was approved with, so every card needs an entry.\n",
             max_length=10,
@@ -5253,7 +5253,7 @@ class WhatsAppMessageTemplate(BaseModel):
         ),
     ]
     components: Annotated[
-        list[WhatsAppMessageTemplateComponent],
+        List[WhatsAppMessageTemplateComponent],
         Field(
             description="The values that filled the template's placeholders. Empty for an authentication template, whose content is never returned.\n"
         ),
@@ -5414,6 +5414,159 @@ class WhatsAppLocation(BaseModel):
     ] = None
 
 
+class WhatsAppContactName(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    formatted_name: Annotated[
+        str | None,
+        Field(
+            description="The whole name as the contact's device renders it.",
+            examples=["Barbara J. Johnson"],
+        ),
+    ] = None
+    first_name: Annotated[str | None, Field(examples=["Barbara"])] = None
+    middle_name: Annotated[str | None, Field(examples=["Joana"])] = None
+    last_name: Annotated[str | None, Field(examples=["Johnson"])] = None
+    prefix: Annotated[str | None, Field(examples=["Dr."])] = None
+    suffix: Annotated[str | None, Field(examples=["Esq."])] = None
+
+
+class WhatsAppContactOrg(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    company: Annotated[str | None, Field(examples=["Lucky Shrub"])] = None
+    department: Annotated[str | None, Field(examples=["Engineering"])] = None
+    title: Annotated[str | None, Field(examples=["Software Engineer"])] = None
+
+
+class WhatsAppContactPhone(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    phone_number: Annotated[
+        str | None,
+        Field(
+            description="The number as the card holds it, normalized to E.164 where we can parse it. A card is whatever the contact's device stored, so a number that no country's numbering plan accepts, an extension among them, is passed through exactly as it arrived rather than dropped. Parse defensively: most values are E.164 and none is guaranteed to be.\n",
+            examples=["+16505551234"],
+        ),
+    ] = None
+    type: Annotated[
+        str | None,
+        Field(
+            description="The label the contact's device attached, for example `CELL`, `Home` or `iPhone`. Free text passed through verbatim: WhatsApp declares no vocabulary here and does not normalize the casing, so neither do we.\n",
+            examples=["CELL"],
+        ),
+    ] = None
+
+
+class WhatsAppContactEmail(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    email: Annotated[str | None, Field(examples=["barbara@example.com"])] = None
+    type: Annotated[
+        str | None,
+        Field(
+            description="The label the contact's device attached, for example `Personal` or `Work`. Free text passed through verbatim.\n",
+            examples=["Personal"],
+        ),
+    ] = None
+
+
+class WhatsAppContactUrl(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str | None,
+        Field(
+            description="The address as the card holds it, which is often bare rather than a full URL, so it is passed through as text rather than validated.\n",
+            examples=["luckyshrub.example.com"],
+        ),
+    ] = None
+    type: Annotated[
+        str | None,
+        Field(
+            description="The label the contact's device attached, for example `Company`. Free text passed through verbatim.\n",
+            examples=["Company"],
+        ),
+    ] = None
+
+
+class WhatsAppContactAddress(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    street: Annotated[str | None, Field(examples=["1 Hacker Way"])] = None
+    city: Annotated[str | None, Field(examples=["Menlo Park"])] = None
+    state: Annotated[str | None, Field(examples=["CA"])] = None
+    zip: Annotated[str | None, Field(examples=["94025"])] = None
+    country: Annotated[str | None, Field(examples=["United States"])] = None
+    country_code: Annotated[
+        str | None,
+        Field(
+            description="The country as the card holds it, left exactly as WhatsApp sent it: it describes a postal address rather than a routing destination.\n",
+            examples=["US"],
+        ),
+    ] = None
+    type: Annotated[
+        str | None,
+        Field(
+            description="The label the contact's device attached, for example `Home`. Free text passed through verbatim.\n",
+            examples=["Home"],
+        ),
+    ] = None
+
+
+class WhatsAppContactCard(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    origin: Annotated[
+        str | None,
+        Field(
+            description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since.\n",
+            examples=["contact_request"],
+            min_length=1,
+        ),
+    ] = None
+    vcard: Annotated[
+        str | None,
+        Field(
+            description="The contact's card in vCard format. WhatsApp sends it on a card shared in the chat and omits it on a button tap, which carries the number alone.\n",
+            examples=[
+                "BEGIN:VCARD\nVERSION:3.0\nN:Johnson;Barbara;;;\nTEL;type=CELL:+16505551234\nEND:VCARD\n"
+            ],
+        ),
+    ] = None
+    name: Annotated[
+        WhatsAppContactName | None,
+        Field(description="The contact's name, when the card carries one."),
+    ] = None
+    org: Annotated[
+        WhatsAppContactOrg | None,
+        Field(description="Where the contact works, when the card carries it."),
+    ] = None
+    birthday: Annotated[
+        str | None,
+        Field(
+            description="The contact's birthday, which WhatsApp sends as `YYYY-MM-DD`. Passed through as text rather than typed as a date: the value comes off the contact's own device unvalidated, and a card we could not parse would otherwise have to lose the field or fail the whole read.\n",
+            examples=["1999-01-23"],
+        ),
+    ] = None
+    phone_numbers: Annotated[
+        List[WhatsAppContactPhone] | None,
+        Field(
+            description="The numbers on the card. A button tap carries the contact's own number here, which is the point of asking.\n"
+        ),
+    ] = None
+    emails: List[WhatsAppContactEmail] | None = None
+    urls: List[WhatsAppContactUrl] | None = None
+    addresses: List[WhatsAppContactAddress] | None = None
+
+
 class WhatsAppUnsupported(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -5523,6 +5676,12 @@ class WhatsAppMessage(BaseModel):
     location: Annotated[
         WhatsAppLocation | None, Field(description="Location the message carried.")
     ] = None
+    contact_cards: Annotated[
+        List[WhatsAppContactCard] | None,
+        Field(
+            description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book. Inbound only: sending a contact card is not supported.\n"
+        ),
+    ] = None
     unsupported: Annotated[
         WhatsAppUnsupported | None,
         Field(
@@ -5562,13 +5721,13 @@ class WhatsAppMessage(BaseModel):
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` filter labels applied to this message."
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(description="Arbitrary JSON metadata stored on the message."),
     ] = None
 
@@ -5578,7 +5737,7 @@ class WhatsAppMessageList(FieldListEnvelope):
         extra="allow",
     )
     data: Annotated[
-        list[WhatsAppMessage],
+        List[WhatsAppMessage],
         Field(description="Page of WhatsApp messages, newest first."),
     ]
 
@@ -5616,7 +5775,7 @@ class WhatsAppTemplateSend1(BaseModel):
         ),
     ] = None
     components: Annotated[
-        list[WhatsAppMessageTemplateComponent] | None,
+        List[WhatsAppMessageTemplateComponent] | None,
         Field(
             description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters`. A positional template takes its parameters in `{{n}}` order; a template with named parameters requires each parameter's `name` to match one the template declares. Either way, sending parameters that do not match what the template declares returns a `422` `WhatsAppTemplateParameterMismatch`.\n"
         ),
@@ -5656,7 +5815,7 @@ class WhatsAppTemplateSend2(BaseModel):
         ),
     ] = None
     components: Annotated[
-        list[WhatsAppMessageTemplateComponent] | None,
+        List[WhatsAppMessageTemplateComponent] | None,
         Field(
             description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters`. A positional template takes its parameters in `{{n}}` order; a template with named parameters requires each parameter's `name` to match one the template declares. Either way, sending parameters that do not match what the template declares returns a `422` `WhatsAppTemplateParameterMismatch`.\n"
         ),
@@ -5906,14 +6065,14 @@ class WhatsAppMessageSendRequest(BaseModel):
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON object stored on the message and returned on API reads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.\n"
         ),
@@ -5960,7 +6119,7 @@ class WhatsAppEventList(BaseModel):
         extra="allow",
     )
     data: Annotated[
-        list[WhatsAppEvent],
+        List[WhatsAppEvent],
         Field(
             description="Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full; this list is not paginated."
         ),
@@ -6380,7 +6539,7 @@ class EmailStatsResponse(BaseModel):
     )
     period: EmailStatsSeriesPeriod
     data: Annotated[
-        list[EmailStatsPoint],
+        List[EmailStatsPoint],
         Field(
             description="One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with zero counts."
         ),
@@ -6523,7 +6682,7 @@ class EmailTagStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket rate series for this tag over the window. Present only when `include_trend=true`."
         ),
@@ -6541,7 +6700,7 @@ class EmailStatsTagsResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailTagStatsPoint],
+        List[EmailTagStatsPoint],
         Field(
             description="Tag breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no tagged sends occurred in the period."
         ),
@@ -6861,7 +7020,7 @@ class EmailSendingIpStatsPoint(BaseModel):
     delivery: EmailSendingIpDeliveryStats
     latency: EmailDeliveryLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket delivery-rate series for this IP over the window. Present only when `include_trend=true`. Engagement is not attributed to a sending IP, so each point's open and click rates read 0 in buckets with deliveries and null in buckets without."
         ),
@@ -6879,7 +7038,7 @@ class EmailStatsBySendingIpResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailSendingIpStatsPoint],
+        List[EmailSendingIpStatsPoint],
         Field(
             description="Sending-IP breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no per-IP-attributable activity (delivery, bounce, deferral, or late bounce) occurred in the period."
         ),
@@ -6910,7 +7069,7 @@ class EmailSendingDomainStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket rate series for this sending domain over the window. Present only when `include_trend=true`."
         ),
@@ -6928,7 +7087,7 @@ class EmailStatsBySendingDomainResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailSendingDomainStatsPoint],
+        List[EmailSendingDomainStatsPoint],
         Field(
             description="Sending-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period."
         ),
@@ -6959,7 +7118,7 @@ class EmailCategoryStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket rate series for this category over the window. Present only when `include_trend=true`."
         ),
@@ -6977,7 +7136,7 @@ class EmailStatsByCategoryResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailCategoryStatsPoint],
+        List[EmailCategoryStatsPoint],
         Field(
             description="Category breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no sends occurred in the period."
         ),
@@ -7104,7 +7263,7 @@ class EmailMailboxProviderStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailDeliveryLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket rate series for this mailbox provider over the window. Present only when `include_trend=true`."
         ),
@@ -7122,7 +7281,7 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailMailboxProviderStatsPoint],
+        List[EmailMailboxProviderStatsPoint],
         Field(
             description="Mailbox-provider breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no eligible activity occurred in the period."
         ),
@@ -7161,7 +7320,7 @@ class EmailMailboxProviderRegionStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailDeliveryLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket rate series for this provider region over the window. Present only when `include_trend=true`."
         ),
@@ -7179,7 +7338,7 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailMailboxProviderRegionStatsPoint],
+        List[EmailMailboxProviderRegionStatsPoint],
         Field(
             description="Provider-region breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no deliveries occurred in the period."
         ),
@@ -7210,7 +7369,7 @@ class EmailRecipientDomainStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="Per-bucket rate series for this recipient domain over the window. Present only when `include_trend=true`."
         ),
@@ -7228,7 +7387,7 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailRecipientDomainStatsPoint],
+        List[EmailRecipientDomainStatsPoint],
         Field(
             description="Recipient-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period."
         ),
@@ -7260,7 +7419,7 @@ class EmailTemplateStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[
-        list[EmailStatsSeriesPoint] | None,
+        List[EmailStatsSeriesPoint] | None,
         Field(
             description="A short series of this template's delivery and engagement rates, one point per time bucket over the window. Only present when you set `include_trend=true` on the request.\n"
         ),
@@ -7278,7 +7437,7 @@ class EmailStatsByTemplateResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailTemplateStatsPoint],
+        List[EmailTemplateStatsPoint],
         Field(
             description="Template breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no messages were sent with a template in the period."
         ),
@@ -7396,7 +7555,7 @@ class EmailStatsByLocationResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailLocationStatsPoint],
+        List[EmailLocationStatsPoint],
         Field(
             description="Location breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a resolved location occurred in the period."
         ),
@@ -7450,7 +7609,7 @@ class EmailStatsByClientResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailClientStatsPoint],
+        List[EmailClientStatsPoint],
         Field(
             description="Client breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a detected client occurred in the period."
         ),
@@ -7545,7 +7704,7 @@ class EmailStatsByBounceCodeResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailBounceCodeStatsPoint],
+        List[EmailBounceCodeStatsPoint],
         Field(
             description="Bounce-code breakdown rows, ranked by the `sort` metric (default `bounced`) descending. Empty when no bounces occurred in the period."
         ),
@@ -7593,7 +7752,7 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailComplaintTypeStatsPoint],
+        List[EmailComplaintTypeStatsPoint],
         Field(
             description="Complaint-type breakdown rows, ranked by `complained` descending. Empty when no complaints occurred in the period."
         ),
@@ -7637,7 +7796,7 @@ class EmailStatsByBroadcastResponse(BaseModel):
         ),
     ]
     data: Annotated[
-        list[EmailBroadcastStatsPoint],
+        List[EmailBroadcastStatsPoint],
         Field(
             description="Broadcast breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no broadcast messages were active in the period."
         ),
@@ -7954,7 +8113,7 @@ class Domain(BaseModel):
     ]
     settings: DomainSettings
     next: Annotated[
-        list[NextAction] | None,
+        List[NextAction] | None,
         Field(
             description="What to do next about this domain, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nThis answers whether you own the domain, which is what `status` reports. What each\ncapability still needs before it can send or receive is reported separately under\n`capabilities`, so an empty list here does not on its own mean the domain is ready.\n"
         ),
@@ -7962,7 +8121,7 @@ class Domain(BaseModel):
     dkim: DomainDKIM
     capabilities: DomainCapabilities
     dns_records: Annotated[
-        list[DNSRecord],
+        List[DNSRecord],
         Field(
             description="The domain's DNS records and their individual verification state, returned in full on both the list and single-domain responses. This is the complete set to publish across DKIM, return-path, DMARC, tracking, and inbound; records for a staged change carry `state: pending`. Inbound MX records are always included as a regional reference, even while receiving is off and `capabilities.inbound.status` is `not_configured`. Their presence alone does not mean receiving is enabled; see `DomainUpdate.inbound`.\n"
         ),
@@ -7993,7 +8152,7 @@ class DomainList(FieldListEnvelopeWithTotal):
         extra="allow",
     )
     data: Annotated[
-        list[Domain],
+        List[Domain],
         Field(description="Page of sending domains, newest first by default."),
     ]
 
@@ -8253,7 +8412,7 @@ class Mailbox(BaseModel):
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any],
+        Dict[str, Any],
         Field(
             description="Your own key/value data attached to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved."
         ),
@@ -8282,7 +8441,7 @@ class MailboxList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[Mailbox]
+    data: List[Mailbox]
 
 
 class RetentionTier1(str, Enum):
@@ -8341,7 +8500,7 @@ class MailboxCreate(BaseModel):
         ),
     ] = "30d"
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Your own key/value data to attach to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved."
         ),
@@ -8378,7 +8537,7 @@ class MailboxUpdate(BaseModel):
         ),
     ] = "30d"
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Replaces the mailbox's key/value data. Up to 2 KB. Keys starting with `__bird` are reserved."
         ),
@@ -8450,7 +8609,7 @@ class MailboxStatsResponse(BaseModel):
     period: EmailStatsSeriesPeriod
     summary: MailboxStatsSummary
     data: Annotated[
-        list[MailboxStatsPoint],
+        List[MailboxStatsPoint],
         Field(
             description="One row per bucket in the period, in chronological order. Buckets with no activity are included with zero counts."
         ),
@@ -8523,7 +8682,7 @@ class ReceiveRuleList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[ReceiveRule]
+    data: List[ReceiveRule]
 
 
 class ReceiveRuleCreate(BaseModel):
@@ -8568,14 +8727,14 @@ class EmailThreadHighlights(BaseModel):
         extra="allow",
     )
     subject: Annotated[
-        list[SubjectItem] | None,
+        List[SubjectItem] | None,
         Field(
             description="Matched fragments from the conversation's subject.",
             examples=[["Re: your **order** **4821**"]],
         ),
     ] = None
     text: Annotated[
-        list[TextItem] | None,
+        List[TextItem] | None,
         Field(
             description="Matched fragments from a message's body text.",
             examples=[["confirming your **order** **4821** shipped"]],
@@ -8636,7 +8795,7 @@ class EmailThread(BaseModel):
         ),
     ]
     participants: Annotated[
-        list[str],
+        List[str],
         Field(
             description="Addresses that appear on the retained messages in this conversation, including the mailbox's own address."
         ),
@@ -8669,7 +8828,7 @@ class EmailThread(BaseModel):
         ),
     ]
     labels: Annotated[
-        list[Label],
+        List[Label],
         Field(
             description="Labels on this conversation. Exactly one system placement label is always present, set by the message that started the conversation:\n\n- `inbox`: The conversation is in the inbox.\n- `archive`: The conversation was filed away and is done for now.\n- `spam`: The conversation's opening message failed sender authentication.\n- `blocked`: The conversation's opening message was rejected by the mailbox's receive policy or rules.\n\nMove a conversation by updating its labels. Add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox`, or remove `spam`, `blocked`, or `archive`, to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list, and a conversation has at most 20 labels in total.\n",
             examples=[["inbox", "urgent"]],
@@ -8694,7 +8853,7 @@ class EmailThreadList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[EmailThread]
+    data: List[EmailThread]
 
 
 class AddItem(RootModel[str]):
@@ -8714,11 +8873,11 @@ class EmailLabelsUpdate(BaseModel):
         extra="allow",
     )
     add: Annotated[
-        list[AddItem] | None,
+        List[AddItem] | None,
         Field(description="Labels to apply.", examples=[["urgent"]], max_length=20),
     ] = None
     remove: Annotated[
-        list[RemoveItem] | None,
+        List[RemoveItem] | None,
         Field(description="Labels to take off.", examples=[["pending"]], max_length=20),
     ] = None
 
@@ -8855,9 +9014,9 @@ class EmailThreadMessage(BaseModel):
     from_: Annotated[
         str, Field(alias="from", description="Sender address.", min_length=1)
     ]
-    to: Annotated[list[str], Field(description="Recipient addresses on the To line.")]
+    to: Annotated[List[str], Field(description="Recipient addresses on the To line.")]
     cc: Annotated[
-        list[str],
+        List[str],
         Field(
             description="Recipient addresses on the Cc line. Empty when the message had none."
         ),
@@ -8885,7 +9044,7 @@ class EmailThreadMessage(BaseModel):
         ),
     ] = None
     labels: Annotated[
-        list[Label],
+        List[Label],
         Field(
             description="Labels on this message. A received message always has exactly one placement label:\n\n- `inbox`: Accepted mail.\n- `archive`: The message's conversation was filed away.\n- `spam`: The message failed sender authentication.\n- `blocked`: The message was rejected by the mailbox's receive policy or rules.\n\nA received message also has `unread` until it is read. `trash` marks a message in the trash, in either direction. Custom labels share the same list, and a message has at most 20 labels in total.\n",
             examples=[["inbox", "unread"]],
@@ -8899,7 +9058,7 @@ class EmailThreadMessage(BaseModel):
         ),
     ]
     recipients: Annotated[
-        list[EmailThreadMessageRecipient] | None,
+        List[EmailThreadMessageRecipient] | None,
         Field(
             description="Terminal per-recipient delivery outcomes of a sent message, filled in as each one becomes known and kept for the mailbox's full retention tier. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.\n"
         ),
@@ -8939,13 +9098,13 @@ class EmailThreadMessage(BaseModel):
         int, Field(description="Number of attachments on the message.", ge=0)
     ]
     attachment_manifest: Annotated[
-        list[EmailThreadMessageAttachment],
+        List[EmailThreadMessageAttachment],
         Field(
             description="Attachment metadata (filename, content type, size). Stays readable for the mailbox's retention tier even after the attachment bytes themselves have expired.\n"
         ),
     ]
     reference_ids: Annotated[
-        list[str],
+        List[str],
         Field(
             description="RFC 5322 References header entries used to thread the conversation."
         ),
@@ -8970,7 +9129,7 @@ class EmailThreadMessageList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[EmailThreadMessage]
+    data: List[EmailThreadMessage]
 
 
 class EmailThreadMessageBody(BaseModel):
@@ -8995,7 +9154,7 @@ class EmailThreadMessageAttachmentList(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[EmailThreadMessageAttachment]
+    data: List[EmailThreadMessageAttachment]
 
 
 class EmailThreadMessageReplyRequest(BaseModel):
@@ -9023,21 +9182,21 @@ class EmailThreadMessageReplyRequest(BaseModel):
         ),
     ] = False
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n"
         ),
     ] = None
     category: EmailMessageCategory | None = "transactional"
     attachments: Annotated[
-        list[EmailAttachment] | None,
+        List[EmailAttachment] | None,
         Field(
             description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for 30 days.\n",
             max_length=20,
@@ -9050,7 +9209,7 @@ class EmailMailboxComposeRequest(BaseModel):
         extra="allow",
     )
     to: Annotated[
-        list[EmailAddressInput1 | EmailAddress],
+        List[EmailAddressInput1 | EmailAddress],
         Field(
             description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
@@ -9058,14 +9217,14 @@ class EmailMailboxComposeRequest(BaseModel):
         ),
     ]
     cc: Annotated[
-        list[EmailAddressInput1 | EmailAddress] | None,
+        List[EmailAddressInput1 | EmailAddress] | None,
         Field(
             description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
         ),
     ] = None
     bcc: Annotated[
-        list[EmailAddressInput1 | EmailAddress] | None,
+        List[EmailAddressInput1 | EmailAddress] | None,
         Field(
             description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
             max_length=50,
@@ -9089,7 +9248,7 @@ class EmailMailboxComposeRequest(BaseModel):
         ),
     ] = None
     reply_to: Annotated[
-        list[EmailAddressInput1 | EmailAddress] | None,
+        List[EmailAddressInput1 | EmailAddress] | None,
         Field(
             description="Reply-To addresses. When omitted, the mailbox's `default_reply_to` applies (replies then come back to the mailbox itself).\n",
             max_length=25,
@@ -9097,21 +9256,21 @@ class EmailMailboxComposeRequest(BaseModel):
         ),
     ] = None
     attachments: Annotated[
-        list[EmailAttachment] | None,
+        List[EmailAttachment] | None,
         Field(
             description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for 30 days.\n",
             max_length=20,
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.\n",
             max_length=20,
         ),
     ] = None
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.\n"
         ),
@@ -9149,7 +9308,7 @@ class EmailMailboxLabelList(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[EmailMailboxLabel]
+    data: List[EmailMailboxLabel]
 
 
 class WebhookEventType(str, Enum):
@@ -9368,13 +9527,13 @@ class EventEmailBase(BaseModel):
         RecipientRole, Field(description="Envelope position of the recipient.")
     ]
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Tags provided on the send request, echoed on every event for the send so you can route and correlate without an extra lookup. Null when the send carried no tags.\n"
         ),
     ]
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.\n",
             examples=[{"order_id": "ord_123"}],
@@ -9502,13 +9661,13 @@ class EventEmailMessageBase(BaseModel):
         ),
     ]
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Tags provided on the send request, echoed on the event so you can route and correlate without an extra lookup. Null when the send carried no tags.\n"
         ),
     ]
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.\n",
             examples=[{"order_id": "ord_123"}],
@@ -9914,7 +10073,7 @@ class EventEmailReceivedData(BaseModel):
         ),
     ]
     to: Annotated[
-        list[str],
+        List[str],
         Field(
             description="Recipient addresses the message was sent to.",
             examples=[["support@acme.com"]],
@@ -10263,7 +10422,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
         ),
     ]
     to: Annotated[
-        list[str],
+        List[str],
         Field(
             description="Recipient addresses the message was sent to.",
             examples=[["support@inbox.ai"]],
@@ -10747,13 +10906,13 @@ class EventSMSBase(BaseModel):
         ),
     ]
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Tags provided on the send request, echoed on every event for the message so you can route and correlate without an extra lookup. Null when the message carried no tags.\n"
         ),
     ]
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.\n",
             examples=[{"order_id": "ord_123"}],
@@ -11250,7 +11409,7 @@ class EventVerifyBase(BaseModel):
         ),
     ]
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.\n",
             examples=[{"user_id": "usr_123"}],
@@ -11853,13 +12012,13 @@ class EventWhatsAppBase(BaseModel):
         ),
     ]
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.\n"
         ),
     ]
     metadata: Annotated[
-        dict[str, Any] | None,
+        Dict[str, Any] | None,
         Field(
             description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.\n",
             examples=[{"order_id": "ord_123"}],
@@ -12014,6 +12173,12 @@ class EventWhatsAppReceivedData(EventWhatsAppBase):
     ] = None
     location: Annotated[
         WhatsAppLocation | None, Field(description="Location the contact sent.")
+    ] = None
+    contact_cards: Annotated[
+        List[WhatsAppContactCard] | None,
+        Field(
+            description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.\n"
+        ),
     ] = None
     unsupported: Annotated[
         WhatsAppUnsupported | None,
@@ -12199,7 +12364,7 @@ class NumberOwnership(BaseModel):
         ),
     ] = None
     next: Annotated[
-        list[NextAction],
+        List[NextAction],
         Field(
             description="What you do about it, in the order to do it. Empty only when `satisfied` is true, so while anything is outstanding there is always at least one step. When what you already sent is being reviewed and nothing is needed from you, that step has kind `wait` and says so. Re-read it after each call rather than caching the first list you saw.\n"
         ),
@@ -12254,7 +12419,7 @@ class Number(BaseModel):
         Field(description="Physical type of this phone number."),
     ]
     capabilities: Annotated[
-        list[
+        List[
             Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]
         ],
         Field(description="Capabilities supported by this number."),
@@ -12290,7 +12455,7 @@ class NumberList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[Number]
+    data: List[Number]
 
 
 class AvailableNumber(BaseModel):
@@ -12315,7 +12480,7 @@ class AvailableNumber(BaseModel):
         Field(description="Physical type of this phone number."),
     ]
     capabilities: Annotated[
-        list[
+        List[
             Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]
         ],
         Field(description="Capabilities supported by this number."),
@@ -12326,7 +12491,7 @@ class AvailableNumberList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[AvailableNumber]
+    data: List[AvailableNumber]
 
 
 class NumbersOrderStatus(str, Enum):
@@ -12395,7 +12560,7 @@ class NumbersOrderList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[NumbersOrder]
+    data: List[NumbersOrder]
 
 
 class NumbersOrderCreate(BaseModel):
@@ -12594,7 +12759,7 @@ class VoiceCall(BaseModel):
         ),
     ] = None
     tags: Annotated[
-        list[Tag] | None,
+        List[Tag] | None,
         Field(
             description="Your own `{name, value}` labels for this call, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise calls by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a call is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the call still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the call carried none, and on calls recorded before this field existed.",
             max_length=5,
@@ -12657,7 +12822,7 @@ class VoiceCallList(FieldListEnvelope):
     model_config = ConfigDict(
         extra="allow",
     )
-    data: list[VoiceCall]
+    data: List[VoiceCall]
 
 
 class WebhookEvent(

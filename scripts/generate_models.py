@@ -234,6 +234,13 @@ def main() -> None:
             # parity with Go's typed string constants and TS's string unions.
             "--use-subclass-enum",
             "--use-annotated",
+            # typing.List/Dict rather than PEP 585 builtins. A wire property named
+            # `list` binds that name in the model's class body, and PEP 563 defers
+            # annotations, so pydantic resolves every SIBLING `list[...]` against the
+            # shadowed name and the whole module fails to import. Nothing else in the
+            # toolchain sees it, so the wire name would otherwise have to dodge every
+            # builtin.
+            "--no-use-standard-collections",
             "--target-python-version", "3.10",
             "--output", str(OUT),
         ],
