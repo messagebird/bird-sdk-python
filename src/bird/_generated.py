@@ -2111,13 +2111,14 @@ class SMSSegments(BaseModel):
     encoding: Annotated[
         Encoding,
         Field(
-            description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 characters in one segment, or 153 per part in a multi-segment message. The `UCS2` encoding applies when the body contains a character outside the GSM 03.38 alphabet, including emoji, CJK, and some accented characters. It fits 70 characters in one segment, or 67 per part in a multi-segment message.\n"
+            description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.\n"
         ),
     ]
     characters: Annotated[
         int,
         Field(
-            description="Character count of the body under the selected encoding.", ge=0
+            description="Character count of the body, counted in Unicode code points under either encoding. This is not the segment measure: a `GSM_7BIT` extended-table character counts once here but costs two septets, and a `UCS2` emoji outside the Basic Multilingual Plane counts once here but costs two of the segment's 70 code units.\n",
+            ge=0,
         ),
     ]
 
