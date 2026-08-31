@@ -5634,6 +5634,9 @@ class Mailbox(BaseModel):
         description="Number of retained messages across all threads.",
     )]
     thread_count: Annotated[int, Field(description="Number of retained threads.")]
+    size_bytes: Annotated[int, Field(
+        description="Stored bytes across the mailbox's retained messages: the metadata and extracted text kept for the retention tier plus attachment bytes. Message bodies and raw MIME expire after 30 days and do not count. Maintained with each message written or deleted, so the value is current; messages stored before the counter existed are not counted.",
+    )]
     unread_thread_count: Annotated[Optional[int], Field(
         description="Number of threads with unread messages in this mailbox, excluding trash. `null` on create/update responses.",
     )] = None
