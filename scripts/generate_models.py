@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Generate the Bird Python SDK's wire models from the OpenAPI customer bundle.
 
+NOT the generator any more: beak emits bird._generated in-process Go
+(tools/beak/gens/sdkpython.go). This is kept as the parity ORACLE the port is
+checked against — tools/beak:sdk-python-parity runs it into a temp tree and
+compares the two by model surface (scripts/model_diff.py). Editing it changes
+what the port is measured against, nothing that ships.
+
 Two things this script does by hand, everything else being native generator
 behavior whose per-flag rationale lives at the call site in ``main``:
 
@@ -15,8 +21,7 @@ behavior whose per-flag rationale lives at the call site in ``main``:
    AGENTS.md § "Open enums are retyped, and must stay open"; both are load-bearing
    for forward compatibility, and ``tests/test_open_enums.py`` pins them.
 
-Run via ``make generate``. Regenerate after the OpenAPI bundle changes; the output
-is checked in and guarded by the repo drift gate.
+Run by the parity check, not by hand. ``make generate`` now runs beak.
 """
 
 from __future__ import annotations

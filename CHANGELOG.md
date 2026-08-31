@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.43.0
+
+- Mailbox `retention_tier` now accepts `90d` and `1y` on create and update, gated by the organization's plan; a tier the plan does not include is rejected with `E17048`.
+
 ## 0.42.0
 
 - **Breaking:** `Webhooks`/`AsyncWebhooks` are constructed as `Webhooks(client, secret)`; a receiver verifies through `Bird(webhook_secret=...)` — no API key required.

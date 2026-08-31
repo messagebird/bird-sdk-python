@@ -187,7 +187,7 @@ class EmailThreadsMessages(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessageAttachmentList:
-        """List the attachments on a conversation message. Bytes are downloadable for 30 days, and the metadata stays readable afterward on the message's attachment_manifest.
+        """List the attachments on a conversation message. Bytes are downloadable for the mailbox's retention tier, and the metadata stays readable afterward on the message's attachment_manifest.
 
         ```python
         result = client.email.threads.messages.attachments(
@@ -332,7 +332,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessageAttachmentList:
-        """List the attachments on a conversation message. Bytes are downloadable for 30 days, and the metadata stays readable afterward on the message's attachment_manifest.
+        """List the attachments on a conversation message. Bytes are downloadable for the mailbox's retention tier, and the metadata stays readable afterward on the message's attachment_manifest.
 
         ```python
         result = await client.email.threads.messages.attachments(

@@ -4,8 +4,9 @@
 sync:  ## install the package and dev dependencies into a local venv
 	uv sync --extra dev
 
-generate:  ## regenerate src/bird/_generated from the OpenAPI customer bundle
-	uv run --with pyyaml python scripts/generate_models.py
+# Not a uv task any more: generation left the Python toolchain.
+generate:  ## regenerate src/bird/_generated from the OpenAPI customer bundle (in-process Go)
+	../../tools/bin/beak run clients:sdk-python-generate
 
 test:
 	uv run --extra dev pytest
