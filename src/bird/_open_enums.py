@@ -252,6 +252,40 @@ class WhatsAppEventType:
     WHATSAPP_SENT: Final = "whatsapp.sent"
 
 
+class WhatsAppInteractiveButtonType:
+    """Values of WhatsAppInteractiveButtonType known at this SDK version (open enum)."""
+
+    CTA_URL: Final = "cta_url"
+    QUICK_REPLY: Final = "quick_reply"
+
+
+class WhatsAppInteractiveHeaderType:
+    """Values of WhatsAppInteractiveHeaderType known at this SDK version (open enum)."""
+
+    DOCUMENT: Final = "document"
+    IMAGE: Final = "image"
+    TEXT: Final = "text"
+    VIDEO: Final = "video"
+
+
+class WhatsAppInteractiveReplyType:
+    """Values of WhatsAppInteractiveReplyType known at this SDK version (open enum)."""
+
+    BUTTON: Final = "button"
+    LIST: Final = "list"
+
+
+class WhatsAppInteractiveType:
+    """Values of WhatsAppInteractiveType known at this SDK version (open enum)."""
+
+    BUTTON: Final = "button"
+    CAROUSEL: Final = "carousel"
+    CTA_URL: Final = "cta_url"
+    LIST: Final = "list"
+    LOCATION_REQUEST_MESSAGE: Final = "location_request_message"
+    REQUEST_CONTACT_INFO: Final = "request_contact_info"
+
+
 class WhatsAppTemplateCategory:
     """Values of WhatsAppTemplateCategory known at this SDK version (open enum)."""
 
@@ -296,6 +330,10 @@ __all__ = [
     "VerificationTerminalReason",
     "WhatsAppErrorCode",
     "WhatsAppEventType",
+    "WhatsAppInteractiveButtonType",
+    "WhatsAppInteractiveHeaderType",
+    "WhatsAppInteractiveReplyType",
+    "WhatsAppInteractiveType",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateParameterType",
 ]

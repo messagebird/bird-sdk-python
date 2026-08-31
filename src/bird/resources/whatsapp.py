@@ -2,9 +2,9 @@
 list the message log, and list a single message's event timeline.
 
 A send carries exactly one kind of content: a template, or free-form ``text``,
-``image``, ``video``, ``audio``, ``sticker``, ``document`` or ``location``.
-Free-form content is deliverable only inside an open 24-hour customer service
-window.
+``image``, ``video``, ``audio``, ``sticker``, ``document``, ``location`` or
+``interactive``. Free-form content is deliverable only inside an open 24-hour
+customer service window.
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ def _send_body(
     sticker: Mapping[str, Any] | None = None,
     document: Mapping[str, Any] | None = None,
     location: Mapping[str, Any] | None = None,
+    interactive: Mapping[str, Any] | None = None,
+    in_reply_to_message_id: str | None = None,
     tags: Sequence[Mapping[str, str]] | None = None,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -55,10 +57,13 @@ def _send_body(
         "sticker": sticker,
         "document": document,
         "location": location,
+        "interactive": interactive,
     }
     for name, value in content.items():
         if value is not None:
             body[name] = value
+    if in_reply_to_message_id is not None:
+        body["in_reply_to_message_id"] = in_reply_to_message_id
     if tags is not None:
         body["tags"] = tags
     if metadata is not None:
@@ -84,16 +89,21 @@ class Whatsapp(WhatsappBase):
         sticker: Mapping[str, Any] | None = None,
         document: Mapping[str, Any] | None = None,
         location: Mapping[str, Any] | None = None,
+        interactive: Mapping[str, Any] | None = None,
+        in_reply_to_message_id: str | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppMessage:
         """Send one message to a single recipient, carrying exactly one kind of
         content: a template named by its id (``wat_…``) or slug, or a free-form
-        arm shaped like its wire object (``text={"body": …}``). Every send but a
-        Bird-managed template needs ``from_``. The result is ``accepted``, not
-        yet delivered — read it back with ``get`` or follow its timeline with
-        ``list_events``.
+        arm shaped like its wire object (``text={"body": …}``). ``interactive``
+        is the arm that gives the recipient something to tap — reply buttons, a
+        list menu, a link button, media cards, or a request for their location
+        or contact details. Pass ``in_reply_to_message_id`` to quote an earlier
+        message from the same conversation. Every send but a Bird-managed
+        template needs ``from_``. The result is ``accepted``, not yet delivered
+        — read it back with ``get`` or follow its timeline with ``list_events``.
 
         ```python
         msg = client.whatsapp.send(
@@ -118,6 +128,8 @@ class Whatsapp(WhatsappBase):
             sticker=sticker,
             document=document,
             location=location,
+            interactive=interactive,
+            in_reply_to_message_id=in_reply_to_message_id,
             tags=tags,
             metadata=metadata,
         )
@@ -142,6 +154,8 @@ class AsyncWhatsapp(AsyncWhatsappBase):
         sticker: Mapping[str, Any] | None = None,
         document: Mapping[str, Any] | None = None,
         location: Mapping[str, Any] | None = None,
+        interactive: Mapping[str, Any] | None = None,
+        in_reply_to_message_id: str | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
@@ -160,6 +174,8 @@ class AsyncWhatsapp(AsyncWhatsappBase):
             sticker=sticker,
             document=document,
             location=location,
+            interactive=interactive,
+            in_reply_to_message_id=in_reply_to_message_id,
             tags=tags,
             metadata=metadata,
         )

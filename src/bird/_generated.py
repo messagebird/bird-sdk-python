@@ -3358,6 +3358,14 @@ class WhatsAppAddress(BaseModel):
         examples=["NL.xxxx"],
         min_length=1,
     )] = None
+    username: Annotated[Optional[str], Field(
+        description="Present only on a message received from a WhatsApp user, on `from`; never on an outbound send's `to`, where the profile is not known. Absent when the contact has not adopted one, and on a message received before this workspace started recording them. Same form as a number's own username (`WhatsAppNumberProfile.username`), without a leading `@`; a message cannot be addressed by it.",
+        min_length=1,
+    )] = None
+    display_name: Annotated[Optional[str], Field(
+        description="Present only on a message received from a WhatsApp user, on `from`; never on an outbound send's `to`, where the profile is not known. Absent when the message carries no profile, and on a message received before this workspace started recording them.",
+        min_length=1,
+    )] = None
 
 
 class WhatsAppTemplateParameterType(str, Enum):
@@ -3739,6 +3747,192 @@ class WhatsAppContactCard(BaseModel):
     addresses: Optional[List[WhatsAppContactAddress]] = None
 
 
+class WhatsAppInteractiveType(str, Enum):
+    button = "button"
+    list = "list"
+    cta_url = "cta_url"
+    carousel = "carousel"
+    location_request_message = "location_request_message"
+    request_contact_info = "request_contact_info"
+
+
+class WhatsAppInteractiveHeaderType(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    document = "document"
+
+
+class WhatsAppInteractiveHeader(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppInteractiveHeaderType, str], Field(
+        description="Which kind of header this is, and which field carries it.",
+        union_mode="left_to_right",
+    )]
+    text: Annotated[Optional[str], Field(
+        description="The line of text shown above the body.",
+        examples=["New workshop dates announced"],
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The URL of the file shown above the body, as the send supplied it. Interactive content is outbound only, so Bird neither stores nor proxies the file.",
+        examples=["https://cdn.example.com/banners/workshop.png"],
+    )] = None
+
+
+class WhatsAppInteractiveButtonType(str, Enum):
+    quick_reply = "quick_reply"
+    cta_url = "cta_url"
+
+
+class WhatsAppInteractiveQuickReplyButton(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[str, Field(
+        description="The handle the button carries back, never shown to the recipient. On a tap on a template's quick-reply button, it is the payload that template declared.",
+        examples=["change-booking"],
+        min_length=1,
+    )]
+    text: Annotated[str, Field(
+        description="The label the recipient saw.",
+        examples=["Change"],
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveCtaUrl(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    text: Annotated[str, Field(
+        description="The button's label.",
+        examples=["See dates"],
+        min_length=1,
+    )]
+    url: Annotated[str, Field(
+        description="The address the button opens, as the send supplied it.",
+        examples=["https://example.com/workshops?click_id=a1b2c3"],
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveButton(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppInteractiveButtonType, str], Field(
+        description="Which kind of button this is, and which field carries it.",
+        union_mode="left_to_right",
+    )]
+    quick_reply: Annotated[Optional[WhatsAppInteractiveQuickReplyButton], Field(
+        description="The button's label and the handle it sends back.",
+    )] = None
+    cta_url: Annotated[Optional[WhatsAppInteractiveCtaUrl], Field(
+        description="The button's label and the address it opens.",
+    )] = None
+
+
+class WhatsAppInteractiveListRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[str, Field(
+        description="The handle the row carries back, never shown to the recipient.",
+        examples=["priority_express"],
+        min_length=1,
+    )]
+    text: Annotated[str, Field(
+        description="The row's label, shown as its title in the menu.",
+        examples=["Priority Mail Express"],
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="The second line under the label. Absent when the row carried none.",
+        examples=["Next day to 2 days"],
+    )] = None
+
+
+class WhatsAppInteractiveListSection(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[str, Field(
+        description="The group's heading, shown above its rows.",
+        examples=["As soon as possible"],
+        min_length=1,
+    )]
+    rows: Annotated[List[WhatsAppInteractiveListRow], Field(
+        description="The options in this group, in the order shown.",
+    )]
+
+
+class WhatsAppInteractiveList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    button_text: Annotated[str, Field(
+        description="The label of the button that opens the menu.",
+        examples=["Shipping options"],
+        min_length=1,
+    )]
+    sections: Annotated[List[WhatsAppInteractiveListSection], Field(
+        description="The groups of options in the menu, in the order shown.",
+    )]
+
+
+class WhatsAppInteractiveCard(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    header: Annotated[WhatsAppInteractiveHeader, Field(
+        description="The image or video shown at the top of the card.",
+    )]
+    body_text: Annotated[Optional[str], Field(
+        description="The card's own text. Absent when the card carried none.",
+        examples=["*Blue Echeveria*"],
+    )] = None
+    buttons: Annotated[List[WhatsAppInteractiveButton], Field(
+        description="The buttons the card offered, in the order shown.",
+    )]
+
+
+class WhatsAppInteractive(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppInteractiveType, str], Field(
+        description="Which kind of interactive message this is, and which field carries it.",
+        union_mode="left_to_right",
+    )]
+    header: Annotated[Optional[WhatsAppInteractiveHeader], Field(
+        description="What was shown above the body. Absent when the message carried no header.",
+    )] = None
+    body_text: Annotated[str, Field(
+        description="The message's main text.",
+        examples=["Your workshop is scheduled for 9am tomorrow."],
+        min_length=1,
+    )]
+    footer_text: Annotated[Optional[str], Field(
+        description="The small print below the body. Absent when the message carried none.",
+        examples=["Lucky Shrub, your gateway to succulents"],
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppInteractiveButton]], Field(
+        description="The buttons the message offered, in the order shown.",
+    )] = None
+    list: Annotated[Optional[WhatsAppInteractiveList], Field(
+        description="The menu the message offered.",
+    )] = None
+    cta_url: Annotated[Optional[WhatsAppInteractiveCtaUrl], Field(
+        description="The link button the message offered.",
+    )] = None
+    cards: Annotated[Optional[List[WhatsAppInteractiveCard]], Field(
+        description="The cards the message offered, in the order they appeared, left to right.",
+    )] = None
+
+
+class WhatsAppInteractiveReplyType(str, Enum):
+    button = "button"
+    list = "list"
+
+
+class WhatsAppInteractiveReply(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppInteractiveReplyType, str], Field(
+        description="Which kind of tap this reply came from, and which field carries it.",
+        union_mode="left_to_right",
+    )]
+    button: Annotated[Optional[WhatsAppInteractiveQuickReplyButton], Field(
+        description="The button the contact tapped, as you declared it. On a reply to a template's quick-reply button, `slug` is the button's payload, which WhatsApp sets to the button's own label.",
+    )] = None
+    list: Annotated[Optional[WhatsAppInteractiveListRow], Field(
+        description="The row the contact chose, as you declared it. `description` is present only when the row carried one.",
+    )] = None
+
+
 class WhatsAppUnsupportedType(str, Enum):
     reaction = "reaction"
     interactive = "interactive"
@@ -3837,6 +4031,18 @@ class WhatsAppMessage(BaseModel):
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
         description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book. Inbound only: sending a contact card is not supported.",
+    )] = None
+    interactive: Annotated[Optional[WhatsAppInteractive], Field(
+        description="Interactive content the message carried. Outbound only: a contact cannot send one. A tap on a reply button or a list row reads back as `interactive_reply` on the contact's inbound message; a `cta_url` link sends nothing back, and the two request kinds are answered by an inbound `location` or `contact_cards` message.",
+    )] = None
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. An outbound message echoes the `in_reply_to_message_id` it was sent with. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
+        description="What the contact tapped, on a message answering an interactive message or a template's quick-reply button. Inbound only.",
     )] = None
     unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
         description="Set when the contact sent content we do not model, naming the WhatsApp content type so the message is not silently empty. Inbound only.",
@@ -3994,6 +4200,337 @@ class WhatsAppDocumentSend(BaseModel):
     )] = None
 
 
+class WhatsAppInteractiveTypeWrite(str, Enum):
+    button = "button"
+    list = "list"
+    cta_url = "cta_url"
+    carousel = "carousel"
+    location_request_message = "location_request_message"
+    request_contact_info = "request_contact_info"
+
+
+class WhatsAppInteractiveHeaderTypeWrite(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    document = "document"
+
+
+class WhatsAppInteractiveHeaderSend1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    text: Annotated[str, Field(
+        description="A single line of text above the body. Send it on a `text` header.",
+        examples=["New workshop dates announced"],
+        max_length=60,
+        min_length=1,
+    )]
+    url: Optional[Any] = None
+
+
+class WhatsAppInteractiveHeaderSend2Type(str, Enum):
+    image = "image"
+    video = "video"
+    document = "document"
+
+
+class WhatsAppInteractiveHeaderSend2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: WhatsAppInteractiveHeaderSend2Type
+    text: Optional[Any] = None
+    url: Annotated[str, Field(
+        description="Public `https` URL of the file to show. Send it on an `image`, `video` or `document` header. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB; a document, up to 100 MB, and PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client while other file types are transmitted but unsupported. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch.",
+        examples=["https://cdn.example.com/banners/workshop.png"],
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveHeaderSend(RootModel[WhatsAppInteractiveHeaderSend1 | WhatsAppInteractiveHeaderSend2]):
+    root: WhatsAppInteractiveHeaderSend1 | WhatsAppInteractiveHeaderSend2
+
+
+class WhatsAppInteractiveButtonTypeWrite(str, Enum):
+    quick_reply = "quick_reply"
+    cta_url = "cta_url"
+
+
+class WhatsAppInteractiveQuickReplyButtonSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[str, Field(
+        description="Your own handle for this button, echoed back on the reply. You choose the value and it is never shown to the recipient, so it can carry whatever your application needs to route the answer. Any characters, up to 256.",
+        examples=["change-booking"],
+        max_length=256,
+        min_length=1,
+    )]
+    text: Annotated[str, Field(
+        description="The button's label. It must differ from every other button's label in the same message, because the recipient's reply is identified to them by the label they tapped.",
+        examples=["Change"],
+        max_length=20,
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveCtaUrlSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    text: Annotated[str, Field(
+        description="The button's label.",
+        examples=["See dates"],
+        max_length=20,
+        min_length=1,
+    )]
+    url: Annotated[str, Field(
+        description="The address the button opens. It is fixed for every recipient, so per recipient tracking belongs in the address you supply, for example as a query parameter you generate per send.",
+        examples=["https://example.com/workshops?click_id=a1b2c3"],
+        max_length=2000,
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveButtonSend1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    quick_reply: Annotated[WhatsAppInteractiveQuickReplyButtonSend, Field(
+        description="The button's label and the handle it sends back. Send this on a `quick_reply` button.",
+    )]
+    cta_url: Optional[Any] = None
+
+
+class WhatsAppInteractiveButtonSend2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    quick_reply: Optional[Any] = None
+    cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
+        description="The button's label and the address it opens. Send this on a `cta_url` button.",
+    )]
+
+
+class WhatsAppInteractiveButtonSend(RootModel[WhatsAppInteractiveButtonSend1 | WhatsAppInteractiveButtonSend2]):
+    root: WhatsAppInteractiveButtonSend1 | WhatsAppInteractiveButtonSend2
+
+
+class WhatsAppInteractiveListRowSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[str, Field(
+        description="Your own handle for this option, echoed back on the reply. You choose the value and it is never shown to the recipient. Any characters, up to 200.",
+        examples=["priority_express"],
+        max_length=200,
+        min_length=1,
+    )]
+    text: Annotated[str, Field(
+        description="The option's label, shown as the row's title in the menu. It must differ from every other row's label and from every button's label in the same message, not merely within its own group; a repeat returns a `422` `WhatsAppInteractiveDuplicateLabel`.",
+        examples=["Priority Mail Express"],
+        max_length=24,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="A second line under the label, for detail that will not fit in it.",
+        examples=["Next day to 2 days"],
+        max_length=72,
+    )] = None
+
+
+class WhatsAppInteractiveListSectionSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[str, Field(
+        description="The group's heading, shown above its rows.",
+        examples=["As soon as possible"],
+        max_length=24,
+        min_length=1,
+    )]
+    rows: Annotated[List[WhatsAppInteractiveListRowSend], Field(
+        description="The options in this group. A message carries at most 10 rows across all its groups combined, so this per-group maximum is not additive: more than 10 in total returns a `422` `WhatsAppInteractiveLimitExceeded`. Row labels must be unique across the whole message too, not just within a group.",
+        max_length=10,
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveListSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    button_text: Annotated[str, Field(
+        description="The label of the button that opens the menu.",
+        examples=["Shipping options"],
+        max_length=20,
+        min_length=1,
+    )]
+    sections: Annotated[List[WhatsAppInteractiveListSectionSend], Field(
+        description="The groups of options in the menu, in the order shown. At most 10 rows across all groups combined, each carrying a label unique across the whole message.",
+        max_length=10,
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveCardHeaderSend1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    url: Annotated[str, Field(
+        description="Public `https` URL of the file to show at the top of the card. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB. WhatsApp fetches it at send time, on the same terms as a message header's `url`.",
+        examples=["https://cdn.example.com/plants/blue-echeveria.jpeg"],
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveCardHeaderSend2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    url: Annotated[str, Field(
+        description="Public `https` URL of the file to show at the top of the card. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB. WhatsApp fetches it at send time, on the same terms as a message header's `url`.",
+        examples=["https://cdn.example.com/plants/blue-echeveria.jpeg"],
+        min_length=1,
+    )]
+
+
+class WhatsAppInteractiveCardHeaderSend(RootModel[WhatsAppInteractiveCardHeaderSend1 | WhatsAppInteractiveCardHeaderSend2]):
+    root: WhatsAppInteractiveCardHeaderSend1 | WhatsAppInteractiveCardHeaderSend2
+
+
+class WhatsAppInteractiveCardSend1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    header: Annotated[WhatsAppInteractiveCardHeaderSend, Field(
+        description="The image or video at the top of the card.",
+    )]
+    body_text: Annotated[Optional[str], Field(
+        description="The card's own text, below its media, with at most two line breaks. Optional: a card can carry media and buttons alone.",
+        examples=["*Blue Echeveria*\n\nA rosette-shaped succulent with powdery blue leaves."],
+        max_length=160,
+        min_length=1,
+        pattern="^[^\\n]*(\\n[^\\n]*){0,2}$",
+    )] = None
+    buttons: Annotated[Any, Field(max_length=1)]
+
+
+class WhatsAppInteractiveCardSend2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    header: Annotated[WhatsAppInteractiveCardHeaderSend, Field(
+        description="The image or video at the top of the card.",
+    )]
+    body_text: Annotated[Optional[str], Field(
+        description="The card's own text, below its media, with at most two line breaks. Optional: a card can carry media and buttons alone.",
+        examples=["*Blue Echeveria*\n\nA rosette-shaped succulent with powdery blue leaves."],
+        max_length=160,
+        min_length=1,
+        pattern="^[^\\n]*(\\n[^\\n]*){0,2}$",
+    )] = None
+    buttons: Any
+
+
+class WhatsAppInteractiveCardSend(RootModel[WhatsAppInteractiveCardSend1 | WhatsAppInteractiveCardSend2]):
+    root: WhatsAppInteractiveCardSend1 | WhatsAppInteractiveCardSend2
+
+
+class WhatsAppInteractiveSend1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
+        description="Optional content above the body. A `list` accepts a `text` header only; `button` and `cta_url` also accept an image, video or document. A `carousel` accepts none: its cards carry their own media. Neither request kind accepts one.",
+    )] = None
+    body_text: Annotated[Any, Field(max_length=1024)]
+    footer_text: Annotated[Optional[str], Field(
+        description="Optional small print below the body and above the buttons. A `carousel` and both request kinds take no footer.",
+        examples=["Dates are subject to change."],
+        max_length=60,
+        min_length=1,
+    )] = None
+    buttons: Any
+    list: Optional[Any] = None
+    cta_url: Optional[Any] = None
+    cards: Optional[Any] = None
+
+
+class WhatsAppInteractiveSend2Header(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Optional[Any] = None
+    url: Optional[Any] = None
+
+
+class WhatsAppInteractiveSend2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    header: Optional[WhatsAppInteractiveSend2Header] = None
+    body_text: Annotated[str, Field(
+        description="The message's main text, required on every kind, and the whole message on `location_request_message` and `request_contact_info`. The WhatsApp client turns any URL it contains into a clickable link. Only a `list` may use the full length; the other kinds cap it at 1024 characters.",
+        examples=["Your workshop is scheduled for 9am tomorrow."],
+        max_length=4096,
+        min_length=1,
+    )]
+    footer_text: Annotated[Optional[str], Field(
+        description="Optional small print below the body and above the buttons. A `carousel` and both request kinds take no footer.",
+        examples=["Dates are subject to change."],
+        max_length=60,
+        min_length=1,
+    )] = None
+    buttons: Optional[Any] = None
+    list: Annotated[WhatsAppInteractiveListSend, Field(
+        description="The menu to show. Send this on a `list` message.",
+    )]
+    cta_url: Optional[Any] = None
+    cards: Optional[Any] = None
+
+
+class WhatsAppInteractiveSend3(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
+        description="Optional content above the body. A `list` accepts a `text` header only; `button` and `cta_url` also accept an image, video or document. A `carousel` accepts none: its cards carry their own media. Neither request kind accepts one.",
+    )] = None
+    body_text: Annotated[Any, Field(max_length=1024)]
+    footer_text: Annotated[Optional[str], Field(
+        description="Optional small print below the body and above the buttons. A `carousel` and both request kinds take no footer.",
+        examples=["Dates are subject to change."],
+        max_length=60,
+        min_length=1,
+    )] = None
+    buttons: Optional[Any] = None
+    list: Optional[Any] = None
+    cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
+        description="The link button to show. Send this on a `cta_url` message.",
+    )]
+    cards: Optional[Any] = None
+
+
+class WhatsAppInteractiveSend4(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    header: Optional[Any] = None
+    body_text: Annotated[Any, Field(max_length=1024)]
+    footer_text: Optional[Any] = None
+    buttons: Optional[Any] = None
+    list: Optional[Any] = None
+    cta_url: Optional[Any] = None
+    cards: Annotated[List[WhatsAppInteractiveCardSend], Field(
+        description="The cards to show, in the order they appear, left to right. Send this on a `carousel` message, with between 2 and 10 cards. The message's own `body_text` introduces them; a carousel carries no header and no footer of its own.",
+        max_length=10,
+        min_length=2,
+    )]
+
+
+class WhatsAppInteractiveSend5(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    header: Optional[Any] = None
+    body_text: Annotated[Any, Field(max_length=1024)]
+    footer_text: Optional[Any] = None
+    buttons: Optional[Any] = None
+    list: Optional[Any] = None
+    cta_url: Optional[Any] = None
+    cards: Optional[Any] = None
+
+
+class WhatsAppInteractiveSend6(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Any
+    header: Optional[Any] = None
+    body_text: Annotated[Any, Field(max_length=1024)]
+    footer_text: Optional[Any] = None
+    buttons: Optional[Any] = None
+    list: Optional[Any] = None
+    cta_url: Optional[Any] = None
+    cards: Optional[Any] = None
+
+
+class WhatsAppInteractiveSend(RootModel[WhatsAppInteractiveSend1 | WhatsAppInteractiveSend2 | WhatsAppInteractiveSend3 | WhatsAppInteractiveSend4 | WhatsAppInteractiveSend5 | WhatsAppInteractiveSend6]):
+    root: WhatsAppInteractiveSend1 | WhatsAppInteractiveSend2 | WhatsAppInteractiveSend3 | WhatsAppInteractiveSend4 | WhatsAppInteractiveSend5 | WhatsAppInteractiveSend6
+
+
 class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
@@ -4030,6 +4567,13 @@ class WhatsAppMessageSendRequest(BaseModel):
     )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
         description="A free-form location to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+    )] = None
+    interactive: Annotated[Optional[WhatsAppInteractiveSend], Field(
+        description="Free-form interactive content to send instead of a template: body text plus reply buttons, a menu, a link button, media cards, or a single button asking the recipient to share their location or their phone number. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+    )] = None
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="Quote a message the contact will see above this one, the way replying in the WhatsApp client does. Name a message from the same conversation: one this workspace sent to this recipient, or received from them. Any content quotes, template or free-form. A message this workspace does not hold, or one older than the 15-day window we keep provider ids for, returns a `422` `WhatsAppInReplyToNotFound`. A message that never reached WhatsApp, or one from a different conversation than this send's `to` and `from`, returns a `422` `WhatsAppInReplyToNotQuotable`.",
+        examples=["wam_01kya19eknftrs2s6p82asmvnh"],
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.",
@@ -8982,10 +9526,10 @@ class EventWhatsAppAcceptedData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9030,10 +9574,10 @@ class EventWhatsAppDeliveredData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9078,10 +9622,10 @@ class EventWhatsAppFailedData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9129,10 +9673,10 @@ class EventWhatsAppReadData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9177,10 +9721,10 @@ class EventWhatsAppReceivedData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9246,10 +9790,10 @@ class EventWhatsAppRejectedData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9297,10 +9841,10 @@ class EventWhatsAppSentData(BaseModel):
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both.",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
         description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
@@ -9691,6 +10235,17 @@ class SIPTrunkID(RootModel[str]):
     root: str
 
 
+class VoiceCallRouteType(str, Enum):
+    reject = "reject"
+    trunk = "trunk"
+    forward = "forward"
+
+
+class VoiceInboundForwardAs(str, Enum):
+    dialed_number = "dialed_number"
+    calling_number = "calling_number"
+
+
 class VoiceCallRejectionReason(str, Enum):
     source_not_allowed = "source_not_allowed"
     caller_id_not_verified = "caller_id_not_verified"
@@ -9703,6 +10258,45 @@ class VoiceCallRejectionReason(str, Enum):
     concurrent_calls_exceeded = "concurrent_calls_exceeded"
     calls_per_second_exceeded = "calls_per_second_exceeded"
     call_not_permitted = "call_not_permitted"
+
+
+class VoiceCallInboundRouteReject(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[VoiceCallRouteType, Field(
+        description="The number turned the call away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
+    )]
+
+
+class VoiceCallInboundRouteTrunk(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[VoiceCallRouteType, Field(
+        description="The call was delivered to one of your SIP trunks.",
+    )]
+    trunk_id: Annotated[str, Field(
+        description="The SIP trunk the call was delivered to. Recorded as it was at the time, so it may name a trunk you have since changed or deleted.",
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceCallInboundRouteForward(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[VoiceCallRouteType, Field(
+        description="The call was forwarded to another of your numbers.",
+    )]
+    forward_to: Annotated[str, Field(
+        description="The number the call was forwarded to, in E.164 format. Recorded as it was at the time, so it may name a number you have since stopped verifying.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    forward_as: Annotated[VoiceInboundForwardAs, Field(
+        description="Which of the call's two numbers the forwarded leg presented as its caller. The value that went on the wire, not the one the number is set to now.",
+    )]
+
+
+class VoiceCallInboundRoute(RootModel[VoiceCallInboundRouteReject | VoiceCallInboundRouteTrunk | VoiceCallInboundRouteForward]):
+    root: VoiceCallInboundRouteReject | VoiceCallInboundRouteTrunk | VoiceCallInboundRouteForward
 
 
 class VoiceMediaQuality(BaseModel):
@@ -9804,7 +10398,10 @@ class VoiceCall(BaseModel):
         ge=100,
     )] = None
     rejection_reason: Annotated[Optional[VoiceCallRejectionReason], Field(
-        description="Why we refused the call before dialing a carrier. Absent when the call connected or failed at the carrier; see `sip_response_code` for the carrier response.",
+        description="Why we refused the call before dialing a carrier. Absent whenever the refusal was not ours: a call that connected, a call the carrier or the far end turned down (`sip_response_code` carries their answer, and a 6xx decline reads as `rejected` rather than `failed`), and an incoming call turned away by the number it dialed, which fails no check of ours and so names no reason. `route` says what that number was set to do.",
+    )] = None
+    route: Annotated[Optional[VoiceCallInboundRoute], Field(
+        description="Which answer your number gave an incoming call: a SIP trunk, a forward, or a refusal. Recorded when the call was handled, so changing the number's setup afterwards does not change what its past calls say. Absent on outbound calls, and on calls recorded before this field existed.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Your own `{name, value}` labels for this call, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise calls by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a call is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the call still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the call carried none, and on calls recorded before this field existed.",
