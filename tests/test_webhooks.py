@@ -75,3 +75,26 @@ def test_unwrap_unknown_event_type_returns_generic_envelope() -> None:
     assert isinstance(event.root, GenericWebhookEvent)
     assert event.root.type == "email.brand_new_event"
     assert event.root.data == {"foo": "bar"}
+
+
+def test_receiver_only_client_unwraps_without_api_key() -> None:
+    payload = b'{"type":"domain.failed","timestamp":"2026-06-01T17:00:12Z","data":{"domain_id":"dom_01krdgeqcxet5s7t44vh8rt9mg","domain":"mail.example.com","workspace_id":"ws_01krdgeqcxet5s7t44vh8rt9mg"}}'
+    receiver = Bird(webhook_secret=SECRET)
+    event = receiver.webhooks.unwrap(payload, _headers(payload))
+    assert isinstance(event, WebhookEvent)
+    assert event.root.type == "domain.failed"
+
+
+def test_receiver_only_client_rejects_api_calls() -> None:
+    from bird import MissingAPIKeyError
+
+    receiver = Bird(webhook_secret=SECRET)
+    with pytest.raises(MissingAPIKeyError):
+        receiver.get("/v1/workspace", cast_to=None)
+
+
+def test_client_requires_api_key_or_webhook_secret() -> None:
+    from bird import BirdError
+
+    with pytest.raises(BirdError):
+        Bird()

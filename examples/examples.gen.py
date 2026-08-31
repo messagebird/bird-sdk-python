@@ -916,29 +916,79 @@ async def _ex_136() -> None:
 
 
 async def _ex_137() -> None:
+    attempts = client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg")
+    for attempt in attempts.data:
+        print(attempt.status, attempt.response_status_code)
+
+
+async def _ex_138() -> None:
+    created = client.webhooks.create(
+        url="https://acme.com/hooks/bird",
+        events=["email.delivered", "email.bounced"],
+        description="Delivery pipeline",
+    )
+    print(created.id, created.secret)
+
+
+async def _ex_139() -> None:
+    client.webhooks.delete("whk_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+async def _ex_140() -> None:
+    endpoint = client.webhooks.get("whk_01krdgeqcxet5s7t44vh8rt9mg")
+    print(endpoint.url, endpoint.events)
+
+
+async def _ex_141() -> None:
+    for endpoint in client.webhooks.list():
+        print(endpoint.id, endpoint.url, endpoint.status)
+
+
+async def _ex_142() -> None:
+    rotated = client.webhooks.rotate_secret("whk_01krdgeqcxet5s7t44vh8rt9mg")
+    print(rotated.secret)
+
+
+async def _ex_143() -> None:
+    result = client.webhooks.test(
+        "whk_01krdgeqcxet5s7t44vh8rt9mg",
+        event_type="email.delivered",
+    )
+    print(result.status)
+
+
+async def _ex_144() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_138() -> None:
+async def _ex_145() -> None:
+    endpoint = client.webhooks.update(
+        "whk_01krdgeqcxet5s7t44vh8rt9mg",
+        events=["email.delivered"],
+    )
+    print(endpoint.events)
+
+
+async def _ex_146() -> None:
     msg = client.whatsapp.get("wa_abc123")
     print(msg.id, msg.status)
 
 
-async def _ex_139() -> None:
+async def _ex_147() -> None:
     for msg in client.whatsapp.list(status=["delivered"]):
         print(msg.id, msg.status)
 
 
-async def _ex_140() -> None:
+async def _ex_148() -> None:
     events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_141() -> None:
+async def _ex_149() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -948,6 +998,6 @@ async def _ex_141() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_142() -> None:
+async def _ex_150() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)

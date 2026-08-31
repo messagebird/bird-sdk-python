@@ -47,19 +47,21 @@ def _infer_region(api_key: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _resolve(api_key: str | None, base_url: str | None, region: str | None) -> tuple[str, str]:
+def _resolve(api_key: str | None, base_url: str | None, region: str | None) -> tuple[str | None, str | None]:
+    """Resolve the key and base URL. Both may be None for a receiver-only client
+    (webhook verification needs neither); the missing-key error is raised at the
+    first API call instead of here."""
     api_key = api_key or os.environ.get("BIRD_API_KEY")
-    if not api_key:
-        raise BirdError("missing API key: pass api_key= or set BIRD_API_KEY")
     base_url = base_url or os.environ.get("BIRD_BASE_URL")
     if not base_url:
-        region = region or _infer_region(api_key)
-        if not region:
+        region = region or (_infer_region(api_key) if api_key else None)
+        if region:
+            base_url = f"https://{region}.platform.bird.com"
+        elif api_key:
             raise BirdError(
                 "could not determine region: pass region= or base_url=, "
                 "or use a bk_{region}_{token} API key"
             )
-        base_url = f"https://{region}.platform.bird.com"
     return api_key, base_url
 
 
@@ -141,6 +143,11 @@ class Bird(SyncAPIClient):
         http_client: httpx.Client | None = None,
     ) -> None:
         api_key, base_url = _resolve(api_key, base_url, region)
+        if not api_key and not webhook_secret:
+            raise BirdError(
+                "configure api_key= (or BIRD_API_KEY) for API calls, "
+                "or webhook_secret= for a receiver-only client"
+            )
         self._config: dict[str, Any] = {
             "api_key": api_key,
             "region": region,
@@ -184,7 +191,7 @@ class Bird(SyncAPIClient):
         self.numbers = Numbers(self)
         self.preferences = Preferences(self)
         self.workspace = WorkspaceResource(self)
-        self.webhooks = Webhooks(webhook_secret)
+        self.webhooks = Webhooks(self, webhook_secret)
         self.realtime = Realtime(self, realtime_key, realtime_secret, realtime_encryption_master_key)
 
     def with_options(
@@ -268,6 +275,11 @@ class AsyncBird(AsyncAPIClient):
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         api_key, base_url = _resolve(api_key, base_url, region)
+        if not api_key and not webhook_secret:
+            raise BirdError(
+                "configure api_key= (or BIRD_API_KEY) for API calls, "
+                "or webhook_secret= for a receiver-only client"
+            )
         self._config: dict[str, Any] = {
             "api_key": api_key,
             "region": region,
@@ -311,7 +323,7 @@ class AsyncBird(AsyncAPIClient):
         self.numbers = AsyncNumbers(self)
         self.preferences = AsyncPreferences(self)
         self.workspace = AsyncWorkspaceResource(self)
-        self.webhooks = AsyncWebhooks(webhook_secret)
+        self.webhooks = AsyncWebhooks(self, webhook_secret)
         self.realtime = AsyncRealtime(self, realtime_key, realtime_secret, realtime_encryption_master_key)
 
     def with_options(

@@ -7,9 +7,13 @@ every client. ``Union[Enum, str]`` in left-to-right mode keeps the field open.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
+from bird import _generated
 from bird._generated import (
     VerificationChannel,
     VerificationChannelEntry,
@@ -64,3 +68,59 @@ def test_a_genuinely_closed_enum_still_rejects() -> None:
     """The retype is scoped to open enums; a closed one must keep validating."""
     with pytest.raises(ValidationError):
         VerificationChannelEntry(channel=object())  # type: ignore[arg-type]
+
+
+def _unions(node: object, path: str) -> Iterator[tuple[str, dict[str, Any]]]:
+    """Every `union` node in a core schema, with the path that reached it."""
+    if isinstance(node, dict):
+        if node.get("type") == "union":
+            yield path, node
+        for key, val in node.items():
+            yield from _unions(val, f"{path}/{key}")
+    elif isinstance(node, (list, tuple)):
+        for i, val in enumerate(node):
+            yield from _unions(val, f"{path}[{i}]")
+
+
+def _kinds(node: dict[str, Any]) -> list[str | None]:
+    """The union's branch types, in the order pydantic will try them."""
+    choices = [c[0] if isinstance(c, tuple) else c for c in node.get("choices", [])]
+    return [c.get("type") for c in choices if isinstance(c, dict)]
+
+
+def _is_open(kinds: list[str | None]) -> bool:
+    """An open enum's union: the enum's known values, and a bare string."""
+    return "enum" in kinds and "str" in kinds
+
+
+def _narrows(node: dict[str, Any], kinds: list[str | None]) -> bool:
+    """Left to right AND enum-first. Either alone hands back a plain string:
+    smart mode prefers the looser branch, and str-first matches everything.
+    """
+    return node.get("mode") == "left_to_right" and kinds.index("enum") < kinds.index("str")
+
+
+def test_every_open_enum_reference_prefers_the_member() -> None:
+    """Exhaustive, because the fields above are the ones a test happens to name.
+
+    A reference that stops narrowing is silent: the field still decodes, it just
+    yields `str` where the enum member was promised. The mode rides on the union
+    itself, which is what makes it survive inside a `List[...]`.
+    """
+    loose = []
+    seen = 0
+    for name in dir(_generated):
+        model = getattr(_generated, name)
+        schema = getattr(model, "__pydantic_core_schema__", None)
+        if not isinstance(model, type) or schema is None:
+            continue
+        for path, node in _unions(schema, name):
+            kinds = _kinds(node)
+            if not _is_open(kinds):
+                continue
+            seen += 1
+            if not _narrows(node, kinds):
+                loose.append(f"{path} (mode={node.get('mode')}, {kinds})")
+    assert not loose, f"{len(loose)} open-enum reference(s) do not narrow: {loose[:10]}"
+    # A walk that matched nothing would pass over an empty input.
+    assert seen > 0, "no open-enum unions in the generated models at all"

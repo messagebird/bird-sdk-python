@@ -21,6 +21,7 @@ is checked in and guarded by the repo drift gate.
 
 from __future__ import annotations
 
+import copy
 import os
 import re
 import subprocess
@@ -44,9 +45,8 @@ OUT = (
 
 HTTP_METHODS = {"get", "put", "post", "delete", "patch", "options", "head", "trace"}
 
-# Referenced by no operation, but webhooks.unwrap decodes them: the event union
-# and its discriminant enum. Endpoint CRUD is not in this release, so its schemas
-# are unreachable and pruned.
+# webhooks.unwrap decodes these — the event union and its discriminant enum —
+# so they must survive pruning even if no kept operation reaches them.
 EXTRA_SCHEMAS = ["WebhookEvent", "WebhookEventType"]
 
 # Wire string-formats kept as plain `str` rather than special Pydantic types
@@ -158,6 +158,37 @@ def open_enum_unions(spec: dict) -> list[str]:
     return sorted(open_enums)
 
 
+def inline_refs(spec: dict, target: str) -> None:
+    """Replace every `$ref` to ``target`` with a deep copy of its definition,
+    carrying sibling keys (description, …) over the copy's own."""
+    definition = resolve(spec, target)
+
+    def inlined(val) -> dict | None:
+        if isinstance(val, dict) and val.get("$ref") == target:
+            siblings = {k: v for k, v in val.items() if k != "$ref"}
+            return {**copy.deepcopy(definition), **siblings}
+        return None
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            for key, val in list(node.items()):
+                if (rep := inlined(val)) is not None:
+                    node[key] = rep
+                else:
+                    walk(val)
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                if (rep := inlined(item)) is not None:
+                    node[i] = rep
+                else:
+                    walk(item)
+
+    walk(spec["paths"])
+    for name, schema in spec.get("components", {}).get("schemas", {}).items():
+        if f"#/components/schemas/{name}" != target:
+            walk(schema)
+
+
 def _open_union(ref_node: dict) -> dict:
     """`{$ref: Enum, description: …}` -> `{anyOf: [{$ref: Enum}, {type: string}], description: …}`.
 
@@ -200,6 +231,13 @@ def main() -> None:
             spec["components"][section] = kept
         else:
             del spec["components"][section]
+
+    # `--collapse-root-models` rewrites a referenced root-model union into its use
+    # site and drops the named class, so the first `$ref` to WebhookEvent
+    # (WebhookTestResponse.event_payload) deletes the class `unwrap` returns.
+    # Inline that ref instead: the use site gets the same union it would have been
+    # collapsed to, and WebhookEvent stays unreferenced and therefore emitted.
+    inline_refs(spec, "#/components/schemas/WebhookEvent")
 
     open_enums = open_enum_unions(spec)
 

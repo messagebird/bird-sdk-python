@@ -72,6 +72,11 @@ class BirdError(Exception):
     """Base class for every error raised by the SDK."""
 
 
+class MissingAPIKeyError(BirdError):
+    """An API call on a client constructed without an API key (a receiver-only
+    client, which can still ``unwrap`` webhooks). Raised before any request."""
+
+
 class APIError(BirdError):
     """Base for every error that originates from issuing a request.
 

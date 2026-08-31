@@ -13,10 +13,12 @@ from typing import Any, Mapping, cast
 
 import pydantic
 
+from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._event_types import WebhookEventType
 from bird._exceptions import WebhookVerificationError, _header
 from bird._generated import WebhookEvent
 from bird._models import BaseModel
+from bird.resources.webhooks_gen import AsyncWebhooksBase, WebhooksBase
 
 _DEFAULT_TOLERANCE = 300  # seconds
 
@@ -108,8 +110,9 @@ def _verify_and_parse(
     raise WebhookVerificationError("no matching v1 signature")
 
 
-class Webhooks:
-    def __init__(self, secret: str | None) -> None:
+class Webhooks(WebhooksBase):
+    def __init__(self, client: SyncAPIClient, secret: str | None = None) -> None:
+        super().__init__(client)
         self._secret = secret
 
     def unwrap(self, payload: str | bytes, headers: Mapping[str, str], *, secret: str | None = None, tolerance: int = _DEFAULT_TOLERANCE) -> WebhookEvent:
@@ -128,11 +131,12 @@ class Webhooks:
         return _verify_and_parse(payload, headers, secret or self._secret, tolerance)
 
 
-class AsyncWebhooks:
+class AsyncWebhooks(AsyncWebhooksBase):
     """Async mirror of `Webhooks`. ``unwrap`` stays synchronous on both clients —
     it is pure crypto, no I/O."""
 
-    def __init__(self, secret: str | None) -> None:
+    def __init__(self, client: AsyncAPIClient, secret: str | None = None) -> None:
+        super().__init__(client)
         self._secret = secret
 
     def unwrap(self, payload: str | bytes, headers: Mapping[str, str], *, secret: str | None = None, tolerance: int = _DEFAULT_TOLERANCE) -> WebhookEvent:

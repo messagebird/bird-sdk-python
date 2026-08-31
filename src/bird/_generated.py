@@ -9357,6 +9357,11 @@ class EmailMailboxLabelList(BaseModel):
     data: List[EmailMailboxLabel]
 
 
+class WebhookSortField(str, Enum):
+    created_at = "created_at"
+    url = "url"
+
+
 class WebhookEventType(str, Enum):
     domain_failed = "domain.failed"
     domain_verified = "domain.verified"
@@ -9411,6 +9416,183 @@ class WebhookEventType(str, Enum):
     whatsapp_rejected = "whatsapp.rejected"
     whatsapp_sent = "whatsapp.sent"
     whatsapp_suppression_created = "whatsapp_suppression.created"
+
+
+class Status15(str, Enum):
+    active = "active"
+    degraded = "degraded"
+    paused = "paused"
+
+
+class WebhookEndpoint(Timestamps):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Unique identifier for the endpoint (`whk_` prefix). Accepted as `webhook_id` by every `/v1/webhooks/{webhook_id}` operation.\n",
+            examples=["whk_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^whk_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+    url: Annotated[
+        str,
+        Field(
+            description="HTTPS URL where the API delivers events for this endpoint.",
+            examples=["https://example.com/webhook"],
+            min_length=1,
+        ),
+    ]
+    description: Annotated[
+        str | None,
+        Field(
+            description="Human-readable label for the endpoint.",
+            examples=["Production webhook endpoint"],
+            min_length=1,
+        ),
+    ] = None
+    events: Annotated[
+        List[
+            Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]
+        ],
+        Field(
+            description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).\n",
+            examples=[["email.delivered", "email.bounced"]],
+        ),
+    ]
+    status: Annotated[
+        Status15,
+        Field(
+            description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then recover\n  the missed events with\n  [Replay missed events](/docs/api/reference/create-webhook-replay).\n"
+        ),
+    ]
+    created_at: str
+    updated_at: str
+
+
+class WebhookEndpointList(FieldListEnvelopeWithTotal):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: List[WebhookEndpoint]
+
+
+class WebhookEndpointCreate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str,
+        Field(
+            description="HTTPS URL to deliver events to, at most 2048 characters. The host must be publicly reachable: URLs on private, loopback, or link-local addresses are rejected with a `422`.\n",
+            examples=["https://example.com/webhook"],
+            max_length=2048,
+            min_length=1,
+        ),
+    ]
+    events: Annotated[
+        List[
+            Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]
+        ],
+        Field(
+            description="Event types to subscribe to; the endpoint receives only matching events. Types outside the event catalog return a `422`, and an endpoint holds at most 100 entries.",
+            examples=[["email.delivered", "email.bounced"]],
+            min_length=1,
+        ),
+    ]
+    description: Annotated[
+        str | None,
+        Field(
+            description="Human-readable label for this endpoint, up to 256 characters.",
+            examples=["Production webhook endpoint"],
+            max_length=256,
+        ),
+    ] = None
+
+
+class WebhookEndpointCreated(WebhookEndpoint):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    secret: Annotated[
+        str,
+        Field(
+            description="Signing secret for this endpoint (`whsec_` prefix), used to verify every delivery signature. Present in this response only: store it immediately, it cannot be retrieved again. If you lose it, mint a new one with [Rotate webhook signing secret](/docs/api/reference/rotate-webhook-secret).\n",
+            examples=["whsec_base64encodedvalue"],
+            min_length=1,
+        ),
+    ]
+
+
+class Status16(str, Enum):
+    active = "active"
+    paused = "paused"
+
+
+class WebhookEndpointUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    url: Annotated[
+        str | None,
+        Field(
+            description="Replacement delivery URL. Same rules as at creation: HTTPS, at most 2048 characters, and the host must be publicly reachable (private, loopback, and link-local addresses return a `422`). Omit to keep the current URL.\n",
+            examples=["https://example.com/webhook"],
+            max_length=2048,
+        ),
+    ] = None
+    description: Annotated[
+        str | None,
+        Field(
+            description="Human-readable label for this endpoint, up to 256 characters.",
+            examples=["Updated webhook endpoint"],
+            max_length=256,
+        ),
+    ] = None
+    events: Annotated[
+        List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]]
+        | None,
+        Field(
+            description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`.\n",
+            examples=[["email.delivered", "email.bounced", "email.complained"]],
+            min_length=1,
+        ),
+    ] = None
+    status: Annotated[
+        Status16 | None,
+        Field(
+            description="`paused` stops all deliveries; `active` re-enables a paused endpoint. Omit to leave the status unchanged. Events that fire while paused are not delivered; after re-enabling, recover them with [Replay missed events](/docs/api/reference/create-webhook-replay). A `degraded` endpoint cannot be reset through this field: it returns to `active` automatically once deliveries succeed again.\n"
+        ),
+    ] = None
+
+
+class WebhookRotateSecretResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    secret: Annotated[
+        str,
+        Field(
+            description="The new signing secret (`whsec_` prefix). Shown only in this response: store it immediately, it cannot be retrieved again. Deliveries are signed with both this and the previous secret for 24 hours after rotation, then the previous secret stops signing.\n",
+            examples=["whsec_newbase64encodedvalue"],
+            min_length=1,
+        ),
+    ]
+
+
+class WebhookTestRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    event_type: Annotated[
+        str | None,
+        Field(
+            description="Event type to simulate. Any type from the event catalog is accepted, whether or not the endpoint subscribes to it; an unknown type returns a `422`. When omitted, the endpoint's first subscribed event type is used.\n",
+            examples=["email.delivered"],
+        ),
+    ] = None
 
 
 class EventDomainFailedData(BaseModel):
@@ -12378,6 +12560,202 @@ class EventWhatsAppSuppressionCreated(BaseModel):
     data: EventWhatsAppSuppressionCreatedData
 
 
+class Status17(str, Enum):
+    delivered = "delivered"
+    failed = "failed"
+
+
+class WebhookTestResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    status: Annotated[
+        Status17,
+        Field(
+            description="Whether your endpoint accepted the test event. `delivered` means it returned a `2xx` status; `failed` means it returned a non-`2xx` status or could not be reached (see `error` for the latter).\n"
+        ),
+    ]
+    response_status_code: Annotated[
+        int | None,
+        Field(
+            description="HTTP status returned by your endpoint. Null when no response was received (timeout, connection error, DNS failure).",
+            examples=[200],
+        ),
+    ]
+    response_body: Annotated[
+        str | None,
+        Field(
+            description="Response body returned by your endpoint, truncated to the first 1024 bytes. Omitted when your endpoint returned no body or could not be reached.\n",
+            examples=["OK"],
+        ),
+    ] = None
+    response_duration_ms: Annotated[
+        int,
+        Field(
+            description="Round-trip delivery latency in milliseconds.",
+            examples=[142],
+            ge=0,
+        ),
+    ]
+    event_payload: Annotated[
+        EventDomainFailed
+        | EventDomainVerified
+        | EventEmailAccepted
+        | EventEmailBounced
+        | EventEmailCanceled
+        | EventEmailClicked
+        | EventEmailComplained
+        | EventEmailDeferred
+        | EventEmailDelivered
+        | EventEmailListUnsubscribed
+        | EventEmailOpened
+        | EventEmailOutOfBandBounce
+        | EventEmailProcessed
+        | EventEmailReceived
+        | EventEmailRejected
+        | EventEmailScheduled
+        | EventEmailUnsubscribed
+        | EventEmailMailboxMessageDelivered
+        | EventEmailMailboxMessageFailed
+        | EventEmailMailboxMessageReceived
+        | EventEmailMailboxMessageSent
+        | EventEmailMailboxSuspended
+        | EventEmailMailboxThreadCreated
+        | EventEmailSuppressionCreated
+        | EventPreferenceDeleted
+        | EventPreferenceGranted
+        | EventPreferenceRevoked
+        | EventSMSAccepted
+        | EventSMSDelivered
+        | EventSMSExpired
+        | EventSMSFailed
+        | EventSMSReceived
+        | EventSMSRejected
+        | EventSMSSent
+        | EventSMSUndelivered
+        | EventSMSSuppressionCreated
+        | EventVerifyAttemptDelivered
+        | EventVerifyAttemptSent
+        | EventVerifyAttemptUndelivered
+        | EventVerifyVerificationCreated
+        | EventVerifyVerificationFailed
+        | EventVerifyVerificationVerified
+        | EventVoiceCallAnswered
+        | EventVoiceCallEnded
+        | EventVoiceCallInitiated
+        | EventWhatsAppAccepted
+        | EventWhatsAppDelivered
+        | EventWhatsAppFailed
+        | EventWhatsAppRead
+        | EventWhatsAppReceived
+        | EventWhatsAppRejected
+        | EventWhatsAppSent
+        | EventWhatsAppSuppressionCreated
+        | None,
+        Field(
+            description="The full event body delivered to your endpoint. Test sends use a minimal synthetic body rather than a full event payload, so this field is omitted.\n",
+            discriminator="type",
+        ),
+    ] = None
+    error: Annotated[
+        str | None,
+        Field(
+            description="A short explanation of why the event could not be delivered. Present only when your endpoint could not be reached.",
+            examples=["connection refused"],
+            min_length=1,
+        ),
+    ] = None
+
+
+class WebhookEventID(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            examples=["whe_01krdgeqcxet5s7t44vh8rt9mg"],
+            min_length=1,
+            pattern="^whe_[0-9a-hjkmnp-tv-z]{26}$",
+        ),
+    ]
+
+
+class Status18(str, Enum):
+    delivered = "delivered"
+    pending = "pending"
+    failed = "failed"
+
+
+class WebhookAttempt(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Identifier of this individual delivery attempt. Each retry is a separate attempt with its own id; use `event_id` to group the attempts for one event.\n",
+            examples=["msgatt_3FdaB1NkOmM6m8AxhgEYTJgqHU3"],
+            min_length=1,
+        ),
+    ]
+    event_id: Annotated[
+        WebhookEventID | None,
+        Field(
+            description="Bird's source event ID, stable across retries of the same event. Null only for older attempts recorded before event IDs were available."
+        ),
+    ] = None
+    event_type: Annotated[
+        Union[WebhookEventType, str], Field(union_mode="left_to_right")
+    ]
+    status: Annotated[
+        Status18,
+        Field(
+            description="Outcome of this attempt.\n\n- `delivered`: your endpoint accepted it with a `2xx` response.\n- `pending`: the attempt is still in flight.\n- `failed`: it returned a non-`2xx` response or no response at all. A `failed`\n  attempt is not final for the event: automatic retries appear as further\n  attempts with the same `event_id`.\n"
+        ),
+    ]
+    url: Annotated[
+        str,
+        Field(
+            description="URL the request was sent to: the endpoint's `url` at the time of the attempt, which can differ from the current configuration after an update.\n",
+            examples=["https://example.com/webhooks"],
+            min_length=1,
+        ),
+    ]
+    response_status_code: Annotated[
+        int | None,
+        Field(
+            description="HTTP status returned by the receiver. Null when no response was received (timeout, connection error, DNS failure).",
+            examples=[200],
+        ),
+    ]
+    response_body: Annotated[
+        str | None,
+        Field(
+            description="Response body your endpoint returned, which may be truncated. Omitted when no body was returned.\n",
+            examples=['{"ok":true}'],
+        ),
+    ] = None
+    response_duration_ms: Annotated[
+        int,
+        Field(description="Round-trip duration in milliseconds.", examples=[87], ge=0),
+    ]
+    attempted_at: Annotated[
+        str,
+        Field(
+            description="When this attempt was made. Attempts are listed newest first by this timestamp, and the list's `before`/`after` parameters bound it.\n",
+            examples=["2026-05-22T11:50:38.080Z"],
+            min_length=1,
+        ),
+    ]
+
+
+class WebhookAttemptList(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    data: Annotated[
+        List[WebhookAttempt], Field(description="Delivery attempts, newest first.")
+    ]
+
+
 class NumberType(str, Enum):
     mobile = "mobile"
     local = "local"
@@ -12422,7 +12800,7 @@ class Kind(str, Enum):
     shared = "shared"
 
 
-class Status15(str, Enum):
+class Status19(str, Enum):
     active = "active"
     pending_compliance = "pending_compliance"
     released = "released"
@@ -12471,7 +12849,7 @@ class Number(BaseModel):
         Field(description="Capabilities supported by this number."),
     ]
     status: Annotated[
-        Status15,
+        Status19,
         Field(
             description="Whether this number can carry traffic.\n\n- `active` means this number is allocated to your workspace and usable.\n- `pending_compliance` means this number is allocated to your workspace and billed,\n  but it cannot carry traffic until the ownership paperwork its country requires is\n  accepted. Read `ownership.next` for what advances it, and re-read later if\n  `ownership` is momentarily `null`.\n- `released` means this number is no longer allocated to your workspace.\n\nAn allocated number is not always enough to send from it: some destination\ncountries also require an approved registration for the sender.\n"
         ),

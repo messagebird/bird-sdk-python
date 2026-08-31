@@ -22,7 +22,7 @@ import httpx
 
 from bird._caller import detect_caller
 from bird._constants import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, INITIAL_RETRY_DELAY, MAX_RETRY_DELAY
-from bird._exceptions import BirdError, APIConnectionError, APITimeoutError, from_response, parse_retry_after
+from bird._exceptions import BirdError, APIConnectionError, APITimeoutError, MissingAPIKeyError, from_response, parse_retry_after
 from bird._types import omit, Omit
 from bird._version import __version__
 
@@ -78,8 +78,8 @@ class BaseClient:
     def __init__(
         self,
         *,
-        base_url: str,
-        api_key: str,
+        base_url: str | None,
+        api_key: str | None,
         api_version: str | None = None,
         timeout: httpx.Timeout | float | None | Omit = omit,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -90,7 +90,7 @@ class BaseClient:
         # Extra credentials some operations require on top of the API key, keyed by
         # the security scheme that names them: {scheme: (header, value, how)}.
         self._credentials = dict(credentials or {})
-        self.base_url = base_url.rstrip("/")
+        self.base_url = base_url.rstrip("/") if base_url else None
         self.api_key = api_key
         self.api_version = api_version
         self.max_retries = max_retries
@@ -126,6 +126,13 @@ class BaseClient:
         timeout: httpx.Timeout | float | None | Omit,
         idempotency_key: str | None,
     ) -> httpx.Request:
+        # A keyless (receiver-only) client also carries no base URL; the missing
+        # API key is the caller's actionable error, so it is raised first.
+        if not self.api_key or self.base_url is None:
+            raise MissingAPIKeyError(
+                "this client has no API key (webhook verification only); "
+                "pass api_key= or set BIRD_API_KEY to call the API"
+            )
         _validate_request_path(self.base_url, path)
         if extra_body:
             body = {**(body or {}), **extra_body}
