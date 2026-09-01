@@ -9754,6 +9754,15 @@ class EventWhatsAppReceivedData(BaseModel):
     contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
         description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
     )] = None
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers, when WhatsApp reports it as a reply. Absent when it answers nothing, or when the message it names is not one we hold.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
+        description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
+    )] = None
     unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
         description="Set when the contact sent content the API does not model, naming the WhatsApp content type.",
     )] = None
@@ -10258,6 +10267,7 @@ class VoiceCallRejectionReason(str, Enum):
     concurrent_calls_exceeded = "concurrent_calls_exceeded"
     calls_per_second_exceeded = "calls_per_second_exceeded"
     call_not_permitted = "call_not_permitted"
+    number_ownership_not_verified = "number_ownership_not_verified"
 
 
 class VoiceCallInboundRouteReject(BaseModel):
