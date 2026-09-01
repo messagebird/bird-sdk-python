@@ -30,6 +30,7 @@ from bird._types import (
     SmsSendParams,
     WhatsappSendParams,
 )
+from bird.resources.whatsapp_messages import WhatsappMedia
 from bird._generated import (
     Audience,
     AudienceList,
@@ -289,6 +290,7 @@ __all__ = [
     "SMSTemplate",
     "SMSTemplateList",
     "SmsTemplateListParams",
+    "WhatsappMedia",
     "WhatsappSendParams",
     "WhatsAppMessage",
     "WhatsAppEvent",

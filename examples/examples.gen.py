@@ -989,6 +989,13 @@ async def _ex_148() -> None:
 
 
 async def _ex_149() -> None:
+    media = client.whatsapp.messages.media(
+        "wam_01kya19eknftrs2s6p82asmvnh", "waf_01kyb2m4xq7whs0d8n3prv6tez"
+    )
+    print(media.content_type, media.content_length)
+
+
+async def _ex_150() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -998,6 +1005,6 @@ async def _ex_149() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_150() -> None:
+async def _ex_151() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)

@@ -63,6 +63,7 @@ def test_surface_conformance() -> None:
     assert callable(client.whatsapp.get)
     assert callable(client.whatsapp.list)
     assert callable(client.whatsapp.list_events)
+    assert callable(client.whatsapp.messages.media)
     assert callable(client.voice.list)
     assert callable(client.voice.get)
     assert callable(client.verify.verifications.create)

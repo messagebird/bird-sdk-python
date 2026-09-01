@@ -216,7 +216,11 @@ class SyncAPIClient(BaseClient):
         timeout: httpx.Timeout | float | None | Omit = omit,
         idempotency_key: str | None = None,
         max_retries: int | None = None,
+        success_status: int | None = None,
     ) -> httpx.Response:
+        """``success_status`` is a 3xx an operation answers on success. Set only
+        where the contract is a redirect the caller must take itself, because the
+        target is pre-authorized and must not receive this client's credentials."""
         request = self._build_request(
             self._client, method, path,
             body=body, extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body,
@@ -235,7 +239,7 @@ class SyncAPIClient(BaseClient):
                 if retries_left <= 0:
                     raise APIConnectionError() from exc
             else:
-                if response.is_success:
+                if response.is_success or response.status_code == success_status:
                     return response
                 if retries_left <= 0 or not self._should_retry(response):
                     raise from_response(response.status_code, response.content, response.headers)
@@ -276,7 +280,11 @@ class AsyncAPIClient(BaseClient):
         timeout: httpx.Timeout | float | None | Omit = omit,
         idempotency_key: str | None = None,
         max_retries: int | None = None,
+        success_status: int | None = None,
     ) -> httpx.Response:
+        """``success_status`` is a 3xx an operation answers on success. Set only
+        where the contract is a redirect the caller must take itself, because the
+        target is pre-authorized and must not receive this client's credentials."""
         request = self._build_request(
             self._client, method, path,
             body=body, extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body,
@@ -295,7 +303,7 @@ class AsyncAPIClient(BaseClient):
                 if retries_left <= 0:
                     raise APIConnectionError() from exc
             else:
-                if response.is_success:
+                if response.is_success or response.status_code == success_status:
                     return response
                 if retries_left <= 0 or not self._should_retry(response):
                     raise from_response(response.status_code, response.content, response.headers)

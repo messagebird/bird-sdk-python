@@ -1,10 +1,11 @@
 """The WhatsApp channel: ``client.whatsapp`` — send a message, read one back,
-list the message log, and list a single message's event timeline.
+list the message log, list a single message's event timeline, and reach one
+message's subresources through ``client.whatsapp.messages``.
 
 A send carries exactly one kind of content: a template, or free-form ``text``,
-``image``, ``video``, ``audio``, ``sticker``, ``document``, ``location`` or
-``interactive``. Free-form content is deliverable only inside an open 24-hour
-customer service window.
+``image``, ``video``, ``audio``, ``sticker``, ``document``, ``location``,
+``contact_cards`` or ``interactive``. Free-form content is deliverable only
+inside an open 24-hour customer service window.
 """
 
 from __future__ import annotations
@@ -12,9 +13,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._generated import WhatsAppMessage
 from bird._types import RequestOptions
 from bird.resources.whatsapp_gen import AsyncWhatsappBase, WhatsappBase
+from bird.resources.whatsapp_messages import AsyncWhatsappMessages, WhatsappMessages
 
 _PATH = "/v1/whatsapp/messages"
 
@@ -34,6 +37,7 @@ def _send_body(
     document: Mapping[str, Any] | None = None,
     location: Mapping[str, Any] | None = None,
     interactive: Mapping[str, Any] | None = None,
+    contact_cards: Sequence[Mapping[str, Any]] | None = None,
     in_reply_to_message_id: str | None = None,
     tags: Sequence[Mapping[str, str]] | None = None,
     metadata: Mapping[str, Any] | None = None,
@@ -62,6 +66,8 @@ def _send_body(
     for name, value in content.items():
         if value is not None:
             body[name] = value
+    if contact_cards is not None:
+        body["contact_cards"] = contact_cards
     if in_reply_to_message_id is not None:
         body["in_reply_to_message_id"] = in_reply_to_message_id
     if tags is not None:
@@ -73,6 +79,10 @@ def _send_body(
 
 class Whatsapp(WhatsappBase):
     """Send and read WhatsApp messages. Reach it via ``client.whatsapp``."""
+
+    def __init__(self, client: SyncAPIClient) -> None:
+        super().__init__(client)
+        self.messages = WhatsappMessages(client)
 
     def send(
         self,
@@ -90,6 +100,7 @@ class Whatsapp(WhatsappBase):
         document: Mapping[str, Any] | None = None,
         location: Mapping[str, Any] | None = None,
         interactive: Mapping[str, Any] | None = None,
+        contact_cards: Sequence[Mapping[str, Any]] | None = None,
         in_reply_to_message_id: str | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -100,8 +111,11 @@ class Whatsapp(WhatsappBase):
         arm shaped like its wire object (``text={"body": …}``). ``interactive``
         is the arm that gives the recipient something to tap — reply buttons, a
         list menu, a link button, media cards, or a request for their location
-        or contact details. Pass ``in_reply_to_message_id`` to quote an earlier
-        message from the same conversation. Every send but a Bird-managed
+        or contact details. ``contact_cards`` sends up to five contact cards: a
+        card's ``name`` needs ``formatted_name`` plus at least one other part, and
+        a ``phone_number`` in E.164 earns the card a button that opens a chat.
+        Pass ``in_reply_to_message_id`` to quote an earlier message from the same
+        conversation. Every send but a Bird-managed
         template needs ``from_``. The result is ``accepted``, not yet delivered
         — read it back with ``get`` or follow its timeline with ``list_events``.
 
@@ -129,6 +143,7 @@ class Whatsapp(WhatsappBase):
             document=document,
             location=location,
             interactive=interactive,
+            contact_cards=contact_cards,
             in_reply_to_message_id=in_reply_to_message_id,
             tags=tags,
             metadata=metadata,
@@ -138,6 +153,10 @@ class Whatsapp(WhatsappBase):
 
 class AsyncWhatsapp(AsyncWhatsappBase):
     """Async mirror of `Whatsapp`: ``await`` each call, ``async for`` over a list."""
+
+    def __init__(self, client: AsyncAPIClient) -> None:
+        super().__init__(client)
+        self.messages = AsyncWhatsappMessages(client)
 
     async def send(
         self,
@@ -155,6 +174,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
         document: Mapping[str, Any] | None = None,
         location: Mapping[str, Any] | None = None,
         interactive: Mapping[str, Any] | None = None,
+        contact_cards: Sequence[Mapping[str, Any]] | None = None,
         in_reply_to_message_id: str | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -175,6 +195,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
             document=document,
             location=location,
             interactive=interactive,
+            contact_cards=contact_cards,
             in_reply_to_message_id=in_reply_to_message_id,
             tags=tags,
             metadata=metadata,

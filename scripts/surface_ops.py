@@ -51,6 +51,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/whatsapp/messages": {"get", "post"},
     "/v1/whatsapp/messages/{message_id}": {"get"},
     "/v1/whatsapp/messages/{message_id}/events": {"get"},
+    "/v1/whatsapp/messages/{message_id}/media/{media_id}": {"get"},
     "/v1/voice/calls": {"get"},
     "/v1/voice/calls/{call_id}": {"get"},
     "/v1/verify/verifications": {"post"},

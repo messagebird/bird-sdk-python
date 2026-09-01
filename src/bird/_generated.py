@@ -3195,6 +3195,7 @@ class VerificationAttemptFailureReason(str, Enum):
     undelivered = "undelivered"
     channel_unavailable = "channel_unavailable"
     channel_disabled = "channel_disabled"
+    channel_restricted = "channel_restricted"
     delivery_timeout = "delivery_timeout"
     not_billable = "not_billable"
 
@@ -3671,7 +3672,7 @@ class WhatsAppContactPhone(BaseModel):
         examples=[+16505551234],
     )] = None
     type: Annotated[Optional[str], Field(
-        description="The label the contact's device attached, for example `CELL`, `Home` or `iPhone`. Free text passed through verbatim: WhatsApp declares no vocabulary here and does not normalize the casing, so neither do we.",
+        description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["CELL"],
     )] = None
 
@@ -3680,7 +3681,7 @@ class WhatsAppContactEmail(BaseModel):
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(examples=["barbara@example.com"])] = None
     type: Annotated[Optional[str], Field(
-        description="The label the contact's device attached, for example `Personal` or `Work`. Free text passed through verbatim.",
+        description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["Personal"],
     )] = None
 
@@ -3692,7 +3693,7 @@ class WhatsAppContactUrl(BaseModel):
         examples=["luckyshrub.example.com"],
     )] = None
     type: Annotated[Optional[str], Field(
-        description="The label the contact's device attached, for example `Company`. Free text passed through verbatim.",
+        description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["Company"],
     )] = None
 
@@ -3709,7 +3710,7 @@ class WhatsAppContactAddress(BaseModel):
         examples=["US"],
     )] = None
     type: Annotated[Optional[str], Field(
-        description="The label the contact's device attached, for example `Home`. Free text passed through verbatim.",
+        description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["Home"],
     )] = None
 
@@ -3722,11 +3723,11 @@ class WhatsAppContactCardOrigin(str, Enum):
 class WhatsAppContactCard(BaseModel):
     model_config = ConfigDict(extra="allow")
     origin: Annotated[Optional[Union[WhatsAppContactCardOrigin, str]], Field(
-        description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since.",
+        description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since. Set on a card the contact shared; absent on one this workspace sent.",
         union_mode="left_to_right",
     )] = None
     vcard: Annotated[Optional[str], Field(
-        description="The contact's card in vCard format. WhatsApp sends it on a card shared in the chat and omits it on a button tap, which carries the number alone.",
+        description="The contact's card in vCard format. WhatsApp sends it on a card shared in the chat and omits it on a button tap, which carries the number alone. Set on a card the contact shared; absent on one this workspace sent.",
         examples=["BEGIN:VCARD\nVERSION:3.0\nN:Johnson;Barbara;;;\nTEL;type=CELL:+16505551234\nEND:VCARD\n"],
     )] = None
     name: Annotated[Optional[WhatsAppContactName], Field(
@@ -4030,7 +4031,7 @@ class WhatsAppMessage(BaseModel):
         description="Location the message carried.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
-        description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book. Inbound only: sending a contact card is not supported.",
+        description="Contact cards on this message: cards the contact shared, either by tapping a button that asked for their number or by sending one from their address book, or the cards this workspace sent.",
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractive], Field(
         description="Interactive content the message carried. Outbound only: a contact cannot send one. A tap on a reply button or a list row reads back as `interactive_reply` on the contact's inbound message; a `cta_url` link sends nothing back, and the two request kinds are answered by an inbound `location` or `contact_cards` message.",
@@ -4531,6 +4532,116 @@ class WhatsAppInteractiveSend(RootModel[WhatsAppInteractiveSend1 | WhatsAppInter
     root: WhatsAppInteractiveSend1 | WhatsAppInteractiveSend2 | WhatsAppInteractiveSend3 | WhatsAppInteractiveSend4 | WhatsAppInteractiveSend5 | WhatsAppInteractiveSend6
 
 
+class WhatsAppContactNameSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    formatted_name: Annotated[str, Field(
+        description="The whole name, as the card should render it.",
+        examples=["Barbara J. Johnson"],
+        max_length=256,
+        min_length=1,
+    )]
+    first_name: Annotated[Optional[str], Field(examples=["Barbara"], max_length=256)] = None
+    middle_name: Annotated[Optional[str], Field(examples=["Joana"], max_length=256)] = None
+    last_name: Annotated[Optional[str], Field(examples=["Johnson"], max_length=256)] = None
+    prefix: Annotated[Optional[str], Field(examples=["Dr."], max_length=64)] = None
+    suffix: Annotated[Optional[str], Field(examples=["Esq."], max_length=64)] = None
+
+
+class WhatsAppContactOrgSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    company: Annotated[Optional[str], Field(examples=["Lucky Shrub"], max_length=128)] = None
+    department: Annotated[Optional[str], Field(examples=["Legal"], max_length=128)] = None
+    title: Annotated[Optional[str], Field(examples=["Lead Counsel"], max_length=128)] = None
+
+
+class WhatsAppContactPhoneSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    phone_number: Annotated[str, Field(
+        description="The number to show. Send it in E.164 to get a card the recipient can message from; any other form still renders, with an invite button.",
+        examples=[+16505551234],
+        max_length=32,
+        min_length=1,
+    )]
+    type: Annotated[Optional[str], Field(
+        description="A label for the number, shown beside it. Free text: WhatsApp defines no vocabulary, and the label is sent exactly as written.",
+        examples=["Mobile"],
+        max_length=64,
+    )] = None
+
+
+class WhatsAppContactEmailSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    email: Annotated[str, Field(
+        examples=["barbara@example.com"],
+        max_length=254,
+        min_length=1,
+    )]
+    type: Annotated[Optional[str], Field(
+        description="A label for the address, shown beside it. Free text, sent exactly as written.",
+        examples=["Work"],
+        max_length=64,
+    )] = None
+
+
+class WhatsAppContactUrlSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    url: Annotated[str, Field(
+        description="The address to show. Not validated as a URL, because a card commonly carries a bare domain.",
+        examples=["https://luckyshrub.example.com"],
+        max_length=2048,
+        min_length=1,
+    )]
+    type: Annotated[Optional[str], Field(
+        description="A label for the website, shown beside it. Free text, sent exactly as written.",
+        examples=["Company"],
+        max_length=64,
+    )] = None
+
+
+class WhatsAppContactAddressSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    street: Annotated[Optional[str], Field(
+        examples=["1 Lucky Shrub Way"],
+        max_length=128,
+    )] = None
+    city: Annotated[Optional[str], Field(examples=["Menlo Park"], max_length=128)] = None
+    state: Annotated[Optional[str], Field(examples=["CA"], max_length=128)] = None
+    zip: Annotated[Optional[str], Field(examples=[94025], max_length=128)] = None
+    country: Annotated[Optional[str], Field(examples=["United States"], max_length=128)] = None
+    country_code: Annotated[Optional[str], Field(
+        description="The country as it should appear on the address, commonly the ISO two-letter code.",
+        examples=["US"],
+        max_length=128,
+    )] = None
+    type: Annotated[Optional[str], Field(
+        description="A label for the address, shown beside it. Free text, sent exactly as written.",
+        examples=["Office"],
+        max_length=64,
+    )] = None
+
+
+class WhatsAppContactCardSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: WhatsAppContactNameSend
+    org: Annotated[Optional[WhatsAppContactOrgSend], Field(
+        description="Where the contact works.",
+    )] = None
+    birthday: Annotated[Optional[str], Field(
+        description="The contact's birthday, as `YYYY-MM-DD`. WhatsApp rejects any other shape, and a date no calendar holds is rejected too.",
+        examples=["1999-01-23"],
+        pattern="^\\d{4}-\\d{2}-\\d{2}$",
+    )] = None
+    phone_numbers: Annotated[Optional[List[WhatsAppContactPhoneSend]], Field(
+        description="The numbers on the card. A number in E.164 renders a button that opens a WhatsApp chat with it; one that is not renders an invite instead.",
+        max_length=10,
+    )] = None
+    emails: Annotated[Optional[List[WhatsAppContactEmailSend]], Field(max_length=10)] = None
+    urls: Annotated[Optional[List[WhatsAppContactUrlSend]], Field(max_length=10)] = None
+    addresses: Annotated[Optional[List[WhatsAppContactAddressSend]], Field(
+        max_length=10,
+    )] = None
+
+
 class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
@@ -4570,6 +4681,11 @@ class WhatsAppMessageSendRequest(BaseModel):
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractiveSend], Field(
         description="Free-form interactive content to send instead of a template: body text plus reply buttons, a menu, a link button, media cards, or a single button asking the recipient to share their location or their phone number. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+    )] = None
+    contact_cards: Annotated[Optional[List[WhatsAppContactCardSend]], Field(
+        description="Contact cards to send instead of a template. Up to five: WhatsApp accepts far more, and a message that opens as one name plus a count of the rest is not a card the recipient will read.",
+        max_length=5,
+        min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
         description="Quote a message the contact will see above this one, the way replying in the WhatsApp client does. Name a message from the same conversation: one this workspace sent to this recipient, or received from them. Any content quotes, template or free-form. A message this workspace does not hold, or one older than the 15-day window we keep provider ids for, returns a `422` `WhatsAppInReplyToNotFound`. A message that never reached WhatsApp, or one from a different conversation than this send's `to` and `from`, returns a `422` `WhatsAppInReplyToNotQuotable`.",
@@ -9117,7 +9233,7 @@ class EventVerifyAttemptUndeliveredData(BaseModel):
         min_length=1,
     )]
     reason: Annotated[Union[VerificationAttemptFailureReason, str], Field(
-        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
+        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: The channel does not carry passcodes to this\n  destination country. The verification moves to the next channel enabled\n  there, or fails when the country has no other.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
         union_mode="left_to_right",
     )]
     error: Annotated[Optional[str], Field(
@@ -9231,7 +9347,7 @@ class EventVerifyVerificationFailedData(BaseModel):
         union_mode="left_to_right",
     )]
     last_attempt_reason: Annotated[Union[VerificationAttemptFailureReason, str], Field(
-        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
+        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: The channel does not carry passcodes to this\n  destination country. The verification moves to the next channel enabled\n  there, or fails when the country has no other.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
         union_mode="left_to_right",
     )]
     failed_at: Annotated[str, Field(
@@ -9537,6 +9653,12 @@ class EventWhatsAppAcceptedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventWhatsAppAccepted(BaseModel):
@@ -9585,6 +9707,12 @@ class EventWhatsAppDeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventWhatsAppDelivered(BaseModel):
@@ -9633,6 +9761,12 @@ class EventWhatsAppFailedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
@@ -9684,6 +9818,12 @@ class EventWhatsAppReadData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventWhatsAppRead(BaseModel):
@@ -9732,6 +9872,12 @@ class EventWhatsAppReceivedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
     image: Annotated[Optional[WhatsAppImage], Field(
         description="Image the contact sent.",
@@ -9753,12 +9899,6 @@ class EventWhatsAppReceivedData(BaseModel):
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
         description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
-    )] = None
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers, when WhatsApp reports it as a reply. Absent when it answers nothing, or when the message it names is not one we hold.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
         description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
@@ -9810,6 +9950,12 @@ class EventWhatsAppRejectedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
@@ -9861,6 +10007,12 @@ class EventWhatsAppSentData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
     )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventWhatsAppSent(BaseModel):
