@@ -6282,7 +6282,7 @@ class Mailbox(BaseModel):
         min_length=1,
     )]
     state: Annotated[MailboxState, Field(
-        description="Lifecycle state. Suspended mailboxes stop emitting events. Inbound mail is retained as blocked.",
+        description="Lifecycle state. `active` means the mailbox can send, receive, and expose conversations. `suspended` pauses sending, conversation reads, and events; inbound mail is retained with the `blocked` label until you resume it.",
         min_length=1,
     )]
     channel: Annotated[Literal["email"], Field(
@@ -6305,7 +6305,7 @@ class Mailbox(BaseModel):
     )]
     thread_count: Annotated[int, Field(description="Number of retained threads.")]
     size_bytes: Annotated[int, Field(
-        description="Stored bytes across the mailbox's retained messages: the metadata and extracted text kept for the retention tier plus attachment bytes. Message bodies and raw MIME expire after 30 days and do not count. Maintained with each message written or deleted, so the value is current; messages stored before the counter existed are not counted.",
+        description="Stored bytes across the mailbox's retained messages: subject, preview, extracted text, and attachment bytes. Message bodies and raw MIME expire after 30 days and do not count. Maintained with each message written or deleted, so the value is current; messages stored before the counter existed are not counted.",
     )]
     unread_thread_count: Annotated[Optional[int], Field(
         description="Number of threads with unread messages in this mailbox, excluding trash. `null` on create/update responses.",
@@ -6313,9 +6313,9 @@ class Mailbox(BaseModel):
     metadata: Annotated[Dict[str, Any], Field(
         description="Your own key/value data attached to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved.",
     )]
-    local_part_generated: Annotated[Optional[bool], Field(
+    local_part_generated: Annotated[bool, Field(
         description="Whether we generated the local part of the address. `false` means a custom handle was chosen at creation. On the shared `inbox.ai` domain a custom handle counts against your plan's custom-handle allowance.",
-    )] = None
+    )]
     created_at: Annotated[str, Field(
         description="When the mailbox was created.",
         min_length=1,
@@ -6325,7 +6325,7 @@ class Mailbox(BaseModel):
         min_length=1,
     )]
     deleted_at: Annotated[Optional[str], Field(
-        description="When the mailbox was deleted, or `null` if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and its remembered messages are permanently removed.",
+        description="When the mailbox was deleted, or `null` if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and any remaining remembered messages are permanently removed.",
     )] = None
 
 
@@ -6421,7 +6421,7 @@ class MailboxUpdate(BaseModel):
         description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.",
     )] = None
     retention_tier: Annotated[Optional[MailboxUpdateRetentionTier], Field(
-        description="How long the mailbox remembers message metadata, extracted text, and attachments. Message bodies and raw MIME stay available for 30 days regardless of tier. Tiers longer than 30 days require a plan that includes them. Lowering the tier deletes remembered messages older than the new horizon, and requires `confirm=true` when that would happen.",
+        description="How long the mailbox remembers message metadata, extracted text, and attachments. Message bodies and raw MIME stay available for 30 days regardless of tier. Tiers longer than 30 days require a plan that includes them. Lowering the tier immediately hides remembered messages older than the new horizon. Deletion waits at least ten minutes and until the background retention update has processed every stored message. The update starts every ten minutes and can take hours for large mailboxes; the next hourly purge deletes eligible messages. A lowering that would affect messages requires `confirm=true`.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Replaces the mailbox's key/value data. Up to 2 KB. Keys starting with `__bird` are reserved.",
@@ -6902,7 +6902,7 @@ class EmailThreadMessageReplyRequest(BaseModel):
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachment]], Field(
-        description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for 30 days.",
+        description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for the mailbox's retention tier.",
         max_length=20,
     )] = None
 
@@ -6941,7 +6941,7 @@ class EmailMailboxComposeRequest(BaseModel):
         min_length=1,
     )] = None
     attachments: Annotated[Optional[List[EmailAttachment]], Field(
-        description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for 30 days.",
+        description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for the mailbox's retention tier.",
         max_length=20,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
@@ -8253,7 +8253,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
         description="True when `extracted_text` was truncated to the 64 KB cap. Fetch the full text through the thread-member endpoint.",
     )] = None
     attachment_count: Annotated[int, Field(
-        description="Number of attachments on the message. Attachment content remains available during the 30-day original-source retention window.",
+        description="Number of attachments on the message. Attachment content remains available for the mailbox's retention tier.",
         examples=[1],
         ge=0,
     )]

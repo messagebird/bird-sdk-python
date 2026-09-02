@@ -167,7 +167,7 @@ class EmailMailboxesBase(Resource):
         confirm: bool | None = None,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Update a mailbox's display name, reply-to, receive policy, retention tier, IP pool, or metadata. Lowering the retention tier requires `confirm=true` when it would delete remembered messages older than the new cutoff.
+        """Update a mailbox's display name, reply-to, receive policy, retention tier, IP pool, or metadata. Lowering the retention tier requires `confirm=true` when it would make remembered messages older than the new cutoff eligible for deletion. Retention tier changes apply in the background, and lowering the tier again before the first change finishes is refused.
 
         ```python
         mailbox = client.email.mailboxes.update(
@@ -205,7 +205,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a mailbox. The address stops receiving immediately and is quarantined. The mailbox and its remembered messages stay restorable for 30 days through the restore endpoint, then are permanently deleted.
+        """Delete a mailbox. The address stops receiving immediately and is quarantined. The mailbox can be restored for 30 days, while normal message-retention expiry continues. After 30 days, the mailbox and its remaining messages are permanently deleted.
 
         ```python
         client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -219,7 +219,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns `404`. A mailbox that is not deleted returns `409`.
+        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and its remaining remembered messages are available. Normal message-retention expiry continues while a mailbox is deleted. Past the restore window the mailbox is permanently deleted and returns `404`. A mailbox that is not deleted returns `409`.
 
         ```python
         mailbox = client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -408,7 +408,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         confirm: bool | None = None,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Update a mailbox's display name, reply-to, receive policy, retention tier, IP pool, or metadata. Lowering the retention tier requires `confirm=true` when it would delete remembered messages older than the new cutoff.
+        """Update a mailbox's display name, reply-to, receive policy, retention tier, IP pool, or metadata. Lowering the retention tier requires `confirm=true` when it would make remembered messages older than the new cutoff eligible for deletion. Retention tier changes apply in the background, and lowering the tier again before the first change finishes is refused.
 
         ```python
         mailbox = await client.email.mailboxes.update(
@@ -446,7 +446,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a mailbox. The address stops receiving immediately and is quarantined. The mailbox and its remembered messages stay restorable for 30 days through the restore endpoint, then are permanently deleted.
+        """Delete a mailbox. The address stops receiving immediately and is quarantined. The mailbox can be restored for 30 days, while normal message-retention expiry continues. After 30 days, the mailbox and its remaining messages are permanently deleted.
 
         ```python
         await client.email.mailboxes.delete("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -460,7 +460,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and the remembered messages are back. Past the window the mailbox is permanently deleted and returns `404`. A mailbox that is not deleted returns `409`.
+        """Restore a mailbox deleted less than 30 days ago: the address starts receiving again and its remaining remembered messages are available. Normal message-retention expiry continues while a mailbox is deleted. Past the restore window the mailbox is permanently deleted and returns `404`. A mailbox that is not deleted returns `409`.
 
         ```python
         mailbox = await client.email.mailboxes.restore("mbx_01krdgeqcxet5s7t44vh8rt9mg")
