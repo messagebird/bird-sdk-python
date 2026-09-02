@@ -732,8 +732,13 @@ class EmailMessageSendRequest(BaseModel):
     )] = None
 
 
-class EmailMessageBatchRequest(RootModel[List[EmailMessageSendRequest]]):
-    root: List[EmailMessageSendRequest]
+class EmailMessageBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    messages: Annotated[List[EmailMessageSendRequest], Field(
+        description="Email message send requests, up to 100. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.",
+        max_length=100,
+        min_length=1,
+    )]
 
 
 class EmailMessageBatchItemCategory(str, Enum):
@@ -1716,8 +1721,13 @@ class SMSMessageSendRequest(BaseModel):
     )] = None
 
 
-class SMSMessageBatchRequest(RootModel[List[SMSMessageSendRequest]]):
-    root: List[SMSMessageSendRequest]
+class SMSMessageBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    messages: Annotated[List[SMSMessageSendRequest], Field(
+        description="SMS message send requests, up to 100. Each is an independent send; all are validated before any is queued.",
+        max_length=100,
+        min_length=1,
+    )]
 
 
 class SMSBatchSummary(BaseModel):

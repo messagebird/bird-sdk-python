@@ -160,7 +160,7 @@ class Sms(SmsBase):
             print(msg.id, msg.status)
         ```
         """
-        body = [_message_body(m) for m in messages]
+        body = {"messages": [_message_body(m) for m in messages]}
         response = self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return SMSMessageBatchResponse.model_validate(response.json())
 
@@ -201,6 +201,6 @@ class AsyncSms(AsyncSmsBase):
         self, *, messages: Sequence[Mapping[str, Any]], options: RequestOptions | None = None
     ) -> SMSMessageBatchResponse:
         """Send up to 100 independent SMS messages in one call."""
-        body = [_message_body(m) for m in messages]
+        body = {"messages": [_message_body(m) for m in messages]}
         response = await self._client.request("POST", _BATCH_PATH, body=body, **_opts(options))
         return SMSMessageBatchResponse.model_validate(response.json())

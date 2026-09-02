@@ -60,9 +60,9 @@ def test_send_batch_serializes_each_message_and_returns_data() -> None:
     assert [item.id for item in batch.data] == [ID1, ID2]
     sent = route.calls.last.request
     body = json.loads(sent.content)
-    assert isinstance(body, list) and len(body) == 2
-    assert body[0]["from"] == "a@b.com"  # from_ -> "from" alias, per item
-    assert "track_opens" not in body[0]  # unset -> omitted
+    assert isinstance(body, dict) and len(body["messages"]) == 2
+    assert body["messages"][0]["from"] == "a@b.com"  # from_ -> "from" alias, per item
+    assert "track_opens" not in body["messages"][0]  # unset -> omitted
     assert sent.headers.get("idempotency-key")  # POST gets an auto idempotency key
 
 
@@ -74,7 +74,7 @@ def test_send_batch_applies_email_defaults() -> None:
     bird = Bird(api_key="bk_eu1_s", email_defaults={"from_": "default@acme.com"})
     bird.email.send_batch(messages=[{"to": ["c@d.com"], "subject": "Hi", "text": "x"}])
     body = json.loads(route.calls.last.request.content)
-    assert body[0]["from"] == "default@acme.com"  # default fills unset from_ per item
+    assert body["messages"][0]["from"] == "default@acme.com"  # default fills unset from_ per item
 
 
 def test_send_batch_invalid_message_raises_bird_error() -> None:
@@ -324,7 +324,7 @@ def test_send_batch_scheduled_at_serializes_to_wire() -> None:
         }]
     )
     body = json.loads(route.calls.last.request.content)
-    assert body[0]["scheduled_at"] == "2026-07-30T09:00:00Z"
+    assert body["messages"][0]["scheduled_at"] == "2026-07-30T09:00:00Z"
 
 
 @respx.mock

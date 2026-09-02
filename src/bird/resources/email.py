@@ -118,13 +118,13 @@ def _send_body(
 def _batch_body(
     messages: Sequence[EmailSendParams],
     defaults: EmailDefaults | None,
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
     # Each item is built exactly like a single send (address parsing, the from_->"from"
     # alias, the EmailDefaults merge, exclude_none) via _send_body, which validates the
     # item through EmailMessageSendRequest. The list's own 1..100 length bound is checked
-    # against the generated RootModel's field constraints so a too-short/long batch fails
-    # client-side as a BirdError, mirroring to_wire — without re-dumping the items (that
-    # would re-apply model defaults and undo exclude_none).
+    # against the generated model's `messages` field constraints so a too-short/long batch
+    # fails client-side as a BirdError, mirroring to_wire — without re-dumping the items
+    # (that would re-apply model defaults and undo exclude_none).
     items = [
         _send_body(
             from_=m.get("from_"),
@@ -151,12 +151,12 @@ def _batch_body(
         )
         for m in messages
     ]
-    field = EmailMessageBatchRequest.model_fields["root"]
+    field = EmailMessageBatchRequest.model_fields["messages"]
     lo = next((m.min_length for m in field.metadata if hasattr(m, "min_length")), None)
     hi = next((m.max_length for m in field.metadata if hasattr(m, "max_length")), None)
     if (lo is not None and len(items) < lo) or (hi is not None and len(items) > hi):
         raise BirdError(f"invalid request: messages: list must have between {lo} and {hi} items, got {len(items)}")
-    return items
+    return {"messages": items}
 
 
 def _opts(options: RequestOptions | None) -> dict[str, Any]:
