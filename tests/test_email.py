@@ -313,9 +313,7 @@ def test_send_scheduled_at_serializes_to_wire() -> None:
 
 
 @respx.mock
-def test_send_batch_forwards_scheduled_at_for_the_server_to_reject() -> None:
-    # Scheduling is a single-send field. Forwarding it lets the server answer
-    # with its 422; dropping it here would turn a schedule into an immediate send.
+def test_send_batch_scheduled_at_serializes_to_wire() -> None:
     route = respx.post(f"{BASE}/v1/email/batches").mock(
         return_value=httpx.Response(202, json={"data": [_batch_item(ID1)]})
     )

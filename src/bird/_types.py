@@ -100,8 +100,8 @@ class EmailSendParams(_EmailSendRequired, total=False):
     ip_pool_id: str
     category: str
     attachments: Sequence[Attachment]
-    # Only a single send accepts scheduling; the server rejects a batch item
-    # that carries it with a 422.
+    # A batch item takes this on the same terms as a single send, so one batch
+    # can mix scheduled and immediate messages.
     scheduled_at: str | datetime
 
 
