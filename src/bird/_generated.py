@@ -571,7 +571,7 @@ class EmailMessage(BaseModel):
         description="When all recipients reached a terminal delivered state, or null if not yet fully delivered.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
-        description="When this message is scheduled to send, for a send created with a future send time. Null for an immediate send. Stays set after the scheduled send fires.",
+        description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
     )] = None
 
 
@@ -784,6 +784,9 @@ class EmailMessageBatchItem(BaseModel):
         examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    scheduled_at: Annotated[Optional[str], Field(
+        description="When this item is scheduled to send, for an item created with a future send time. Absent for an item that sends immediately.",
     )] = None
 
 
