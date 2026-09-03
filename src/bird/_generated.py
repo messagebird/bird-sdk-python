@@ -3284,6 +3284,12 @@ class VerificationOptions(BaseModel):
     channels: Annotated[Optional[List[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]]], Field(
         description="Reorder or narrow the delivery channels for this request. List channel names in the order to try them; a channel you omit is not used for this request, and a channel not already enabled for the recipient is ignored. A list that leaves no usable channel fails the request with `422`. Omit the field to use the configured order.",
     )] = None
+    language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
 
 
 class VerificationCreateRequest(BaseModel):

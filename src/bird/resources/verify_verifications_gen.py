@@ -25,6 +25,7 @@ class VerificationTo(TypedDict, total=False):
 class VerificationOptions(TypedDict, total=False):
     code_length: int
     channels: Sequence[str]
+    language: str
 
 
 class _VerifyVerificationsCreateRequired(TypedDict):
