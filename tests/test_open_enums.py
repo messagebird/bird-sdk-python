@@ -17,6 +17,7 @@ from bird import _generated
 from bird._generated import (
     VerificationChannel,
     VerificationChannelEntry,
+    VerificationLastChannel,
     WhatsAppError,
     WhatsAppErrorCode,
 )
@@ -47,7 +48,12 @@ def test_both_round_trip_to_the_wire_value() -> None:
 
 
 def test_known_values_are_enumerable() -> None:
-    assert [c.value for c in VerificationChannel] == ["email", "sms", "whatsapp", "telegram"]
+    channels = ["email", "sms", "whatsapp", "telegram", "voice"]
+    assert [c.value for c in VerificationChannel] == channels
+    # A separate generated enum, because ``last_channel`` declares its values
+    # inline rather than through the shared ``$ref``. The two drift silently:
+    # a channel a caller may request but never sees reported reads as a bug.
+    assert [c.value for c in VerificationLastChannel] == channels
 
 
 def _whatsapp_error(code: str) -> WhatsAppError:

@@ -1665,7 +1665,7 @@ class SMSMessageSendRequest(BaseModel):
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="Sender to send from. Use an E.164 number such as `+15557654321`, or a short code of 5-6 digits. You can also use an alphanumeric sender ID of 1-11 letters, digits, spaces, dashes, or underscores. It must contain at least one letter, for example `MyBrand`. A numeric sender must be a number your workspace owns; an alphanumeric sender is accepted where the destination country permits one. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.",
+        description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.",
         examples=[+15557654321],
         min_length=1,
     )] = None
@@ -3191,6 +3191,7 @@ class VerificationChannel(str, Enum):
     sms = "sms"
     whatsapp = "whatsapp"
     telegram = "telegram"
+    voice = "voice"
 
 
 class VerificationChannelEntry(BaseModel):
@@ -3233,6 +3234,7 @@ class VerificationLastChannel(str, Enum):
     sms = "sms"
     whatsapp = "whatsapp"
     telegram = "telegram"
+    voice = "voice"
 
 
 class Verification(BaseModel):
@@ -10419,6 +10421,7 @@ class VoiceCallRouteType(str, Enum):
     reject = "reject"
     trunk = "trunk"
     forward = "forward"
+    voicemail = "voicemail"
 
 
 class VoiceInboundForwardAs(str, Enum):
@@ -10529,6 +10532,14 @@ class VoiceCallCost(BaseModel):
     )]
     call_handling_amount: Annotated[Optional[str], Field(
         description="What we charged for handling the call itself, as a decimal string. A call is charged for handling once, however many legs it has, so only one leg's record carries it. `null` until this component is priced.",
+        examples=["null"],
+    )]
+    recording_amount: Annotated[Optional[str], Field(
+        description="What we charged to record the call, as a decimal string, billed per second over the same billable time as the rest of the call. `null` until this component is priced.",
+        examples=["null"],
+    )]
+    transcription_amount: Annotated[Optional[str], Field(
+        description="What we charged to transcribe the call's audio, as a decimal string, billed per second of recorded audio rather than for the length of the call. A transcript is produced after the call ends, so this can appear after the rest of the cost. `null` until this component is priced.",
         examples=["null"],
     )]
 

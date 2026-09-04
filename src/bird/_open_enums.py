@@ -217,6 +217,7 @@ class VerificationChannel:
     EMAIL: Final = "email"
     SMS: Final = "sms"
     TELEGRAM: Final = "telegram"
+    VOICE: Final = "voice"
     WHATSAPP: Final = "whatsapp"
 
 
