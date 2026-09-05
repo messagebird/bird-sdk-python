@@ -6309,7 +6309,7 @@ class Mailbox(BaseModel):
         pattern="^ina_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     retention_tier: Annotated[MailboxRetentionTier, Field(
-        description="How long the mailbox remembers message metadata, extracted text, and attachments. Message bodies and raw MIME stay available for 30 days regardless of tier.",
+        description="How long message metadata, extracted text, and attachments are kept. Original bodies and inbound raw MIME are limited to 30 days on every tier.",
     )]
     message_count: Annotated[int, Field(
         description="Number of retained messages across all threads.",
@@ -6336,7 +6336,7 @@ class Mailbox(BaseModel):
         min_length=1,
     )]
     deleted_at: Annotated[Optional[str], Field(
-        description="When the mailbox was deleted, or `null` if it is active. A deleted mailbox stops receiving mail immediately but can be restored for 30 days, after which it and any remaining remembered messages are permanently removed.",
+        description="When the mailbox was deleted, or `null` if active. Deletion stops receiving; restore is available for 30 days unless permanent erasure has started.",
     )] = None
 
 
@@ -6399,7 +6399,7 @@ class MailboxCreate(BaseModel):
         description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.",
     )] = None
     retention_tier: Annotated[Optional[MailboxCreateRetentionTier], Field(
-        description="How long the mailbox remembers message metadata, extracted text, and attachments. Message bodies and raw MIME stay available for 30 days regardless of tier. Tiers longer than 30 days require a plan that includes them.",
+        description="How long message metadata, extracted text, and attachments are kept. Original bodies and inbound raw MIME are limited to 30 days on every tier. Longer tiers require a plan that includes them.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Your own key/value data to attach to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved.",
@@ -6432,7 +6432,7 @@ class MailboxUpdate(BaseModel):
         description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.",
     )] = None
     retention_tier: Annotated[Optional[MailboxUpdateRetentionTier], Field(
-        description="How long the mailbox remembers message metadata, extracted text, and attachments. Message bodies and raw MIME stay available for 30 days regardless of tier. Tiers longer than 30 days require a plan that includes them. Lowering the tier immediately hides remembered messages older than the new horizon. Deletion waits at least ten minutes and until the background retention update has processed every stored message. The update starts every ten minutes and can take hours for large mailboxes; the next hourly purge deletes eligible messages. A lowering that would affect messages requires `confirm=true`.",
+        description="How long message metadata, extracted text, and attachments are kept. Original bodies and inbound raw MIME are limited to 30 days on every tier. Longer tiers require a plan that includes them. Lowering the tier requires `confirm=true` when messages would be affected; accepted changes hide those messages immediately. Deletion waits at least ten minutes and until the retention update finishes.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Replaces the mailbox's key/value data. Up to 2 KB. Keys starting with `__bird` are reserved.",
