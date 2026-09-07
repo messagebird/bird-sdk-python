@@ -27,6 +27,7 @@ def test_surface_conformance() -> None:
     assert callable(client.email.stats.by_bounce_code)
     assert callable(client.email.stats.by_complaint_type)
     assert callable(client.email.stats.by_broadcast)
+    assert callable(client.email.templates.list)
     assert callable(client.sms.send)
     assert callable(client.sms.send_batch)
     assert callable(client.sms.get)

@@ -6200,6 +6200,141 @@ class SuppressionID(RootModel[str]):
     root: str
 
 
+class EmailTemplateCategory(str, Enum):
+    transactional = "transactional"
+    marketing = "marketing"
+
+
+class EmailTemplateSource(str, Enum):
+    html = "html"
+
+
+class EmailTemplateTheme(str, Enum):
+    arcane = "arcane"
+    barebone = "barebone"
+    matte = "matte"
+    protocol = "protocol"
+    studio = "studio"
+
+
+class EmailTemplateLanguageState(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[Union[TemplateLanguageStatus, str], Field(
+        description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
+        union_mode="left_to_right",
+    )]
+    draft: Annotated[Optional[bool], Field(
+        description="Whether the draft holds an edit to this language that has not been published. If this is true and the status is `live`, sends are still using the older content, and your edit goes out the next time you submit.",
+    )] = None
+
+
+class EmailTemplateSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[Optional[str], Field(
+        description="The workspace that owns the template. Null for a built-in `system` template, which no workspace owns.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The name you send the template by. You can use either the slug or the id when you send. It never changes after the template is created. A built-in `system` template's slug always starts with `bird_`.",
+        examples=["welcome-email"],
+    )]
+    name: Annotated[str, Field(
+        description="The template's display name, shown wherever the template is listed. You can change it any time. It defaults to the slug if you do not set one.",
+        examples=["Welcome email"],
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for, in your own words. Null if you have not set one.",
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`). Every SMS template is `system`.",
+    )]
+    status: Annotated[Union[TemplateStatus, str], Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nThis summary answers whether the template is usable at all. A template with\none language live is `active` even while another is still drafted or refused.\nRead `languages` to determine the state of each language and its reason.\n\nWhich of the five a template can reach follows its channel's review model. A\nchannel whose content a third party reviews reaches all five; one whose\ncontent goes live on publish moves between `draft`, `active` and `inactive`.\n\nOpen enum: treat a value you do not recognize as a new one rather than as\nan error.",
+        union_mode="left_to_right",
+    )]
+    category: Annotated[EmailTemplateCategory, Field(
+        description="Whether the template is for `transactional` email or `marketing` email.",
+    )]
+    source: Annotated[Union[EmailTemplateSource, str], Field(
+        description="The authoring format the template is written in, fixed at creation. `html` is finished markup you provide, optionally personalized with Liquid.",
+        union_mode="left_to_right",
+    )]
+    theme: Annotated[Optional[EmailTemplateTheme], Field(
+        description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version a send resolves to, or null if the template has never been published.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    published_version_id: Annotated[Optional[str], Field(
+        description="Deprecated: use `live_version_id` instead, which carries the same value.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_number: Annotated[Optional[int], Field(
+        description="The live version's sequential number (1, 2, 3…), the same one version history reports, or null if the template has never been published. A built-in `system` template is permanently published as version 1. A rollback moves it backwards, because it names the version that is live rather than how many exist.",
+        ge=1,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="The languages this template currently supports for sending, as BCP-47 tags. Empty until the template is published, because sends serve published content. This set may shrink for reasons other than editing, so read it rather than assuming it matches what was published.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    languages: Annotated[Dict[str, EmailTemplateLanguageState], Field(
+        description="Every language this template has, keyed by language tag, each with its state. Enough to show which templates need attention in a list without a request per row.",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When this template was last submitted. Null if it never has been. Only submitting moves this timestamp, so a rollback keeps reporting the last real submit.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for a built-in `system` template.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for a built-in `system` template.",
+    )]
+
+
+class EmailTemplateList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailTemplateSummary], Field(
+        description="Page of email templates.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
 class ActorType(str, Enum):
     user = "user"
     api_key = "api_key"

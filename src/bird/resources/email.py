@@ -19,6 +19,7 @@ from bird._response import APIResponse
 from bird.resources.email_mailboxes import AsyncEmailMailboxes, EmailMailboxes
 from bird.resources.email_threads import AsyncEmailThreads, EmailThreads
 from bird.resources.email_stats_gen import AsyncEmailStats, EmailStats
+from bird.resources.email_templates_gen import AsyncEmailTemplates, EmailTemplates
 from bird._types import (
     Attachment,
     EmailAddressInput,
@@ -168,6 +169,7 @@ class Email(EmailBase):
         super().__init__(client)
         self._defaults = defaults
         self.stats = EmailStats(client)
+        self.templates = EmailTemplates(client)
         self.mailboxes = EmailMailboxes(client, defaults)
         self.threads = EmailThreads(client)
 
@@ -346,6 +348,7 @@ class AsyncEmail(AsyncEmailBase):
         super().__init__(client)
         self._defaults = defaults
         self.stats = AsyncEmailStats(client)
+        self.templates = AsyncEmailTemplates(client)
         self.mailboxes = AsyncEmailMailboxes(client, defaults)
         self.threads = AsyncEmailThreads(client)
 

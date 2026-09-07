@@ -245,3 +245,8 @@ def mailbox_thread_message_reply() -> None:
         text="Thanks for reaching out!",
     )
     print(reply.id)
+
+
+def email_templates_list() -> None:
+    for template in client.email.templates.list(scope="workspace"):
+        print(template.slug, template.name)

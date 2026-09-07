@@ -56,6 +56,12 @@ class EmailLookupResult:
     VALID: Final = "valid"
 
 
+class EmailTemplateSource:
+    """Values of EmailTemplateSource known at this SDK version (open enum)."""
+
+    HTML: Final = "html"
+
+
 class LookupFlag:
     """Values of LookupFlag known at this SDK version (open enum)."""
 
@@ -312,6 +318,7 @@ __all__ = [
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",
+    "EmailTemplateSource",
     "LookupFlag",
     "LookupPropertyStatus",
     "NumberCapability",

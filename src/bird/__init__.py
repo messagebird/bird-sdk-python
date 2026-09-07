@@ -77,6 +77,7 @@ from bird._generated import (
     SMSMessageBatchResponse,
     SMSTemplate,
     SMSTemplateList,
+    EmailTemplateSummary,
     EmailLookup,
     PhoneNumberLookup,
     Verification,
@@ -128,6 +129,7 @@ from bird.resources.email_stats_gen import (
     EmailStatsSummaryParams,
 )
 from bird.resources.sms_templates_gen import SmsTemplateListParams
+from bird.resources.email_templates_gen import EmailTemplatesListParams
 from bird.resources.verify_verifications_gen import (
     VerifyVerificationsCheckParams,
     VerifyVerificationsCreateParams,
@@ -140,6 +142,7 @@ from bird._open_enums import (
     EmailLookupFlag,
     EmailLookupReason,
     EmailLookupResult,
+    EmailTemplateSource,
     LookupFlag,
     LookupPropertyStatus,
     NumberCapability,
@@ -290,6 +293,8 @@ __all__ = [
     "SMSTemplate",
     "SMSTemplateList",
     "SmsTemplateListParams",
+    "EmailTemplateSummary",
+    "EmailTemplatesListParams",
     "WhatsappMedia",
     "WhatsappSendParams",
     "WhatsAppMessage",
@@ -310,6 +315,7 @@ __all__ = [
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",
+    "EmailTemplateSource",
     "LookupFlag",
     "LookupPropertyStatus",
     "NumberCapability",

@@ -22,6 +22,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/stats/bounce-codes": {"get"},
     "/v1/email/stats/complaint-types": {"get"},
     "/v1/email/stats/broadcasts": {"get"},
+    "/v1/email/templates": {"get"},
     "/v1/sms/messages": {"get", "post"},
     "/v1/sms/batches": {"post"},
     "/v1/sms/messages/{message_id}": {"get"},
