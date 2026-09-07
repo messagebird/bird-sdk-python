@@ -811,6 +811,10 @@ class AudienceID(RootModel[str]):
     root: str
 
 
+class EmailBroadcastID(RootModel[str]):
+    root: str
+
+
 class ContactIdentifierFilter(str, Enum):
     email = "email"
     phone_number = "phone_number"
@@ -7448,6 +7452,10 @@ class EventEmailAcceptedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+    )]
 
 
 class EventEmailAccepted(BaseModel):
@@ -7505,6 +7513,10 @@ class EventEmailBouncedData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
+    )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
     )]
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
@@ -7614,6 +7626,10 @@ class EventEmailClickedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+    )]
     url: Annotated[str, Field(
         description="The URL the recipient clicked.",
         examples=["https://bird.com/welcome"],
@@ -7677,6 +7693,10 @@ class EventEmailComplainedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+    )]
     feedback_type: Annotated[Optional[str], Field(
         description="The kind of feedback the mailbox provider reported (such as `abuse` or `fraud`), or null when the provider did not specify one.",
         examples=["abuse"],
@@ -7730,6 +7750,10 @@ class EventEmailDeferredData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
+    )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
     )]
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
@@ -7798,6 +7822,10 @@ class EventEmailDeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+    )]
 
 
 class EventEmailDelivered(BaseModel):
@@ -7848,6 +7876,10 @@ class EventEmailListUnsubscribedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+    )]
 
 
 class EventEmailListUnsubscribed(BaseModel):
@@ -7897,6 +7929,10 @@ class EventEmailOpenedData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
+    )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
     )]
     ip_address: Annotated[Optional[str], Field(
         description="IP address of the client that opened the email, or null when it is not known.",
@@ -7955,6 +7991,10 @@ class EventEmailOutOfBandBounceData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
+    )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
     )]
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
@@ -8026,6 +8066,10 @@ class EventEmailProcessedData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
+    )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
     )]
 
 
@@ -8160,6 +8204,10 @@ class EventEmailRejectedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+    )]
     rejection_reason: Annotated[EmailRejectionReason, Field(
         description="Why an email was rejected before delivery.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).",
     )]
@@ -8254,6 +8302,10 @@ class EventEmailUnsubscribedData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
+    )]
+    broadcast_id: Annotated[Optional[str], Field(
+        description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
     )]
 
 
