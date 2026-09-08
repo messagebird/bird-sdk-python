@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.57.0
+
+- A sending domain's DNS record now sets `error` while its status is still `pending`, reporting that the record published in DNS does not match the expected value.
+- **Breaking:** a template's `status` is a closed set of `draft`, `pending`, `active`, `rejected` and `inactive`, so it no longer widens to an arbitrary string. TypeScript callers reading `TemplateStatus.Active` or the `TemplateStatusValue` type should use the `TemplateStatus` union with the string literals, and Python callers should read `TemplateStatus.active` in place of `TemplateStatus.ACTIVE`.
+- **Breaking:** a send that quotes a message Bird does not hold now fails with `404` `WhatsAppReferencedMessageNotFound` instead of `422` `WhatsAppInReplyToNotFound`; one Bird holds but cannot quote answers `422` `WhatsAppMessageNotQuotable`, and a quote Bird cannot look up answers `503` `WhatsAppMessageLookupUnavailable`, which is worth retrying. Update anything matching the old codes.
+
 ## 0.56.0
 
 - Add `broadcast_id` to the per-recipient outbound email events, naming the broadcast a send went out as part of so you can group a broadcast's events without looking each send up. It is null on a send with no broadcast behind it.

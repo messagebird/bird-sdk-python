@@ -1895,9 +1895,8 @@ class SMSTemplate(BaseModel):
     scope: Annotated[TemplateScope, Field(
         description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`). Every SMS template is `system`.",
     )]
-    status: Annotated[Union[TemplateStatus, str], Field(
-        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nThis summary answers whether the template is usable at all. A template with\none language live is `active` even while another is still drafted or refused.\nRead `languages` to determine the state of each language and its reason.\n\nWhich of the five a template can reach follows its channel's review model. A\nchannel whose content a third party reviews reaches all five; one whose\ncontent goes live on publish moves between `draft`, `active` and `inactive`.\n\nOpen enum: treat a value you do not recognize as a new one rather than as\nan error.",
-        union_mode="left_to_right",
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
     )]
     category: Annotated[SMSMessageCategory, Field(
         description="Content classification applied to messages sent from this template.",
@@ -4713,7 +4712,7 @@ class WhatsAppMessageSendRequest(BaseModel):
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="Quote a message the contact will see above this one, the way replying in the WhatsApp client does. Name a message from the same conversation: one this workspace sent to this recipient, or received from them. Any content quotes, template or free-form. A message this workspace does not hold, or one older than the 15-day window we keep provider ids for, returns a `422` `WhatsAppInReplyToNotFound`. A message that never reached WhatsApp, or one from a different conversation than this send's `to` and `from`, returns a `422` `WhatsAppInReplyToNotQuotable`.",
+        description="Quote a message the contact will see above this one, the way replying in the WhatsApp client does. Name a message from the same conversation: one this workspace sent to this recipient, or received from them. Any content quotes, template or free-form. The quote is resolved before the send is accepted, so a quote WhatsApp cannot render fails this request rather than the message. An id naming no message this workspace holds, or one older than the 15 days we keep provider ids for, answers `404`; a message that never reached WhatsApp, or one from a different conversation than this send's `to` and `from`, answers `422`. Nothing is charged either way.",
         examples=["wam_01kya19eknftrs2s6p82asmvnh"],
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
@@ -6018,7 +6017,7 @@ class DNSRecord(BaseModel):
         min_length=1,
     )]
     error: Annotated[Optional[str], Field(
-        description="Human-readable detail for a failed check on this record: what was found in DNS and why it did not match. `null` when the record is verified or not yet checked.",
+        description="Human-readable detail for a check that did not pass on this record: what was found in DNS and why it did not match. Also set while `pending` when the record is published but does not match the expected value, which is the case you can act on. `null` when the record is `verified`, when nothing is published at this name yet, or before the first check.",
     )] = None
     safe_to_remove: Annotated[Optional[bool], Field(
         description="Only set on `deprecated` records: `true` once the record is no longer referenced by in-flight mail or live tracked links and can be deleted from your DNS. `null` on `active` and `pending` records.",
@@ -6261,9 +6260,8 @@ class EmailTemplateSummary(BaseModel):
     scope: Annotated[TemplateScope, Field(
         description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`). Every SMS template is `system`.",
     )]
-    status: Annotated[Union[TemplateStatus, str], Field(
-        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nThis summary answers whether the template is usable at all. A template with\none language live is `active` even while another is still drafted or refused.\nRead `languages` to determine the state of each language and its reason.\n\nWhich of the five a template can reach follows its channel's review model. A\nchannel whose content a third party reviews reaches all five; one whose\ncontent goes live on publish moves between `draft`, `active` and `inactive`.\n\nOpen enum: treat a value you do not recognize as a new one rather than as\nan error.",
-        union_mode="left_to_right",
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
     )]
     category: Annotated[EmailTemplateCategory, Field(
         description="Whether the template is for `transactional` email or `marketing` email.",

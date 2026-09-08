@@ -193,16 +193,6 @@ class TemplateLanguageStatus:
     SUPERSEDED: Final = "superseded"
 
 
-class TemplateStatus:
-    """Values of TemplateStatus known at this SDK version (open enum)."""
-
-    ACTIVE: Final = "active"
-    DRAFT: Final = "draft"
-    INACTIVE: Final = "inactive"
-    PENDING: Final = "pending"
-    REJECTED: Final = "rejected"
-
-
 class VerificationAttemptFailureReason:
     """Values of VerificationAttemptFailureReason known at this SDK version (open enum)."""
 
@@ -333,7 +323,6 @@ __all__ = [
     "SMSSuppressionOrigin",
     "SMSSuppressionReason",
     "TemplateLanguageStatus",
-    "TemplateStatus",
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
