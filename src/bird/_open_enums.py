@@ -292,6 +292,23 @@ class WhatsAppTemplateCategory:
     UTILITY: Final = "utility"
 
 
+class WhatsAppTemplateLanguageStatus:
+    """Values of WhatsAppTemplateLanguageStatus known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    ARCHIVED: Final = "archived"
+    DELETED: Final = "deleted"
+    DISABLED: Final = "disabled"
+    IN_APPEAL: Final = "in_appeal"
+    LIMIT_EXCEEDED: Final = "limit_exceeded"
+    OUTCOME_UNKNOWN: Final = "outcome_unknown"
+    PAUSED: Final = "paused"
+    PENDING: Final = "pending"
+    PENDING_DELETION: Final = "pending_deletion"
+    REJECTED: Final = "rejected"
+    SUBMIT_FAILED: Final = "submit_failed"
+
+
 class WhatsAppTemplateParameterType:
     """Values of WhatsAppTemplateParameterType known at this SDK version (open enum)."""
 
@@ -301,6 +318,25 @@ class WhatsAppTemplateParameterType:
     LOCATION: Final = "location"
     TEXT: Final = "text"
     VIDEO: Final = "video"
+
+
+class WhatsAppTemplateQualityScore:
+    """Values of WhatsAppTemplateQualityScore known at this SDK version (open enum)."""
+
+    GREEN: Final = "green"
+    RED: Final = "red"
+    UNKNOWN: Final = "unknown"
+    YELLOW: Final = "yellow"
+
+
+class WhatsAppTemplateRejectionCategory:
+    """Values of WhatsAppTemplateRejectionCategory known at this SDK version (open enum)."""
+
+    ABUSIVE_CONTENT: Final = "abusive_content"
+    INCORRECT_CATEGORY: Final = "incorrect_category"
+    INVALID_FORMAT: Final = "invalid_format"
+    SCAM: Final = "scam"
+    TAG_CONTENT_MISMATCH: Final = "tag_content_mismatch"
 
 
 __all__ = [
@@ -333,5 +369,8 @@ __all__ = [
     "WhatsAppInteractiveReplyType",
     "WhatsAppInteractiveType",
     "WhatsAppTemplateCategory",
+    "WhatsAppTemplateLanguageStatus",
     "WhatsAppTemplateParameterType",
+    "WhatsAppTemplateQualityScore",
+    "WhatsAppTemplateRejectionCategory",
 ]

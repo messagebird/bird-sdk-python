@@ -1011,5 +1011,41 @@ async def _ex_151() -> None:
 
 
 async def _ex_152() -> None:
+    tpl = client.whatsapp.templates.get("bird_otp")
+    print(tpl.default_language, tpl.available_languages)
+
+
+async def _ex_153() -> None:
+    for tpl in client.whatsapp.templates.list():
+        print(tpl.slug, tpl.status)
+
+
+async def _ex_154() -> None:
+    version = client.whatsapp.templates.versions.get("bird_otp", "wav_01ky4x8e4genzb7way45txfkm1")
+    print(version.id, list(version.languages))
+
+
+async def _ex_155() -> None:
+    language = client.whatsapp.templates.versions.languages.get(
+        "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1", "nl-BE"
+    )
+    for component in language.components:
+        print(component.type)
+
+
+async def _ex_156() -> None:
+    languages = client.whatsapp.templates.versions.languages.list(
+        "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1"
+    )
+    for language in languages.data:
+        print(language.language, language.status)
+
+
+async def _ex_157() -> None:
+    for version in client.whatsapp.templates.versions.list("bird_otp"):
+        print(version.id, version.version_number)
+
+
+async def _ex_158() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)

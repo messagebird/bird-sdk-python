@@ -8,6 +8,10 @@ from pydantic import ConfigDict, Field, RootModel
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 
+class WorkspaceID(RootModel[str]):
+    root: str
+
+
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     param: Annotated[str, Field(
@@ -120,11 +124,11 @@ class Error(BaseModel):
     error: ErrorBody
 
 
-class OrganizationID(RootModel[str]):
+class UserID(RootModel[str]):
     root: str
 
 
-class WorkspaceID(RootModel[str]):
+class OrganizationID(RootModel[str]):
     root: str
 
 
@@ -620,6 +624,9 @@ class EmailTemplateSend(BaseModel):
     slug: Annotated[Optional[str], Field(
         description="The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).",
         examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -1646,6 +1653,9 @@ class SMSTemplateSend(BaseModel):
     slug: Annotated[Optional[str], Field(
         description="The template to send, by its slug handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.",
         examples=["bird_otp_verification_ttl"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     name: Annotated[Optional[str], Field(
         description="Deprecated: use `slug` instead. Resolved as a slug first, and only if that finds nothing, matched against the template's display name.",
@@ -1654,6 +1664,8 @@ class SMSTemplateSend(BaseModel):
     language: Annotated[Optional[str], Field(
         description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.",
         examples=["fr"],
+        max_length=35,
+        min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.",
@@ -1881,6 +1893,9 @@ class SMSTemplate(BaseModel):
     slug: Annotated[str, Field(
         description="The template's permanent handle. Pass it (or the id) as the template reference when sending. Handles beginning with `bird_` are reserved for our built-in templates.",
         examples=["bird_otp_verification"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )]
     name: Annotated[str, Field(
         description="The template's display name, shown wherever the template is listed. Nothing resolves through it, so it is safe to show wherever a human reads the template.",
@@ -1894,6 +1909,7 @@ class SMSTemplate(BaseModel):
     )]
     scope: Annotated[TemplateScope, Field(
         description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`). Every SMS template is `system`.",
+        min_length=1,
     )]
     status: Annotated[TemplateStatus, Field(
         description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
@@ -3504,14 +3520,19 @@ class WhatsAppMessageTemplate(BaseModel):
     slug: Annotated[str, Field(
         description="The template's stable handle (for example `bird_otp`).",
         examples=["bird_otp"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )]
     category: Annotated[Union[WhatsAppTemplateCategory, str], Field(
-        description="Content classification applied to messages sent from this template.",
+        description="The category this message was priced at, recorded as it stood when the message was sent. For a template you authored this is the category Meta applies to the language the send resolved to, which can differ from the category declared on the template: Meta categorizes each language separately and may move one. A built-in `bird_` template is priced at the single category the built-in declares, the same in every language.",
         union_mode="left_to_right",
     )]
     language: Annotated[str, Field(
         description="The canonical BCP-47 tag of the template variant that was sent.",
         examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
     )]
     components: Annotated[List[WhatsAppMessageTemplateComponent], Field(
         description="The values that filled the template's placeholders. Empty for an authentication template, whose content is never returned.",
@@ -4133,10 +4154,15 @@ class WhatsAppTemplateSend(BaseModel):
     slug: Annotated[Optional[str], Field(
         description="The template to send, by its slug handle (for example `bird_otp`).",
         examples=["bird_otp"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
-        description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`); Meta's underscore form (`pt_BR`) is accepted and normalized. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected. The accepted message echoes the canonical BCP-47 form of the language it resolved to.",
+        description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`); Meta's underscore form (`pt_BR`) is accepted and normalized. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected. The accepted message echoes the canonical BCP-47 form of the language it resolved to, which is the language it is priced at: Meta categorizes each language separately, so a send served by a different language than the one you asked for is priced at that language's category.",
         examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
     )] = None
     components: Annotated[Optional[List[WhatsAppMessageTemplateComponent]], Field(
         description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters`. A positional template takes its parameters in `{{n}}` order; a template with named parameters requires each parameter's `name` to match one the template declares. Either way, sending parameters that do not match what the template declares returns a `422` `WhatsAppTemplateParameterMismatch`.",
@@ -4714,6 +4740,8 @@ class WhatsAppMessageSendRequest(BaseModel):
     in_reply_to_message_id: Annotated[Optional[str], Field(
         description="Quote a message the contact will see above this one, the way replying in the WhatsApp client does. Name a message from the same conversation: one this workspace sent to this recipient, or received from them. Any content quotes, template or free-form. The quote is resolved before the send is accepted, so a quote WhatsApp cannot render fails this request rather than the message. An id naming no message this workspace holds, or one older than the 15 days we keep provider ids for, answers `404`; a message that never reached WhatsApp, or one from a different conversation than this send's `to` and `from`, answers `422`. Nothing is charged either way.",
         examples=["wam_01kya19eknftrs2s6p82asmvnh"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.",
@@ -4763,6 +4791,576 @@ class WhatsAppEventList(BaseModel):
     data: Annotated[List[WhatsAppEvent], Field(
         description="Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full; this list is not paginated.",
     )]
+
+
+class WhatsAppTemplateExampleParameter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppTemplateParameterType, str], Field(
+        description="The kind of value this parameter accepts.",
+        union_mode="left_to_right",
+    )]
+    text: Annotated[Optional[str], Field(
+        description="An example value for a text parameter. Present when `type` is `text`.",
+        examples=[123456],
+        min_length=1,
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The address of the file a media header shows, as it was given when the header was authored rather than WhatsApp's copy of it. Present when `type` is `image`, `video`, `gif` or `document`.",
+        examples=["https://www.example.com/holiday/banner.jpg"],
+    )] = None
+    name: Annotated[Optional[str], Field(
+        description="The named placeholder this example fills. Present whenever the template declares named parameters, which is what a send must name; absent only for a positional template, whose values go in `{{n}}` order.",
+        examples=["first_name"],
+        min_length=1,
+    )] = None
+
+
+class WhatsAppTemplateButtonType(str, Enum):
+    url = "url"
+    quick_reply = "quick_reply"
+    phone_number = "phone_number"
+    otp = "otp"
+    copy_code = "copy_code"
+    request_contact_info = "request_contact_info"
+
+
+class WhatsAppTemplateButton(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppTemplateButtonType, str], Field(
+        description="The button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It\n  belongs only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number\n  their WhatsApp account carries. It belongs only on a utility or\n  marketing template, as that template's only button.\n\nThis is an open enum. Accept unrecognized values.",
+        union_mode="left_to_right",
+    )]
+    otp_type: Annotated[Optional[Literal["copy_code"]], Field(
+        description="How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.",
+        examples=["copy_code"],
+        min_length=1,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The button's label. Absent on an authentication template's passcode button until the language has been submitted, since WhatsApp writes that label itself. Absent on a `request_contact_info` draft for a related reason: WhatsApp fixes that label, so a draft that carried it reads back without it. Once the language is submitted, this carries the label WhatsApp wrote, which is `Share Contact Info` in every language today.",
+        examples=["Copy code"],
+        min_length=1,
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The address the button opens, with any variable placeholder shown inline. Present on link buttons.",
+        examples=["https://www.example.com/orders/{{1}}"],
+        min_length=1,
+    )] = None
+    phone_number: Annotated[Optional[str], Field(
+        description="The number the button dials. Present on dial buttons.",
+        examples=[+14155550100],
+        min_length=1,
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        description="Example values for this button's variables, in placeholder order. Present when the button address has variables, and on a `copy_code` button, where the single value is the sample coupon code WhatsApp reviewed.",
+    )] = None
+
+
+class WhatsAppTemplateCardComponentType(str, Enum):
+    header = "header"
+    body = "body"
+    buttons = "buttons"
+
+
+class WhatsAppTemplateCardComponentFormat(str, Enum):
+    image = "image"
+    video = "video"
+
+
+class WhatsAppTemplateCardComponent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppTemplateCardComponentType, str], Field(
+        description="The card block's type.",
+        union_mode="left_to_right",
+    )]
+    format: Annotated[Optional[Union[WhatsAppTemplateCardComponentFormat, str]], Field(
+        description="The card header's content type. Present on a card's header block.",
+        union_mode="left_to_right",
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The block's text content, with any variable placeholders shown inline.",
+        examples=["Chronograph, brown leather"],
+        min_length=1,
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        description="Example values for this block's variables, in placeholder order.",
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
+        description="The buttons this card carries. Present on a card's buttons block.",
+    )] = None
+
+
+class WhatsAppTemplateCard(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    components: Annotated[List[WhatsAppTemplateCardComponent], Field(
+        description="This card's content blocks, in display order.",
+    )]
+
+
+class WhatsAppTemplateComponentType(str, Enum):
+    header = "header"
+    body = "body"
+    footer = "footer"
+    buttons = "buttons"
+    carousel = "carousel"
+
+
+class WhatsAppTemplateComponentFormat(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    gif = "gif"
+    document = "document"
+    location = "location"
+
+
+class WhatsAppTemplateComponent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Union[WhatsAppTemplateComponentType, str], Field(
+        description="The content block's type within the template.",
+        union_mode="left_to_right",
+    )]
+    format: Annotated[Optional[Union[WhatsAppTemplateComponentFormat, str]], Field(
+        description="The header block's content type. Present on a header block. A `text` header carries a line of copy. The `image`, `video`, `gif`, and `document` formats each show a file whose address is in the block's `example_parameters`. The `location` format shows a map. It carries no content because the coordinates belong to the message rather than the template.",
+        union_mode="left_to_right",
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The block's text content, with any variable placeholders shown inline. Present when the block carries text. An authentication template's body and footer are written by WhatsApp from the two settings below rather than by you, so their text is absent until the language has been submitted and WhatsApp has supplied it.",
+        examples=["Your verification code is {{1}}."],
+        min_length=1,
+    )] = None
+    add_security_recommendation: Annotated[Optional[bool], Field(
+        description="Whether this authentication template's body ends with WhatsApp's advice not to share the code. Present on an authentication template's body block.",
+    )] = None
+    code_expiration_minutes: Annotated[Optional[int], Field(
+        description="How long the passcode stays valid, which WhatsApp states in this footer. Present on an authentication template's footer block. Omitting it on a write leaves the footer off entirely.",
+        examples=[60],
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        description="Example values for this block's variables, in placeholder order (one per `{{n}}`). Use them to see what a filled message looks like. Present when the block has variables.",
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
+        description="The buttons attached to this block. Present when the block carries buttons.",
+    )] = None
+    cards: Annotated[Optional[List[WhatsAppTemplateCard]], Field(
+        description="The cards this block scrolls through, in display order. Present on a `carousel` block.",
+    )] = None
+
+
+class WhatsAppTemplateLanguageStatus(str, Enum):
+    approved = "approved"
+    pending = "pending"
+    rejected = "rejected"
+    paused = "paused"
+    disabled = "disabled"
+    in_appeal = "in_appeal"
+    pending_deletion = "pending_deletion"
+    limit_exceeded = "limit_exceeded"
+    archived = "archived"
+    deleted = "deleted"
+    submit_failed = "submit_failed"
+    outcome_unknown = "outcome_unknown"
+
+
+class WhatsAppTemplateRejectionCategory(str, Enum):
+    abusive_content = "abusive_content"
+    incorrect_category = "incorrect_category"
+    invalid_format = "invalid_format"
+    scam = "scam"
+    tag_content_mismatch = "tag_content_mismatch"
+
+
+class WhatsAppTemplateRejection(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[Optional[Union[WhatsAppTemplateRejectionCategory, str]], Field(
+        description="Why Meta refused a language's content, in Meta's own vocabulary, lowercased. Read it with `reason`, which carries Meta's human-written detail, and `recommendation`, which carries its suggested fix. This is an open enum. Accept unrecognized values.",
+        union_mode="left_to_right",
+    )] = None
+    reason: Annotated[Optional[str], Field(
+        description="Meta's detail about the refusal, passed through unmodified.",
+        examples=["Parameters are adjacent."],
+    )] = None
+    recommendation: Annotated[Optional[str], Field(
+        description="Meta's suggested fix, the only thing it says about how to make the content acceptable. Meta sends it for some refusals and not others.",
+        examples=["Add text between the two parameters."],
+    )] = None
+
+
+class WhatsAppTemplateSubmissionError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    description: Annotated[str, Field(
+        description="Human-readable explanation of why the submission did not complete.",
+        examples=["component of type HEADER is missing expected field(s)"],
+        min_length=1,
+    )]
+    meta_error_code: Annotated[Optional[str], Field(
+        description="WhatsApp's most specific code for the refusal: its error subcode when it sent one, otherwise its top-level code. Opaque, treat it as a string. Absent when the failure was Bird's own verdict rather than a WhatsApp refusal.",
+        examples=[2388043],
+    )] = None
+
+
+class WhatsAppTemplateLanguageState(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+        description="On a template, where this language stands on the version currently in service. On a version, what that version's submission did with this language. Absent on a draft, which has not been submitted.",
+        union_mode="left_to_right",
+    )] = None
+    submitted_at: Annotated[Optional[str], Field(
+        description="When this language's content was last submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, shipped already approved rather than submitted on your behalf.",
+        examples=["2026-07-26T16:40:00Z"],
+    )] = None
+    editable_at: Annotated[Optional[str], Field(
+        description="The next time you can edit this language, if Meta's one-edit-per-day limit on an approved language is currently spent. Null when an edit is allowed right now, though Meta also caps an approved language at ten edits per rolling 30 days: a null here does not guarantee an edit will succeed if you are close to that limit too.",
+        examples=["2026-07-27T16:40:00Z"],
+    )] = None
+    rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
+        description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
+    )] = None
+    error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
+        description="Why the submission did not complete, present when `status` is `submit_failed` or `outcome_unknown`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+    )] = None
+
+
+class WhatsAppTemplateVersionID(RootModel[str]):
+    root: str
+
+
+class WhatsAppTemplate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The template's handle, editable before the first submission. Address it by this handle, and reference it when sending. Handles beginning with `bird_` are reserved for our built-in templates.",
+        examples=["bird_otp"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    slug_editable: Annotated[bool, Field(
+        description="Whether the slug can still be changed. False after the first submission and for built-in templates.",
+    )]
+    name: Annotated[str, Field(
+        description="A display name for the template. Nothing resolves through it, so it is safe to show wherever a human reads the template.",
+        examples=["Order update"],
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Null when unset.",
+        examples=["Sent when an order ships."],
+        max_length=1000,
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
+    )]
+    waba: Annotated[Optional[str], Field(
+        description="The WhatsApp Business Account that holds this template's languages at Meta. Absent on a built-in template: those live on a WABA that Bird manages centrally rather than on your account, so it is not yours to reconcile against and is not disclosed.",
+        examples=[102290129340398],
+    )] = None
+    category: Annotated[Union[WhatsAppTemplateCategory, str], Field(
+        description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
+        union_mode="left_to_right",
+    )]
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    on_missing_language: Annotated[TemplateOnMissingLanguage, Field(
+        description="What a send does when the language it asks for has no approved copy. Defaults to `fail` on WhatsApp, because every language is separately approved and separately priced: falling back silently would send content the recipient did not expect at a rate the sender did not choose.",
+    )]
+    language_source_required: Annotated[bool, Field(
+        description="When true, a send must name a language explicitly rather than letting the template resolve one.",
+        examples=[False],
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="The languages a send can resolve right now: approved and not held back by Meta. It shrinks for reasons you did not cause: Meta pauses, disables, archives or limits a language and it leaves the set with nobody having edited anything. Read `languages` to see which languages exist and why one is missing.",
+    )]
+    languages: Annotated[Dict[str, WhatsAppTemplateLanguageState], Field(
+        description="Where each of the template's languages stands, keyed by BCP-47 language tag. This is the summary of the version currently in service, so a template reading `active` can still hold a rejected or paused language: the aggregate says something is sendable, and this says which. Content is not here; it lives under a version.",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The open draft, or null when nobody is editing. Non-null is the answer to whether this template has unsubmitted work: a draft exists only because someone opened one.",
+        examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wav_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version Meta is serving. A version goes live as a unit the moment any of its languages is approved, superseding the one before it. Null until a first approval.",
+        examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wav_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    pending_version_id: Annotated[Optional[str], Field(
+        description="A submitted version still awaiting verdicts: what to poll. It stays set while any language is unresolved, including after a sibling's approval took the version live. Null when nothing is outstanding.",
+        examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wav_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When this template was last submitted. Null for a pre-approved built-in template.",
+        examples=["2026-07-26T16:40:00Z"],
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for a built-in template, which Bird ships rather than stores.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for a built-in template, which Bird ships rather than stores.",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this template, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nA `draft` template routes to opening its draft, a `pending` one to the version\nunder review, and a `rejected` or `inactive` one to a fresh draft. The template's\n`status` is the aggregate over its languages, so an entry may send you to the\nversion to see where each language actually stands.",
+    )] = None
+
+
+class WhatsAppTemplateList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppTemplate], Field(
+        description="Page of templates available to your workspace.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppTemplateRevision(RootModel[int]):
+    root: int
+
+
+class WhatsAppTemplateVersionSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wav_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="The version's sequence number, assigned when it is submitted. Null on a draft, which has not been submitted and has no place in the sequence yet.",
+        examples=[4],
+        ge=1,
+    )] = None
+    submitted_at: Annotated[Optional[str], Field(
+        description="When this version was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's version, which Bird ships already approved rather than submitting on your behalf.",
+        examples=["2026-07-20T11:04:00Z"],
+    )]
+    languages: Annotated[Dict[str, WhatsAppTemplateLanguageState], Field(
+        description="What this version's submission did with each language it holds, keyed by BCP-47 language tag. Content is not here: read the version for that.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the version was opened. Null for a built-in template's version, which Bird ships rather than stores.",
+        examples=["2026-07-20T10:31:00Z"],
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this version, given whether it has been submitted. Present on\nreads that compute it: an empty list means there is nothing to do, and the field is\nabsent entirely on responses that do not report next actions.\n\nA version with no `version_number` is the open draft, and routes to writing its\nlanguages and checking it. One that carries a number is frozen, so it routes to\nreading the verdicts it holds. `submitted_at` does not separate the two, because\nit is also null on a built-in template's version.",
+    )] = None
+
+
+class WhatsAppTemplateVersionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppTemplateVersionSummary], Field(
+        description="Page of the template's versions, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppTemplateVersionLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    components: Annotated[List[WhatsAppTemplateComponent], Field(
+        description="This language's content in this version, in display order.",
+    )]
+    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+        description="What this submission did with this language. Absent on a draft, which has not been submitted. Whether the language can be sent right now is a different question, answered by the template's `languages` summary.",
+        union_mode="left_to_right",
+    )] = None
+    rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
+        description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
+    )] = None
+    error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
+        description="Why the submission did not complete, present when `status` is `submit_failed` or `outcome_unknown`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+    )] = None
+
+
+class WhatsAppTemplateVersion(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wav_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="The version's sequence number, assigned when it is submitted. Null on a draft, which has not been submitted and has no place in the sequence yet.",
+        examples=[4],
+        ge=1,
+    )] = None
+    submitted_at: Annotated[Optional[str], Field(
+        description="When this version was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's version, which Bird ships already approved rather than submitting on your behalf.",
+        examples=["2026-07-20T11:04:00Z"],
+    )]
+    languages: Annotated[Dict[str, WhatsAppTemplateVersionLanguage], Field(
+        description="This version's content, keyed by BCP-47 language tag, with what its submission did with each language.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the version was opened. Null for a built-in template's version, which Bird ships rather than stores.",
+        examples=["2026-07-20T10:31:00Z"],
+    )]
+
+
+class WhatsAppTemplateLanguageSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n- `outcome_unknown`: A create or an edit reached WhatsApp but no response came back, so the outcome is still being resolved against WhatsApp. An unanswered deletion is retried instead of landing here. `error.description` says so, and `error.meta_error_code` is absent, since nothing was refused.\n\nThis is an open enum. Accept unrecognized values.",
+        union_mode="left_to_right",
+    )] = None
+    revision: Annotated[int, Field(
+        description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
+        examples=[4],
+        ge=1,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A hash over the serialized `components` this API surfaces, for telling whether a language differs without fetching it. It is comparable only within one version of this API: adding a field to the component shape changes every hash without the underlying content changing.",
+        examples=["sha256:9f2c4e1a7b03d85fbc6e29d417a05e8c3b1d9f76a2e4c018d53b7f9a6c2e18d4"],
+        min_length=1,
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this language, given the verdict it carries. Present on reads\nthat compute it: an empty list means there is nothing to do, and the field is absent\nentirely on responses that do not report next actions.\n\nApproval is per language, so this is where a rejection, a pause, or a reclaimed\nlanguage is answered. The template's own next actions cannot say, because they read\nthe aggregate.",
+    )] = None
+
+
+class WhatsAppTemplateLanguageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppTemplateLanguageSummary], Field(
+        description="Every language this version holds, without content.",
+    )]
+
+
+class WhatsAppTemplateContentHash(RootModel[str]):
+    root: str
+
+
+class WhatsAppTemplateQualityScore(str, Enum):
+    green = "green"
+    yellow = "yellow"
+    red = "red"
+    unknown = "unknown"
+
+
+class WhatsAppTemplateQuality(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    current_score: Annotated[Union[WhatsAppTemplateQualityScore, str], Field(
+        description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
+        union_mode="left_to_right",
+    )]
+    previous_score: Annotated[Optional[Union[WhatsAppTemplateQualityScore, str]], Field(
+        description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
+        union_mode="left_to_right",
+    )] = None
+    updated_at: Annotated[str, Field(
+        description="When the rating last changed. A re-evaluation that lands on the same rating does not move it, so this answers how long the language has held its current rating.",
+        examples=["2026-07-26T16:41:00Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppTemplateLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    components: Annotated[List[WhatsAppTemplateComponent], Field(
+        description="This language's content blocks, in display order, exactly as submitted or as they stand in the draft.",
+    )]
+    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n- `outcome_unknown`: A create or an edit reached WhatsApp but no response came back, so the outcome is still being resolved against WhatsApp. An unanswered deletion is retried instead of landing here. `error.description` says so, and `error.meta_error_code` is absent, since nothing was refused.\n\nThis is an open enum. Accept unrecognized values.",
+        union_mode="left_to_right",
+    )] = None
+    revision: Annotated[int, Field(
+        description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
+        examples=[4],
+        ge=1,
+    )]
+    content_hash: Annotated[str, Field(
+        examples=["sha256:9f2c4e1a7b03d85fbc6e29d417a05e8c3b1d9f76a2e4c018d53b7f9a6c2e18d4"],
+        min_length=1,
+    )]
+    category: Annotated[Optional[Union[WhatsAppTemplateCategory, str]], Field(
+        description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
+        union_mode="left_to_right",
+    )] = None
+    previous_category: Annotated[Optional[Union[WhatsAppTemplateCategory, str]], Field(
+        description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
+        union_mode="left_to_right",
+    )] = None
+    quality: Annotated[Optional[WhatsAppTemplateQuality], Field(
+        description="Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating.",
+    )] = None
+    rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
+        description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
+    )] = None
+    error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
+        description="Why the submission did not complete, present when `status` is `submit_failed` or `outcome_unknown`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+    )] = None
+    submitted_at: Annotated[Optional[str], Field(
+        description="When this content was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, which Bird ships already approved rather than submitting on your behalf.",
+        examples=["2026-07-26T16:40:00Z"],
+    )]
+    approved_at: Annotated[Optional[str], Field(
+        description="When Meta approved this exact content. It is a permanent mark on the content rather than a status, so a later pause or archival does not clear it. Null for a built-in template's language, whose approval predates Bird holding a date for it.",
+        examples=["2026-07-21T08:15:00Z"],
+    )] = None
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language last changed. Null for a built-in template's language, which Bird ships rather than stores.",
+        examples=["2026-07-26T16:41:00Z"],
+    )]
+    updated_by: Annotated[Optional[str], Field(
+        description="The workspace member who last wrote this language. Always null for a built-in template's language: nobody in the workspace authored it.",
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class NumbersDedicatedAllocationID(RootModel[str]):
@@ -6247,6 +6845,9 @@ class EmailTemplateSummary(BaseModel):
     slug: Annotated[str, Field(
         description="The name you send the template by. You can use either the slug or the id when you send. It never changes after the template is created. A built-in `system` template's slug always starts with `bird_`.",
         examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )]
     name: Annotated[str, Field(
         description="The template's display name, shown wherever the template is listed. You can change it any time. It defaults to the slug if you do not set one.",
@@ -6258,7 +6859,7 @@ class EmailTemplateSummary(BaseModel):
         description="What the template is for, in your own words. Null if you have not set one.",
     )]
     scope: Annotated[TemplateScope, Field(
-        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`). Every SMS template is `system`.",
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
     )]
     status: Annotated[TemplateStatus, Field(
         description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
@@ -7453,6 +8054,8 @@ class EventEmailAcceptedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
 
 
@@ -7515,6 +8118,8 @@ class EventEmailBouncedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
@@ -7627,6 +8232,8 @@ class EventEmailClickedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     url: Annotated[str, Field(
         description="The URL the recipient clicked.",
@@ -7694,6 +8301,8 @@ class EventEmailComplainedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     feedback_type: Annotated[Optional[str], Field(
         description="The kind of feedback the mailbox provider reported (such as `abuse` or `fraud`), or null when the provider did not specify one.",
@@ -7752,6 +8361,8 @@ class EventEmailDeferredData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
@@ -7823,6 +8434,8 @@ class EventEmailDeliveredData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
 
 
@@ -7877,6 +8490,8 @@ class EventEmailListUnsubscribedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
 
 
@@ -7931,6 +8546,8 @@ class EventEmailOpenedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     ip_address: Annotated[Optional[str], Field(
         description="IP address of the client that opened the email, or null when it is not known.",
@@ -7993,6 +8610,8 @@ class EventEmailOutOfBandBounceData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
@@ -8068,6 +8687,8 @@ class EventEmailProcessedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
 
 
@@ -8205,6 +8826,8 @@ class EventEmailRejectedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     rejection_reason: Annotated[EmailRejectionReason, Field(
         description="Why an email was rejected before delivery.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).",
@@ -8304,6 +8927,8 @@ class EventEmailUnsubscribedData(BaseModel):
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
 
 
@@ -9921,6 +10546,145 @@ class EventWhatsAppDeliveredData(BaseModel):
     )] = None
 
 
+class EventWhatsAppReadData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[EventWhatsAppBaseDirection, Field(
+        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+    )]
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class EventWhatsAppReceivedData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[EventWhatsAppBaseDirection, Field(
+        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+    )]
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
+    image: Annotated[Optional[WhatsAppImage], Field(
+        description="Image the contact sent.",
+    )] = None
+    video: Annotated[Optional[WhatsAppVideo], Field(
+        description="Video the contact sent.",
+    )] = None
+    audio: Annotated[Optional[WhatsAppAudio], Field(
+        description="Audio the contact sent.",
+    )] = None
+    sticker: Annotated[Optional[WhatsAppSticker], Field(
+        description="Sticker the contact sent.",
+    )] = None
+    document: Annotated[Optional[WhatsAppDocument], Field(
+        description="Document the contact sent.",
+    )] = None
+    location: Annotated[Optional[WhatsAppLocation], Field(
+        description="Location the contact sent.",
+    )] = None
+    contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
+        description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
+    )] = None
+    interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
+        description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
+    )] = None
+    unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
+        description="Set when the contact sent content the API does not model, naming the WhatsApp content type.",
+    )] = None
+
+
+class EventWhatsAppSentData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[EventWhatsAppBaseDirection, Field(
+        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+    )]
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
 class EventWhatsAppDelivered(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.delivered"], Field(
@@ -9995,43 +10759,6 @@ class EventWhatsAppFailed(BaseModel):
     )]
 
 
-class EventWhatsAppReadData(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    whatsapp_id: Annotated[str, Field(
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
-    )]
-    from_: Annotated[WhatsAppAddress, Field(
-        alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
-    )]
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-
-
 class EventWhatsAppRead(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.read"], Field(
@@ -10047,71 +10774,6 @@ class EventWhatsAppRead(BaseModel):
     data: Annotated[EventWhatsAppReadData, Field(
         description="Payload of the whatsapp.read event.",
     )]
-
-
-class EventWhatsAppReceivedData(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    whatsapp_id: Annotated[str, Field(
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
-    )]
-    from_: Annotated[WhatsAppAddress, Field(
-        alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
-    )]
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-    text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
-    image: Annotated[Optional[WhatsAppImage], Field(
-        description="Image the contact sent.",
-    )] = None
-    video: Annotated[Optional[WhatsAppVideo], Field(
-        description="Video the contact sent.",
-    )] = None
-    audio: Annotated[Optional[WhatsAppAudio], Field(
-        description="Audio the contact sent.",
-    )] = None
-    sticker: Annotated[Optional[WhatsAppSticker], Field(
-        description="Sticker the contact sent.",
-    )] = None
-    document: Annotated[Optional[WhatsAppDocument], Field(
-        description="Document the contact sent.",
-    )] = None
-    location: Annotated[Optional[WhatsAppLocation], Field(
-        description="Location the contact sent.",
-    )] = None
-    contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
-        description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
-    )] = None
-    interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
-        description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
-    )] = None
-    unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
-        description="Set when the contact sent content the API does not model, naming the WhatsApp content type.",
-    )] = None
 
 
 class EventWhatsAppReceived(BaseModel):
@@ -10182,43 +10844,6 @@ class EventWhatsAppRejected(BaseModel):
     data: Annotated[EventWhatsAppRejectedData, Field(
         description="Payload of the whatsapp.rejected event.",
     )]
-
-
-class EventWhatsAppSentData(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    whatsapp_id: Annotated[str, Field(
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
-    )]
-    from_: Annotated[WhatsAppAddress, Field(
-        alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
-    )]
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
 
 
 class EventWhatsAppSent(BaseModel):

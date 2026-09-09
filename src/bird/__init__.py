@@ -89,6 +89,12 @@ from bird._generated import (
     WhatsAppEvent,
     WhatsAppEventList,
     WhatsAppMessage,
+    WhatsAppTemplate,
+    WhatsAppTemplateLanguage,
+    WhatsAppTemplateLanguageList,
+    WhatsAppTemplateList,
+    WhatsAppTemplateVersion,
+    WhatsAppTemplateVersionSummary,
 )
 from bird.resources.audiences_gen import (
     AudienceAddContactsParams,
@@ -168,7 +174,10 @@ from bird._open_enums import (
     WhatsAppInteractiveReplyType,
     WhatsAppInteractiveType,
     WhatsAppTemplateCategory,
+    WhatsAppTemplateLanguageStatus,
     WhatsAppTemplateParameterType,
+    WhatsAppTemplateQualityScore,
+    WhatsAppTemplateRejectionCategory,
 )
 from bird.resources.realtime import ChannelAuthorization
 from bird.resources.webhooks import GenericWebhookEvent
@@ -300,6 +309,12 @@ __all__ = [
     "WhatsAppMessage",
     "WhatsAppEvent",
     "WhatsAppEventList",
+    "WhatsAppTemplate",
+    "WhatsAppTemplateList",
+    "WhatsAppTemplateVersion",
+    "WhatsAppTemplateVersionSummary",
+    "WhatsAppTemplateLanguage",
+    "WhatsAppTemplateLanguageList",
     "VerifyVerificationsCreateParams",
     "VerifyVerificationsCheckParams",
     "VerifyVerificationsNextChannelParams",
@@ -341,7 +356,10 @@ __all__ = [
     "WhatsAppInteractiveReplyType",
     "WhatsAppInteractiveType",
     "WhatsAppTemplateCategory",
+    "WhatsAppTemplateLanguageStatus",
     "WhatsAppTemplateParameterType",
+    "WhatsAppTemplateQualityScore",
+    "WhatsAppTemplateRejectionCategory",
     "BirdError",
     "APIError",
     "APIStatusError",
