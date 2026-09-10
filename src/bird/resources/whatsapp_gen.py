@@ -9,7 +9,10 @@ from urllib.parse import quote
 from bird._generated import (
     WhatsAppEventList,
     WhatsAppMessage,
+    WhatsAppReadReceipt,
+    WhatsAppReadReceiptRequest,
 )
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
@@ -37,6 +40,12 @@ class WhatsappListEventsParams(TypedDict, total=False):
     """Query params for ``client.whatsapp.list_events``. Every key is optional."""
 
     type: str
+
+
+class WhatsappMarkReadParams(TypedDict, total=False):
+    """Params for ``client.whatsapp.mark_read``. Every key is optional."""
+
+    typing_indicator: bool
 
 
 class WhatsappBase(Resource):
@@ -126,6 +135,34 @@ class WhatsappBase(Resource):
             options,
         )
 
+    def mark_read(
+        self,
+        message_id: str,
+        *,
+        typing_indicator: bool | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppReadReceipt:
+        """Mark one inbound WhatsApp message as read, optionally showing a typing indicator at the same time. Accepted asynchronously (202); there is no status to poll and no webhook.
+
+        ```python
+        ack = client.whatsapp.mark_read("wam_01krdgeqcxet5s7t44vh8rt9mg", typing_indicator=True)
+        print(ack.typing_indicator)
+        ```
+        """
+        body = to_wire(
+            WhatsAppReadReceiptRequest,
+            {
+                "typing_indicator": typing_indicator,
+            },
+        )
+        return self._write(
+            "POST",
+            f"/v1/whatsapp/messages/{quote(message_id, safe='')}/read",
+            body,
+            WhatsAppReadReceipt,
+            options,
+        )
+
 
 class AsyncWhatsappBase(AsyncResource):
     async def get(
@@ -211,5 +248,33 @@ class AsyncWhatsappBase(AsyncResource):
                 "type": type,
             },
             WhatsAppEventList,
+            options,
+        )
+
+    async def mark_read(
+        self,
+        message_id: str,
+        *,
+        typing_indicator: bool | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppReadReceipt:
+        """Mark one inbound WhatsApp message as read, optionally showing a typing indicator at the same time. Accepted asynchronously (202); there is no status to poll and no webhook.
+
+        ```python
+        ack = await client.whatsapp.mark_read("wam_01krdgeqcxet5s7t44vh8rt9mg", typing_indicator=True)
+        print(ack.typing_indicator)
+        ```
+        """
+        body = to_wire(
+            WhatsAppReadReceiptRequest,
+            {
+                "typing_indicator": typing_indicator,
+            },
+        )
+        return await self._write(
+            "POST",
+            f"/v1/whatsapp/messages/{quote(message_id, safe='')}/read",
+            body,
+            WhatsAppReadReceipt,
             options,
         )

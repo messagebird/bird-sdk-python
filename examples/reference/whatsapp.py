@@ -28,6 +28,25 @@ def whatsapp_list_events() -> None:
         print(event.type, event.occurred_at)
 
 
+def whatsapp_mark_read() -> None:
+    ack = client.whatsapp.mark_read("wam_01krdgeqcxet5s7t44vh8rt9mg", typing_indicator=True)
+    print(ack.typing_indicator)
+
+
+def whatsapp_reaction_set() -> None:
+    reaction = client.whatsapp.reaction.set("wam_01krdgeqcxet5s7t44vh8rt9mg", emoji="\U0001f44d")
+    print(reaction.id, reaction.emoji)
+
+
+def whatsapp_reaction_remove() -> None:
+    client.whatsapp.reaction.remove("wam_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+def whatsapp_reaction_list_events() -> None:
+    for event in client.whatsapp.reaction.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(event.id, event.emoji, event.status)
+
+
 def whatsapp_templates_list() -> None:
     for tpl in client.whatsapp.templates.list():
         print(tpl.slug, tpl.status)

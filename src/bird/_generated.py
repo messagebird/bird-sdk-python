@@ -712,7 +712,7 @@ class EmailMessageSendRequest(BaseModel):
         description="Arbitrary JSON object returned on API reads and included in webhook payloads. You can query its paths in analytics, such as `metadata.order_id`, but it is not a dashboard filter. The serialized object is limited to 2 KB. Use metadata for per-send context such as order IDs, customer references, and structured event data. For low-cardinality filterable labels, use `tags` instead.",
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Parameter values used to personalize inline content. A parameter is a single word, and a token in the subject or body (for example `{{ animal }}`) is replaced with the value of that name at send time. Shared across all recipients of this send. A token with no matching key renders empty. Cap: 16 KB serialized. When sending a stored `template`, put the values in `template.parameters` instead.",
+        description="Parameter values used to personalize inline content, shared across all recipients of this send. Tokens such as `{{ animal }}` are replaced with matching values; missing values render empty. Include this object, even as `{}`, to use Liquid, or omit it to leave tokens unchanged. Use single-word names other than `bird`. Cap: 16 KB serialized. For a stored template, use `template.parameters` instead. See [inline personalization](https://bird.com/docs/guides/email/sending-email#content) for validation and URL encoding examples.",
     )] = None
     template: Annotated[Optional[EmailTemplateSend], Field(
         description="Send a stored template instead of inline content. When set, omit `subject`, `html` and `text`, because the template supplies them. Personalize with `template.parameters`. A template send goes out immediately: `template` and `scheduled_at` are mutually exclusive, and combining them is rejected with a `422`.",
@@ -3181,6 +3181,14 @@ class EmailLookup(BaseModel):
     )] = None
 
 
+class VerificationChannel(str, Enum):
+    email = "email"
+    sms = "sms"
+    whatsapp = "whatsapp"
+    telegram = "telegram"
+    voice = "voice"
+
+
 class VerificationID(RootModel[str]):
     root: str
 
@@ -3203,14 +3211,6 @@ class VerificationTo(BaseModel):
         examples=[+15551234567],
         min_length=1,
     )] = None
-
-
-class VerificationChannel(str, Enum):
-    email = "email"
-    sms = "sms"
-    whatsapp = "whatsapp"
-    telegram = "telegram"
-    voice = "voice"
 
 
 class VerificationChannelEntry(BaseModel):
@@ -3996,6 +3996,19 @@ class WhatsAppUnsupported(BaseModel):
     )]
 
 
+class WhatsAppReaction(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    emoji: Annotated[str, Field(
+        description="The emoji, as WhatsApp sent it. It is not normalized, so two emoji that render identically can differ byte for byte and compare unequal.",
+        examples=["👍"],
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Who reacted. On a group message this is what tells one participant's reaction from another's. On a one-to-one message it is your business number on a reaction you placed and the contact on one they placed, which is why it is here rather than inferred from the message's `direction`.",
+    )]
+
+
 class WhatsAppErrorCode(str, Enum):
     insufficient_balance = "insufficient_balance"
     price_not_found = "price_not_found"
@@ -4093,6 +4106,9 @@ class WhatsAppMessage(BaseModel):
     unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
         description="Set when the contact sent content we do not model, naming the WhatsApp content type so the message is not silently empty. Inbound only.",
     )] = None
+    reactions: Annotated[Optional[List[WhatsAppReaction]], Field(
+        description="Emoji reactions standing on this message right now, one per sender. Absent when the message has none. A reaction that was replaced by a different emoji, or taken back, is not listed; the message's reaction log keeps that history. WhatsApp accepts a reaction on a message up to 30 days old, and we keep provider ids for 15, so a reaction placed on a message older than that cannot be matched to it and does not appear here.",
+    )] = None
     status: WhatsAppMessageStatus
     last_error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -4108,7 +4124,7 @@ class WhatsAppMessage(BaseModel):
         description="When delivery was confirmed. Null until then.",
     )] = None
     read_at: Annotated[Optional[str], Field(
-        description="When the message was read by the recipient. Null until then.",
+        description="When the message was read. On an outbound message this is the recipient opening it. On an inbound one it is when Bird acknowledged the message to WhatsApp for the business, which a read receipt sets. Null until then.",
     )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -4752,6 +4768,22 @@ class WhatsAppMessageSendRequest(BaseModel):
     )] = None
 
 
+class WhatsAppReadReceiptRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    typing_indicator: Annotated[Optional[bool], Field(
+        description="Show a typing indicator to the contact as well as marking the message read. WhatsApp clears it when you send your next message, or after 25 seconds, whichever comes first. Only ask for one if you are about to reply.",
+        examples=[True],
+    )] = None
+
+
+class WhatsAppReadReceipt(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    typing_indicator: Annotated[bool, Field(
+        description="Whether a typing indicator was requested alongside the read receipt.",
+        examples=[True],
+    )]
+
+
 class WhatsAppEventType(str, Enum):
     whatsapp_accepted = "whatsapp.accepted"
     whatsapp_delivered = "whatsapp.delivered"
@@ -4774,7 +4806,7 @@ class WhatsAppEvent(BaseModel):
         pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     type: Annotated[Union[WhatsAppEventType, str], Field(
-        description="Message timeline event type:\n\n- `whatsapp.accepted`: The API accepted the request.\n- `whatsapp.sent`: The message reached the WhatsApp network.\n- `whatsapp.delivered`: Delivery to the recipient's device was confirmed.\n- `whatsapp.read`: The recipient opened the message.\n- `whatsapp.failed`: Delivery failed permanently.\n- `whatsapp.rejected`: The message was refused before sending and not charged.\n- `whatsapp.received`: An inbound message arrived from the contact.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Message timeline event type:\n\n- `whatsapp.accepted`: The API accepted the request.\n- `whatsapp.sent`: The message reached the WhatsApp network.\n- `whatsapp.delivered`: Delivery to the recipient's device was confirmed.\n- `whatsapp.read`: The message was read. On an outbound message the recipient\n  opened it; on an inbound one Bird acknowledged it to WhatsApp for the\n  business, which is what a read receipt records.\n- `whatsapp.failed`: Delivery failed permanently.\n- `whatsapp.rejected`: The message was refused before sending and not charged.\n- `whatsapp.received`: An inbound message arrived from the contact.\n\nThis is an open enum. Accept unrecognized values.",
         union_mode="left_to_right",
     )]
     occurred_at: Annotated[str, Field(
@@ -4790,6 +4822,86 @@ class WhatsAppEventList(BaseModel):
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[WhatsAppEvent], Field(
         description="Timeline events for this WhatsApp message, in chronological order. The timeline is bounded and returned in full; this list is not paginated.",
+    )]
+
+
+class WhatsAppReactionUpsert(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    emoji: Annotated[str, Field(
+        description="The emoji to place, as the character itself. Replaces your existing reaction on this message if you have one. To take a reaction back entirely, delete it rather than sending an empty value. WhatsApp takes exactly one emoji, so a value carrying more than one is refused with a `422` rather than sent. The length cap is generous because a single joined emoji is many code points: a couple-kissing one carrying two skin tones is ten, which is why the cap alone cannot express the limit.",
+        examples=["👍"],
+        max_length=64,
+        min_length=1,
+    )]
+
+
+class WhatsAppReactionEventID(RootModel[str]):
+    root: str
+
+
+class WhatsAppReactionAccepted(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["war_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^war_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    emoji: Annotated[str, Field(
+        description="The emoji as accepted, echoing the one the request carried.",
+        examples=["👍"],
+        min_length=1,
+    )]
+
+
+class WhatsAppReactionEventStatus(str, Enum):
+    received = "received"
+    sent = "sent"
+    failed = "failed"
+    rejected = "rejected"
+
+
+class WhatsAppReactionEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["war_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^war_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    emoji: Annotated[Optional[str], Field(
+        description="The emoji this entry placed, as WhatsApp sent it and not normalized. Null when the entry took a reaction back rather than placing one. Always present, so null is the removal itself rather than a value we are missing.",
+        examples=["👍"],
+    )]
+    status: WhatsAppReactionEventStatus
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Who made the change. Your business number on a reaction you placed, the contact on one they placed.",
+    )]
+    error: Annotated[Optional[WhatsAppError], Field(
+        description="Failure detail for a message that could not be delivered or was rejected.",
+    )] = None
+    occurred_at: Annotated[str, Field(
+        description="When the change was made.",
+        examples=["2026-08-28T19:01:10Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppReactionEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppReactionEvent], Field(
+        description="Changes to this message's reactions, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -7793,6 +7905,7 @@ class WebhookEventType(str, Enum):
     whatsapp_accepted = "whatsapp.accepted"
     whatsapp_delivered = "whatsapp.delivered"
     whatsapp_failed = "whatsapp.failed"
+    whatsapp_reacted = "whatsapp.reacted"
     whatsapp_read = "whatsapp.read"
     whatsapp_received = "whatsapp.received"
     whatsapp_rejected = "whatsapp.rejected"
@@ -10759,6 +10872,46 @@ class EventWhatsAppFailed(BaseModel):
     )]
 
 
+class EventWhatsAppReactedData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    emoji: Annotated[Optional[str], Field(
+        description="The emoji the contact placed, as WhatsApp sent it and not normalized. Null when they took their reaction back rather than placing one. Always present, so null is the removal itself rather than a value we are missing.",
+        examples=["👍"],
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="The contact who reacted, as WhatsApp identified them.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Your WhatsApp number, the business side of the conversation.",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class EventWhatsAppReacted(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["whatsapp.reacted"], Field(
+        description="Always `whatsapp.reacted` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When the contact reacted, as reported by WhatsApp. Meta reports this to the second, so a contact who changes or withdraws a reaction quickly can produce two events sharing one timestamp. Sorting reactions on one message by this field cannot order those, and neither can delivery order, which retries make unreliable. Act on the reaction each event carries, as the change it describes; do not reconstruct the sequence from the events or treat the last one to arrive as the message's standing reaction. Read the message back for the reactions that stand: `getWhatsAppMessage` (`GET /v1/whatsapp/messages/{message_id}`) returns one entry per sender in `reactions`, and `listWhatsAppMessageReactionEvents` has every change.",
+        examples=["2026-08-28T19:01:10Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventWhatsAppReactedData, Field(
+        description="Payload of the whatsapp.reacted event. Names the message the contact reacted to, not the reaction, because a reaction is an annotation on a message rather than a message of its own.",
+    )]
+
+
 class EventWhatsAppRead(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.read"], Field(
@@ -10910,8 +11063,8 @@ class WebhookTestResponseStatus(str, Enum):
     failed = "failed"
 
 
-class WebhookEvent(RootModel[EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
-    root: EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
+class WebhookEvent(RootModel[EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
+    root: EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
 
 
 class WebhookTestResponse(BaseModel):
@@ -11400,7 +11553,7 @@ class VoiceCall(BaseModel):
         ge=100,
     )] = None
     rejection_reason: Annotated[Optional[VoiceCallRejectionReason], Field(
-        description="Why we refused the call before dialing a carrier. Absent whenever the refusal was not ours: a call that connected, a call the carrier or the far end turned down (`sip_response_code` carries their answer, and a 6xx decline reads as `rejected` rather than `failed`), and an incoming call turned away by the number it dialed, which fails no check of ours and so names no reason. `route` says what that number was set to do.",
+        description="Why we rejected the call. Absent on connected calls and calls rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the call a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
     )] = None
     route: Annotated[Optional[VoiceCallInboundRoute], Field(
         description="Which answer your number gave an incoming call: a SIP trunk, a forward, or a refusal. Recorded when the call was handled, so changing the number's setup afterwards does not change what its past calls say. Absent on outbound calls, and on calls recorded before this field existed.",
