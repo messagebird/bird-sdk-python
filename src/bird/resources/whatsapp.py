@@ -19,6 +19,7 @@ from bird._types import RequestOptions
 from bird.resources.whatsapp_gen import AsyncWhatsappBase, WhatsappBase
 from bird.resources.whatsapp_messages import AsyncWhatsappMessages, WhatsappMessages
 from bird.resources.whatsapp_reaction_gen import AsyncWhatsappReaction, WhatsappReaction
+from bird.resources.whatsapp_stats import AsyncWhatsappStats, WhatsappStats
 from bird.resources.whatsapp_templates import AsyncWhatsappTemplates, WhatsappTemplates
 
 _PATH = "/v1/whatsapp/messages"
@@ -84,6 +85,7 @@ class Whatsapp(WhatsappBase):
 
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
+        self.stats = WhatsappStats(client)
         self.messages = WhatsappMessages(client)
         self.templates = WhatsappTemplates(client)
         self.reaction = WhatsappReaction(client)
@@ -160,6 +162,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
 
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
+        self.stats = AsyncWhatsappStats(client)
         self.messages = AsyncWhatsappMessages(client)
         self.templates = AsyncWhatsappTemplates(client)
         self.reaction = AsyncWhatsappReaction(client)

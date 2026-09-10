@@ -1030,21 +1030,101 @@ async def _ex_155() -> None:
 
 
 async def _ex_156() -> None:
+    stats = client.whatsapp.stats.by_country(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.country, row.delivery)
+
+
+async def _ex_157() -> None:
+    stats = client.whatsapp.stats.by_error_code(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.error_code, row.count)
+
+
+async def _ex_158() -> None:
+    stats = client.whatsapp.stats.by_phone_number(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.phone_number, row.delivery)
+
+
+async def _ex_159() -> None:
+    stats = client.whatsapp.stats.by_tag(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.tag, row.delivery)
+
+
+async def _ex_160() -> None:
+    stats = client.whatsapp.stats.by_template(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.template_id, row.delivery)
+
+
+async def _ex_161() -> None:
+    stats = client.whatsapp.stats.by_template_category(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.category, row.delivery)
+
+
+async def _ex_162() -> None:
+    stats = client.whatsapp.stats.daily(from_="2026-08-01", to="2026-08-31")
+    for point in stats.data or []:
+        print(point.bucket, point.delivery)
+
+
+async def _ex_163() -> None:
+    stats = client.whatsapp.stats.hourly(from_="2026-08-30T00:00:00Z", to="2026-08-31T00:00:00Z")
+    for point in stats.data or []:
+        print(point.bucket, point.delivery)
+
+
+async def _ex_164() -> None:
+    stats = client.whatsapp.stats.inbound.by_phone_number(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.phone_number, row.received)
+
+
+async def _ex_165() -> None:
+    stats = client.whatsapp.stats.inbound.daily(from_="2026-05-01", to="2026-05-31")
+    for point in stats.data or []:
+        print(point.bucket, point.received)
+
+
+async def _ex_166() -> None:
+    stats = client.whatsapp.stats.inbound.hourly(
+        from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z"
+    )
+    for point in stats.data or []:
+        print(point.bucket, point.received)
+
+
+async def _ex_167() -> None:
+    summary = client.whatsapp.stats.inbound.summary(from_="2026-05-01", to="2026-05-31")
+    print(summary.received)
+
+
+async def _ex_168() -> None:
+    summary = client.whatsapp.stats.summary(
+        from_="2026-08-01", to="2026-08-31", timezone="Europe/Amsterdam"
+    )
+    print(summary.delivery, summary.latency)
+
+
+async def _ex_169() -> None:
     tpl = client.whatsapp.templates.get("bird_otp")
     print(tpl.default_language, tpl.available_languages)
 
 
-async def _ex_157() -> None:
+async def _ex_170() -> None:
     for tpl in client.whatsapp.templates.list():
         print(tpl.slug, tpl.status)
 
 
-async def _ex_158() -> None:
+async def _ex_171() -> None:
     version = client.whatsapp.templates.versions.get("bird_otp", "wav_01ky4x8e4genzb7way45txfkm1")
     print(version.id, list(version.languages))
 
 
-async def _ex_159() -> None:
+async def _ex_172() -> None:
     language = client.whatsapp.templates.versions.languages.get(
         "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1", "nl-BE"
     )
@@ -1052,7 +1132,7 @@ async def _ex_159() -> None:
         print(component.type)
 
 
-async def _ex_160() -> None:
+async def _ex_173() -> None:
     languages = client.whatsapp.templates.versions.languages.list(
         "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1"
     )
@@ -1060,11 +1140,11 @@ async def _ex_160() -> None:
         print(language.language, language.status)
 
 
-async def _ex_161() -> None:
+async def _ex_174() -> None:
     for version in client.whatsapp.templates.versions.list("bird_otp"):
         print(version.id, version.version_number)
 
 
-async def _ex_162() -> None:
+async def _ex_175() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)

@@ -81,3 +81,83 @@ def whatsapp_templates_versions_languages_get() -> None:
     )
     for component in language.components:
         print(component.type)
+
+
+def whatsapp_stats_summary() -> None:
+    summary = client.whatsapp.stats.summary(
+        from_="2026-08-01", to="2026-08-31", timezone="Europe/Amsterdam"
+    )
+    print(summary.delivery, summary.latency)
+
+
+def whatsapp_stats_daily() -> None:
+    stats = client.whatsapp.stats.daily(from_="2026-08-01", to="2026-08-31")
+    for point in stats.data or []:
+        print(point.bucket, point.delivery)
+
+
+def whatsapp_stats_hourly() -> None:
+    stats = client.whatsapp.stats.hourly(from_="2026-08-30T00:00:00Z", to="2026-08-31T00:00:00Z")
+    for point in stats.data or []:
+        print(point.bucket, point.delivery)
+
+
+def whatsapp_stats_by_error_code() -> None:
+    stats = client.whatsapp.stats.by_error_code(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.error_code, row.count)
+
+
+def whatsapp_stats_by_template() -> None:
+    stats = client.whatsapp.stats.by_template(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.template_id, row.delivery)
+
+
+def whatsapp_stats_by_template_category() -> None:
+    stats = client.whatsapp.stats.by_template_category(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.category, row.delivery)
+
+
+def whatsapp_stats_by_tag() -> None:
+    stats = client.whatsapp.stats.by_tag(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.tag, row.delivery)
+
+
+def whatsapp_stats_by_phone_number() -> None:
+    stats = client.whatsapp.stats.by_phone_number(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.phone_number, row.delivery)
+
+
+def whatsapp_stats_by_country() -> None:
+    stats = client.whatsapp.stats.by_country(from_="2026-08-01", to="2026-08-31")
+    for row in stats.data or []:
+        print(row.country, row.delivery)
+
+
+def whatsapp_stats_inbound_summary() -> None:
+    summary = client.whatsapp.stats.inbound.summary(from_="2026-05-01", to="2026-05-31")
+    print(summary.received)
+
+
+def whatsapp_stats_inbound_daily() -> None:
+    stats = client.whatsapp.stats.inbound.daily(from_="2026-05-01", to="2026-05-31")
+    for point in stats.data or []:
+        print(point.bucket, point.received)
+
+
+def whatsapp_stats_inbound_hourly() -> None:
+    stats = client.whatsapp.stats.inbound.hourly(
+        from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z"
+    )
+    for point in stats.data or []:
+        print(point.bucket, point.received)
+
+
+def whatsapp_stats_inbound_by_phone_number() -> None:
+    stats = client.whatsapp.stats.inbound.by_phone_number(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.phone_number, row.received)

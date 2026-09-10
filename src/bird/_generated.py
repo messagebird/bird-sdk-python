@@ -5475,6 +5475,521 @@ class WhatsAppTemplateLanguage(BaseModel):
     )] = None
 
 
+class WhatsAppStatsSummaryPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class WhatsAppDeliveryStats(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off for delivery.",
+        examples=[4810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct messages confirmed delivered to the recipient's device.",
+        examples=[4720],
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Distinct messages that failed during sending or delivery.",
+        examples=[25],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
+        examples=[412],
+        ge=0,
+    )]
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that were delivered, computed as `delivered / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.9793],
+        ge=0,
+        le=1,
+    )]
+    failure_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that ultimately failed, computed as `failed / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.0052],
+        ge=0,
+        le=1,
+    )]
+
+
+class WhatsAppEngagementStats(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    read: Annotated[int, Field(
+        description="Distinct messages confirmed read by the recipient.",
+        examples=[3105],
+        ge=0,
+    )]
+    read_rate: Annotated[Optional[float], Field(
+        description="Distinct messages read relative to messages delivered in the same scope, computed as `read / delivery.delivered`. Both counts are attributed by send time, so a read is counted alongside its own message's delivery. The rate can exceed 1 where a read receipt arrived for a message whose delivery receipt did not, or, at high volume, because the counts are close estimates. Null when `delivery.delivered` is zero.",
+        examples=[0.6578],
+        ge=0,
+    )]
+
+
+class WhatsAppLatencyQuantiles(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    p50_ms: Annotated[Optional[int], Field(
+        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[610],
+        ge=0,
+    )]
+    p95_ms: Annotated[Optional[int], Field(
+        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[2140],
+        ge=0,
+    )]
+    p99_ms: Annotated[Optional[int], Field(
+        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[5380],
+        ge=0,
+    )]
+
+
+class WhatsAppLatencyStats(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    processing: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    delivery: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    total: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class WhatsAppStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    accepted_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+        examples=[0.508],
+    )]
+    sent_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in sent messages (`delivery.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.508],
+    )]
+    delivered_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in delivered messages (`delivery.delivered`) versus the previous period, as a signed fraction. Null when the previous period delivered none.",
+        examples=[0.513],
+    )]
+    failed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in failed messages (`delivery.failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.194],
+    )]
+    rejected_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.084],
+    )]
+    read_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in messages read (`engagement.read`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.568],
+    )]
+    delivery_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
+        examples=[0.0031],
+        ge=-1,
+        le=1,
+    )]
+    failure_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's failure rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's failure rate is undefined.",
+        examples=[-0.0045],
+        ge=-1,
+        le=1,
+    )]
+    read_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between the current and previous read-rate fractions. Multiply by 100 for percentage points. The value can fall outside `[-1, 1]` because a read receipt can arrive for a message whose delivery receipt did not, and high-volume counts are approximate. Null when either rate is undefined.",
+        examples=[0.0232],
+    )]
+
+
+class WhatsAppStatsComparison(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+    delta: WhatsAppStatsComparisonDelta
+
+
+class WhatsAppStatsSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+    comparison: Optional[WhatsAppStatsComparison] = None
+
+
+class WhatsAppStatsSeriesPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window. A calendar day (YYYY-MM-DD) on the day grain, an RFC 3339 instant on the hour grain.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window. A calendar day (YYYY-MM-DD) on the day grain, an RFC 3339 instant on the hour grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    grain: Annotated[StatsGrain, Field(
+        description="The bucket grain of the series, either `day` or `hour`.",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class WhatsAppDeliveryCounts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off for delivery.",
+        examples=[4810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct messages confirmed delivered to the recipient's device.",
+        examples=[4720],
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Distinct messages that failed during sending or delivery.",
+        examples=[25],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
+        examples=[412],
+        ge=0,
+    )]
+
+
+class WhatsAppEngagementCounts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    read: Annotated[int, Field(
+        description="Distinct messages confirmed read by the recipient.",
+        examples=[3105],
+        ge=0,
+    )]
+
+
+class WhatsAppStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    delivery: WhatsAppDeliveryCounts
+    engagement: WhatsAppEngagementCounts
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSeriesPeriod, Field(
+        description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
+    )]
+    data: Annotated[List[WhatsAppStatsPoint], Field(
+        description="One row per day or hour in chronological order. Buckets with no activity contain zero counts.",
+    )]
+
+
+class WhatsAppErrorCodeStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    error_code: Annotated[Union[WhatsAppErrorCode, str], Field(
+        description="The normalized failure reason this row aggregates, matching the `last_error.code` reported on an individual failed message.",
+        union_mode="left_to_right",
+    )]
+    count: Annotated[int, Field(
+        description="Distinct messages that failed with this reason in scope.",
+        examples=[18],
+        ge=0,
+    )]
+
+
+class WhatsAppStatsByErrorCodeResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppErrorCodeStatsPoint], Field(
+        description="Error-code rows ranked by failure count descending. Empty when no failures occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct error codes with failures in the period, regardless of `limit`.",
+        examples=[3],
+        ge=0,
+    )]
+
+
+class WhatsAppTemplateStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    template_id: Annotated[str, Field(
+        description="The template these messages were sent from, using the same `id` the WhatsApp template endpoints return. A send that resolved no template does not appear in this breakdown. A template renamed after it was used to send still reports under this one `id`, and a template deleted after sending keeps its row rather than dropping the messages.",
+        examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByTemplateResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppTemplateStatsPoint], Field(
+        description="Template rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct templates with activity in the period, regardless of `limit`.",
+        examples=[7],
+        ge=0,
+    )]
+
+
+class WhatsAppTemplateCategoryStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[Union[WhatsAppTemplateCategory, str], Field(
+        description="The template category this row aggregates.",
+        union_mode="left_to_right",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByTemplateCategoryResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppTemplateCategoryStatsPoint], Field(
+        description="Category rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct categories with activity in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class WhatsAppTagStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    tag: Annotated[str, Field(
+        description="The tag this row aggregates, in `name:value` form.",
+        examples=["campaign:summer_sale"],
+        min_length=1,
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByTagResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppTagStatsPoint], Field(
+        description="Tag rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct tags with activity in the period, regardless of `limit`.",
+        examples=[12],
+        ge=0,
+    )]
+
+
+class WhatsAppPhoneNumberStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    phone_number: Annotated[str, Field(
+        description="The business sender phone number in E.164 form.",
+        examples=[+13124495569],
+        min_length=1,
+    )]
+    shared: Annotated[bool, Field(
+        description="`true` for a shared Bird-managed number; `false` for a number owned by your workspace.",
+        examples=[True],
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByPhoneNumberResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppPhoneNumberStatsPoint], Field(
+        description="Phone-number rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct phone numbers with activity in the period, regardless of `limit`.",
+        examples=[2],
+        ge=0,
+    )]
+
+
+class WhatsAppCountryStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country: Annotated[str, Field(
+        description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code. `ZZ` collects recipients whose country could not be resolved.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByCountryResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppCountryStatsPoint], Field(
+        description="Country rows ranked by accepted volume descending. Empty when no eligible activity occurred in the period; rows sum to the summary less group-send volume, and less any pre-cutover phone-addressed sends still inside the window.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct countries with activity in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class WhatsAppInboundStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    received_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
+        examples=[0.058],
+    )]
+
+
+class WhatsAppInboundStatsComparison(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the preceding period.",
+        examples=[3980],
+        ge=0,
+    )]
+    delta: WhatsAppInboundStatsComparisonDelta
+
+
+class WhatsAppInboundStatsSummaryResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the period, counted by the time each message reached your number. Computed across the whole window rather than summed from the daily or hourly series, so it can sit slightly below the sum of those rows.",
+        examples=[4210],
+        ge=0,
+    )]
+    comparison: Optional[WhatsAppInboundStatsComparison] = None
+
+
+class WhatsAppInboundStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in this bucket.",
+        examples=[182],
+        ge=0,
+    )]
+
+
+class WhatsAppInboundStatsResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSeriesPeriod, Field(
+        description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
+    )]
+    data: Annotated[List[WhatsAppInboundStatsPoint], Field(
+        description="One row per bucket (day or hour, matching the request) in the period, in chronological order. Buckets with no activity are included with a count of zero, so the series charts continuously without client-side gap handling.",
+    )]
+
+
+class WhatsAppInboundPhoneNumberStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    phone_number: Annotated[str, Field(
+        description="The business phone number that received the messages, in E.164 form.",
+        examples=[+13124495569],
+        min_length=1,
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages the number received in the period.",
+        examples=[182],
+        ge=0,
+    )]
+
+
+class WhatsAppInboundStatsByPhoneNumberResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppInboundPhoneNumberStatsPoint], Field(
+        description="Phone-number rows ranked by received-message volume descending, capped at the requested `limit`. A number with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct phone numbers with received messages in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[2],
+        ge=0,
+    )]
+
+
 class NumbersDedicatedAllocationID(RootModel[str]):
     root: str
 
