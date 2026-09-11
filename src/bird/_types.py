@@ -266,6 +266,55 @@ class PreferenceCreateParams(_PreferenceCreateRequired, total=False):
     consented_at: Union[str, datetime]
 
 
+class BroadcastCreateParams(TypedDict, total=False):
+    """Params for ``client.broadcasts.create``. Every key is optional on a draft;
+    a send needs ``from_``, ``audience_id``, and a ``template`` with a published
+    version. ``scheduled_at`` accepts a timezone-aware ``datetime`` (serialized
+    to RFC 3339) or an already-wire string, and is only meaningful alongside
+    ``send``."""
+
+    from_: EmailAddressInput
+    audience_id: str
+    template: str
+    reply_to: Sequence[EmailAddressInput]
+    headers: Mapping[str, str]
+    tags: Sequence[Mapping[str, str]]
+    metadata: Mapping[str, Any]
+    track_opens: bool
+    track_clicks: bool
+    ip_pool_id: str
+    category: str
+    send: bool
+    scheduled_at: Union[str, datetime]
+
+
+class BroadcastUpdateParams(TypedDict, total=False):
+    """Params for ``client.broadcasts.update`` (the broadcast id is positional).
+    An absent key keeps the stored value; ``template``, ``reply_to`` and
+    ``ip_pool_id`` present with ``None`` clear it, which is why those three are
+    the nullable ones."""
+
+    from_: EmailAddressInput
+    audience_id: str
+    template: str | None
+    reply_to: Sequence[EmailAddressInput] | None
+    headers: Mapping[str, str]
+    tags: Sequence[Mapping[str, str]]
+    metadata: Mapping[str, Any]
+    track_opens: bool
+    track_clicks: bool
+    ip_pool_id: str | None
+    category: str
+
+
+class BroadcastSendParams(TypedDict, total=False):
+    """Params for ``client.broadcasts.send`` (the broadcast id is positional).
+    ``scheduled_at`` accepts a timezone-aware ``datetime`` or an already-wire
+    string; omit it to send straight away."""
+
+    scheduled_at: Union[str, datetime]
+
+
 class Omit:
     """Sentinel for an argument the caller left unset, distinct from an explicit
     ``None``: a value sets it, ``None`` sends JSON ``null`` (clearing a nullable

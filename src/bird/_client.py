@@ -27,6 +27,7 @@ from bird.resources.domains_gen import AsyncDomains, Domains
 from bird.resources.email import AsyncEmail, Email
 from bird.resources.lookup_gen import AsyncLookup, Lookup
 from bird.resources.numbers import AsyncNumbers, Numbers
+from bird.resources.broadcasts import AsyncBroadcasts, Broadcasts
 from bird.resources.preferences import AsyncPreferences, Preferences
 from bird.resources.workspace_gen import AsyncWorkspaceResource, WorkspaceResource
 from bird.resources.realtime import AsyncRealtime, Realtime
@@ -190,6 +191,7 @@ class Bird(SyncAPIClient):
         self.lookup = Lookup(self)
         self.numbers = Numbers(self)
         self.preferences = Preferences(self)
+        self.broadcasts = Broadcasts(self, email_defaults)
         self.workspace = WorkspaceResource(self)
         self.webhooks = Webhooks(self, webhook_secret)
         self.realtime = Realtime(self, realtime_key, realtime_secret, realtime_encryption_master_key)
@@ -322,6 +324,7 @@ class AsyncBird(AsyncAPIClient):
         self.lookup = AsyncLookup(self)
         self.numbers = AsyncNumbers(self)
         self.preferences = AsyncPreferences(self)
+        self.broadcasts = AsyncBroadcasts(self, email_defaults)
         self.workspace = AsyncWorkspaceResource(self)
         self.webhooks = AsyncWebhooks(self, webhook_secret)
         self.realtime = AsyncRealtime(self, realtime_key, realtime_secret, realtime_encryption_master_key)

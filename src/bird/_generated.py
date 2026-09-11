@@ -814,12 +814,682 @@ class RecipientRole(str, Enum):
     bcc = "bcc"
 
 
+class EmailRecipientStatus(str, Enum):
+    accepted = "accepted"
+    processed = "processed"
+    deferred = "deferred"
+    delivered = "delivered"
+    bounced = "bounced"
+    complained = "complained"
+    rejected = "rejected"
+
+
+class EmailRecipientRejectionReason(str, Enum):
+    recipient_suppressed = "recipient_suppressed"
+    transmission_failed = "transmission_failed"
+    generation_failure = "generation_failure"
+    policy_rejection = "policy_rejection"
+    domain_unverified = "domain_unverified"
+    quota_exceeded = "quota_exceeded"
+    recipient_not_allowed = "recipient_not_allowed"
+
+
+class EmailRecipientBounceType(str, Enum):
+    hard = "hard"
+    soft = "soft"
+    undetermined = "undetermined"
+    admin = "admin"
+    block = "block"
+
+
+class EmailRecipient(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    parent_id: Annotated[str, Field(
+        description="ID of the message or broadcast this recipient belongs to. For a message send, this is the message's `em_`-prefixed ID. For a broadcast, this field is also `em_`-prefixed, but currently does not resolve to a retrievable message.",
+        examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(em|eb)_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    role: Annotated[RecipientRole, Field(
+        description="Envelope position of a recipient on an outbound email event.",
+    )]
+    recipient: Annotated[str, Field(
+        description="Recipient email address.",
+        min_length=5,
+    )]
+    name: Annotated[Optional[str], Field(
+        description="Display name provided for this recipient on the send, or null if none was given.",
+    )] = None
+    status: Annotated[EmailRecipientStatus, Field(
+        description="Delivery status for this recipient:\n\n- `accepted`: The send has been taken and is being prepared for delivery.\n- `processed`: This recipient's message is on its way out.\n- `deferred`: The recipient's mailbox provider asked for a retry, and delivery attempts continue.\n- `delivered`: The recipient's mail server accepted the message.\n- `bounced`: Delivery permanently failed (see `bounce_type` for hard vs soft).\n- `complained`: The recipient reported the message as spam.\n- `rejected`: Delivery was never attempted (see `rejection_reason` for why).",
+        min_length=1,
+    )]
+    rejection_reason: Annotated[Optional[EmailRecipientRejectionReason], Field(
+        description="Present on `status: rejected` rows. Specifies why the recipient was rejected:\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).",
+    )] = None
+    bounce_type: Annotated[Optional[EmailRecipientBounceType], Field(
+        description="Bounce classification for `bounced` and `deferred` rows, or null when the recipient\nhas not bounced or the receiving server's response has not been classified.\n\n- `hard`: a permanent failure (invalid address or non-existent domain).\n- `soft`: a transient failure (mailbox full or server temporarily unavailable).\n- `block`: the receiving mail server blocked the sending IP for reputation reasons.\n- `admin`: an administrative refusal (relaying denied or blocklisted domain).\n- `undetermined`: the receiving server's response is ambiguous.",
+    )] = None
+    bounce_code: Annotated[Optional[str], Field(
+        description="SMTP reply code returned by the receiving mail server for `bounced` and `deferred` rows, or null when none was provided.",
+        examples=[550],
+    )] = None
+    bounce_description: Annotated[Optional[str], Field(
+        description="Human-readable reason the receiving mail server gave for the bounce or deferral, or null when none was provided.",
+        examples=["5.1.1 Unknown user"],
+    )] = None
+    processed_at: Annotated[Optional[str], Field(
+        description="When the message was prepared and queued for delivery to the recipient's mail server, or null if that has not happened yet.",
+    )] = None
+    delivered_at: Annotated[Optional[str], Field(
+        description="When the recipient's mail server accepted the message, or null if not yet delivered.",
+    )] = None
+    processing_latency_ms: Annotated[Optional[int], Field(
+        description="Time between the send being accepted and the message being prepared for delivery, in milliseconds. Null until processed.",
+        ge=0,
+    )] = None
+    delivery_latency_ms: Annotated[Optional[int], Field(
+        description="Time between the message being prepared and the receiving mail server accepting it, in milliseconds. Null until delivered.",
+        ge=0,
+    )] = None
+    total_latency_ms: Annotated[Optional[int], Field(
+        description="End-to-end accept → delivered time for this recipient, in milliseconds. Null until delivered.",
+        ge=0,
+    )] = None
+    open_count: Annotated[int, Field(
+        description="Number of open events for this recipient.",
+    )]
+    click_count: Annotated[int, Field(
+        description="Number of click events for this recipient.",
+    )]
+
+
+class EmailRecipientList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailRecipient], Field(
+        description="Page of recipient objects for this email send.",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next, given what this page reports. Present only where the read computes it: an\nempty list means the answer you were looking for is here and there is nothing further to\ndo. Absent entirely on reads that do not report next actions.",
+    )] = None
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailEventType(str, Enum):
+    email_accepted = "email.accepted"
+    email_bounced = "email.bounced"
+    email_canceled = "email.canceled"
+    email_clicked = "email.clicked"
+    email_complained = "email.complained"
+    email_deferred = "email.deferred"
+    email_delivered = "email.delivered"
+    email_list_unsubscribed = "email.list_unsubscribed"
+    email_opened = "email.opened"
+    email_out_of_band_bounce = "email.out_of_band_bounce"
+    email_processed = "email.processed"
+    email_rejected = "email.rejected"
+    email_scheduled = "email.scheduled"
+    email_unsubscribed = "email.unsubscribed"
+
+
+class EmailEventBounceType(str, Enum):
+    hard = "hard"
+    soft = "soft"
+    undetermined = "undetermined"
+    admin = "admin"
+    block = "block"
+
+
+class EmailEventRejectionReason(str, Enum):
+    recipient_suppressed = "recipient_suppressed"
+    transmission_failed = "transmission_failed"
+    generation_failure = "generation_failure"
+    policy_rejection = "policy_rejection"
+    domain_unverified = "domain_unverified"
+    quota_exceeded = "quota_exceeded"
+    recipient_not_allowed = "recipient_not_allowed"
+
+
+class EmailEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Event ID.",
+        examples=["ev_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    type: Annotated[Union[EmailEventType, str], Field(
+        description="Type of an event in a message's per-recipient delivery timeline.\n\n- `email.scheduled`: We accepted a send scheduled for a future time. Fires once for each message regardless of its recipient count.\n- `email.accepted`: We accepted the send and are getting ready to deliver it. Fires once per requested recipient.\n- `email.processed`: We queued the message for delivery to the recipient's mail server.\n- `email.deferred`: The recipient's mail server temporarily refused the message. Delivery remains pending and is retried. Can fire more than once per recipient.\n- `email.delivered`: The recipient's mail server accepted the message.\n- `email.bounced`: Delivery permanently failed at the recipient's mail server.\n- `email.out_of_band_bounce`: A bounce notification arrived after the message had already been accepted for delivery.\n- `email.rejected`: We rejected the message before attempting delivery, for example because the recipient is suppressed.\n- `email.canceled`: A scheduled send was canceled before it fired. Fires once for each message regardless of its recipient count.\n- `email.opened`: The recipient opened the message. Can fire more than once per recipient.\n- `email.clicked`: The recipient clicked a tracked link in the message. Can fire more than once per recipient.\n- `email.unsubscribed`: The recipient opted out through a tracked unsubscribe link in the message.\n- `email.list_unsubscribed`: The recipient opted out through the one-click unsubscribe control in their mail client.\n- `email.complained`: The recipient reported the message as spam through their mailbox provider.\n\nWe can add new event types to this list over time, so treat a value you do not recognize as a new type rather than as an error.",
+        union_mode="left_to_right",
+    )]
+    occurred_at: Annotated[str, Field(
+        description="When this event occurred.",
+        min_length=1,
+    )]
+    recipient_id: Annotated[str, Field(
+        examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    bounce_type: Annotated[Optional[EmailEventBounceType], Field(
+        description="Bounce classification. Present on `email.bounced`, `email.out_of_band_bounce`, and\n`email.deferred` events.\n\n- `hard`: a permanent failure (invalid address or non-existent domain).\n- `soft`: a transient failure (mailbox full or server temporarily unavailable).\n- `block`: the receiving mail server blocked the sending IP for reputation reasons.\n- `admin`: an administrative refusal (relaying denied or blocklisted domain).\n- `undetermined`: the receiving server's response is ambiguous.",
+    )] = None
+    bounce_class: Annotated[Optional[int], Field(
+        description="A more detailed numeric bounce code, useful for telling apart failures that share the same `bounce_type`. For example, a DNS failure and a spam block can both come through as `bounce_type: soft` or `bounce_type: block`; this field tells you which one actually happened. Present on `email.bounced`, `email.out_of_band_bounce`, and `email.deferred` events.",
+        ge=1,
+        le=255,
+    )] = None
+    bounce_code: Annotated[Optional[str], Field(
+        description="SMTP status code returned by the receiving mail server. Present on `email.bounced` and `email.deferred` events.",
+        examples=["5.1.1"],
+    )] = None
+    bounce_description: Annotated[Optional[str], Field(
+        description="The bounce reason, in plain language, as reported by the mail server. Present on `email.bounced` and `email.deferred` events.",
+    )] = None
+    rejection_reason: Annotated[Optional[EmailEventRejectionReason], Field(
+        description="Specific cause of rejection. Present on `email.rejected` events only.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery, because of a template or content issue.\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: This recipient was not allowed for this send. For a send from the shared onboarding domain, every recipient has to be a verified member of the workspace.",
+    )] = None
+    sending_ip: Annotated[Optional[str], Field(
+        description="The IP address used to send this message. Useful for spotting a deliverability problem that is tied to one specific sending IP rather than affecting all of them. Present on `email.delivered`, `email.bounced`, `email.out_of_band_bounce`, and `email.deferred` events.",
+    )] = None
+    mailbox_provider: Annotated[Optional[str], Field(
+        description="The recipient mailbox provider, as a lowercased classifier bucket (e.g. `gmail`, `yahoo`, `microsoft`, `apple`). Present on `email.processed`, `email.delivered`, `email.complained`, `email.bounced`, `email.out_of_band_bounce`, `email.deferred`, `email.rejected`, `email.unsubscribed`, `email.list_unsubscribed`, `email.opened`, and `email.clicked` events when the receiving mail system could be classified; null when it could not.",
+    )] = None
+    mailbox_provider_region: Annotated[Optional[str], Field(
+        description="The provider region, as reported by the receiving mail system (for example `NA`, `EU`, `APAC`). The set is open and provider-specific. Present on `email.processed`, `email.delivered`, `email.complained`, `email.bounced`, `email.out_of_band_bounce`, `email.deferred`, `email.rejected`, `email.unsubscribed`, `email.list_unsubscribed`, `email.opened`, and `email.clicked` events when reported; null otherwise.",
+    )] = None
+    is_prefetched: Annotated[Optional[bool], Field(
+        description="True when the open was auto-fetched by an inbox privacy feature (Apple Mail Privacy Protection, the Gmail image proxy) rather than a person actually opening the message. Use it to calculate open rate accurately. Present on `email.opened` events only.",
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The clicked URL. Present on `email.clicked` events, and on `email.unsubscribed` events when the recipient unsubscribed through a link in the message.",
+    )] = None
+    link_name: Annotated[Optional[str], Field(
+        description="The clicked link's own name, when the link in the message carried one, so a click can be reported by what the link said rather than where it pointed. Absent when the link had no name. Appears alongside `url` on `email.clicked` events, and on `email.unsubscribed` events when the recipient unsubscribed through a link.",
+        examples=["Faster exports, docs"],
+    )] = None
+    country: Annotated[Optional[str], Field(
+        description="ISO 3166-1 alpha-2 country code derived from the client IP. Present on `email.opened` and `email.clicked` events when available.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+    )] = None
+    ip_address: Annotated[Optional[str], Field(
+        description="Client IP address (IPv4 or IPv6). Present on `email.opened` and `email.clicked` events when available.",
+    )] = None
+    user_agent: Annotated[Optional[str], Field(
+        description="Client user-agent string. Present on `email.opened` and `email.clicked` events when available.",
+    )] = None
+
+
+class EmailEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailEvent], Field(
+        description="Page of timeline events for this email send, in chronological order.",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next, given what this page reports. Present only where the read computes it: an\nempty list means the answer you were looking for is here and there is nothing further to\ndo. Absent entirely on reads that do not report next actions.",
+    )] = None
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailBroadcastStatus(str, Enum):
+    draft = "draft"
+    scheduled = "scheduled"
+    accepted = "accepted"
+    sending = "sending"
+    sent = "sent"
+    canceling = "canceling"
+    canceled = "canceled"
+    failed = "failed"
+
+
 class AudienceID(RootModel[str]):
     root: str
 
 
+class EmailBroadcastTemplate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_id: Annotated[Optional[str], Field(
+        description="The template version this broadcast is fixed to. It is chosen when the broadcast is prepared for sending, so publishing a new version while the broadcast is going out cannot change what the rest of the recipients get. Null until the broadcast is prepared.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class EmailBroadcastCategory(str, Enum):
+    marketing = "marketing"
+    transactional = "transactional"
+
+
+class EmailBroadcastFailureReason(str, Enum):
+    empty_audience = "empty_audience"
+    audience_unavailable = "audience_unavailable"
+    content_invalid = "content_invalid"
+    insufficient_funds = "insufficient_funds"
+    quota_exceeded = "quota_exceeded"
+    internal_error = "internal_error"
+
+
+class EmailBroadcast(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Broadcast ID.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    from_: Annotated[Optional[EmailAddress], Field(
+        alias="from",
+        description="An email address with an optional display name.",
+    )] = None
+    audience_id: Annotated[Optional[str], Field(
+        examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    template: Annotated[Optional[EmailBroadcastTemplate], Field(
+        description="The template this broadcast sends. A broadcast sends the template's published version, and the exact version is fixed when the broadcast is prepared for sending, so publishing a new version afterwards does not change what this broadcast sends. Null on a draft that has not chosen a template yet.",
+    )] = None
+    html_bytes: Annotated[Optional[int], Field(
+        description="Size of the HTML body this broadcast sends, in bytes, or 0 when its content has no HTML part. Measured on the template version the broadcast sends, so this is the real body we send and differs per recipient only by that recipient's own merge values. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which measure the content. Absent too when the broadcast has no template or its content can no longer be read.",
+        examples=[18432],
+        ge=0,
+    )] = None
+    text_bytes: Annotated[Optional[int], Field(
+        description="Size of the plain-text body this broadcast sends, in bytes, or 0 when its content has no plain-text part. Measured, and absent, the same way as `html_bytes`.",
+        examples=[2104],
+        ge=0,
+    )] = None
+    category: Annotated[EmailBroadcastCategory, Field(
+        description="What kind of email this is, which decides how suppressions apply to it. A `marketing` broadcast is held back from every suppressed address. A `transactional` one still goes to addresses suppressed for a complaint or an unsubscribe, because those suppressions are about marketing mail.",
+        min_length=1,
+    )]
+    ip_pool_id: Annotated[Optional[str], Field(
+        description="The IP pool this broadcast sends from, or `ipp_shared` when it sends through the shared pool. Absent when it sends on your organization's default pool.",
+        pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
+    )] = None
+    reply_to: Annotated[Optional[List[EmailAddress]], Field(
+        description="Where replies to this broadcast go, if you want them somewhere other than the `from` address. Absent when you have not set one.",
+        max_length=25,
+    )] = None
+    headers: Annotated[Optional[Dict[str, str]], Field(
+        description="Any custom email headers set on the broadcast. Returned on a single broadcast read and on the broadcast that creating, updating, sending or canceling one returns, and absent from the list. The unsubscribe headers we add ourselves are not included.",
+    )] = None
+    status: Annotated[EmailBroadcastStatus, Field(
+        description="Where the broadcast itself has got to, separate from what happened to individual recipients: for that, read `sent_count`, `delivered_count`, `bounced_count` and `complained_count` below. When it is `failed`, `failure_reason` says why.",
+        examples=["sent"],
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this broadcast, given the state it is in. Each entry names one action and\nsays why it is worth taking. Present on reads that compute it: an empty list means there is\nnothing to do, and the field is absent entirely on responses that do not report next actions.",
+    )] = None
+    failure_reason: Annotated[Optional[EmailBroadcastFailureReason], Field(
+        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` says exactly what was wrong. It is one of these:\n  - The broadcast has no template, or its template has been deleted.\n  - The template has no published version, or no sendable content.\n  - The template uses a loop that a broadcast cannot fill.\n  - The template requires every send to name a language.\n  - The sending domain is no longer verified.\n  - The IP pool has nothing to send from.\n  - The message could not be handed off for delivery.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.",
+        examples=["null"],
+    )] = None
+    failure_detail: Annotated[Optional[str], Field(
+        description="A sentence explaining the failure in more detail than `failure_reason` does, and `null` when the broadcast has not failed. Show it to the person using your app. Do not write code that reads it, because the wording can change. Branch on `failure_reason` instead.",
+        examples=["null"],
+    )] = None
+    recipient_count: Annotated[int, Field(
+        description="Number of recipients after suppressed addresses are removed from the audience. This is 0 until sending starts and the audience becomes a recipient list.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent_count: Annotated[Optional[int], Field(
+        description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending or canceling it, none of which read the counters. Absent from a list row for a broadcast that has no delivery events yet, such as a draft, where reading that one broadcast answers 0 instead. Absent too when the event store cannot be reached, which still returns 200. Read the broadcast again for the numbers.",
+        examples=[4820],
+        ge=0,
+    )] = None
+    delivered_count: Annotated[Optional[int], Field(
+        description="How many recipients' messages were accepted by their mail server. Absent when `sent_count` is.",
+        examples=[4712],
+        ge=0,
+    )] = None
+    bounced_count: Annotated[Optional[int], Field(
+        description="How many recipients the message could not be delivered to at all. Absent when `sent_count` is.",
+        examples=[96],
+        ge=0,
+    )] = None
+    complained_count: Annotated[Optional[int], Field(
+        description="How many recipients marked the message as spam. Absent when `sent_count` is.",
+        examples=[12],
+        ge=0,
+    )] = None
+    open_count: Annotated[Optional[int], Field(
+        description="How many times the message was opened, added up across every recipient. One recipient opening it twice counts twice. Absent when `sent_count` is.",
+        examples=[3104],
+        ge=0,
+    )] = None
+    click_count: Annotated[Optional[int], Field(
+        description="How many times a link in the message was clicked, added up across every recipient. One recipient clicking twice counts twice. Absent when `sent_count` is.",
+        examples=[812],
+        ge=0,
+    )] = None
+    sending_ips: Annotated[Optional[List[str]], Field(
+        description="The IP addresses this broadcast's messages went out from, up to 100 of them. A broadcast is spread across every address in its pool, so more than one can appear. The receiving mail systems name the address when they deliver, bounce or defer a message, so this stays absent until the first of those comes back. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which read them. For delivery and latency broken down per address, read the sending-IP stats.",
+    )] = None
+    unique_opens_non_prefetched: Annotated[Optional[int], Field(
+        description="How many distinct recipients opened the message at least once, excluding opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy). A recipient who opened several times, or whose inbox prefetched the message, counts once. Absent when `sent_count` is.",
+        examples=[2140],
+        ge=0,
+    )] = None
+    unique_clicks: Annotated[Optional[int], Field(
+        description="How many distinct recipients clicked a link in the message at least once. A recipient who clicked several times counts once. Absent when `sent_count` is.",
+        examples=[693],
+        ge=0,
+    )] = None
+    out_of_band_bounces: Annotated[Optional[int], Field(
+        description="How many recipients bounced after the message had already been accepted for delivery. A recipient who bounced this way more than once counts once. Absent when `sent_count` is.",
+        examples=[14],
+        ge=0,
+    )] = None
+    delivered_recipients: Annotated[Optional[int], Field(
+        description="How many distinct recipients a delivery landed for. This is the denominator to measure `unique_opens_non_prefetched`, `unique_clicks` and `complained_count` against. It differs from `delivered_count`, which reports how many recipients are currently in the delivered state: a recipient who was delivered to and then complained moves to `complained_count` and leaves `delivered_count`, but stays here, because the message did reach them. Absent when `sent_count` is.",
+        examples=[4724],
+        ge=0,
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Labels on this broadcast, each one a `name` and a `value`, that you can filter and search broadcasts by. Use tags for anything you want to find broadcasts by later, and `metadata` for data you only want handed back to you.",
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Any JSON you want to keep on the broadcast. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
+    )] = None
+    track_opens: Annotated[bool, Field(
+        description="Whether opens are tracked for this broadcast.",
+        examples=[True],
+    )]
+    track_clicks: Annotated[bool, Field(
+        description="Whether link clicks are tracked for this broadcast.",
+        examples=[True],
+    )]
+    created_at: Annotated[str, Field(
+        description="When the broadcast was created.",
+        examples=["2026-09-01T09:14:02.418Z"],
+        min_length=1,
+    )]
+    scheduled_at: Annotated[Optional[str], Field(
+        description="When the broadcast is due to send, and absent when it is not scheduled.",
+        examples=["2026-09-02T08:00:00Z"],
+    )] = None
+    started_at: Annotated[Optional[str], Field(
+        description="When the broadcast started sending. Absent until then. Compare with `sent_at`, which is when the broadcast finished sending.",
+        examples=["2026-09-02T08:00:03.771Z"],
+    )] = None
+    sent_at: Annotated[Optional[str], Field(
+        description="When the last recipient was sent to and the broadcast became `sent`. Null until then. Compare with `started_at`, which is when the broadcast started sending.",
+        examples=["2026-09-02T08:11:47.902Z"],
+    )]
+    canceled_at: Annotated[Optional[str], Field(
+        description="When the broadcast was canceled, and absent if it never was. This is when cancellation was requested, so it is set as soon as the status is `canceling` and does not move while the remaining sends stop and the status becomes `canceled`.",
+    )] = None
+
+
+class EmailBroadcastList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailBroadcast], Field(
+        description="Page of broadcast objects.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailBroadcastCreateRequestCategory(str, Enum):
+    marketing = "marketing"
+    transactional = "transactional"
+
+
+class EmailBroadcastCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[Optional[EmailAddressInput], Field(
+        alias="from",
+        description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
+    )] = None
+    audience_id: Annotated[Optional[str], Field(
+        examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    template: Annotated[Optional[EmailBroadcastTemplate], Field(
+        description="The template a broadcast sends, and the exact version of it the broadcast is fixed to. The template cannot be one that requires every send to name a language, because a broadcast never names one, so a template that insists on it has nothing to work with.",
+    )] = None
+    reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        description="Where replies to this broadcast should go. Give each address as a plain address, as `Jane <jane@acme.com>` to include a display name, or as an object with an address and a name. You can list more than one.",
+        max_length=25,
+        min_length=1,
+    )] = None
+    headers: Annotated[Optional[Dict[str, str]], Field(
+        description="Custom email headers to set on the broadcast, as name and value pairs. Up to 25 of them, each value up to 998 characters. Two names are ours and cannot be set here: `List-Unsubscribe` and `List-Unsubscribe-Post` are dropped if you send them, whatever the category. We add the one-click unsubscribe pair to a marketing broadcast ourselves, and a transactional broadcast has neither header.",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Labels on this broadcast, each one a `name` and a `value`, up to 20 of them. You can filter the broadcast list by a tag, break your stats down by one, and read them back off webhook payloads. Use tags for anything you want to find broadcasts by later, and `metadata` for data you only want handed back to you.",
+        max_length=20,
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Any JSON you want to keep on the broadcast. We store it, hand it back when you read the broadcast, and include it in webhook payloads, and you can break stats down by a path inside it such as `metadata.order_id`. It can be up to 2 KB once serialized.",
+    )] = None
+    track_opens: Annotated[Optional[bool], Field(
+        description="Whether to track opens for this broadcast.",
+    )] = None
+    track_clicks: Annotated[Optional[bool], Field(
+        description="Whether to track link clicks for this broadcast.",
+    )] = None
+    ip_pool_id: Annotated[Optional[str], Field(
+        description="The IP pool to send this broadcast from. Pass a pool ID, or `ipp_shared` to send through the shared pool on purpose. Leave it out and the broadcast uses your organization's default pool. A pool we do not recognize, or one with no IPs available to send from, is refused with a `422`.",
+        pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
+    )] = None
+    category: Annotated[Optional[EmailBroadcastCreateRequestCategory], Field(
+        description="What kind of email this is. A broadcast sets this itself rather than taking it from its template, and it decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing`, the default, is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way still reaches people who have already unsubscribed from you.",
+    )] = None
+    send: Annotated[Optional[bool], Field(
+        description="Whether to send the broadcast as soon as it is created. Set it to true and the broadcast goes out immediately, or at `scheduled_at` if you set one. Leave it false, which is the default, and you get a draft you can update and send later.",
+    )] = None
+    scheduled_at: Annotated[Optional[str], Field(
+        description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. It requires `send` to be true, so a `scheduled_at` on its own is refused rather than saved on the draft.",
+    )] = None
+
+
+class EmailBroadcastUpdateRequestCategory(str, Enum):
+    marketing = "marketing"
+    transactional = "transactional"
+
+
+class EmailBroadcastUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[Optional[EmailAddressInput], Field(
+        alias="from",
+        description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
+    )] = None
+    audience_id: Annotated[Optional[str], Field(
+        examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    template: Annotated[Optional[EmailBroadcastTemplate], Field(
+        description="The template the broadcast sends. Its published version is fixed when the broadcast is prepared for sending. Set this to null to take the template off a draft, or leave it out to keep the one already set.",
+    )] = None
+    reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        description="Where replies to this broadcast should go. Set this to null to remove the addresses already set.",
+        max_length=25,
+        min_length=1,
+    )] = None
+    headers: Annotated[Optional[Dict[str, str]], Field(
+        description="Custom email headers to set on the broadcast, as name and value pairs. What you send replaces the headers the draft already had rather than adding to them. Up to 25 of them, each value up to 998 characters. Two names are ours and cannot be set here: `List-Unsubscribe` and `List-Unsubscribe-Post` are dropped if you send them, whatever the category. We add the one-click unsubscribe pair to a marketing broadcast ourselves, and a transactional broadcast has neither header.",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Labels on this broadcast, each one a `name` and a `value`, that you can filter and search broadcasts by. What you send replaces the tags the draft already had rather than adding to them.",
+        max_length=20,
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Any JSON you want to keep on the broadcast, up to 2 KB once serialized. What you send replaces the metadata the draft already had rather than merging into it.",
+    )] = None
+    track_opens: Annotated[Optional[bool], Field(
+        description="Whether to track opens for this broadcast.",
+    )] = None
+    track_clicks: Annotated[Optional[bool], Field(
+        description="Whether to track link clicks for this broadcast.",
+    )] = None
+    ip_pool_id: Annotated[Optional[str], Field(
+        description="The IP pool to send this broadcast from. Pass a pool ID, or `ipp_shared` to send through the shared pool on purpose. Set it to null to fall back to your organization's default pool.",
+        pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
+    )] = None
+    category: Annotated[Optional[EmailBroadcastUpdateRequestCategory], Field(
+        description="What kind of email this is. It decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing` is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way reaches people who have already unsubscribed from you.",
+    )] = None
+
+
 class EmailBroadcastID(RootModel[str]):
     root: str
+
+
+class EmailBroadcastCounts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    broadcast_id: Annotated[str, Field(
+        description="The broadcast these counts are for.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[EmailBroadcastStatus, Field(
+        description="Where the broadcast is in its lifecycle, so the counts read in context. Anything past `draft` or `scheduled` means these numbers describe an audience the broadcast has already been sent to, not one it is about to reach.",
+        examples=["draft"],
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next, given where the broadcast is. On a broadcast that has already sent this names\nthe reads that carry delivery outcomes, which these counts never do. An empty list means there\nis nothing to do; the field is absent entirely on responses that do not report next actions.",
+    )] = None
+    total: Annotated[int, Field(
+        description="How many contacts are in the audience.",
+        examples=[13000],
+        ge=0,
+    )]
+    addressable: Annotated[int, Field(
+        description="How many of those contacts have an email address. A contact with no address is not counted. This is never higher than `total`.",
+        examples=[12500],
+        ge=0,
+    )]
+    sendable: Annotated[int, Field(
+        description="How many of the addressable contacts are not suppressed for this broadcast's category, which is who the email would actually go to. This is never higher than `addressable`. Which suppressions apply depends on the category, so the same audience can give a higher number for a transactional broadcast than for a marketing one. A transactional broadcast still reaches people who unsubscribed from or complained about marketing mail, and a marketing broadcast does not.",
+        examples=[12000],
+        ge=0,
+    )]
+
+
+class EmailSendAllowanceWindow(str, Enum):
+    none = "none"
+    monthly = "monthly"
+    daily = "daily"
+
+
+class EmailBroadcastSendQuota(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    recipients: Annotated[int, Field(
+        description="Number of contacts the broadcast would send to right now, after contacts without an email address and contacts suppressed for the broadcast's category are dropped. The same number the broadcast's audience counts report as sendable.",
+        examples=[12000],
+        ge=0,
+    )]
+    allowed: Annotated[int, Field(
+        description="Number of those recipients the organization's email send allowance covers. Equal to `recipients` when nothing limits the send, and lower when part of the audience runs past what is left of it. A part-covered send goes out in whole batches, so this is cut back to a batch boundary rather than to the exact number of emails left: it can sit below `remaining` rather than matching it, and should be read rather than worked out from `limit` and `remaining`. 0 means none of them would go out, either because the audience is larger than the whole allowance, which is refused rather than sent in part, or because too little of the allowance is left to carry any of it.",
+        examples=[5000],
+        ge=0,
+    )]
+    limited_by: Annotated[EmailSendAllowanceWindow, Field(
+        description="Which of the organization's email send allowances stops a send from reaching its whole audience.\n\n- `none`: every recipient is covered.\n- `monthly`: the allowance that runs with the billing period.\n- `daily`: the allowance that resets at the end of each UTC day.\n\nWhen both apply, the tighter of the two is reported.",
+    )]
+    limit: Annotated[Optional[int], Field(
+        description="Size of the allowance named by `limited_by`, in emails. Omitted when nothing limits the send.",
+        examples=[50000],
+        ge=0,
+    )] = None
+    remaining: Annotated[Optional[int], Field(
+        description="How much of that allowance is left in the current window, in emails. Omitted when nothing limits the send.",
+        examples=[7000],
+        ge=0,
+    )] = None
+
+
+class EmailBroadcastClickedLink(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    url: Annotated[str, Field(
+        description="The clicked URL.",
+        examples=["https://acme.com/whats-new/faster-exports"],
+        min_length=1,
+    )]
+    name: Annotated[Optional[str], Field(
+        description="What the link said, resolved by the name used by the most clicks that carried one. Null when no click through this URL ever carried a name.",
+        examples=["Faster exports, docs"],
+    )]
+    click_count: Annotated[int, Field(
+        description="Total clicks through this URL, including clicks that carried no link name.",
+        examples=[431],
+        ge=0,
+    )]
+    recipient_count: Annotated[int, Field(
+        description="Number of distinct recipients who clicked this URL at least once.",
+        examples=[388],
+        ge=0,
+    )]
+
+
+class EmailBroadcastClickedLinkList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailBroadcastClickedLink], Field(
+        description="The broadcast's clicked URLs, most-clicked first, capped at 100 rows.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct URLs the broadcast's recipients clicked, regardless of the cap on `data`. When it exceeds the number of rows returned, the list was capped at the 100 most-clicked URLs.",
+        examples=[57],
+        ge=0,
+    )]
+
+
+class EmailBroadcastSendNowRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    scheduled_at: Annotated[Optional[str], Field(
+        description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. Leave it out to send straight away.",
+    )] = None
 
 
 class ContactIdentifierFilter(str, Enum):
@@ -7939,6 +8609,14 @@ class EmailTemplateSource(str, Enum):
     html = "html"
 
 
+class EmailTemplateThemeFilter(str, Enum):
+    arcane = "arcane"
+    barebone = "barebone"
+    matte = "matte"
+    protocol = "protocol"
+    studio = "studio"
+
+
 class EmailTemplateTheme(str, Enum):
     arcane = "arcane"
     barebone = "barebone"
@@ -8000,8 +8678,9 @@ class EmailTemplateSummary(BaseModel):
         description="The authoring format the template is written in, fixed at creation. `html` is finished markup you provide, optionally personalized with Liquid.",
         union_mode="left_to_right",
     )]
-    theme: Annotated[Optional[EmailTemplateTheme], Field(
+    theme: Annotated[Optional[Union[EmailTemplateTheme, str]], Field(
         description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
+        union_mode="left_to_right",
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
@@ -8067,6 +8746,431 @@ class EmailTemplateList(BaseModel):
     )]
 
 
+class EmailTemplateLanguageContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[Optional[str], Field(
+        description="The email subject line for this language.",
+        examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
+        max_length=998,
+    )] = None
+    preview_text: Annotated[Optional[str], Field(
+        description="The line an inbox shows after the subject in the message list, for this language. Leave it out and the inbox shows the opening words of the body instead. A mail client only reads it from the message body, so publishing folds it into the top of the HTML, hidden from view once the message is open; write it here rather than hiding your own copy in the body.",
+        examples=["{{ bird.contact.first_name }}, your order is on its way"],
+        max_length=255,
+    )] = None
+    html: Annotated[Optional[str], Field(
+        description="The HTML body for this language.",
+        examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
+        max_length=524288,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The plain-text body for this language. Omit it and a plain-text alternative is derived from the HTML when you submit.",
+        max_length=524288,
+    )] = None
+
+
+class EmailTemplateCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[str, Field(
+        description="The template's workspace-unique handle, and a stable alternative to the template ID when sending by template. It can contain lowercase letters, numbers, hyphens, and underscores. It is fixed at creation, so pick it deliberately. Two prefixes are rejected: `bird_`, reserved for our built-in templates, and `emt_`, the template ID format, which a slug could never be distinguished from.",
+        examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[Optional[str], Field(
+        description="The template's display name, shown wherever the template is listed. You can change it any time. It defaults to the slug if you do not set one.",
+        examples=["Welcome email"],
+        max_length=255,
+        min_length=1,
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="What the template is for, in your own words.",
+        examples=["Sent to new customers after signup."],
+    )] = None
+    category: Annotated[EmailTemplateCategory, Field(
+        description="Whether the template is for `transactional` email or `marketing` email.",
+    )]
+    source: Annotated[Literal["html"], Field(
+        description="The authoring format the template is written in, fixed at creation.\n`html` is finished markup you provide, optionally personalized with\nLiquid. Liquid supports variables, filters, and control flow such\nas `{% if %}` conditionals and `{% for %}` loops. A few constructs are\nrejected when you submit, and the error names exactly what to change:\n\n- Partial includes (`{% include %}`, `{% render %}`).\n- The `increment`, `decrement`, and `ifchanged` tags.\n- The `money`, `format_date`, `format_time`, `json`, `inspect`, and `type` filters.\n- Comparing against `empty`/`blank` (use `.size == 0` instead).\n- Blocks nested far deeper than real email markup needs.\n\nA broadcast's template additionally cannot use a `{% for %}` loop,\nbecause a broadcast supplies one value per contact property, so there\nis nothing to iterate. Send with the messages API instead if the\ntemplate needs one.",
+    )]
+    languages: Annotated[Optional[Dict[str, EmailTemplateLanguageContent]], Field(
+        description="The initial draft's content, keyed by language tag in BCP-47 form such as\n`en` or `pt-BR`. A template holds up to 25 languages, and a send picks one\nof them.\n\nOmit this to create an empty draft and add content later.",
+    )] = None
+    default_language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on email.",
+    )] = None
+    language_source_required: Annotated[Optional[bool], Field(
+        description="Whether a send has to name a language. Set it to true to reject a send that names none instead of serving the default language. Pair it with `on_missing_language: fail` when every send must pick a language deliberately: on its own, `fail` is bypassed by naming no language at all. A template with this set cannot be used for a broadcast, which has no way to name one. Defaults to false.",
+    )] = None
+
+
+class EmailTemplate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[Optional[str], Field(
+        description="The workspace that owns the template. Null for a built-in `system` template, which no workspace owns.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The name you send the template by. You can use either the slug or the id when you send. It never changes after the template is created. A built-in `system` template's slug always starts with `bird_`.",
+        examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[str, Field(
+        description="The template's display name, shown wherever the template is listed. You can change it any time. It defaults to the slug if you do not set one.",
+        examples=["Welcome email"],
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for, in your own words. Null if you have not set one.",
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
+    )]
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
+    )]
+    category: Annotated[EmailTemplateCategory, Field(
+        description="Whether the template is for `transactional` email or `marketing` email.",
+    )]
+    source: Annotated[Union[EmailTemplateSource, str], Field(
+        description="The authoring format the template is written in, fixed at creation. `html` is finished markup you provide, optionally personalized with Liquid.",
+        union_mode="left_to_right",
+    )]
+    theme: Annotated[Optional[Union[EmailTemplateTheme, str]], Field(
+        description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
+        union_mode="left_to_right",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version a send resolves to, or null if the template has never been published.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    published_version_id: Annotated[Optional[str], Field(
+        description="Deprecated: use `live_version_id` instead, which carries the same value.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    revision: Annotated[Optional[int], Field(
+        description="The draft's revision counter. Send it back on the next update to detect concurrent edits. Null for a built-in `system` template, which is unversioned.",
+        ge=0,
+    )]
+    languages: Annotated[Dict[str, EmailTemplateLanguageState], Field(
+        description="Every language this template has, keyed by language tag in BCP-47 form\nsuch as `en` or `pt-BR`, each with its state. One read tells you which\nlanguages are live and which have unpublished edits, without fetching any\ncontent.\n\nContent is not here: read a version's languages for that, one language at\na time.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="The languages this template currently supports for sending, as BCP-47 tags. Empty until the template is published, because sends serve published content. The set may shrink for reasons other than editing, so read it rather than assuming it matches what was published. A built-in `system` template has no publish step and always reports its one language.",
+    )]
+    on_missing_language: Annotated[TemplateOnMissingLanguage, Field(
+        description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on email.",
+    )]
+    language_source_required: Annotated[bool, Field(
+        description="Whether a send has to name a language. When true, a send that names none is rejected instead of being served the default language, and the template cannot be used for a broadcast, which has no way to name one.",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When this template was last submitted. Null if it never has been. Submitting is the only thing that moves this timestamp: rolling back changes which version is live without counting as a submit, so this keeps reporting the last real submit. Read it alongside `languages`, which says where each language stands.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for a built-in `system` template.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for a built-in `system` template.",
+    )]
+
+
+class EmailTemplateDraftRevision(RootModel[int]):
+    root: int
+
+
+class EmailTemplateUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    revision: Annotated[int, Field(
+        description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.",
+        examples=[3],
+        ge=0,
+    )]
+    name: Annotated[Optional[str], Field(
+        description="New display name, in free text. The slug stays fixed at creation, so renaming the template does not break whatever refers to it by slug or id.",
+        max_length=255,
+        min_length=1,
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="What the template is for, in your own words. Send `null` to clear it.",
+    )] = None
+    default_language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        description="What a send does when it asks for a language this template does not carry.",
+    )] = None
+    language_source_required: Annotated[Optional[bool], Field(
+        description="Whether a send has to name a language. Turning it on rejects a send that names none instead of serving the default language, and makes the template unusable for a broadcast, which has no way to name one.",
+    )] = None
+
+
+class EmailTemplateDuplicate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[Optional[str], Field(
+        description="The copy's workspace-unique handle, and the stable alternative to the template ID when sending by template. It can contain lowercase letters, numbers, hyphens, and underscores. Omit it to derive one from the source (for example, `welcome-email-copy`), with a numeric suffix if that slug is already taken. Two prefixes are rejected: `bird_`, reserved for our built-in templates, and `emt_`, the template ID format, which a slug could never be distinguished from. If you supply a slug that is already in use in the workspace, the request returns a conflict.",
+        examples=["welcome-email-copy"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )] = None
+
+
+class EmailTemplatePreviewContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[Optional[str], Field(
+        description="The subject line to render.",
+        examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
+        max_length=998,
+    )] = None
+    preview_text: Annotated[Optional[str], Field(
+        description="The preview text to render. It is folded into the top of the HTML the same way publishing folds it, so the rendered body carries the hidden preheader a recipient's inbox would read.",
+        examples=["{{ bird.contact.first_name }}, your order is on its way"],
+        max_length=255,
+    )] = None
+    html: Annotated[Optional[str], Field(
+        description="The HTML body to render.",
+        examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
+        max_length=524288,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The plain-text body to render. Omit it and a plain-text alternative is derived from the HTML, the same way it is derived when you publish.",
+        max_length=524288,
+    )] = None
+
+
+class EmailTemplatePreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    content: Annotated[Optional[EmailTemplatePreviewContent], Field(
+        description="Render this content rather than the template's stored draft. It is what an editor uses to show a change as it is made, since nothing has to be saved first.\n\nThe content is treated exactly as a draft would be: personalization is filled in the same way, a plain-text body is derived from the HTML when you omit it, and content that could not be published is refused with the same error. `version` asks for a published version's own content, so the two cannot be combined.",
+    )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        description="Sample values for the variables the template uses, for this one preview only. A variable takes its value under its own name. A `bird.` value nests to match the token, so `{\"bird\": {\"contact\": {\"first_name\": \"Ada\"}}}` fills `{{ bird.contact.first_name }}`.\n\nA preview is more forgiving than a send: a parameter you leave out renders as empty here rather than being rejected. `parameters` is capped at 16 KB once serialized.",
+    )] = None
+    contact: Annotated[Optional[str], Field(
+        description="Render the template the way this contact would receive it. Every `{{ bird.contact.… }}` token takes its value from the contact's record, narrowed to the attributes the template reads and filled from each property's `fallback_value` where the contact holds no value: the same values a broadcast to this contact would send.\n\nValues are read as the contact stands right now, so a preview reflects an edit to their record as soon as you make it. A `bird.contact.…` value you also pass in `parameters` wins for that one attribute, so you can preview a contact with one field changed without editing them.",
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    version: Annotated[Optional[str], Field(
+        description="Preview a specific published version by its id, instead of the current draft.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class EmailCompatibilityReportSeverity(str, Enum):
+    problem = "problem"
+    warning = "warning"
+    none = "none"
+
+
+class EmailCompatibilityRuleID(str, Enum):
+    html_script = "html_script"
+    html_event_handlers = "html_event_handlers"
+    html_embedded_content = "html_embedded_content"
+    html_linked_stylesheet = "html_linked_stylesheet"
+    css_at_import = "css_at_import"
+    html_form = "html_form"
+    html_svg = "html_svg"
+    html_media = "html_media"
+    css_display_flex_grid = "css_display_flex_grid"
+    css_position_fixed_sticky = "css_position_fixed_sticky"
+    css_variables_no_fallback = "css_variables_no_fallback"
+    css_viewport_units = "css_viewport_units"
+    html_button = "html_button"
+    css_math_functions = "css_math_functions"
+    css_modern_color = "css_modern_color"
+    html_web_page_markup = "html_web_page_markup"
+
+
+class EmailCompatibilitySeverity(str, Enum):
+    problem = "problem"
+    warning = "warning"
+
+
+class EmailClientFamily(str, Enum):
+    gmail = "gmail"
+    outlook = "outlook"
+    yahoo = "yahoo"
+    apple_mail = "apple_mail"
+    aol = "aol"
+    thunderbird = "thunderbird"
+    samsung_email = "samsung_email"
+    sfr = "sfr"
+    orange = "orange"
+    protonmail = "protonmail"
+    hey = "hey"
+    mail_ru = "mail_ru"
+    fastmail = "fastmail"
+    laposte = "laposte"
+    gmx = "gmx"
+    web_de = "web_de"
+    ionos_1and1 = "ionos_1and1"
+    wp_pl = "wp_pl"
+
+
+class EmailClientPlatform(str, Enum):
+    desktop_webmail = "desktop_webmail"
+    mobile_webmail = "mobile_webmail"
+    ios = "ios"
+    android = "android"
+    windows = "windows"
+    macos = "macos"
+    windows_mail = "windows_mail"
+    outlook_com = "outlook_com"
+
+
+class EmailClientSupport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    family: Annotated[Union[EmailClientFamily, str], Field(
+        description="Which mail client a finding applies to. A finding's `message` names at most\nApple Mail, Gmail, Outlook, and Yahoo; its `unsupported_clients` and\n`partial_clients` name every client affected.\n\n- `gmail`: Gmail\n- `outlook`: Outlook\n- `yahoo`: Yahoo\n- `apple_mail`: Apple Mail\n- `aol`: AOL\n- `thunderbird`: Mozilla Thunderbird\n- `samsung_email`: Samsung Email\n- `sfr`: SFR\n- `orange`: Orange\n- `protonmail`: ProtonMail\n- `hey`: HEY\n- `mail_ru`: Mail.ru\n- `fastmail`: Fastmail\n- `laposte`: LaPoste.net\n- `gmx`: GMX\n- `web_de`: WEB.DE\n- `ionos_1and1`: 1&1\n- `wp_pl`: WP.pl",
+        union_mode="left_to_right",
+    )]
+    platforms: Annotated[List[Annotated[Union[EmailClientPlatform, str], Field(union_mode="left_to_right")]], Field(
+        description="Which of the family's platforms this applies to, in alphabetical order.",
+        min_length=1,
+    )]
+
+
+class EmailCompatibilityFinding(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    rule_id: Annotated[Union[EmailCompatibilityRuleID, str], Field(
+        description="Which rule produced a finding.\n\n- `html_script`: a `<script>` tag.\n- `html_event_handlers`: a JavaScript event-handler attribute such as `onclick`.\n- `html_embedded_content`: an `<iframe>`, `<embed>`, or `<object>`.\n- `html_linked_stylesheet`: a `<link rel=\"stylesheet\">`.\n- `css_at_import`: an `@import` rule.\n- `html_form`: a `<form>`, `<input>`, `<select>`, or `<textarea>`.\n- `html_svg`: an inline `<svg>`.\n- `html_media`: a `<video>` or `<audio>` element.\n- `css_display_flex_grid`: `display: flex` or `display: grid`, and their `inline-` forms.\n- `css_position_fixed_sticky`: `position: fixed` or `position: sticky`.\n- `css_variables_no_fallback`: a `var()` with no fallback value.\n- `css_viewport_units`: a `vh` or `vw` length.\n- `html_button`: a `<button>` element.\n- `css_math_functions`: `clamp()`, `min()`, or `max()`.\n- `css_modern_color`: `oklch()`, `oklab()`, `lch()`, or `lab()`.\n- `html_web_page_markup`: markup a web framework left behind, such as a `data-reactroot` attribute or a `__next` element id.",
+        union_mode="left_to_right",
+    )]
+    severity: Annotated[EmailCompatibilitySeverity, Field(
+        description="What a finding costs you.\n\n- `problem`: the pattern does nothing at all. The client removes the markup, never loads the stylesheet carrying it, or will not operate the control. Where a finding names clients, that is what happens in those clients.\n- `warning`: it does something, but not what you wrote.\n\nNeither one refuses a save, a submit, or a send.",
+    )]
+    language: Annotated[Optional[str], Field(
+        description="Which language's content this finding is in. Null when the call covered a single language.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    field: Annotated[str, Field(
+        description="Which field of that language the finding is in. Always `html`; the subject and the plain-text body are not checked.",
+        examples=["html"],
+        min_length=1,
+    )]
+    message: Annotated[str, Field(
+        description="What is wrong and which clients it affects, worded to show to whoever is authoring the template. It covers the rule's whole category rather than the exact text that matched, so a rule covering `<video>` and `<audio>` names both whichever one is on the line. Show `fix` and then `partial` after it.",
+        examples=["`display: flex` and `grid` don't work in Outlook (Windows/Windows Mail)."],
+        min_length=1,
+    )]
+    fix: Annotated[Optional[str], Field(
+        description="What to use instead. Null when there is no drop-in alternative and the fix is a restructure.",
+        examples=["Use tables for layout."],
+        min_length=1,
+    )]
+    partial: Annotated[Optional[str], Field(
+        description="Which clients support the feature only partly. Null when no client's support is partial.",
+        examples=["Partial support for `display: flex` and `grid` in Gmail (iOS/Android)."],
+        min_length=1,
+    )]
+    line: Annotated[int, Field(
+        description="The 1-based line the pattern is on, in the HTML the containing response's `compatibility` says it covered.",
+        examples=[14],
+        ge=1,
+    )]
+    column: Annotated[int, Field(
+        description="The 1-based column the pattern starts at, on that line.",
+        examples=[6],
+        ge=1,
+    )]
+    match: Annotated[str, Field(
+        description="The source text that matched, starting at `line` and `column`: the smallest span that identifies what is wrong. Never the enclosing line. For a finding on a whole element, the span runs from the opening tag through the close tag, because the client drops the element's content along with its markup. Cut at 256 characters, so an element holding a long body is quoted from its start rather than in full.",
+        examples=["display: flex"],
+        max_length=256,
+        min_length=1,
+    )]
+    unsupported_clients: Annotated[List[EmailClientSupport], Field(
+        description="Every client family that does not support the feature at all, in alphabetical order by each entry's `family`. Empty on a finding whose `message`, `fix`, and `partial` name no client. `message` names at most four families; this names all of them.",
+    )]
+    partial_clients: Annotated[List[EmailClientSupport], Field(
+        description="Every client family that renders something other than what you wrote, in alphabetical order by each entry's `family`. Empty when no client's support is partial, which is also when `partial` is null. `partial` names at most four families; this names all of them.",
+    )]
+
+
+class EmailTemplatePreview(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[Optional[str], Field(
+        description="The rendered subject line. Null when the template has no subject.",
+    )]
+    html: Annotated[Optional[str], Field(
+        description="The rendered HTML body. Null when the template has no HTML body.",
+    )]
+    text: Annotated[Optional[str], Field(
+        description="The rendered plain-text body. Derived from the HTML when the template has no separate plain-text body, and null when it has neither.",
+    )]
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    variables: Annotated[List[TemplateVariable], Field(
+        description="The variables you can fill in with `parameters`. This list covers only the\nlanguage named by `language`. A version read combines the variables from\nevery language the version holds. Preview each language separately to see\nits own variables.\n\nVariables under the reserved `bird.` namespace are not listed here. We\nsupply those values, but you can nest sample values under `bird` in\n`parameters` to preview them.",
+    )]
+    compatibility_severity: Annotated[EmailCompatibilityReportSeverity, Field(
+        description="The worst severity across every finding the response was computed from, which\nis the authoritative reading: a response that caps how many findings it lists\nstill accounts here for the ones it left out. Each response's `compatibility`\nsays which content it covered.\n\n- `problem`: at least one finding is a `problem`.\n- `warning`: every finding is a `warning`.\n- `none`: there are no findings.",
+    )]
+    compatibility: Annotated[List[EmailCompatibilityFinding], Field(
+        description="What the previewed HTML uses that mail clients remove, ignore, or render inconsistently, in the order the patterns appear. Empty when nothing is worth reporting. Line and column count in the `content.html` you supplied, or in the template's own HTML when you supplied none, so they address the source rather than the rendered output. Previewing a published `version` is the exception: where the stored version keeps no authored copy of a language the publish step rewrote, the positions count in that rewritten body, which no response returns. A preview renders either way. At most 200 findings come back, the first 200 in source order; `compatibility_severity` is derived from every finding the HTML produced, including any beyond those 200.",
+        max_length=200,
+    )]
+
+
+class EmailTemplateVersionStatus(str, Enum):
+    draft = "draft"
+    published = "published"
+    archived = "archived"
+
+
 class ActorType(str, Enum):
     user = "user"
     api_key = "api_key"
@@ -8090,6 +9194,404 @@ class Actor(BaseModel):
     display_name: Annotated[Optional[str], Field(
         description="The label the actor is shown under: typically a member's name or email address, or the API key's name. Null when it could not be resolved.",
     )] = None
+
+
+class EmailTemplateVersionSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="Sequential published-version number (1, 2, 3…). Null while the version is a draft.",
+        ge=1,
+    )] = None
+    status: Annotated[EmailTemplateVersionStatus, Field(
+        description="Whether this version is still being edited or has been published. It records\nthe version's publication history: a version that a later one replaced stays\n`published`. The template's `live_version_id` names the version a send\nresolves to now.\n\n`archived` is reserved and no version carries it yet. Version retirement will\nproduce it, so it is declared here ahead of that feature: a client written\nagainst this list today keeps working when the first archived version arrives,\nrather than the value's arrival being a breaking change.",
+    )]
+    revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
+    variables: Annotated[List[TemplateVariable], Field(
+        description="Every variable this version's content uses. You supply a value for each of them when you send.\n\nThe list combines all the languages, because languages do not have to use the same variables: if the English body uses `discount_code` and the French body uses `shipping_date`, both appear here. Send a value for every variable in the list rather than only the ones you expect the language you are sending to use. A language that does not use a variable ignores the value you sent for it, and a variable the sent language does use but you left out is rejected with a `422` naming it.\n\nVariables under the reserved `bird.` namespace are not listed here. We fill those in ourselves from the recipient's contact record.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="The languages this version holds, as BCP-47 tags: the keys its `languages` map would return, without the content itself.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When this version was created.",
+        min_length=1,
+    )]
+    published_at: Annotated[Optional[str], Field(
+        description="When this version was published, or null if it has not been published.",
+    )] = None
+    updated_by: Annotated[Optional[Actor], Field(
+        description="Who last saved this version: a member's own session, an OAuth token delegated from one, or a workspace API key. Publishing freezes a version, so on a published one this is whoever published it. Null means no actor is on record: a built-in template, which is code-defined rather than stored, or a version last saved by an API key before this field existed. Every other version has one, even when its display_name could not be resolved (a member whose account is gone, say).",
+    )] = None
+
+
+class EmailTemplateVersionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailTemplateVersionSummary], Field(
+        description="One page of the template's versions, newest first. Each entry describes a version and which languages it holds. Read a single version if you want its actual content.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailTemplateBroadcastSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[EmailBroadcastStatus, Field(
+        description="Where the broadcast has got to. Only `scheduled` and `accepted` appear here: those are the two that have not pinned their content yet, so they are the ones blocking the delete. This list carries the status alone; the per-recipient totals live on the broadcast itself.",
+        examples=["scheduled"],
+    )]
+    scheduled_at: Annotated[Optional[str], Field(
+        description="When the broadcast is due to send, or null when it is not scheduled.",
+        examples=["2026-07-03T09:00:00Z"],
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When the broadcast was created.",
+        examples=["2026-07-01T00:00:00Z"],
+        min_length=1,
+    )]
+
+
+class EmailTemplateBroadcastList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailTemplateBroadcastSummary], Field(
+        description="Page of broadcasts blocking a delete of the template, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailTemplateVersion(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="Sequential published-version number (1, 2, 3…). Null while the version is a draft.",
+        ge=1,
+    )] = None
+    status: Annotated[EmailTemplateVersionStatus, Field(
+        description="Whether this version is still being edited or has been published. It records\nthe version's publication history: a version that a later one replaced stays\n`published`. The template's `live_version_id` names the version a send\nresolves to now.\n\n`archived` is reserved and no version carries it yet. Version retirement will\nproduce it, so it is declared here ahead of that feature: a client written\nagainst this list today keeps working when the first archived version arrives,\nrather than the value's arrival being a breaking change.",
+    )]
+    revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
+    variables: Annotated[List[TemplateVariable], Field(
+        description="Every variable this version's content uses. You supply a value for each of them when you send.\n\nThe list combines all the languages, because languages do not have to use the same variables: if the English body uses `discount_code` and the French body uses `shipping_date`, both appear here. Send a value for every variable in the list rather than only the ones you expect the language you are sending to use. A language that does not use a variable ignores the value you sent for it, and a variable the sent language does use but you left out is rejected with a `422` naming it.\n\nVariables under the reserved `bird.` namespace are not listed here. We fill those in ourselves from the recipient's contact record.",
+    )]
+    languages: Annotated[Dict[str, EmailTemplateLanguageContent], Field(
+        description="The content this version holds, keyed by language tag in BCP-47 form such as `en` or `pt-BR`. Publishing freezes every language together, so a version shows exactly what it would send in each of them. On a published version this is the send content.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    created_at: Annotated[str, Field(
+        description="When this version was created.",
+        min_length=1,
+    )]
+    published_at: Annotated[Optional[str], Field(
+        description="When this version was published, or null if it has not been published.",
+    )] = None
+    updated_by: Annotated[Optional[Actor], Field(
+        description="Who last saved this version: a member's own session, an OAuth token delegated from one, or a workspace API key. Publishing freezes a version, so on a published one this is whoever published it. Null means no actor is on record: a built-in template, which is code-defined rather than stored, or a version last saved by an API key before this field existed. Every other version has one, even when its display_name could not be resolved (a member whose account is gone, say).",
+    )] = None
+
+
+class EmailTemplateLanguageSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter, to send back when you save it. It counts only this language's own changes.",
+        ge=0,
+    )]
+    content_hash: Annotated[Optional[str], Field(
+        description="A hash over this language's content, prefixed with the algorithm that produced it (`sha256:`), so the algorithm can change without the field becoming ambiguous. It tells you whether a language differs without transferring the content, and is comparable only within one version of this API. Null for a language saved before fingerprints were recorded.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+    )] = None
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null if that is not recorded.",
+    )] = None
+    has_html: Annotated[Optional[bool], Field(
+        description="Whether this language has an HTML body.",
+    )] = None
+    has_text: Annotated[Optional[bool], Field(
+        description="Whether this language has a plain-text body.",
+    )] = None
+
+
+class EmailTemplateLanguageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailTemplateLanguageSummary], Field(
+        description="Every language the version holds, ordered by language tag, without their content. Read a single language to get its content.",
+    )]
+
+
+class EmailTemplateLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter. Send it back when you save this language so a concurrent edit is caught instead of silently overwritten. It counts only this language's own changes, so editing another language never invalidates it.",
+        ge=0,
+    )]
+    content_hash: Annotated[Optional[str], Field(
+        description="A hash over this language's content, prefixed with the algorithm that produced it (`sha256:`), so the algorithm can change without the field becoming ambiguous. It tells you whether a language differs without transferring the content, and is comparable only within one version of this API. Null for a language saved before fingerprints were recorded.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+    )] = None
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null if that is not recorded.",
+    )] = None
+    content: Annotated[Optional[EmailTemplateLanguageContent], Field(
+        description="One language's content for an email template. Each language carries its own subject, preview text and bodies, so a translation can differ in wording and length from every other language without affecting them.",
+    )] = None
+    compatibility_severity: Annotated[EmailCompatibilityReportSeverity, Field(
+        description="The worst severity across every finding the response was computed from, which\nis the authoritative reading: a response that caps how many findings it lists\nstill accounts here for the ones it left out. Each response's `compatibility`\nsays which content it covered.\n\n- `problem`: at least one finding is a `problem`.\n- `warning`: every finding is a `warning`.\n- `none`: there are no findings.",
+    )]
+    compatibility: Annotated[List[EmailCompatibilityFinding], Field(
+        description="What the stored HTML uses that mail clients remove, ignore, or render inconsistently, in the order the patterns appear. Empty when nothing is worth reporting. Line and column count in the `content.html` this response carries. At most 200 findings come back, the first 200 in source order; `compatibility_severity` is derived from every finding the HTML produced, including any beyond those 200.",
+        max_length=200,
+    )]
+
+
+class EmailTemplateLanguageUpsert(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[str, Field(
+        description="The email subject line for this language.",
+        examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
+        max_length=998,
+        min_length=1,
+    )]
+    preview_text: Annotated[Optional[str], Field(
+        description="The line an inbox shows after the subject in the message list. Leave it out and the inbox shows the opening words of the body instead.",
+        examples=["{{ bird.contact.first_name }}, your order is on its way"],
+        max_length=255,
+    )] = None
+    html: Annotated[Optional[str], Field(
+        description="The HTML body for this language.",
+        examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
+        max_length=524288,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The plain-text body for this language. Omit it and a plain-text alternative is derived from the HTML when you submit.",
+        max_length=524288,
+    )] = None
+    revision: Annotated[Optional[int], Field(
+        description="The revision you last read for this language, to detect a concurrent edit. The save is rejected with a conflict if the language moved on since. Omit it to save unconditionally. Creating a language does not need one.",
+        ge=0,
+    )] = None
+
+
+class EmailTemplateRef(RootModel[str]):
+    root: str
+
+
+class EmailTemplateLanguageSaved(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's new revision. Send it back on your next save of this language so a concurrent edit is caught instead of silently overwritten.",
+        ge=0,
+    )]
+    draft_revision: Annotated[int, Field(
+        description="The draft's new revision. Saving a language moves it, so any template update you make next must send this value instead of the revision you read before the save.",
+        ge=0,
+    )]
+    content_hash: Annotated[Optional[str], Field(
+        description="A hash over the language's content as saved, prefixed with the algorithm that produced it (`sha256:`), so the algorithm can change without the field becoming ambiguous. It tells you whether a language differs without transferring the content, and is comparable only within one version of this API.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+    )] = None
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was saved.",
+    )] = None
+    template_ref: Annotated[str, Field(
+        description="The template this call addressed, as its id, even when you addressed it by slug. Send it back as `template_ref` on a follow-up call.",
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+    )]
+    version_id: Annotated[str, Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    compatibility_severity: Annotated[EmailCompatibilityReportSeverity, Field(
+        description="The worst severity across every finding the response was computed from, which\nis the authoritative reading: a response that caps how many findings it lists\nstill accounts here for the ones it left out. Each response's `compatibility`\nsays which content it covered.\n\n- `problem`: at least one finding is a `problem`.\n- `warning`: every finding is a `warning`.\n- `none`: there are no findings.",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this save. Present on reads that compute it: an empty list means\nthere is nothing to do, and the field is absent entirely on responses that do not\nreport next actions.\n\nA `problem` in `compatibility` routes back to this same write, with the identifiers\nto address it already on this response; a `warning` says what degrades and leaves\nthe draft as it is.",
+    )] = None
+    compatibility: Annotated[List[EmailCompatibilityFinding], Field(
+        description="What the HTML you just saved uses that mail clients remove, ignore, or render inconsistently, in the order the patterns appear. Empty when nothing is worth reporting. Advisory: the language was saved either way, and a finding never refuses a write. Line and column count in the HTML as saved, which the language read returns as `content.html`. A partial update reports on the language in full rather than on the fields it carried, so it reads the same as the read of the same language. At most 200 findings come back, the first 200 in source order; `compatibility_severity` is derived from every finding the HTML produced, including any beyond those 200.",
+        max_length=200,
+    )]
+
+
+class EmailTemplateLanguageUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[Optional[str], Field(
+        description="A new email subject line for this language.",
+        examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
+        max_length=998,
+        min_length=1,
+    )] = None
+    preview_text: Annotated[Optional[str], Field(
+        description="A new line for the inbox to show after the subject in the message list. Send null to clear it, and the inbox shows the opening words of the body instead.",
+        examples=["{{ bird.contact.first_name }}, your order is on its way"],
+        max_length=255,
+    )] = None
+    html: Annotated[Optional[str], Field(
+        description="A new HTML body for this language.",
+        examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
+        max_length=524288,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="A new plain-text body for this language. Send null to clear it, and a plain-text alternative is derived from the HTML when you submit.",
+        max_length=524288,
+    )] = None
+    revision: Annotated[Optional[int], Field(
+        description="The revision you last read for this language, to detect a concurrent edit. The edit is rejected with a conflict if the language moved on since. Omit it to apply the edit unconditionally.",
+        ge=0,
+    )] = None
+
+
+class EmailTemplateRollback(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    revision: Annotated[int, Field(
+        description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.",
+        examples=[3],
+        ge=0,
+    )]
+
+
+class EmailTemplateSubmit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    validate_only: Annotated[Optional[bool], Field(
+        description="Check the draft without actually submitting it. Every language gets checked and every problem gets reported back to you, but nothing is frozen and no new version gets created. Give a validation run its own `Idempotency-Key`, separate from the real submit that follows it. You can also send no key. The validation request and real submit have different bodies, so using the same key for both is rejected as key reuse.",
+    )] = None
+    expected_revision: Annotated[Optional[int], Field(
+        description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.",
+        examples=[3],
+        ge=0,
+    )] = None
+    languages: Annotated[Optional[List[str]], Field(
+        description="Languages to process when submitting an already-published version. Email templates accept submissions only for drafts, so setting this field for an email template is rejected.",
+        max_length=25,
+        min_length=1,
+    )] = None
+
+
+class EmailTemplateSubmitProblem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[Optional[str], Field(
+        description="The language this problem is about. Null when the problem is about the whole version rather than one language, for example an empty draft, or a default language the draft does not have.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    field: Annotated[Optional[str], Field(
+        description="Which field within that language has the problem, such as `subject` or `html`. Null when the problem is not about one particular field.",
+        examples=["subject"],
+        min_length=1,
+    )] = None
+    code: Annotated[str, Field(
+        description="The error code a real submit would fail with. Look it up in the error catalog to see what it means and what to do about it.",
+        examples=["E04051"],
+        min_length=1,
+        pattern="^E\\d{5}$",
+    )]
+    message: Annotated[str, Field(
+        description="What is wrong, worded so you can show it directly to whoever is authoring the template.",
+        examples=["A subject is required to submit."],
+        min_length=1,
+    )]
+
+
+class EmailTemplateSubmitResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    valid: Annotated[bool, Field(description="Whether the version passed every check.")]
+    errors: Annotated[List[EmailTemplateSubmitProblem], Field(
+        description="Every problem found across the draft's languages. Empty when `valid` is `true`.",
+    )]
+    version: Annotated[Optional[EmailTemplateVersion], Field(
+        description="The version this submit created, or null when it was only a validation run and nothing got frozen. As soon as this is not null, sends already use that version. No further action is required to make it live.",
+    )] = None
+    template_ref: Annotated[str, Field(
+        description="The template this call addressed, as its id, even when you addressed it by slug. Send it back as `template_ref` on a follow-up call.",
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+    )]
+    version_id: Annotated[str, Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    compatibility_severity: Annotated[EmailCompatibilityReportSeverity, Field(
+        description="The worst severity across every finding the response was computed from, which\nis the authoritative reading: a response that caps how many findings it lists\nstill accounts here for the ones it left out. Each response's `compatibility`\nsays which content it covered.\n\n- `problem`: at least one finding is a `problem`.\n- `warning`: every finding is a `warning`.\n- `none`: there are no findings.",
+    )]
+    compatibility: Annotated[List[EmailCompatibilityFinding], Field(
+        description="What the draft's HTML uses that mail clients remove, ignore, or render inconsistently, across every language, in alphabetical order of language tag and then the order the patterns appear. Empty when nothing is worth reporting. Advisory, and separate from `errors`: a finding never fails a submit, so the version froze either way. Each finding names the `language` it is in, and its line and column count in that language's HTML, which the language read returns as `content.html`. At most 200 findings come back, the first 200 in that order, so a draft that reaches the cap can omit a later language's findings entirely rather than trimming each language: read a language's own findings from its read or its write. `compatibility_severity` is derived from every finding the draft produced, including any beyond those 200.",
+        max_length=200,
+    )]
 
 
 class InboundAddressID(RootModel[str]):

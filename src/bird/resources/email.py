@@ -18,8 +18,8 @@ from bird._models import to_wire
 from bird._response import APIResponse
 from bird.resources.email_mailboxes import AsyncEmailMailboxes, EmailMailboxes
 from bird.resources.email_threads import AsyncEmailThreads, EmailThreads
+from bird.resources.email_templates import AsyncEmailTemplates, EmailTemplates
 from bird.resources.email_stats_gen import AsyncEmailStats, EmailStats
-from bird.resources.email_templates_gen import AsyncEmailTemplates, EmailTemplates
 from bird._types import (
     Attachment,
     EmailAddressInput,

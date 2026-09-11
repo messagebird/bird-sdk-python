@@ -11,6 +11,63 @@ from __future__ import annotations
 from typing import Final
 
 
+class EmailClientFamily:
+    """Values of EmailClientFamily known at this SDK version (open enum)."""
+
+    AOL: Final = "aol"
+    APPLE_MAIL: Final = "apple_mail"
+    FASTMAIL: Final = "fastmail"
+    GMAIL: Final = "gmail"
+    GMX: Final = "gmx"
+    HEY: Final = "hey"
+    IONOS_1AND1: Final = "ionos_1and1"
+    LAPOSTE: Final = "laposte"
+    MAIL_RU: Final = "mail_ru"
+    ORANGE: Final = "orange"
+    OUTLOOK: Final = "outlook"
+    PROTONMAIL: Final = "protonmail"
+    SAMSUNG_EMAIL: Final = "samsung_email"
+    SFR: Final = "sfr"
+    THUNDERBIRD: Final = "thunderbird"
+    WEB_DE: Final = "web_de"
+    WP_PL: Final = "wp_pl"
+    YAHOO: Final = "yahoo"
+
+
+class EmailClientPlatform:
+    """Values of EmailClientPlatform known at this SDK version (open enum)."""
+
+    ANDROID: Final = "android"
+    DESKTOP_WEBMAIL: Final = "desktop_webmail"
+    IOS: Final = "ios"
+    MACOS: Final = "macos"
+    MOBILE_WEBMAIL: Final = "mobile_webmail"
+    OUTLOOK_COM: Final = "outlook_com"
+    WINDOWS: Final = "windows"
+    WINDOWS_MAIL: Final = "windows_mail"
+
+
+class EmailCompatibilityRuleID:
+    """Values of EmailCompatibilityRuleID known at this SDK version (open enum)."""
+
+    CSS_AT_IMPORT: Final = "css_at_import"
+    CSS_DISPLAY_FLEX_GRID: Final = "css_display_flex_grid"
+    CSS_MATH_FUNCTIONS: Final = "css_math_functions"
+    CSS_MODERN_COLOR: Final = "css_modern_color"
+    CSS_POSITION_FIXED_STICKY: Final = "css_position_fixed_sticky"
+    CSS_VARIABLES_NO_FALLBACK: Final = "css_variables_no_fallback"
+    CSS_VIEWPORT_UNITS: Final = "css_viewport_units"
+    HTML_BUTTON: Final = "html_button"
+    HTML_EMBEDDED_CONTENT: Final = "html_embedded_content"
+    HTML_EVENT_HANDLERS: Final = "html_event_handlers"
+    HTML_FORM: Final = "html_form"
+    HTML_LINKED_STYLESHEET: Final = "html_linked_stylesheet"
+    HTML_MEDIA: Final = "html_media"
+    HTML_SCRIPT: Final = "html_script"
+    HTML_SVG: Final = "html_svg"
+    HTML_WEB_PAGE_MARKUP: Final = "html_web_page_markup"
+
+
 class EmailEventType:
     """Values of EmailEventType known at this SDK version (open enum)."""
 
@@ -60,6 +117,16 @@ class EmailTemplateSource:
     """Values of EmailTemplateSource known at this SDK version (open enum)."""
 
     HTML: Final = "html"
+
+
+class EmailTemplateTheme:
+    """Values of EmailTemplateTheme known at this SDK version (open enum)."""
+
+    ARCANE: Final = "arcane"
+    BAREBONE: Final = "barebone"
+    MATTE: Final = "matte"
+    PROTOCOL: Final = "protocol"
+    STUDIO: Final = "studio"
 
 
 class LookupFlag:
@@ -493,11 +560,15 @@ class WhatsAppUsernameStatus:
 
 
 __all__ = [
+    "EmailClientFamily",
+    "EmailClientPlatform",
+    "EmailCompatibilityRuleID",
     "EmailEventType",
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",
     "EmailTemplateSource",
+    "EmailTemplateTheme",
     "LookupFlag",
     "LookupPropertyStatus",
     "NumberCapability",

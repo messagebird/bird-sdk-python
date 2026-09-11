@@ -99,6 +99,18 @@ def field_types(mod) -> frozenset[str]:
     return frozenset(out)
 
 
+def one_value_enum(mod, name: str) -> bool:
+    """Whether the oracle's class is a single-member enum.
+
+    beak renders one of those as a ``Literal`` at every use and emits no class,
+    so a caller reads the value off the annotation and has nothing to import.
+    A vocabulary that gains a second value gets a class on both sides, and this
+    stops matching.
+    """
+    obj = getattr(mod, name, None)
+    return isinstance(obj, type) and issubclass(obj, enum.Enum) and len(list(obj)) == 1
+
+
 def main() -> None:
     ours_mod, theirs_mod = load(sys.argv[1], "ours"), load(sys.argv[2], "theirs")
     ours, theirs = surface(ours_mod), surface(theirs_mod)
@@ -125,7 +137,11 @@ def main() -> None:
         print(f"only in ours ({len(only_ours)}): {only_ours[:20]}")
 
     components, reachable = component_schemas(), field_types(theirs_mod)
-    dropped = [n for n in only_theirs if n in components and n in reachable]
+    dropped = [
+        n
+        for n in only_theirs
+        if n in components and n in reachable and not one_value_enum(theirs_mod, n)
+    ]
     if dropped:
         problems.append(f"{len(dropped)} component schema(s) type a field but we define no class: {dropped}")
     if problems:
