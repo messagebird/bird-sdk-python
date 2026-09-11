@@ -83,6 +83,35 @@ def whatsapp_templates_versions_languages_get() -> None:
         print(component.type)
 
 
+def whatsapp_numbers_list() -> None:
+    for number in client.whatsapp.numbers.list(status=["connected"]):
+        print(number.id, number.phone_number, number.status)
+
+
+def whatsapp_numbers_get() -> None:
+    number = client.whatsapp.numbers.get("wan_01krdgeqcxet5s7t44vh8rt9mg")
+    print(number.status, number.quality_rating, number.messaging_limit)
+
+
+def whatsapp_numbers_profile_get() -> None:
+    profile = client.whatsapp.numbers.profile.get("wan_01krdgeqcxet5s7t44vh8rt9mg")
+    print(profile.display_name, profile.description)
+
+
+def whatsapp_numbers_list_events() -> None:
+    for event in client.whatsapp.numbers.list_events("wan_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(event.created_at, event.type, event.summary)
+
+
+def whatsapp_business_accounts_list() -> None:
+    for account in client.whatsapp.business_accounts.list():
+        print(account.id, account.name, account.status)
+
+
+def whatsapp_business_accounts_get() -> None:
+    account = client.whatsapp.business_accounts.get("waa_01krdgeqcxet5s7t44vh8rt9mg")
+    print(account.account_review_status, account.business_verification_status)
+
 def whatsapp_stats_summary() -> None:
     summary = client.whatsapp.stats.summary(
         from_="2026-08-01", to="2026-08-31", timezone="Europe/Amsterdam"

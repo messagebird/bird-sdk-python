@@ -225,6 +225,89 @@ class VerificationTerminalReason:
     UNDELIVERABLE: Final = "undeliverable"
 
 
+class WhatsAppBusinessAccountMarketingMessagesStatus:
+    """Values of WhatsAppBusinessAccountMarketingMessagesStatus known at this SDK version (open enum)."""
+
+    ELIGIBLE: Final = "eligible"
+    ONBOARDED: Final = "onboarded"
+
+
+class WhatsAppBusinessAccountReviewStatus:
+    """Values of WhatsAppBusinessAccountReviewStatus known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    DEFERRED: Final = "deferred"
+    PENDING: Final = "pending"
+    REJECTED: Final = "rejected"
+
+
+class WhatsAppBusinessAccountStatus:
+    """Values of WhatsAppBusinessAccountStatus known at this SDK version (open enum)."""
+
+    ACTIVE: Final = "active"
+
+
+class WhatsAppBusinessPortfolioMarketingMessagesStatus:
+    """Values of WhatsAppBusinessPortfolioMarketingMessagesStatus known at this SDK version (open enum)."""
+
+    NOT_STARTED: Final = "not_started"
+    REQUEST_SENT: Final = "request_sent"
+    TERM_OF_SERVICE_SIGNED: Final = "term_of_service_signed"
+
+
+class WhatsAppBusinessVerificationStatus:
+    """Values of WhatsAppBusinessVerificationStatus known at this SDK version (open enum)."""
+
+    EXPIRED: Final = "expired"
+    FAILED: Final = "failed"
+    INELIGIBLE: Final = "ineligible"
+    NOT_VERIFIED: Final = "not_verified"
+    PENDING: Final = "pending"
+    PENDING_NEED_MORE_INFO: Final = "pending_need_more_info"
+    PENDING_SUBMISSION: Final = "pending_submission"
+    REJECTED: Final = "rejected"
+    REVOKED: Final = "revoked"
+    VERIFIED: Final = "verified"
+
+
+class WhatsAppBusinessVertical:
+    """Values of WhatsAppBusinessVertical known at this SDK version (open enum)."""
+
+    ALCOHOL: Final = "alcohol"
+    APPAREL: Final = "apparel"
+    AUTO: Final = "auto"
+    BEAUTY: Final = "beauty"
+    EDU: Final = "edu"
+    ENTERTAIN: Final = "entertain"
+    EVENT_PLAN: Final = "event_plan"
+    FINANCE: Final = "finance"
+    GOVT: Final = "govt"
+    GROCERY: Final = "grocery"
+    HEALTH: Final = "health"
+    HOTEL: Final = "hotel"
+    NONPROFIT: Final = "nonprofit"
+    ONLINE_GAMBLING: Final = "online_gambling"
+    OTC_DRUGS: Final = "otc_drugs"
+    OTHER: Final = "other"
+    PHYSICAL_GAMBLING: Final = "physical_gambling"
+    PROF_SERVICES: Final = "prof_services"
+    RESTAURANT: Final = "restaurant"
+    RETAIL: Final = "retail"
+    TRAVEL: Final = "travel"
+
+
+class WhatsAppDisplayNameStatus:
+    """Values of WhatsAppDisplayNameStatus known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    AVAILABLE_WITHOUT_REVIEW: Final = "available_without_review"
+    DECLINED: Final = "declined"
+    EXPIRED: Final = "expired"
+    NON_EXISTS: Final = "non_exists"
+    NONE: Final = "none"
+    PENDING_REVIEW: Final = "pending_review"
+
+
 class WhatsAppErrorCode:
     """Values of WhatsAppErrorCode known at this SDK version (open enum)."""
 
@@ -284,6 +367,68 @@ class WhatsAppInteractiveType:
     REQUEST_CONTACT_INFO: Final = "request_contact_info"
 
 
+class WhatsAppNumberErrorCode:
+    """Values of WhatsAppNumberErrorCode known at this SDK version (open enum)."""
+
+    BUSINESS_ACCOUNT_LOCKED: Final = "business_account_locked"
+    CREDIT_CURRENCY_MISMATCH: Final = "credit_currency_mismatch"
+    INTERNAL_ERROR: Final = "internal_error"
+    INVALID_REQUEST: Final = "invalid_request"
+    NUMBER_ALREADY_IN_USE: Final = "number_already_in_use"
+    NUMBER_ALREADY_LINKED: Final = "number_already_linked"
+    NUMBER_NOT_REGISTERED: Final = "number_not_registered"
+    NUMBER_VERIFICATION_REQUIRED: Final = "number_verification_required"
+    PERMISSION_DENIED: Final = "permission_denied"
+    REGISTRATION_ATTEMPTS_EXHAUSTED: Final = "registration_attempts_exhausted"
+    REGISTRATION_PIN_RATE_LIMITED: Final = "registration_pin_rate_limited"
+    REGISTRATION_PIN_REJECTED: Final = "registration_pin_rejected"
+    VERIFICATION_CODE_NOT_RECEIVED: Final = "verification_code_not_received"
+    VERIFICATION_RATE_LIMITED: Final = "verification_rate_limited"
+
+
+class WhatsAppNumberMessagingLimit:
+    """Values of WhatsAppNumberMessagingLimit known at this SDK version (open enum)."""
+
+    TIER_100K: Final = "tier_100k"
+    TIER_10K: Final = "tier_10k"
+    TIER_1K: Final = "tier_1k"
+    TIER_250: Final = "tier_250"
+    TIER_50: Final = "tier_50"
+    TIER_UNLIMITED: Final = "tier_unlimited"
+
+
+class WhatsAppNumberQualityRating:
+    """Values of WhatsAppNumberQualityRating known at this SDK version (open enum)."""
+
+    GREEN: Final = "green"
+    RED: Final = "red"
+    UNKNOWN: Final = "unknown"
+    YELLOW: Final = "yellow"
+
+
+class WhatsAppNumberStatus:
+    """Values of WhatsAppNumberStatus known at this SDK version (open enum)."""
+
+    AWAITING_SIGNUP: Final = "awaiting_signup"
+    BANNED: Final = "banned"
+    CONNECTED: Final = "connected"
+    DELETED: Final = "deleted"
+    DISCONNECTED: Final = "disconnected"
+    FAILED: Final = "failed"
+    FLAGGED: Final = "flagged"
+    MIGRATED: Final = "migrated"
+    PENDING: Final = "pending"
+    PREPARING: Final = "preparing"
+    RATE_LIMITED: Final = "rate_limited"
+    RESTRICTED: Final = "restricted"
+
+
+class WhatsAppNumberThroughputLevel:
+    """Values of WhatsAppNumberThroughputLevel known at this SDK version (open enum)."""
+
+    STANDARD: Final = "standard"
+
+
 class WhatsAppTemplateCategory:
     """Values of WhatsAppTemplateCategory known at this SDK version (open enum)."""
 
@@ -339,6 +484,14 @@ class WhatsAppTemplateRejectionCategory:
     TAG_CONTENT_MISMATCH: Final = "tag_content_mismatch"
 
 
+class WhatsAppUsernameStatus:
+    """Values of WhatsAppUsernameStatus known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    DELETED: Final = "deleted"
+    RESERVED: Final = "reserved"
+
+
 __all__ = [
     "EmailEventType",
     "EmailLookupFlag",
@@ -362,15 +515,28 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
+    "WhatsAppBusinessAccountMarketingMessagesStatus",
+    "WhatsAppBusinessAccountReviewStatus",
+    "WhatsAppBusinessAccountStatus",
+    "WhatsAppBusinessPortfolioMarketingMessagesStatus",
+    "WhatsAppBusinessVerificationStatus",
+    "WhatsAppBusinessVertical",
+    "WhatsAppDisplayNameStatus",
     "WhatsAppErrorCode",
     "WhatsAppEventType",
     "WhatsAppInteractiveButtonType",
     "WhatsAppInteractiveHeaderType",
     "WhatsAppInteractiveReplyType",
     "WhatsAppInteractiveType",
+    "WhatsAppNumberErrorCode",
+    "WhatsAppNumberMessagingLimit",
+    "WhatsAppNumberQualityRating",
+    "WhatsAppNumberStatus",
+    "WhatsAppNumberThroughputLevel",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",
     "WhatsAppTemplateParameterType",
     "WhatsAppTemplateQualityScore",
     "WhatsAppTemplateRejectionCategory",
+    "WhatsAppUsernameStatus",
 ]

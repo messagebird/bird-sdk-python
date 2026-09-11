@@ -4905,6 +4905,14 @@ class WhatsAppReactionEventList(BaseModel):
     )]
 
 
+class WhatsAppNumberID(RootModel[str]):
+    root: str
+
+
+class WhatsAppBusinessAccountID(RootModel[str]):
+    root: str
+
+
 class WhatsAppTemplateExampleParameter(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Union[WhatsAppTemplateParameterType, str], Field(
@@ -5990,8 +5998,502 @@ class WhatsAppInboundStatsByPhoneNumberResponse(BaseModel):
     )]
 
 
+class WhatsAppDataLocalizationRegion(str, Enum):
+    AU = "AU"
+    ID = "ID"
+    IN = "IN"
+    JP = "JP"
+    SG = "SG"
+    KR = "KR"
+    DE = "DE"
+    CH = "CH"
+    GB = "GB"
+    BR = "BR"
+    BH = "BH"
+    ZA = "ZA"
+    AE = "AE"
+    CA = "CA"
+
+
+class WhatsAppNumberStatus(str, Enum):
+    awaiting_signup = "awaiting_signup"
+    banned = "banned"
+    connected = "connected"
+    deleted = "deleted"
+    disconnected = "disconnected"
+    failed = "failed"
+    flagged = "flagged"
+    migrated = "migrated"
+    pending = "pending"
+    preparing = "preparing"
+    rate_limited = "rate_limited"
+    restricted = "restricted"
+
+
+class WhatsAppNumberScope(str, Enum):
+    system = "system"
+    workspace = "workspace"
+
+
+class WhatsAppNumberErrorCode(str, Enum):
+    registration_pin_rejected = "registration_pin_rejected"
+    registration_pin_rate_limited = "registration_pin_rate_limited"
+    registration_attempts_exhausted = "registration_attempts_exhausted"
+    number_verification_required = "number_verification_required"
+    number_not_registered = "number_not_registered"
+    number_already_linked = "number_already_linked"
+    number_already_in_use = "number_already_in_use"
+    verification_code_not_received = "verification_code_not_received"
+    verification_rate_limited = "verification_rate_limited"
+    business_account_locked = "business_account_locked"
+    credit_currency_mismatch = "credit_currency_mismatch"
+    permission_denied = "permission_denied"
+    invalid_request = "invalid_request"
+    internal_error = "internal_error"
+
+
+class WhatsAppNumberError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Union[WhatsAppNumberErrorCode, str], Field(
+        description="Standardized failure reason.",
+        union_mode="left_to_right",
+    )]
+    description: Annotated[Optional[str], Field(
+        description="Why the connection failed: WhatsApp's own words, in the language of the account it refused, when WhatsApp answered; our own explanation when the number was refused before WhatsApp was asked; a generic sentence when WhatsApp refused without giving a reason. Absent when the attempt failed without ever reaching WhatsApp, which leaves `code` as the only account of the failure. Show it to the person who owns the number; never match on its text.",
+        examples=["Cannot Create Certificate: Please ensure two-factor authentication is disabled."],
+        min_length=1,
+    )] = None
+    meta_error_code: Annotated[Optional[str], Field(
+        description="WhatsApp's most specific code for the refusal: its error subcode where it sent one, otherwise its top-level code. Null when WhatsApp did not provide a code. Treat it as an opaque string.",
+        examples=[2388001],
+    )] = None
+
+
+class WhatsAppNumberQualityRating(str, Enum):
+    green = "green"
+    yellow = "yellow"
+    red = "red"
+    unknown = "unknown"
+
+
+class WhatsAppNumberMessagingLimit(str, Enum):
+    tier_50 = "tier_50"
+    tier_250 = "tier_250"
+    tier_1k = "tier_1k"
+    tier_10k = "tier_10k"
+    tier_100k = "tier_100k"
+    tier_unlimited = "tier_unlimited"
+
+
+class WhatsAppNumberThroughputLevel(str, Enum):
+    standard = "standard"
+
+
+class WhatsAppNumber(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the connected number.",
+        examples=["wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    waba: Annotated[Optional[str], Field(
+        description="The WhatsApp Business Account this number is connected under. Present only for a number your workspace connected itself.",
+        examples=[102290129340398],
+        min_length=1,
+    )] = None
+    phone_number: Annotated[Optional[str], Field(
+        description="The number in E.164 format. Null only while the number itself is not yet known: a number your workspace holds carries its E.164 from the moment setup starts, so a value here does not mean the number can send. `status` is what says that.",
+        examples=[+15550001234],
+    )]
+    number_id: Annotated[Optional[str], Field(
+        description="The number you hold with us that this WhatsApp number was connected from, as its id in GET /v1/numbers. Absent for a number you brought yourself.",
+        examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    name: Annotated[str, Field(
+        description="Your workspace's own label for this number, given when it was connected and changeable afterwards. It has no bearing on what WhatsApp displays to people the number messages; `GET /v1/whatsapp/numbers/{number_id}/profile` returns that as `display_name`. For a number we operate on your behalf, this is our own label instead and cannot be changed.",
+        examples=["Sales EU"],
+        max_length=100,
+        min_length=1,
+    )]
+    scope: Annotated[WhatsAppNumberScope, Field(
+        description="Whether the number sends under a WhatsApp Business Account we operate on your behalf (`system`) or one your workspace connected itself (`workspace`).",
+    )]
+    data_localization_region: Annotated[Optional[WhatsAppDataLocalizationRegion], Field(
+        description="The country this number's message content is stored at rest in, as its two-letter ISO 3166 code. Absent when it uses WhatsApp's default storage. It can differ from the region requested at connection when WhatsApp requires a particular country for the number.",
+    )] = None
+    status: Annotated[Union[WhatsAppNumberStatus, str], Field(
+        description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`.",
+        union_mode="left_to_right",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this number, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nWhile `status` is `awaiting_signup` this carries the browser step that finishes\nthe connection, because embedded signup sits behind an OAuth screen no API call\ncan stand in for.",
+    )] = None
+    error: Annotated[Optional[WhatsAppNumberError], Field(
+        description="Why this number's connection was refused for good. Present only while `status` is `failed`. A retryable step records its cause on a still-`pending` number without setting this field, because that cause is not a refusal yet, so a connection you are still waiting on reports no error here.",
+    )] = None
+    finish_setup_url: Annotated[Optional[str], Field(
+        description="Where a person finishes connecting this number, present only while `status` is `awaiting_signup`. Finishing means completing WhatsApp's embedded signup, which is a browser flow behind an OAuth screen: it cannot be done over the API, so open this link and have someone with access to the workspace complete it. The number is offered to them already verified. Once they finish, `status` moves on and this link is no longer returned.",
+        examples=["https://bird.com/dashboard/w/ws_01krdgeqcxet5s7t44vh8rt9mg/whatsapp/numbers?finish_setup_number=wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+    )] = None
+    quality_rating: Annotated[Optional[Union[WhatsAppNumberQualityRating, str]], Field(
+        description="WhatsApp's quality rating for this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
+        union_mode="left_to_right",
+    )] = None
+    messaging_limit: Annotated[Optional[Union[WhatsAppNumberMessagingLimit, str]], Field(
+        description="The messaging limit WhatsApp applied to this number's business portfolio as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
+        union_mode="left_to_right",
+    )] = None
+    throughput_level: Annotated[Optional[Union[WhatsAppNumberThroughputLevel, str]], Field(
+        description="The send rate WhatsApp allowed this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
+        union_mode="left_to_right",
+    )] = None
+    is_official_business_account: Annotated[Optional[bool], Field(
+        description="Whether WhatsApp grants this number Official Business Account status as of `meta_synced_at`. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf. WhatsApp grants the status per number, so two numbers on one WhatsApp Business Account can differ. The status also decides whether a rename is possible here: a number that has it cannot be renamed through `PATCH /v1/whatsapp/numbers/{number_id}/profile` at all, and has to be renamed through WhatsApp support instead.",
+    )] = None
+    meta_synced_at: Annotated[Optional[str], Field(
+        description="When this number's state was last read from WhatsApp. `status`, `quality_rating`, `messaging_limit`, `throughput_level`, and `is_official_business_account` all belong to that reading rather than representing live values. We re-read roughly hourly, so a change at WhatsApp can be up to an hour old here. Absent for a number we have never read back and for a number we operate on your behalf.",
+        min_length=1,
+    )] = None
+    pre_verification_requested_at: Annotated[Optional[str], Field(
+        description="When we last asked WhatsApp to send this number a verification code, which we do only for a number your workspace connected itself from a number you hold with us. Absent for a number we operate on your behalf, and for one you connected through Embedded Signup with a code you read yourself. Wait a few hours after this before repairing a number whose verification failed: WhatsApp rotates the routes it verifies over during that period, and throttles a number asked repeatedly in a short window. Distinct from `updated_at`, which any change to the number moves.",
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When this number was submitted for connection.",
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When this number was last changed.",
+        min_length=1,
+    )]
+
+
+class WhatsAppNumberList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppNumber], Field(
+        description="The WhatsApp numbers your workspace can send from.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
 class NumbersDedicatedAllocationID(RootModel[str]):
     root: str
+
+
+class WhatsAppNumberEventID(RootModel[str]):
+    root: str
+
+
+class WhatsAppNumberEventType(str, Enum):
+    whatsapp_number_created = "whatsapp_number.created"
+    whatsapp_number_messaging_limit_updated = "whatsapp_number.messaging_limit_updated"
+    whatsapp_number_profile_name_update = "whatsapp_number.profile_name_update"
+    whatsapp_number_quality_rating_updated = "whatsapp_number.quality_rating_updated"
+    whatsapp_number_status_changed = "whatsapp_number.status_changed"
+
+
+class WhatsAppNumberEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wne_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wne_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    type: Annotated[Union[WhatsAppNumberEventType, str], Field(
+        description="Type of number event. `whatsapp_number.messaging_limit_updated` and `whatsapp_number.profile_name_update` are reported by WhatsApp as they happen; `whatsapp_number.quality_rating_updated` is observed when Bird next reads the number, so it can lag the change by up to an hour. `whatsapp_number.status_changed` records every move of the `status` field on the number itself, whichever side caused it. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error. The values below are the types known at this version.",
+        union_mode="left_to_right",
+    )]
+    summary: Annotated[str, Field(
+        description="Human-readable summary of what changed.",
+        examples=["Quality rating dropped to medium."],
+        min_length=1,
+    )]
+    metadata: Annotated[Dict[str, Any], Field(
+        description="Structured details for the event. `from` and `to` carry the values that changed, and `from` is absent when the number had no prior value to report. A status change into `failed` also carries the `reason`; a display-name decision carries `new_display_name`, `decision`, and, when WhatsApp named one for a rejection, `rejection_reason`. A messaging-limit change also carries the `trigger` WhatsApp named for it, such as `onboarding` or `throughput_upgrade`, when it named one. A `whatsapp_number.created` event carries the `source` the number came from, and its `phone_number` once one is known.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the event was recorded.",
+        min_length=1,
+    )]
+
+
+class WhatsAppNumberEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppNumberEvent], Field(
+        description="Page of number events, newest first by default.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppDisplayNameStatus(str, Enum):
+    approved = "approved"
+    available_without_review = "available_without_review"
+    declined = "declined"
+    expired = "expired"
+    non_exists = "non_exists"
+    pending_review = "pending_review"
+    none = "none"
+
+
+class WhatsAppUsernameStatus(str, Enum):
+    approved = "approved"
+    reserved = "reserved"
+    deleted = "deleted"
+
+
+class WhatsAppBusinessVertical(str, Enum):
+    other = "other"
+    auto = "auto"
+    beauty = "beauty"
+    apparel = "apparel"
+    edu = "edu"
+    entertain = "entertain"
+    event_plan = "event_plan"
+    finance = "finance"
+    grocery = "grocery"
+    govt = "govt"
+    hotel = "hotel"
+    health = "health"
+    nonprofit = "nonprofit"
+    prof_services = "prof_services"
+    retail = "retail"
+    travel = "travel"
+    restaurant = "restaurant"
+    alcohol = "alcohol"
+    online_gambling = "online_gambling"
+    physical_gambling = "physical_gambling"
+    otc_drugs = "otc_drugs"
+
+
+class WhatsAppNumberProfile(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    display_name: Annotated[Optional[str], Field(
+        description="The name WhatsApp verifies for this number. Once WhatsApp approves it, it appears at the top of a chat with this number; `display_name_status` is what says whether it has. Set when the number was connected, and changed from the dashboard or the CLI, as [WhatsApp phone numbers](/docs/guides/whatsapp/phone-number-setup) explains. This field still returns the current name until a requested change completes.",
+        examples=["Lucky Shrub"],
+    )] = None
+    display_name_status: Annotated[Optional[Union[WhatsAppDisplayNameStatus, str]], Field(
+        description="Where WhatsApp's review of the display name stands. A name still under review is not yet shown at the top of a chat.",
+        union_mode="left_to_right",
+    )] = None
+    new_display_name: Annotated[Optional[str], Field(
+        description="The display name whose change has been requested, whether or not WhatsApp is reviewing it. Absent when no change is pending.",
+        examples=["Lucky Shrub Garden Center"],
+    )] = None
+    new_display_name_status: Annotated[Optional[Union[WhatsAppDisplayNameStatus, str]], Field(
+        description="Where the requested display name stands with WhatsApp, including whether it is being reviewed or was accepted for immediate use without a review. Absent when no change is pending. If WhatsApp accepts the name it becomes `display_name`. Every other outcome leaves the number on the name it already had: `declined` is WhatsApp refusing the name, and `expired` is a request that no longer stands and has to be made again.",
+        union_mode="left_to_right",
+    )] = None
+    username: Annotated[Optional[str], Field(
+        description="The username WhatsApp users can find this number by, without an `@`. Absent when the number has no username. Once set it cannot be removed through this API.",
+        examples=["goldcrest.support"],
+    )] = None
+    username_status: Annotated[Optional[Union[WhatsAppUsernameStatus, str]], Field(
+        description="Where the username stands with WhatsApp. Absent when the number has no username.",
+        union_mode="left_to_right",
+    )] = None
+    about: Annotated[Optional[str], Field(
+        description="The short line shown under the business name in a chat.",
+        examples=["Open Monday to Friday, 9am to 6pm CET."],
+        max_length=139,
+    )] = None
+    address: Annotated[Optional[str], Field(
+        description="The business address shown on the profile.",
+        examples=["Trompenburgstraat 2C, 1079 TX Amsterdam"],
+        max_length=256,
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="The longer description shown on the profile.",
+        examples=["Bird is the platform for messaging with your customers."],
+        max_length=256,
+    )] = None
+    email: Annotated[Optional[str], Field(
+        description="The contact email shown on the profile.",
+        examples=["hello@bird.com"],
+        max_length=128,
+    )] = None
+    vertical: Annotated[Optional[Union[WhatsAppBusinessVertical, str]], Field(
+        description="The industry WhatsApp shows on the profile.",
+        union_mode="left_to_right",
+    )] = None
+    websites: Annotated[Optional[List[str]], Field(
+        description="Up to two websites shown on the profile.",
+        max_length=2,
+    )] = None
+    profile_picture_url: Annotated[Optional[str], Field(
+        description="A link to the profile picture WhatsApp currently shows. WhatsApp signs this link and it expires within days, so load it when you display it and never store it. It is served with permissive cross-origin headers, so a browser can load it directly.",
+        examples=["https://pps.whatsapp.net/v/t61.24694-24/643148303_1005107588793925.jpg"],
+    )] = None
+
+
+class WhatsAppBusinessAccountStatus(str, Enum):
+    active = "active"
+
+
+class WhatsAppBusinessAccountReviewStatus(str, Enum):
+    approved = "approved"
+    deferred = "deferred"
+    pending = "pending"
+    rejected = "rejected"
+
+
+class WhatsAppBusinessVerificationStatus(str, Enum):
+    expired = "expired"
+    failed = "failed"
+    ineligible = "ineligible"
+    not_verified = "not_verified"
+    pending = "pending"
+    pending_need_more_info = "pending_need_more_info"
+    pending_submission = "pending_submission"
+    rejected = "rejected"
+    revoked = "revoked"
+    verified = "verified"
+
+
+class WhatsAppBusinessAccountMarketingMessagesStatus(str, Enum):
+    eligible = "eligible"
+    onboarded = "onboarded"
+
+
+class WhatsAppBusinessPortfolioMarketingMessagesStatus(str, Enum):
+    not_started = "not_started"
+    request_sent = "request_sent"
+    term_of_service_signed = "term_of_service_signed"
+
+
+class WhatsAppBusinessPortfolio(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    meta_id: Annotated[str, Field(
+        description="Meta's identifier for the portfolio. Treat it as an opaque string.",
+        examples=[178563218361309],
+        min_length=1,
+    )]
+    name: Annotated[Optional[str], Field(
+        description="The portfolio's name, as Meta reports it. Absent when Meta returned none.",
+        examples=["Acme Holdings"],
+        min_length=1,
+    )] = None
+    marketing_messages_onboarding_status: Annotated[Optional[Union[WhatsAppBusinessPortfolioMarketingMessagesStatus, str]], Field(
+        description="How far this portfolio has got through Meta's Marketing Messages terms of service. Absent until Meta has reported it. Distinct from the account's own `marketing_messages_onboarding_status`, which Meta gives the same field name but a different vocabulary: that one is the account's own eligibility, this one is the portfolio's Terms-of-Service progress.",
+        union_mode="left_to_right",
+    )] = None
+
+
+class WhatsAppBusinessAccountBanState(str, Enum):
+    disabled = "disabled"
+    scheduled_for_disable = "scheduled_for_disable"
+
+
+class WhatsAppBusinessAccountBan(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    state: WhatsAppBusinessAccountBanState
+    occurred_at: Annotated[str, Field(
+        description="When WhatsApp reported the ban, by WhatsApp's own clock. Bird can learn of a ban later than this, so it is not when Bird recorded it.",
+        examples=["2026-04-10T09:12:00Z"],
+        min_length=1,
+    )]
+    appeal_url: Annotated[Optional[str], Field(
+        description="Where to appeal WhatsApp's decision with Meta Business Support, because neither Bird nor this API can lift one. Absent when Bird does not know the account's Meta business portfolio, since there is no support-home path to build without one.",
+        examples=["https://business.facebook.com/business-support-home/178563218361309/102290129340398"],
+    )] = None
+
+
+class WhatsAppBusinessAccount(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the WhatsApp Business Account.",
+        examples=["waa_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^waa_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    waba: Annotated[str, Field(
+        description="Meta's own identifier for this WhatsApp Business Account. This is the value to send when creating a template on the account.",
+        examples=[102290129340398],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="The account's name, as WhatsApp reports it.",
+        examples=["Acme Inc"],
+        min_length=1,
+    )]
+    status: Annotated[Union[WhatsAppBusinessAccountStatus, str], Field(
+        description="WhatsApp's own state for this account as of `meta_synced_at`. The status is `active` until WhatsApp reports otherwise. WhatsApp already considers an account usable if Bird could connect a number under it. The absence of a reading is therefore not evidence of another state.",
+        union_mode="left_to_right",
+    )]
+    account_review_status: Annotated[Optional[Union[WhatsAppBusinessAccountReviewStatus, str]], Field(
+        description="How far WhatsApp's review of this account had got as of `meta_synced_at`. Absent until WhatsApp has reported it.",
+        union_mode="left_to_right",
+    )] = None
+    business_verification_status: Annotated[Optional[Union[WhatsAppBusinessVerificationStatus, str]], Field(
+        description="Whether Meta had verified the business behind this account as of `meta_synced_at`. Absent until Meta has reported it.",
+        union_mode="left_to_right",
+    )] = None
+    marketing_messages_onboarding_status: Annotated[Optional[Union[WhatsAppBusinessAccountMarketingMessagesStatus, str]], Field(
+        description="Whether this account can use WhatsApp's Marketing Messages API, as of `meta_synced_at`. Absent until WhatsApp has reported it. Distinct from the owning portfolio's `marketing_messages_onboarding_status` (`portfolio.marketing_messages_onboarding_status`), which Meta gives the same field name but a different vocabulary: this one is the account's own eligibility, that one is the portfolio's Terms-of-Service progress.",
+        union_mode="left_to_right",
+    )] = None
+    portfolio: Annotated[Optional[WhatsAppBusinessPortfolio], Field(
+        description="The Meta business portfolio that owns this account. Absent until Meta has reported it. The portfolio is where a messaging limit is set, so every account it owns shares one.",
+    )] = None
+    ban: Annotated[Optional[WhatsAppBusinessAccountBan], Field(
+        description="WhatsApp's ban on this account, absent unless Bird was told of one. `status` is what the account said when Bird last read it; this is what WhatsApp announced, which arrives only on the webhook that announces it and is never re-read.",
+    )] = None
+    meta_synced_at: Annotated[Optional[str], Field(
+        description="When Bird last read this account's state from WhatsApp. `status`, `account_review_status`, `business_verification_status`, `marketing_messages_onboarding_status` and `portfolio` are all that reading rather than live values; Bird re-reads roughly hourly. Absent for an account Bird has never read back.",
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When this account was connected.",
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When this account was last changed.",
+        min_length=1,
+    )]
+
+
+class WhatsAppBusinessAccountList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppBusinessAccount], Field(
+        description="The WhatsApp Business Accounts your workspace has connected.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
 
 
 class WhatsAppSuppressionID(RootModel[str]):
