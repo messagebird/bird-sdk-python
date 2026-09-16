@@ -137,6 +137,7 @@ class BaseClient:
         if extra_body:
             body = {**(body or {}), **extra_body}
         query = {**self._default_query, **(extra_query or {})}
+        query = {key: value for key, value in query.items() if not isinstance(value, Omit)}
         return client.build_request(
             method,
             self.base_url + path,

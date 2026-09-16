@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.63.0
+
+- Add Competitive Insights and non-seed Inbox Insights operations to the SDKs, CLI and MCP server. Discover competitors and owned sending domains, manage watchlists and monitoring, and read campaign and deliverability reports. Insights API-key calls require preview access for the organization.
+- **Breaking:** `Verification.expires_at`, `Domain.created_at`, and `Domain.updated_at` now reject empty strings; callers constructing these models must provide non-empty values.
+- Mailbox thread messages and `email_mailbox.message_received` expose the receiving provider's `spf_pass` and `dkim_pass` results. Missing or inconclusive results are null. The provider supplies no DMARC result, so `dmarc_pass` remains null and `authentication` is `unknown` for received messages. Sent messages report null for these fields.
+- Received email messages expose the receiving provider's `spf_pass` and `dkim_pass` results. Missing or inconclusive results are null. The provider supplies no DMARC result or spam score, so `dmarc_pass` and `spam_score` remain null and `authentication` is `unknown`.
+- **Breaking:** SMS template `list` methods now return lazy iterators over shallow summaries instead of a list envelope, and `get` no longer returns message text or variables. Read content and variables through the new version and language methods. Add SMS template version and version-language read methods.
+- Auto-pagination now clears `ending_before` when continuing with `starting_after`, so iterating from a backward page no longer sends conflicting cursors.
+- Fix synchronous and asynchronous list iteration after an `ending_before` cursor. Subsequent pages clear the backward cursor when advancing with `starting_after`.
+
 ## 0.62.0
 
 - Add `broadcasts.counts`, which reports how many contacts an email broadcast's audience holds, how many of those have an email address, and how many of those addressable contacts are not suppressed for the broadcast's category, so a send can be sized before it goes out.

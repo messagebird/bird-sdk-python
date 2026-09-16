@@ -20,6 +20,8 @@ from bird._generated import (
     VerificationLastChannel,
     WhatsAppError,
     WhatsAppErrorCode,
+    WhatsAppTemplateButton,
+    WhatsAppTemplateButtonOtpType,
 )
 
 
@@ -68,6 +70,16 @@ def test_open_enum_holds_across_schemas() -> None:
     """Not just the one field: every retyped enum keeps both properties."""
     assert _whatsapp_error("rate_limited").code is WhatsAppErrorCode.rate_limited
     assert _whatsapp_error("invented_in_2030").code == "invented_in_2030"
+    assert (
+        WhatsAppTemplateButton(type="otp", otp_type="copy_code").otp_type
+        is WhatsAppTemplateButtonOtpType.copy_code
+    )
+    assert WhatsAppTemplateButton(type="otp", otp_type="future").model_dump(
+        mode="json", exclude_unset=True,
+    ) == {"type": "otp", "otp_type": "future"}
+    with pytest.raises(ValidationError):
+        WhatsAppTemplateButton(type="otp", otp_type="")
+
 
 
 def test_a_genuinely_closed_enum_still_rejects() -> None:

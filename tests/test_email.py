@@ -121,10 +121,14 @@ def test_list_auto_paginates_with_cursor() -> None:
             httpx.Response(200, json={"data": [_message(ID2)], "next_cursor": None}),
         ]
     )
-    ids = [m.id for m in client().email.list(limit=1)]
+    with Bird(api_key="bk_eu1_secret", default_query={"ending_before": "default-anchor", "limit": 1}) as bird:
+        ids = [m.id for m in bird.email.list(limit=1, ending_before="anchor")]
     assert ids == [ID1, ID2]
     assert route.call_count == 2
-    assert "starting_after=cur2" in str(route.calls[1].request.url)
+    assert route.calls[0].request.url.params["ending_before"] == "anchor"
+    assert route.calls[1].request.url.params["starting_after"] == "cur2"
+    assert "ending_before" not in route.calls[1].request.url.params
+    assert route.calls[1].request.url.params["limit"] == "1"
 
 
 @respx.mock
@@ -188,12 +192,18 @@ async def test_async_page_await_then_iterate_fetches_first_page_once() -> None:
 
 @respx.mock
 async def test_async_list_iterates_directly_without_await() -> None:
-    respx.get(f"{BASE}/v1/email/messages").mock(
-        return_value=httpx.Response(200, json={"data": [_message(ID1), _message(ID2)], "next_cursor": None})
+    route = respx.get(f"{BASE}/v1/email/messages").mock(
+        side_effect=[
+            httpx.Response(200, json={"data": [_message(ID1)], "next_cursor": "cur2"}),
+            httpx.Response(200, json={"data": [_message(ID2)], "next_cursor": None}),
+        ]
     )
-    async with AsyncBird(api_key="bk_eu1_secret") as bird:
-        ids = [m.id async for m in bird.email.list()]  # no await — the page is directly iterable
+    async with AsyncBird(api_key="bk_eu1_secret", default_query={"ending_before": "default-anchor"}) as bird:
+        ids = [m.id async for m in bird.email.list(options={"extra_query": {"ending_before": "anchor"}})]
     assert ids == [ID1, ID2]
+    assert route.calls[0].request.url.params["ending_before"] == "anchor"
+    assert route.calls[1].request.url.params["starting_after"] == "cur2"
+    assert "ending_before" not in route.calls[1].request.url.params
 
 
 @respx.mock

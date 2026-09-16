@@ -8,10 +8,6 @@ from pydantic import ConfigDict, Field, RootModel
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 
-class WorkspaceID(RootModel[str]):
-    root: str
-
-
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     param: Annotated[str, Field(
@@ -33,9 +29,9 @@ class NextActionKind(str, Enum):
 
 class NextAction(BaseModel):
     model_config = ConfigDict(extra="allow")
-    kind: Annotated[Union[NextActionKind, str], Field(
+    kind: Annotated[Annotated[Union[NextActionKind, str], Field(union_mode="left_to_right")], Field(
         description="What you do about this step.\n\n- `operation`: call the operation named in `operation`, then\n  read again.\n- `external`: act somewhere this API does not reach, then read\n  again.\n- `wait`: nothing is asked of you, so read again later.\n- `terminal`: nothing you do resolves this, so stop retrying.\n\nTolerate a value you do not recognize: show the `description` and\noffer no action.",
-        union_mode="left_to_right",
+        min_length=1,
     )]
     description: Annotated[str, Field(
         description="A short, human-readable label for the step, suitable for display.",
@@ -130,6 +126,19 @@ class UserID(RootModel[str]):
 
 class OrganizationID(RootModel[str]):
     root: str
+
+
+class WorkspaceID(RootModel[str]):
+    root: str
+
+
+class Timezone(RootModel[str]):
+    root: str
+
+
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
 
 
 class CountryCode(RootModel[str]):
@@ -974,9 +983,8 @@ class EmailEvent(BaseModel):
         min_length=1,
         pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    type: Annotated[Union[EmailEventType, str], Field(
+    type: Annotated[Annotated[Union[EmailEventType, str], Field(union_mode="left_to_right")], Field(
         description="Type of an event in a message's per-recipient delivery timeline.\n\n- `email.scheduled`: We accepted a send scheduled for a future time. Fires once for each message regardless of its recipient count.\n- `email.accepted`: We accepted the send and are getting ready to deliver it. Fires once per requested recipient.\n- `email.processed`: We queued the message for delivery to the recipient's mail server.\n- `email.deferred`: The recipient's mail server temporarily refused the message. Delivery remains pending and is retried. Can fire more than once per recipient.\n- `email.delivered`: The recipient's mail server accepted the message.\n- `email.bounced`: Delivery permanently failed at the recipient's mail server.\n- `email.out_of_band_bounce`: A bounce notification arrived after the message had already been accepted for delivery.\n- `email.rejected`: We rejected the message before attempting delivery, for example because the recipient is suppressed.\n- `email.canceled`: A scheduled send was canceled before it fired. Fires once for each message regardless of its recipient count.\n- `email.opened`: The recipient opened the message. Can fire more than once per recipient.\n- `email.clicked`: The recipient clicked a tracked link in the message. Can fire more than once per recipient.\n- `email.unsubscribed`: The recipient opted out through a tracked unsubscribe link in the message.\n- `email.list_unsubscribed`: The recipient opted out through the one-click unsubscribe control in their mail client.\n- `email.complained`: The recipient reported the message as spam through their mailbox provider.\n\nWe can add new event types to this list over time, so treat a value you do not recognize as a new type rather than as an error.",
-        union_mode="left_to_right",
     )]
     occurred_at: Annotated[str, Field(
         description="When this event occurred.",
@@ -1874,9 +1882,8 @@ class PreferenceCreate(BaseModel):
         max_length=320,
         min_length=1,
     )]
-    channel: Annotated[Union[PreferenceChannel, str], Field(
+    channel: Annotated[Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a preference statement applies to. A preference addresses one channel: the handle that identifies the person differs per channel, so opting out of one channel says nothing about the others. New channels can be added over time, so a value outside this list can be returned.",
-        union_mode="left_to_right",
     )]
     status: Annotated[PreferenceStatus, Field(
         description="What the statement says: `granted` records consent to receive messages, `revoked` records an opt-out. There is no third state: a person who never stated anything simply has no preference on record.",
@@ -2110,6 +2117,18 @@ class SMSMessageStatus(str, Enum):
     received = "received"
 
 
+class SMSTemplateID(RootModel[str]):
+    root: str
+
+
+class SMSTemplateVersionID(RootModel[str]):
+    root: str
+
+
+class SMSTemplateContentHash(RootModel[str]):
+    root: str
+
+
 class SMSSegmentsEncoding(str, Enum):
     GSM_7BIT = "GSM_7BIT"
     UCS2 = "UCS2"
@@ -2182,9 +2201,8 @@ class SMSErrorCode(str, Enum):
 
 class SMSError(BaseModel):
     model_config = ConfigDict(extra="allow")
-    code: Annotated[Union[SMSErrorCode, str], Field(
+    code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason:\n\n- `invalid_destination`: The number is unassigned, ported out, or malformed.\n- `unreachable`: The handset is off or outside coverage.\n- `blocked_by_carrier`: The carrier filtered the message.\n- `blocked_by_recipient`: The recipient device blocked the sender.\n- `landline_unreachable`: The destination is a landline that does not accept SMS.\n- `content_rejected`: The carrier rejected the content.\n- `sender_unregistered`: The sender is not registered for the destination.\n- `recipient_opted_out`: The recipient is on a suppression list.\n- `provider_unavailable`: The provider remained unavailable after retries.\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `unknown`: The failure could not be classified.\n\nThis is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )]
     description: Annotated[str, Field(
         description="The failure in words, from whatever refused the message: the carrier's own reason text on a delivery receipt, or ours on a message stopped before a carrier saw it. Free-form, so branch on `code` and show this to a human.",
@@ -2234,8 +2252,37 @@ class SMSMessage(BaseModel):
         min_length=1,
     )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
-        description="Content classification supplied on the send. Null for inbound messages.",
+        description="Content classification supplied for free text or derived from the template. Null for inbound messages.",
     )] = None
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language whose text was rendered, in canonical form. Null when the send used no template. This can differ from `requested_language` when the template's fallback policy selects another language.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered for this message, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
     segments: Annotated[SMSSegments, Field(
         description="Segment breakdown for the message body. Segment count drives billing.",
     )]
@@ -2309,10 +2356,6 @@ class SMSSendOptions(BaseModel):
     )] = None
 
 
-class SMSTemplateID(RootModel[str]):
-    root: str
-
-
 class SMSTemplateSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
@@ -2321,14 +2364,14 @@ class SMSTemplateSend(BaseModel):
         pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     slug: Annotated[Optional[str], Field(
-        description="The template to send, by its slug handle (for example `bird_otp_verification`). Browse the available templates and their variables with the templates endpoint.",
+        description="The workspace or built-in template to send, by its immutable slug. Read the template's live version to see its variables.",
         examples=["bird_otp_verification_ttl"],
         max_length=63,
         min_length=1,
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     name: Annotated[Optional[str], Field(
-        description="Deprecated: use `slug` instead. Resolved as a slug first, and only if that finds nothing, matched against the template's display name.",
+        description="Deprecated. Use `slug` instead. This resolves legacy built-in catalogue names and never matches a workspace template's display name.",
         min_length=1,
     )] = None
     language: Annotated[Optional[str], Field(
@@ -2338,7 +2381,7 @@ class SMSTemplateSend(BaseModel):
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Values for the template's variables, keyed by variable name. The accepted keys and their formats are fixed per template (the template's `variables` on the templates endpoint). A missing required variable, an undeclared key, a value that does not match its variable's format, or a serialized payload over 16 KB each return a `422`.",
+        description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A missing key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
     )] = None
 
 
@@ -2351,7 +2394,7 @@ class SMSMessageSendRequest(BaseModel):
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send: omitting it returns a `422` `SMSNoEligibleSender`. Not accepted alongside `template`, which selects its sender automatically.",
+        description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and when sending a workspace template. Omitting it in either case returns `422`. A built-in template selects its sender automatically and rejects `from`.",
         examples=[+15557654321],
         min_length=1,
     )] = None
@@ -2388,7 +2431,7 @@ class SMSMessageSendRequest(BaseModel):
         description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     template: Annotated[Optional[SMSTemplateSend], Field(
-        description="Send using a stored template instead of free text. Mutually exclusive with `text`; the message category is derived from the template, so `from`, `category`, and `media_urls` are not accepted alongside it.",
+        description="Send using a stored template instead of free text. The category is derived from the template, so `category` and `media_urls` are rejected. A workspace template requires `from`; a built-in template selects its sender and rejects `from`.",
     )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="Preview feature: broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
@@ -2455,9 +2498,10 @@ class SMSEvent(BaseModel):
         min_length=1,
         pattern="^evt_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    type: Annotated[Union[SMSEventType, str], Field(
+    type: Annotated[Annotated[Union[SMSEventType, str], Field(union_mode="left_to_right")], Field(
         description="Lifecycle event type. The `sms.accepted` event means the API accepted the request. The `sms.sent` event means the message reached the carrier. The `sms.delivered` event confirms delivery. The `sms.undelivered`, `sms.failed`, and `sms.expired` events describe delivery failures. The `sms.rejected` event means the message was refused before carrier handoff. This is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
+        examples=["sms.delivered"],
+        min_length=1,
     )]
     occurred_at: Annotated[str, Field(
         description="When this event occurred.",
@@ -2488,12 +2532,229 @@ class TemplateScope(str, Enum):
     workspace = "workspace"
 
 
+class SMSTemplateCategory(str, Enum):
+    transactional = "transactional"
+    marketing = "marketing"
+    authentication = "authentication"
+
+
 class TemplateStatus(str, Enum):
     draft = "draft"
     pending = "pending"
     active = "active"
     rejected = "rejected"
     inactive = "inactive"
+
+
+class TemplateLanguageStatus(str, Enum):
+    draft = "draft"
+    live = "live"
+    superseded = "superseded"
+
+
+class SMSTemplateLanguageState(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[Annotated[Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
+    )]
+    draft: Annotated[Optional[bool], Field(
+        description="Whether the draft has an unpublished change for this language. When true beside `live`, sends keep using the older published text until submit.",
+    )] = None
+
+
+class SMSTemplateSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[Optional[str], Field(
+        description="The workspace that owns the template. Null for a built-in `system` template.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The immutable handle used to address and send the template.",
+        examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[str, Field(
+        description="The template's display name.",
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Null if it has no description.",
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
+    )]
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
+    )]
+    category: Annotated[SMSTemplateCategory, Field(
+        description="Why messages use this template. Use `authentication` for one-time codes, `marketing` for promotions, and `transactional` for service messages.",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The permanent editable draft version. Null for a built-in template.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version sends resolve to, or null before first publication.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    published_version_id: Annotated[Optional[str], Field(
+        description="Deprecated. Use `live_version_id`, which carries the same value.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    languages: Annotated[Dict[str, SMSTemplateLanguageState], Field(
+        description="Each language and its live or draft state, keyed by canonical BCP-47 tag.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="Languages the live version can currently send. Empty before first publication.",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When the template was last published. Null before first publication and for built-in templates.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for built-in templates.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for built-in templates.",
+    )]
+
+
+class SMSTemplateList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[SMSTemplateSummary], Field(
+        description="One page of SMS templates.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class SMSTemplateText(RootModel[str]):
+    root: str
+
+
+class TemplateOnMissingLanguage(str, Enum):
+    fallback = "fallback"
+    fail = "fail"
+
+
+class SMSTemplate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[Optional[str], Field(
+        description="The workspace that owns the template. Null for a built-in `system` template.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The immutable handle used to address and send the template. A built-in template's slug starts with `bird_`.",
+        examples=["order-shipped"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[str, Field(
+        description="The template's display name. It defaults to the slug and can be changed on workspace templates.",
+        examples=["Order shipped"],
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Null if it has no description.",
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
+    )]
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
+    )]
+    category: Annotated[SMSTemplateCategory, Field(
+        description="Why messages use this template. Use `authentication` for one-time codes, `marketing` for promotions, and `transactional` for service messages.",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The permanent editable draft version. Null for a built-in template.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version sends resolve to, or null before a workspace template is first published. A built-in template points to a synthetic published version that projects its current catalogue content.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    published_version_id: Annotated[Optional[str], Field(
+        description="Deprecated. Use `live_version_id`, which carries the same value.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    revision: Annotated[Optional[int], Field(
+        description="The draft revision to use for concurrent-edit checks. Null for a built-in template.",
+        ge=0,
+    )]
+    languages: Annotated[Dict[str, SMSTemplateLanguageState], Field(
+        description="Each language the template has, keyed by canonical BCP-47 tag, with its live state and whether the draft contains unpublished changes. Content is available from version reads.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="Languages the live version can currently send. Empty before first publication.",
+    )]
+    on_missing_language: Annotated[TemplateOnMissingLanguage, Field(
+        description="How a send handles a requested language that the live version does not have.",
+    )]
+    language_source_required: Annotated[bool, Field(
+        description="Whether each send must name a language instead of using the live version's default.",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When the template was last published. Null before first publication and for built-in templates.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for built-in templates.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for built-in templates.",
+    )]
 
 
 class TemplateVariableType(str, Enum):
@@ -2514,9 +2775,9 @@ class TemplateVariable(BaseModel):
         description="The key this slot is filled by. On email and SMS it is the key you set in the send's `parameters` object. On WhatsApp it is the `name` you repeat on the matching parameter inside `components`, or, for a template whose placeholders are positional, the position itself as `1`, `2` and so on.",
         min_length=1,
     )]
-    type: Annotated[Union[TemplateVariableType, str], Field(
-        description="The value type this slot accepts. SMS templates use the typed slots (`code`, `amount` and the rest), each of which rejects a value that does not match its `constraint`. Email and WhatsApp templates use `text`, which accepts any value. Open enum: treat an unrecognized value as a future type rather than an error.",
-        union_mode="left_to_right",
+    type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
+        description="The value type this slot accepts. Built-in SMS templates use typed slots (`code`, `amount` and the rest), each of which rejects a value that does not match its `constraint`. Email, WhatsApp and workspace SMS templates use `text`. Workspace SMS parameters must be scalar values. Open enum: treat an unrecognized value as a future type rather than an error.",
+        min_length=1,
     )]
     required: Annotated[bool, Field(
         description="Whether the send must supply this variable. Omitting a required value returns `422` on email, SMS, and WhatsApp sends.",
@@ -2526,130 +2787,189 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     sensitive: Annotated[Optional[bool], Field(
-        description="Whether this slot's value is kept out of durable storage. A sensitive slot's rendered value never appears in message content read back through the API: a stand-in placeholder is stored instead.",
+        description="Whether this slot's value is redacted from stored message content. A placeholder replaces the sensitive value in message history; transport queues can still carry the text needed for delivery.",
     )] = None
 
 
-class TemplateLanguageStatus(str, Enum):
+class SMSTemplateVersionStatus(str, Enum):
     draft = "draft"
-    live = "live"
-    superseded = "superseded"
+    published = "published"
 
 
-class SMSTemplateLanguageState(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[TemplateLanguageStatus, str], Field(
-        description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
-        union_mode="left_to_right",
-    )]
-
-
-class TemplateOnMissingLanguage(str, Enum):
-    fallback = "fallback"
-    fail = "fail"
-
-
-class SMSTemplateVersionID(RootModel[str]):
-    root: str
-
-
-class SMSTemplate(BaseModel):
+class SMSTemplateVersionSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
         examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    slug: Annotated[str, Field(
-        description="The template's permanent handle. Pass it (or the id) as the template reference when sending. Handles beginning with `bird_` are reserved for our built-in templates.",
-        examples=["bird_otp_verification"],
-        max_length=63,
-        min_length=1,
-        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    version_number: Annotated[Optional[int], Field(
+        description="Sequential publication number. Null for the draft; a built-in template reports 1.",
+        ge=1,
     )]
-    name: Annotated[str, Field(
-        description="The template's display name, shown wherever the template is listed. Nothing resolves through it, so it is safe to show wherever a human reads the template.",
-        examples=["bird_otp_verification"],
-        max_length=255,
-        min_length=1,
+    status: Annotated[SMSTemplateVersionStatus, Field(
+        description="Whether the version is the editable draft or published. Published workspace versions are immutable and remain `published` after a later version goes live. A built-in template's synthetic published version projects the current catalogue entry.",
     )]
-    description: Annotated[Optional[str], Field(
-        description="What the template is for. Null when unset.",
-        examples=["One-time passcode verification"],
-    )]
-    scope: Annotated[TemplateScope, Field(
-        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`). Every SMS template is `system`.",
-        min_length=1,
-    )]
-    status: Annotated[TemplateStatus, Field(
-        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
-    )]
-    category: Annotated[SMSMessageCategory, Field(
-        description="Content classification applied to messages sent from this template.",
-    )]
-    body: Annotated[str, Field(
-        description="The template body in its default language, shown for preview. Variable placeholders appear inline (for example `{{ code }}`). Name a `language` on the send to have another one served.",
-        examples=["Your verification code is {{ code }}."],
-        min_length=1,
-    )]
+    revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
     variables: Annotated[List[TemplateVariable], Field(
-        description="The typed slots this template fills in from the values you supply in `parameters` when sending. Every language of a template declares the same slots, so this list holds for whichever one a send resolves to.",
+        description="Variables inferred from the version's text and shared by each language.",
     )]
     default_language: Annotated[str, Field(
-        description="The language a send uses when it names none, and the last resort when `on_missing_language` is `fallback` and the language asked for is not available.",
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )]
     available_languages: Annotated[List[str], Field(
-        description="The languages a send can resolve right now, as BCP-47 tags. The set may shrink for reasons other than editing, so read it rather than assuming it matches what you last saw.",
-    )]
-    languages: Annotated[Dict[str, SMSTemplateLanguageState], Field(
-        description="Where each of the template's languages stands, keyed by BCP-47 language tag. Content is not here: `body` previews the default language, and a send resolves the one it needs.",
-    )]
-    on_missing_language: Annotated[TemplateOnMissingLanguage, Field(
-        description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on SMS.",
-    )]
-    language_source_required: Annotated[bool, Field(
-        description="Whether a send has to name a language. When true, a send that names none is rejected instead of being served the default language.",
-    )]
-    draft_version_id: Annotated[Optional[str], Field(
-        description="The current editable draft version, or null for a built-in `system` template, which has no draft.",
-        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    live_version_id: Annotated[Optional[str], Field(
-        description="The version a send resolves to, or null for a built-in `system` template, which Bird ships ready to send rather than versioning.",
-        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    published_version_id: Annotated[Optional[str], Field(
-        description="Deprecated: use `live_version_id` instead, which carries the same value.",
-        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    revision: Annotated[Optional[int], Field(
-        description="The draft's revision counter. Null for a built-in `system` template, which is unversioned.",
-        ge=0,
-    )]
-    last_submitted_at: Annotated[Optional[str], Field(
-        description="When this template was last submitted. Null for a built-in `system` template, which is already available to send.",
+        description="Languages this version contains, without their text.",
     )]
     created_at: Annotated[Optional[str], Field(
-        description="When the template was created. Null for a built-in `system` template, which Bird ships rather than stores.",
+        description="When the version was created. Null for a built-in template's synthetic version.",
+    )]
+    published_at: Annotated[Optional[str], Field(
+        description="When the version was published. Null for the draft and for a built-in template's synthetic version.",
+    )]
+
+
+class SMSTemplateVersionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[SMSTemplateVersionSummary], Field(
+        description="One page of the template's versions, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class SMSTemplateVersionLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    text: Annotated[str, Field(
+        description="SMS template text, limited to 16 KiB of UTF-8 source. Blank text can be saved in a draft but cannot be published. Workspace templates support scalar variables, conditional text, and bounded filters. Loops, assignments, captures, partials, collections, and string-expanding filters are rejected.",
+        min_length=0,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter.",
+        ge=0,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A fingerprint of SMS template text, prefixed with its algorithm. Compare it within this API version to identify the exact source without transferring it.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
     )]
     updated_at: Annotated[Optional[str], Field(
-        description="When the template was last modified. Null for a built-in `system` template, which Bird ships rather than stores.",
+        description="When this language was last saved. Null for a built-in template.",
     )]
 
 
-class SMSTemplateList(BaseModel):
+class SMSTemplateVersion(BaseModel):
     model_config = ConfigDict(extra="allow")
-    data: Annotated[List[SMSTemplate], Field(
-        description="The templates available to your workspace. The catalog is returned in full and is not paginated.",
+    id: Annotated[str, Field(
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="Sequential publication number. Null for the draft; a built-in template reports 1.",
+        ge=1,
+    )]
+    status: Annotated[SMSTemplateVersionStatus, Field(
+        description="Whether the version is the editable draft or published. Published workspace versions are immutable and remain `published` after a later version goes live. A built-in template's synthetic published version projects the current catalogue entry.",
+    )]
+    revision: Annotated[int, Field(
+        description="The version revision. A draft revision advances with each metadata or content change. Published workspace versions are frozen; a built-in template's synthetic version reports 0.",
+        ge=0,
+    )]
+    variables: Annotated[List[TemplateVariable], Field(
+        description="Variables inferred from the version's text. Every language in a publishable SMS version uses the same set. Built-in templates may apply additional typed constraints described by each variable.",
+    )]
+    languages: Annotated[Dict[str, SMSTemplateVersionLanguage], Field(
+        description="Full content for each language, keyed by canonical BCP-47 tag.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the version was created. Null for a built-in template's synthetic version.",
+    )]
+    published_at: Annotated[Optional[str], Field(
+        description="When the version was published. Null for the draft and for a built-in template's synthetic version.",
+    )]
+
+
+class SMSTemplateLanguageSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter.",
+        ge=0,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A fingerprint of SMS template text, prefixed with its algorithm. Compare it within this API version to identify the exact source without transferring it.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null for a built-in template.",
+    )]
+
+
+class SMSTemplateLanguageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[SMSTemplateLanguageSummary], Field(
+        description="The version's languages ordered by canonical tag, without text.",
+    )]
+
+
+class SMSTemplateLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    text: Annotated[str, Field(
+        description="SMS template text, limited to 16 KiB of UTF-8 source. Blank text can be saved in a draft but cannot be published. Workspace templates support scalar variables, conditional text, and bounded filters. Loops, assignments, captures, partials, collections, and string-expanding filters are rejected.",
+        min_length=0,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter, used for concurrent-edit checks on draft writes.",
+        ge=0,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A fingerprint of SMS template text, prefixed with its algorithm. Compare it within this API version to identify the exact source without transferring it.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null for a built-in template.",
     )]
 
 
@@ -2707,15 +3027,9 @@ class SMSSuppression(BaseModel):
         max_length=20,
         min_length=1,
     )]
-    reason: Annotated[Union[SMSSuppressionReason, str], Field(
-        union_mode="left_to_right",
-    )]
-    origin: Annotated[Union[SMSSuppressionOrigin, str], Field(
-        union_mode="left_to_right",
-    )]
-    applies_to: Annotated[Union[SMSSuppressionCoverage, str], Field(
-        union_mode="left_to_right",
-    )]
+    reason: Annotated[Union[SMSSuppressionReason, str], Field(union_mode="left_to_right")]
+    origin: Annotated[Union[SMSSuppressionOrigin, str], Field(union_mode="left_to_right")]
+    applies_to: Annotated[Union[SMSSuppressionCoverage, str], Field(union_mode="left_to_right")]
     blocking: Annotated[bool, Field(
         description="Whether this is stopping messages right now. Always true in a list, which carries only the suppressions in force; false when you fetch one by ID that has since ended, which is also when `ended_at` is set.",
     )]
@@ -2732,9 +3046,8 @@ class SMSSuppression(BaseModel):
     ended_at: Annotated[Optional[str], Field(
         description="When this stopped applying. Null while it is still stopping messages.",
     )] = None
-    ended_reason: Annotated[Optional[Union[SMSSuppressionEndReason, str]], Field(
+    ended_reason: Annotated[Optional[Annotated[Union[SMSSuppressionEndReason, str], Field(union_mode="left_to_right")]], Field(
         description="What ended it. Null while it is still stopping messages.",
-        union_mode="left_to_right",
     )] = None
     ended_effective_at: Annotated[Optional[str], Field(
         description="When the subscriber opted back in, as reported. Null while it is still stopping messages.",
@@ -2816,9 +3129,8 @@ class SMSKeywordRule(BaseModel):
     scope: Annotated[SMSKeywordRuleScope, Field(
         description="Whether the rule is one of Bird's defaults (`system`) or one your workspace created (`workspace`). A `workspace` rule takes precedence over Bird's default for the same country, so it is how you replace a reply without losing the keywords Bird ships.",
     )]
-    operation: Annotated[Union[SMSKeywordOperation, str], Field(
+    operation: Annotated[Annotated[Union[SMSKeywordOperation, str], Field(union_mode="left_to_right")], Field(
         description="What Bird does when an inbound message matches the rule.\n\n- `stop` unsubscribes the sender from further messages.\n- `start` resubscribes them.\n- `help` replies with your support information.\n- `info` replies with your program information. It behaves exactly as `help` does and is\n  separate so a country whose INFO answer must differ from its HELP answer can carry both.\n  Where Bird ships no `info` rule for a country, INFO is one of that country's `help`\n  keywords and answers with the `help` reply.\n- `confirm` marks a double opt-in reply. It sends nothing today, so answer it from your own\n  handler.\n- `custom` replies with the text you configured and has no other effect.\n\nBird's built-in rules fix the operation for `stop`, `start` and `help`; you can change their\nreply but not what they do. The same holds for `info` in any country where Bird ships an\n`info` rule. This is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )]
     country: Annotated[Optional[str], Field(
         description="The country the rule applies in, as an ISO 3166-1 alpha-2 code. A rule for `NL` covers messages received on your Dutch numbers, and messages from a subscriber whose own number is Dutch whichever of your numbers they text. Rules for the country a message arrives in always outrank rules for the country its sender is in; within each, your rule wins over Bird's keywords for that country. `number` confines a rule to one number. Null means the rule applies worldwide, which is allowed for `custom` operations only.",
@@ -2881,9 +3193,8 @@ class SMSKeywordRuleList(BaseModel):
 
 class SMSKeywordRuleCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
-    operation: Annotated[Union[SMSKeywordOperation, str], Field(
+    operation: Annotated[Annotated[Union[SMSKeywordOperation, str], Field(union_mode="left_to_right")], Field(
         description="What Bird does when an inbound message matches the rule.\n\n- `stop` unsubscribes the sender from further messages.\n- `start` resubscribes them.\n- `help` replies with your support information.\n- `info` replies with your program information. It behaves exactly as `help` does and is\n  separate so a country whose INFO answer must differ from its HELP answer can carry both.\n  Where Bird ships no `info` rule for a country, INFO is one of that country's `help`\n  keywords and answers with the `help` reply.\n- `confirm` marks a double opt-in reply. It sends nothing today, so answer it from your own\n  handler.\n- `custom` replies with the text you configured and has no other effect.\n\nBird's built-in rules fix the operation for `stop`, `start` and `help`; you can change their\nreply but not what they do. The same holds for `info` in any country where Bird ships an\n`info` rule. This is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )]
     country: Annotated[Optional[str], Field(
         description="The country this rule applies in, as an ISO 3166-1 alpha-2 code. It matches a message two ways: one received on any of your numbers in this country, and one sent by a subscriber whose own number is in it, wherever they text you. Rules for the country a message arrives in always outrank rules for the country its sender is in; within each, your rule wins over Bird's keywords for that country. To confine a rule to one of your numbers, set `number` instead. Required for `stop`, `start` and `help`, because those replace what Bird ships for one country and a worldwide rule would replace every country's. Omit it only for `custom`, which then applies everywhere you send. Derived from `number` when you supply an E.164 number and leave this out; a short code carries no country, so a rule for one must name it.",
@@ -3300,9 +3611,8 @@ class SMSStatsLifecycleSortMetric(str, Enum):
 
 class SMSErrorCodeStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
-    error_code: Annotated[Union[SMSErrorCode, str], Field(
+    error_code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason this row aggregates. Matches the `error_code` message-list filter.",
-        union_mode="left_to_right",
     )]
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
@@ -3658,9 +3968,7 @@ class LookupClassificationValue(str, Enum):
 
 class LookupClassification(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[LookupPropertyStatus, str], Field(
-        union_mode="left_to_right",
-    )]
+    status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     value: Annotated[Optional[LookupClassificationValue], Field(
         description="The allocated service of the range. Present only when `status` is `ok`.",
     )] = None
@@ -3668,9 +3976,7 @@ class LookupClassification(BaseModel):
 
 class LookupPresence(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[LookupPropertyStatus, str], Field(
-        union_mode="left_to_right",
-    )]
+    status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     reachable: Annotated[Optional[bool], Field(
         description="Whether the number is registered on a network and able to receive traffic. A `false` value means the network answered and reported the number as currently unreachable. This differs from the API being unable to find out. Present only when `status` is `ok`.",
     )] = None
@@ -3678,9 +3984,7 @@ class LookupPresence(BaseModel):
 
 class LookupRoaming(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[LookupPropertyStatus, str], Field(
-        union_mode="left_to_right",
-    )]
+    status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     is_roaming: Annotated[Optional[bool], Field(
         description="Whether the number is currently roaming outside its home network. Present only when `status` is `ok`.",
     )] = None
@@ -3694,9 +3998,7 @@ class LookupRoaming(BaseModel):
 
 class LookupSimSwap(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[LookupPropertyStatus, str], Field(
-        union_mode="left_to_right",
-    )]
+    status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     last_swapped_at: Annotated[Optional[str], Field(
         description="When the SIM was last changed. Absent when only a recency band is known.",
     )] = None
@@ -3720,9 +4022,7 @@ class LookupPortingEvent(BaseModel):
 
 class LookupPorting(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[LookupPropertyStatus, str], Field(
-        union_mode="left_to_right",
-    )]
+    status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     ported: Annotated[Optional[bool], Field(
         description="Whether the number has ever moved network. `false` is a positive finding rather than a lack of one: the registry was consulted and holds no move for this number. Present only when `status` is `ok`.",
     )] = None
@@ -3739,9 +4039,7 @@ class LookupPorting(BaseModel):
 
 class LookupScore(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[LookupPropertyStatus, str], Field(
-        union_mode="left_to_right",
-    )]
+    status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     value: Annotated[Optional[int], Field(
         description="Credibility from 0 (low) to 100 (high). A low score means the number looks less credible than a typical subscriber line in the same range. Treat it as one signal instead of a verdict. It is a composite and is not derivable from the other properties. Present only when `status` is `ok`.",
         ge=0,
@@ -3840,9 +4138,8 @@ class EmailLookup(BaseModel):
     flags: Annotated[List[Annotated[Union[EmailLookupFlag, str], Field(union_mode="left_to_right")]], Field(
         description="Notable characteristics of the address. Empty when none apply.",
     )]
-    reason: Annotated[Optional[Union[EmailLookupReason, str]], Field(
+    reason: Annotated[Optional[Annotated[Union[EmailLookupReason, str], Field(union_mode="left_to_right")]], Field(
         description="Why the address cannot receive mail. Absent unless `result` is `undeliverable`.",
-        union_mode="left_to_right",
     )] = None
     did_you_mean: Annotated[Optional[str], Field(
         description="The address this one looks like a misspelling of. Absent unless a correction was found, which in practice means `result` is `typo`. Offer it to whoever typed the original rather than sending to it unasked, because it is a guess and the address they meant may be neither one.",
@@ -3885,9 +4182,8 @@ class VerificationTo(BaseModel):
 
 class VerificationChannelEntry(BaseModel):
     model_config = ConfigDict(extra="allow")
-    channel: Annotated[Union[VerificationChannel, str], Field(
+    channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
-        union_mode="left_to_right",
     )]
 
 
@@ -3937,9 +4233,8 @@ class Verification(BaseModel):
         description="The verification's current state:\n\n- `pending`: Awaiting a correct passcode.\n- `verified`: A correct passcode was submitted.\n- `failed`: The verification cannot be completed. Either too many\n  incorrect passcodes were submitted, or no planned channel could\n  deliver one. Read `reason` to tell those apart.\n- `expired`: The validity window elapsed before a correct passcode.\n- `canceled`: The verification was canceled before completion.\n- `blocked`: A fraud or abuse control stopped the verification.",
         min_length=1,
     )]
-    reason: Annotated[Optional[Union[VerificationTerminalReason, str]], Field(
+    reason: Annotated[Optional[Annotated[Union[VerificationTerminalReason, str], Field(union_mode="left_to_right")]], Field(
         description="Why the verification reached its final state, or `null` while `pending` and once `verified`. See the enum for the values it can take.",
-        union_mode="left_to_right",
     )] = None
     to: Annotated[VerificationTo, Field(
         description="The recipient to verify. Provide an `email`, a `phone_number`, or both; at least one is required. The addresses also identify the verification: a check must supply exactly the set used on the create call, so a verification created with both addresses is not found by either one alone.",
@@ -3948,15 +4243,15 @@ class Verification(BaseModel):
         description="The channels this verification uses to deliver the passcode, in attempt order: the first entry is tried first and later entries are fallbacks. An email recipient is verified over email; a phone recipient is verified over the phone channels enabled for its destination country, in the order that country's configuration sets.",
         min_length=1,
     )]
-    last_channel: Annotated[Optional[Union[VerificationLastChannel, str]], Field(
+    last_channel: Annotated[Optional[Annotated[Union[VerificationLastChannel, str], Field(union_mode="left_to_right")]], Field(
         description="The channel the most recent passcode was sent on, or `null` before the first send. Open enum; new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
-        union_mode="left_to_right",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The key/value pairs attached when the verification was created.",
     )] = None
     expires_at: Annotated[str, Field(
         description="When the verification expires if no correct passcode is submitted first. After this time its status reports `expired`.",
+        min_length=1,
     )]
     verified_at: Annotated[Optional[str], Field(
         description="When the verification was completed, or `null` if it is not yet verified.",
@@ -4020,9 +4315,8 @@ class VerificationCheckResult(BaseModel):
     success: Annotated[bool, Field(
         description="Whether the submitted passcode verified this verification. `true` means the passcode was correct and the verification is now complete; `false` means it did not verify, and `reason` says why. A verification that has already reached a final state is no longer checkable and returns `404`.",
     )]
-    reason: Annotated[Optional[Union[VerificationCheckResultReason, str]], Field(
+    reason: Annotated[Optional[Annotated[Union[VerificationCheckResultReason, str], Field(union_mode="left_to_right")]], Field(
         description="Why the check did not succeed:\n\n- `incorrect_code`: The passcode was wrong and attempts remain.\n- `expired`: The validity window elapsed.\n- `attempts_exhausted`: Too many incorrect attempts were submitted.\n\n`null` when `success` is `true`. Treat unrecognized values as reasons added\nlater.",
-        union_mode="left_to_right",
     )] = None
     verification: Verification
     attempts_remaining: Annotated[Optional[int], Field(
@@ -4116,9 +4410,8 @@ class WhatsAppLocationSend(BaseModel):
 
 class WhatsAppMessageTemplateComponentParameter(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppTemplateParameterType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
         description="The kind of value this parameter carries, which decides which of the fields below to send.",
-        union_mode="left_to_right",
     )]
     text: Annotated[Optional[str], Field(
         description="The value substituted into the placeholder, as a plain string. Send it on a `text` parameter.",
@@ -4146,9 +4439,10 @@ class WhatsAppMessageTemplateCardComponentType(str, Enum):
 
 class WhatsAppMessageTemplateCardComponent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppMessageTemplateCardComponentType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppMessageTemplateCardComponentType, str], Field(union_mode="left_to_right")], Field(
         description="Which part of the card this fills in.\n\n- `header`: the card's image or video.\n- `body`: its text.\n- `button`: a button's variable.",
-        union_mode="left_to_right",
+        examples=["header"],
+        min_length=1,
     )]
     parameters: Annotated[Optional[List[WhatsAppMessageTemplateComponentParameter]], Field(
         description="The values that fill this part's placeholders, in placeholder order.",
@@ -4171,9 +4465,9 @@ class WhatsAppMessageTemplateComponentType(str, Enum):
 
 class WhatsAppMessageTemplateComponent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppMessageTemplateComponentType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppMessageTemplateComponentType, str], Field(union_mode="left_to_right")], Field(
         description="Which part of the template this fills in.\n\n- `body`: the main text.\n- `button`: a button's variable.\n- `header`: the header's text, media or location.\n- `carousel`: the cards.",
-        union_mode="left_to_right",
+        min_length=1,
     )]
     parameters: Annotated[Optional[List[WhatsAppMessageTemplateComponentParameter]], Field(
         description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning. Send it on every part except `carousel`, which carries its values on `cards`. Send no `button` part at all for a button that takes no value, such as a `quick_reply` or `request_contact_info` button, or a `url` button whose address has no placeholder: a part the template has no slot for is refused here, before the message is sent and charged.",
@@ -4194,9 +4488,8 @@ class WhatsAppMessageTemplate(BaseModel):
         min_length=1,
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )]
-    category: Annotated[Union[WhatsAppTemplateCategory, str], Field(
+    category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
         description="The category this message was priced at, recorded as it stood when the message was sent. For a template you authored this is the category Meta applies to the language the send resolved to, which can differ from the category declared on the template: Meta categorizes each language separately and may move one. A built-in `bird_` template is priced at the single category the built-in declares, the same in every language.",
-        union_mode="left_to_right",
     )]
     language: Annotated[str, Field(
         description="The canonical BCP-47 tag of the template variant that was sent.",
@@ -4437,9 +4730,10 @@ class WhatsAppContactCardOrigin(str, Enum):
 
 class WhatsAppContactCard(BaseModel):
     model_config = ConfigDict(extra="allow")
-    origin: Annotated[Optional[Union[WhatsAppContactCardOrigin, str]], Field(
+    origin: Annotated[Optional[Annotated[Union[WhatsAppContactCardOrigin, str], Field(union_mode="left_to_right")]], Field(
         description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since. Set on a card the contact shared; absent on one this workspace sent.",
-        union_mode="left_to_right",
+        examples=["contact_request"],
+        min_length=1,
     )] = None
     vcard: Annotated[Optional[str], Field(
         description="The contact's card in vCard format. WhatsApp sends it on a card shared in the chat and omits it on a button tap, which carries the number alone. Set on a card the contact shared; absent on one this workspace sent.",
@@ -4481,9 +4775,8 @@ class WhatsAppInteractiveHeaderType(str, Enum):
 
 class WhatsAppInteractiveHeader(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppInteractiveHeaderType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppInteractiveHeaderType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of header this is, and which field carries it.",
-        union_mode="left_to_right",
     )]
     text: Annotated[Optional[str], Field(
         description="The line of text shown above the body.",
@@ -4530,9 +4823,8 @@ class WhatsAppInteractiveCtaUrl(BaseModel):
 
 class WhatsAppInteractiveButton(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppInteractiveButtonType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppInteractiveButtonType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of button this is, and which field carries it.",
-        union_mode="left_to_right",
     )]
     quick_reply: Annotated[Optional[WhatsAppInteractiveQuickReplyButton], Field(
         description="The button's label and the handle it sends back.",
@@ -4600,9 +4892,8 @@ class WhatsAppInteractiveCard(BaseModel):
 
 class WhatsAppInteractive(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppInteractiveType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppInteractiveType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of interactive message this is, and which field carries it.",
-        union_mode="left_to_right",
     )]
     header: Annotated[Optional[WhatsAppInteractiveHeader], Field(
         description="What was shown above the body. Absent when the message carried no header.",
@@ -4637,9 +4928,8 @@ class WhatsAppInteractiveReplyType(str, Enum):
 
 class WhatsAppInteractiveReply(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppInteractiveReplyType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppInteractiveReplyType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of tap this reply came from, and which field carries it.",
-        union_mode="left_to_right",
     )]
     button: Annotated[Optional[WhatsAppInteractiveQuickReplyButton], Field(
         description="The button the contact tapped, as you declared it. On a reply to a template's quick-reply button, `slug` is the button's payload, which WhatsApp sets to the button's own label.",
@@ -4660,9 +4950,10 @@ class WhatsAppUnsupportedType(str, Enum):
 
 class WhatsAppUnsupported(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppUnsupportedType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppUnsupportedType, str], Field(union_mode="left_to_right")], Field(
         description="The WhatsApp content type we did not model. `unsupported` is not a placeholder here: WhatsApp reports its own `unsupported` type for a message its own clients cannot render, and that arrives as this value. Open enum: WhatsApp adds content types over time, so treat an unrecognized value as a future type rather than an error.",
-        union_mode="left_to_right",
+        examples=["reaction"],
+        min_length=1,
     )]
 
 
@@ -4692,9 +4983,8 @@ class WhatsAppErrorCode(str, Enum):
 
 class WhatsAppError(BaseModel):
     model_config = ConfigDict(extra="allow")
-    code: Annotated[Union[WhatsAppErrorCode, str], Field(
+    code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )]
     description: Annotated[str, Field(
         description="Human-readable explanation of the failure.",
@@ -4955,7 +5245,7 @@ class WhatsAppInteractiveHeaderTypeWrite(str, Enum):
 
 class WhatsAppInteractiveHeaderSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["text"]
     text: Annotated[str, Field(
         description="A single line of text above the body. Send it on a `text` header.",
         examples=["New workshop dates announced"],
@@ -5025,7 +5315,7 @@ class WhatsAppInteractiveCtaUrlSend(BaseModel):
 
 class WhatsAppInteractiveButtonSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["quick_reply"]
     quick_reply: Annotated[WhatsAppInteractiveQuickReplyButtonSend, Field(
         description="The button's label and the handle it sends back. Send this on a `quick_reply` button.",
     )]
@@ -5034,7 +5324,7 @@ class WhatsAppInteractiveButtonSend1(BaseModel):
 
 class WhatsAppInteractiveButtonSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["cta_url"]
     quick_reply: Optional[Any] = None
     cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
         description="The button's label and the address it opens. Send this on a `cta_url` button.",
@@ -5098,7 +5388,7 @@ class WhatsAppInteractiveListSend(BaseModel):
 
 class WhatsAppInteractiveCardHeaderSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["image"]
     url: Annotated[str, Field(
         description="Public `https` URL of the file to show at the top of the card. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB. WhatsApp fetches it at send time, on the same terms as a message header's `url`.",
         examples=["https://cdn.example.com/plants/blue-echeveria.jpeg"],
@@ -5108,7 +5398,7 @@ class WhatsAppInteractiveCardHeaderSend1(BaseModel):
 
 class WhatsAppInteractiveCardHeaderSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["video"]
     url: Annotated[str, Field(
         description="Public `https` URL of the file to show at the top of the card. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB. WhatsApp fetches it at send time, on the same terms as a message header's `url`.",
         examples=["https://cdn.example.com/plants/blue-echeveria.jpeg"],
@@ -5156,7 +5446,7 @@ class WhatsAppInteractiveCardSend(RootModel[WhatsAppInteractiveCardSend1 | Whats
 
 class WhatsAppInteractiveSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["button"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
         description="Optional content above the body. A `list` accepts a `text` header only; `button` and `cta_url` also accept an image, video or document. A `carousel` accepts none: its cards carry their own media. Neither request kind accepts one.",
     )] = None
@@ -5175,13 +5465,13 @@ class WhatsAppInteractiveSend1(BaseModel):
 
 class WhatsAppInteractiveSend2Header(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Optional[Any] = None
+    type: Optional[Literal["text"]] = None
     url: Optional[Any] = None
 
 
 class WhatsAppInteractiveSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["list"]
     header: Optional[WhatsAppInteractiveSend2Header] = None
     body_text: Annotated[str, Field(
         description="The message's main text, required on every kind, and the whole message on `location_request_message` and `request_contact_info`. The WhatsApp client turns any URL it contains into a clickable link. Only a `list` may use the full length; the other kinds cap it at 1024 characters.",
@@ -5205,7 +5495,7 @@ class WhatsAppInteractiveSend2(BaseModel):
 
 class WhatsAppInteractiveSend3(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["cta_url"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
         description="Optional content above the body. A `list` accepts a `text` header only; `button` and `cta_url` also accept an image, video or document. A `carousel` accepts none: its cards carry their own media. Neither request kind accepts one.",
     )] = None
@@ -5226,7 +5516,7 @@ class WhatsAppInteractiveSend3(BaseModel):
 
 class WhatsAppInteractiveSend4(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["carousel"]
     header: Optional[Any] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Optional[Any] = None
@@ -5242,7 +5532,7 @@ class WhatsAppInteractiveSend4(BaseModel):
 
 class WhatsAppInteractiveSend5(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["location_request_message"]
     header: Optional[Any] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Optional[Any] = None
@@ -5254,7 +5544,7 @@ class WhatsAppInteractiveSend5(BaseModel):
 
 class WhatsAppInteractiveSend6(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Any
+    type: Literal["request_contact_info"]
     header: Optional[Any] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Optional[Any] = None
@@ -5475,9 +5765,8 @@ class WhatsAppEvent(BaseModel):
         min_length=1,
         pattern="^ev_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    type: Annotated[Union[WhatsAppEventType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppEventType, str], Field(union_mode="left_to_right")], Field(
         description="Message timeline event type:\n\n- `whatsapp.accepted`: The API accepted the request.\n- `whatsapp.sent`: The message reached the WhatsApp network.\n- `whatsapp.delivered`: Delivery to the recipient's device was confirmed.\n- `whatsapp.read`: The message was read. On an outbound message the recipient\n  opened it; on an inbound one Bird acknowledged it to WhatsApp for the\n  business, which is what a read receipt records.\n- `whatsapp.failed`: Delivery failed permanently.\n- `whatsapp.rejected`: The message was refused before sending and not charged.\n- `whatsapp.received`: An inbound message arrived from the contact.\n\nThis is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )]
     occurred_at: Annotated[str, Field(
         description="When this event occurred.",
@@ -5585,9 +5874,8 @@ class WhatsAppBusinessAccountID(RootModel[str]):
 
 class WhatsAppTemplateExampleParameter(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppTemplateParameterType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
         description="The kind of value this parameter accepts.",
-        union_mode="left_to_right",
     )]
     text: Annotated[Optional[str], Field(
         description="An example value for a text parameter. Present when `type` is `text`.",
@@ -5614,13 +5902,18 @@ class WhatsAppTemplateButtonType(str, Enum):
     request_contact_info = "request_contact_info"
 
 
+class WhatsAppTemplateButtonOtpType(str, Enum):
+    copy_code = "copy_code"
+
+
 class WhatsAppTemplateButton(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppTemplateButtonType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppTemplateButtonType, str], Field(union_mode="left_to_right")], Field(
         description="The button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It\n  belongs only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number\n  their WhatsApp account carries. It belongs only on a utility or\n  marketing template, as that template's only button.\n\nThis is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
+        examples=["url"],
+        min_length=1,
     )]
-    otp_type: Annotated[Optional[Literal["copy_code"]], Field(
+    otp_type: Annotated[Optional[Annotated[Union[WhatsAppTemplateButtonOtpType, str], Field(union_mode="left_to_right")]], Field(
         description="How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.",
         examples=["copy_code"],
         min_length=1,
@@ -5658,13 +5951,15 @@ class WhatsAppTemplateCardComponentFormat(str, Enum):
 
 class WhatsAppTemplateCardComponent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppTemplateCardComponentType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppTemplateCardComponentType, str], Field(union_mode="left_to_right")], Field(
         description="The card block's type.",
-        union_mode="left_to_right",
+        examples=["header"],
+        min_length=1,
     )]
-    format: Annotated[Optional[Union[WhatsAppTemplateCardComponentFormat, str]], Field(
+    format: Annotated[Optional[Annotated[Union[WhatsAppTemplateCardComponentFormat, str], Field(union_mode="left_to_right")]], Field(
         description="The card header's content type. Present on a card's header block.",
-        union_mode="left_to_right",
+        examples=["image"],
+        min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
         description="The block's text content, with any variable placeholders shown inline.",
@@ -5705,13 +6000,15 @@ class WhatsAppTemplateComponentFormat(str, Enum):
 
 class WhatsAppTemplateComponent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Union[WhatsAppTemplateComponentType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppTemplateComponentType, str], Field(union_mode="left_to_right")], Field(
         description="The content block's type within the template.",
-        union_mode="left_to_right",
+        examples=["body"],
+        min_length=1,
     )]
-    format: Annotated[Optional[Union[WhatsAppTemplateComponentFormat, str]], Field(
+    format: Annotated[Optional[Annotated[Union[WhatsAppTemplateComponentFormat, str], Field(union_mode="left_to_right")]], Field(
         description="The header block's content type. Present on a header block. A `text` header carries a line of copy. The `image`, `video`, `gif`, and `document` formats each show a file whose address is in the block's `example_parameters`. The `location` format shows a map. It carries no content because the coordinates belong to the message rather than the template.",
-        union_mode="left_to_right",
+        examples=["text"],
+        min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
         description="The block's text content, with any variable placeholders shown inline. Present when the block carries text. An authentication template's body and footer are written by WhatsApp from the two settings below rather than by you, so their text is absent until the language has been submitted and WhatsApp has supplied it.",
@@ -5761,9 +6058,8 @@ class WhatsAppTemplateRejectionCategory(str, Enum):
 
 class WhatsAppTemplateRejection(BaseModel):
     model_config = ConfigDict(extra="allow")
-    category: Annotated[Optional[Union[WhatsAppTemplateRejectionCategory, str]], Field(
+    category: Annotated[Optional[Annotated[Union[WhatsAppTemplateRejectionCategory, str], Field(union_mode="left_to_right")]], Field(
         description="Why Meta refused a language's content, in Meta's own vocabulary, lowercased. Read it with `reason`, which carries Meta's human-written detail, and `recommendation`, which carries its suggested fix. This is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )] = None
     reason: Annotated[Optional[str], Field(
         description="Meta's detail about the refusal, passed through unmodified.",
@@ -5790,9 +6086,8 @@ class WhatsAppTemplateSubmissionError(BaseModel):
 
 class WhatsAppTemplateLanguageState(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+    status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         description="On a template, where this language stands on the version currently in service. On a version, what that version's submission did with this language. Absent on a draft, which has not been submitted.",
-        union_mode="left_to_right",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
         description="When this language's content was last submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, shipped already approved rather than submitted on your behalf.",
@@ -5849,9 +6144,8 @@ class WhatsAppTemplate(BaseModel):
         description="The WhatsApp Business Account that holds this template's languages at Meta. Absent on a built-in template: those live on a WABA that Bird manages centrally rather than on your account, so it is not yours to reconcile against and is not disclosed.",
         examples=[102290129340398],
     )] = None
-    category: Annotated[Union[WhatsAppTemplateCategory, str], Field(
+    category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
         description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
-        union_mode="left_to_right",
     )]
     status: Annotated[TemplateStatus, Field(
         description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
@@ -5988,9 +6282,8 @@ class WhatsAppTemplateVersionLanguage(BaseModel):
     components: Annotated[List[WhatsAppTemplateComponent], Field(
         description="This language's content in this version, in display order.",
     )]
-    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+    status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         description="What this submission did with this language. Absent on a draft, which has not been submitted. Whether the language can be sent right now is a different question, answered by the template's `languages` summary.",
-        union_mode="left_to_right",
     )] = None
     rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
@@ -6038,9 +6331,8 @@ class WhatsAppTemplateLanguageSummary(BaseModel):
         max_length=35,
         min_length=2,
     )]
-    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+    status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n- `outcome_unknown`: A create or an edit reached WhatsApp but no response came back, so the outcome is still being resolved against WhatsApp. An unanswered deletion is retried instead of landing here. `error.description` says so, and `error.meta_error_code` is absent, since nothing was refused.\n\nThis is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -6077,13 +6369,11 @@ class WhatsAppTemplateQualityScore(str, Enum):
 
 class WhatsAppTemplateQuality(BaseModel):
     model_config = ConfigDict(extra="allow")
-    current_score: Annotated[Union[WhatsAppTemplateQualityScore, str], Field(
+    current_score: Annotated[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")], Field(
         description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )]
-    previous_score: Annotated[Optional[Union[WhatsAppTemplateQualityScore, str]], Field(
+    previous_score: Annotated[Optional[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")]], Field(
         description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )] = None
     updated_at: Annotated[str, Field(
         description="When the rating last changed. A re-evaluation that lands on the same rating does not move it, so this answers how long the language has held its current rating.",
@@ -6103,9 +6393,8 @@ class WhatsAppTemplateLanguage(BaseModel):
     components: Annotated[List[WhatsAppTemplateComponent], Field(
         description="This language's content blocks, in display order, exactly as submitted or as they stand in the draft.",
     )]
-    status: Annotated[Optional[Union[WhatsAppTemplateLanguageStatus, str]], Field(
+    status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n- `outcome_unknown`: A create or an edit reached WhatsApp but no response came back, so the outcome is still being resolved against WhatsApp. An unanswered deletion is retried instead of landing here. `error.description` says so, and `error.meta_error_code` is absent, since nothing was refused.\n\nThis is an open enum. Accept unrecognized values.",
-        union_mode="left_to_right",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -6116,13 +6405,11 @@ class WhatsAppTemplateLanguage(BaseModel):
         examples=["sha256:9f2c4e1a7b03d85fbc6e29d417a05e8c3b1d9f76a2e4c018d53b7f9a6c2e18d4"],
         min_length=1,
     )]
-    category: Annotated[Optional[Union[WhatsAppTemplateCategory, str]], Field(
+    category: Annotated[Optional[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")]], Field(
         description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
-        union_mode="left_to_right",
     )] = None
-    previous_category: Annotated[Optional[Union[WhatsAppTemplateCategory, str]], Field(
+    previous_category: Annotated[Optional[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")]], Field(
         description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
-        union_mode="left_to_right",
     )] = None
     quality: Annotated[Optional[WhatsAppTemplateQuality], Field(
         description="Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating.",
@@ -6413,9 +6700,8 @@ class WhatsAppStatsResponse(BaseModel):
 
 class WhatsAppErrorCodeStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
-    error_code: Annotated[Union[WhatsAppErrorCode, str], Field(
+    error_code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="The normalized failure reason this row aggregates, matching the `last_error.code` reported on an individual failed message.",
-        union_mode="left_to_right",
     )]
     count: Annotated[int, Field(
         description="Distinct messages that failed with this reason in scope.",
@@ -6469,9 +6755,8 @@ class WhatsAppStatsByTemplateResponse(BaseModel):
 
 class WhatsAppTemplateCategoryStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
-    category: Annotated[Union[WhatsAppTemplateCategory, str], Field(
+    category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
         description="The template category this row aggregates.",
-        union_mode="left_to_right",
     )]
     delivery: WhatsAppDeliveryStats
     engagement: WhatsAppEngagementStats
@@ -6724,9 +7009,8 @@ class WhatsAppNumberErrorCode(str, Enum):
 
 class WhatsAppNumberError(BaseModel):
     model_config = ConfigDict(extra="allow")
-    code: Annotated[Union[WhatsAppNumberErrorCode, str], Field(
+    code: Annotated[Annotated[Union[WhatsAppNumberErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason.",
-        union_mode="left_to_right",
     )]
     description: Annotated[Optional[str], Field(
         description="Why the connection failed: WhatsApp's own words, in the language of the account it refused, when WhatsApp answered; our own explanation when the number was refused before WhatsApp was asked; a generic sentence when WhatsApp refused without giving a reason. Absent when the attempt failed without ever reaching WhatsApp, which leaves `code` as the only account of the failure. Show it to the person who owns the number; never match on its text.",
@@ -6794,9 +7078,8 @@ class WhatsAppNumber(BaseModel):
     data_localization_region: Annotated[Optional[WhatsAppDataLocalizationRegion], Field(
         description="The country this number's message content is stored at rest in, as its two-letter ISO 3166 code. Absent when it uses WhatsApp's default storage. It can differ from the region requested at connection when WhatsApp requires a particular country for the number.",
     )] = None
-    status: Annotated[Union[WhatsAppNumberStatus, str], Field(
+    status: Annotated[Annotated[Union[WhatsAppNumberStatus, str], Field(union_mode="left_to_right")], Field(
         description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`.",
-        union_mode="left_to_right",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
         description="What to do next about this number, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nWhile `status` is `awaiting_signup` this carries the browser step that finishes\nthe connection, because embedded signup sits behind an OAuth screen no API call\ncan stand in for.",
@@ -6809,17 +7092,14 @@ class WhatsAppNumber(BaseModel):
         examples=["https://bird.com/dashboard/w/ws_01krdgeqcxet5s7t44vh8rt9mg/whatsapp/numbers?finish_setup_number=wan_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
     )] = None
-    quality_rating: Annotated[Optional[Union[WhatsAppNumberQualityRating, str]], Field(
+    quality_rating: Annotated[Optional[Annotated[Union[WhatsAppNumberQualityRating, str], Field(union_mode="left_to_right")]], Field(
         description="WhatsApp's quality rating for this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
-        union_mode="left_to_right",
     )] = None
-    messaging_limit: Annotated[Optional[Union[WhatsAppNumberMessagingLimit, str]], Field(
+    messaging_limit: Annotated[Optional[Annotated[Union[WhatsAppNumberMessagingLimit, str], Field(union_mode="left_to_right")]], Field(
         description="The messaging limit WhatsApp applied to this number's business portfolio as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
-        union_mode="left_to_right",
     )] = None
-    throughput_level: Annotated[Optional[Union[WhatsAppNumberThroughputLevel, str]], Field(
+    throughput_level: Annotated[Optional[Annotated[Union[WhatsAppNumberThroughputLevel, str], Field(union_mode="left_to_right")]], Field(
         description="The send rate WhatsApp allowed this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
-        union_mode="left_to_right",
     )] = None
     is_official_business_account: Annotated[Optional[bool], Field(
         description="Whether WhatsApp grants this number Official Business Account status as of `meta_synced_at`. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf. WhatsApp grants the status per number, so two numbers on one WhatsApp Business Account can differ. The status also decides whether a rename is possible here: a number that has it cannot be renamed through `PATCH /v1/whatsapp/numbers/{number_id}/profile` at all, and has to be renamed through WhatsApp support instead.",
@@ -6884,9 +7164,10 @@ class WhatsAppNumberEvent(BaseModel):
         min_length=1,
         pattern="^wne_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    type: Annotated[Union[WhatsAppNumberEventType, str], Field(
+    type: Annotated[Annotated[Union[WhatsAppNumberEventType, str], Field(union_mode="left_to_right")], Field(
         description="Type of number event. `whatsapp_number.messaging_limit_updated` and `whatsapp_number.profile_name_update` are reported by WhatsApp as they happen; `whatsapp_number.quality_rating_updated` is observed when Bird next reads the number, so it can lag the change by up to an hour. `whatsapp_number.status_changed` records every move of the `status` field on the number itself, whichever side caused it. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error. The values below are the types known at this version.",
-        union_mode="left_to_right",
+        examples=["whatsapp_number.quality_rating_updated"],
+        min_length=1,
     )]
     summary: Annotated[str, Field(
         description="Human-readable summary of what changed.",
@@ -6967,25 +7248,22 @@ class WhatsAppNumberProfile(BaseModel):
         description="The name WhatsApp verifies for this number. Once WhatsApp approves it, it appears at the top of a chat with this number; `display_name_status` is what says whether it has. Set when the number was connected, and changed from the dashboard or the CLI, as [WhatsApp phone numbers](/docs/guides/whatsapp/phone-number-setup) explains. This field still returns the current name until a requested change completes.",
         examples=["Lucky Shrub"],
     )] = None
-    display_name_status: Annotated[Optional[Union[WhatsAppDisplayNameStatus, str]], Field(
+    display_name_status: Annotated[Optional[Annotated[Union[WhatsAppDisplayNameStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Where WhatsApp's review of the display name stands. A name still under review is not yet shown at the top of a chat.",
-        union_mode="left_to_right",
     )] = None
     new_display_name: Annotated[Optional[str], Field(
         description="The display name whose change has been requested, whether or not WhatsApp is reviewing it. Absent when no change is pending.",
         examples=["Lucky Shrub Garden Center"],
     )] = None
-    new_display_name_status: Annotated[Optional[Union[WhatsAppDisplayNameStatus, str]], Field(
+    new_display_name_status: Annotated[Optional[Annotated[Union[WhatsAppDisplayNameStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Where the requested display name stands with WhatsApp, including whether it is being reviewed or was accepted for immediate use without a review. Absent when no change is pending. If WhatsApp accepts the name it becomes `display_name`. Every other outcome leaves the number on the name it already had: `declined` is WhatsApp refusing the name, and `expired` is a request that no longer stands and has to be made again.",
-        union_mode="left_to_right",
     )] = None
     username: Annotated[Optional[str], Field(
         description="The username WhatsApp users can find this number by, without an `@`. Absent when the number has no username. Once set it cannot be removed through this API.",
         examples=["goldcrest.support"],
     )] = None
-    username_status: Annotated[Optional[Union[WhatsAppUsernameStatus, str]], Field(
+    username_status: Annotated[Optional[Annotated[Union[WhatsAppUsernameStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Where the username stands with WhatsApp. Absent when the number has no username.",
-        union_mode="left_to_right",
     )] = None
     about: Annotated[Optional[str], Field(
         description="The short line shown under the business name in a chat.",
@@ -7007,9 +7285,8 @@ class WhatsAppNumberProfile(BaseModel):
         examples=["hello@bird.com"],
         max_length=128,
     )] = None
-    vertical: Annotated[Optional[Union[WhatsAppBusinessVertical, str]], Field(
+    vertical: Annotated[Optional[Annotated[Union[WhatsAppBusinessVertical, str], Field(union_mode="left_to_right")]], Field(
         description="The industry WhatsApp shows on the profile.",
-        union_mode="left_to_right",
     )] = None
     websites: Annotated[Optional[List[str]], Field(
         description="Up to two websites shown on the profile.",
@@ -7068,9 +7345,8 @@ class WhatsAppBusinessPortfolio(BaseModel):
         examples=["Acme Holdings"],
         min_length=1,
     )] = None
-    marketing_messages_onboarding_status: Annotated[Optional[Union[WhatsAppBusinessPortfolioMarketingMessagesStatus, str]], Field(
+    marketing_messages_onboarding_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessPortfolioMarketingMessagesStatus, str], Field(union_mode="left_to_right")]], Field(
         description="How far this portfolio has got through Meta's Marketing Messages terms of service. Absent until Meta has reported it. Distinct from the account's own `marketing_messages_onboarding_status`, which Meta gives the same field name but a different vocabulary: that one is the account's own eligibility, this one is the portfolio's Terms-of-Service progress.",
-        union_mode="left_to_right",
     )] = None
 
 
@@ -7111,21 +7387,17 @@ class WhatsAppBusinessAccount(BaseModel):
         examples=["Acme Inc"],
         min_length=1,
     )]
-    status: Annotated[Union[WhatsAppBusinessAccountStatus, str], Field(
+    status: Annotated[Annotated[Union[WhatsAppBusinessAccountStatus, str], Field(union_mode="left_to_right")], Field(
         description="WhatsApp's own state for this account as of `meta_synced_at`. The status is `active` until WhatsApp reports otherwise. WhatsApp already considers an account usable if Bird could connect a number under it. The absence of a reading is therefore not evidence of another state.",
-        union_mode="left_to_right",
     )]
-    account_review_status: Annotated[Optional[Union[WhatsAppBusinessAccountReviewStatus, str]], Field(
+    account_review_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessAccountReviewStatus, str], Field(union_mode="left_to_right")]], Field(
         description="How far WhatsApp's review of this account had got as of `meta_synced_at`. Absent until WhatsApp has reported it.",
-        union_mode="left_to_right",
     )] = None
-    business_verification_status: Annotated[Optional[Union[WhatsAppBusinessVerificationStatus, str]], Field(
+    business_verification_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessVerificationStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Whether Meta had verified the business behind this account as of `meta_synced_at`. Absent until Meta has reported it.",
-        union_mode="left_to_right",
     )] = None
-    marketing_messages_onboarding_status: Annotated[Optional[Union[WhatsAppBusinessAccountMarketingMessagesStatus, str]], Field(
+    marketing_messages_onboarding_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessAccountMarketingMessagesStatus, str], Field(union_mode="left_to_right")]], Field(
         description="Whether this account can use WhatsApp's Marketing Messages API, as of `meta_synced_at`. Absent until WhatsApp has reported it. Distinct from the owning portfolio's `marketing_messages_onboarding_status` (`portfolio.marketing_messages_onboarding_status`), which Meta gives the same field name but a different vocabulary: this one is the account's own eligibility, that one is the portfolio's Terms-of-Service progress.",
-        union_mode="left_to_right",
     )] = None
     portfolio: Annotated[Optional[WhatsAppBusinessPortfolio], Field(
         description="The Meta business portfolio that owns this account. Absent until Meta has reported it. The portfolio is where a messaging limit is set, so every account it owns shares one.",
@@ -7168,6 +7440,1017 @@ class WhatsAppBusinessAccountList(BaseModel):
 
 class WhatsAppSuppressionID(RootModel[str]):
     root: str
+
+
+class EmailInboxInsightsGroupBy(str, Enum):
+    day = "day"
+    week = "week"
+    month = "month"
+
+
+class EmailInboxInsightsWeightingSource(str, Enum):
+    account = "account"
+    global_ = "global"
+
+
+class EmailInboxInsightsWeighting(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    weight_set_id: Annotated[str, Field(
+        description="The measurement's own identifier for the audience mix, carried through so a client can tell two weightings apart without comparing `basis` strings. No operation accepts it.",
+        examples=[12],
+        min_length=1,
+    )]
+    source: Annotated[Optional[EmailInboxInsightsWeightingSource], Field(
+        description="Which audience mix the weighting used. Null when the measurement weighted these figures by a method this API does not model: the enum is closed so that a client can branch on it exhaustively, which means an unfamiliar method has to answer \"not one of these\" rather than be passed through. `basis` usually still describes the method in words when that happens.",
+    )]
+    basis: Annotated[Optional[str], Field(
+        description="The weighting method behind the rates, as the measurement names it. A slug rather than a sentence, so render it as a label and do not expect it to read as English. Null when the measurement did not state one, which pairs with `source`: both describe the method, so neither can claim to know it when the measurement was silent.",
+        examples=["weighted-mean-of-per-isp-rates"],
+        min_length=1,
+    )]
+
+
+class EmailInboxInsightsMeasurementSources(str, Enum):
+    panel = "panel"
+    intelliseed_public = "intelliseed_public"
+    intelliseed_private = "intelliseed_private"
+    eds = "eds"
+
+
+class EmailInboxInsightsMeasurement(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sources: Annotated[List[Annotated[Union[EmailInboxInsightsMeasurementSources, str], Field(union_mode="left_to_right")]], Field(
+        description="Identifiers of the measurement systems that contributed to these figures. The set grows as measurement coverage does, so treat the values as labels rather than a closed list.",
+    )]
+    weighting: Annotated[Optional[EmailInboxInsightsWeighting], Field(
+        description="How the placement figures in this response were weighted, so a number is\nself-describing wherever it is quoted or screenshotted.\n\nPlacement rates are a weighted average of per-provider rates against an\naudience mix (the share of recipients expected at each mailbox provider)\nrather than a share of delivered volume.",
+    )] = None
+
+
+class EmailInboxInsightsFreshnessLagHint(str, Enum):
+    daily = "daily"
+    nightly = "nightly"
+    near_real_time = "near_real_time"
+
+
+class EmailInboxInsightsFreshness(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    as_of: Annotated[Optional[str], Field(
+        description="The most recent UTC day the figures include, or null for a live lookup that has no measurement window.",
+        examples=["2026-08-17"],
+    )]
+    lag_hint: Annotated[Optional[Annotated[Union[EmailInboxInsightsFreshnessLagHint, str], Field(union_mode="left_to_right")]], Field(
+        description="How far behind real time this resource usually runs. A lowercase\nidentifier rather than a display label, so pick your own wording for it,\nand treat the set as open: the measurement names a hint per resource and\ncan add one without notice.\n\nNull when the measurement reports no hint, which several resources do:\nshow the figures without an age rather than inventing one.",
+        examples=["daily"],
+    )]
+
+
+class EmailInboxInsightsWindow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    start: Annotated[str, Field(
+        description="First UTC day of the period, inclusive.",
+        examples=["2026-08-12"],
+        min_length=1,
+    )]
+    end: Annotated[str, Field(
+        description="Last UTC day of the period, inclusive.",
+        examples=["2026-08-18"],
+        min_length=1,
+    )]
+    group_by: Annotated[Optional[EmailInboxInsightsGroupBy], Field(
+        description="The bucket size a series is grouped by. Day suits the product's charts; wider grains suit long ranges.",
+    )] = None
+
+
+class EmailInboxInsightsComparedTo(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    start: Annotated[str, Field(
+        description="First UTC day of the prior period, inclusive.",
+        examples=["2026-06-19"],
+        min_length=1,
+    )]
+    end: Annotated[str, Field(
+        description="Last UTC day of the prior period, inclusive.",
+        examples=["2026-07-18"],
+        min_length=1,
+    )]
+
+
+class EmailInboxInsightsPlacementCounts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inbox: Annotated[int, Field(
+        description="Measured placements observed in the inbox.",
+        examples=[418211],
+        ge=0,
+    )]
+    spam: Annotated[int, Field(
+        description="Measured placements observed in spam.",
+        examples=[60233],
+        ge=0,
+    )]
+    missing: Annotated[int, Field(
+        description="Measured sends that arrived in neither folder.",
+        examples=[0],
+        ge=0,
+    )]
+    measured: Annotated[int, Field(
+        description="Total measured placements the rates were computed over.",
+        examples=[478444],
+        ge=0,
+    )]
+
+
+class EmailInboxInsightsPlacementDeltaPts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inbox: Annotated[float, Field(
+        description="Inbox-rate movement in percentage points; negative means it fell.",
+        examples=[-3.1],
+    )]
+    spam: Annotated[float, Field(
+        description="Spam-rate movement in percentage points.",
+        examples=[3.1],
+    )]
+
+
+class EmailInboxInsightsSectionStatus(str, Enum):
+    ok = "ok"
+    no_data = "no_data"
+    not_configured = "not_configured"
+    unavailable = "unavailable"
+    not_applicable = "not_applicable"
+
+
+class EmailInboxInsightsPlacementSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Estimated share of measured placements that landed in the inbox, as a percentage.",
+        examples=[87.4],
+    )]
+    spam_rate_percent: Annotated[Optional[float], Field(
+        description="Estimated share of measured placements that landed in spam, as a percentage.",
+        examples=[12.6],
+    )]
+    missing_rate_percent: Annotated[Optional[float], Field(
+        description="Estimated share of measured sends that arrived in neither folder, as a percentage.",
+        examples=[0.0],
+    )]
+    raw_counts: Annotated[Optional[EmailInboxInsightsPlacementCounts], Field(
+        description="The measured placements the rates above were computed over, or null when the summary has none: a period with no measured mail reports null here rather than four zeros, because a zero count is a real measurement and would read as \"we looked and found nothing\" for a domain nothing looked at. Read `status` alongside it.",
+    )]
+    read_rate_percent: Annotated[Optional[float], Field(
+        description="Estimated share of inbox-placed mail that was read, as a percentage, measured by the panel's dwell time. This is not an open rate; the two count different things and are not interchangeable.",
+        examples=[21.4],
+    )]
+    delta_pts: Annotated[Optional[EmailInboxInsightsPlacementDeltaPts], Field(
+        description="How the domain-wide rates moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence means no comparable prior data, never zero change.",
+    )] = None
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsMailboxProvider(RootModel[str]):
+    root: str
+
+
+class EmailInboxInsightsPlacementProvider(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mailbox_provider: Annotated[str, Field(
+        description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this provider's measured placements that landed in the inbox, as a percentage.",
+        examples=[89.2],
+    )]
+    spam_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this provider's measured placements that landed in spam, as a percentage.",
+        examples=[10.8],
+    )]
+    raw_counts: Annotated[EmailInboxInsightsPlacementCounts, Field(
+        description="Raw measured placements behind a set of rates, before any weighting. A measured placement is one message whose mailbox destination the measurement observed.",
+    )]
+    delta_pts: Annotated[Optional[float], Field(
+        description="Inbox-rate movement against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data for this provider; absence is not zero change.",
+        examples=[0.4],
+    )] = None
+    read_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this provider's inbox-placed mail that was read, as a percentage.",
+        examples=[24.3],
+    )]
+
+
+class EmailInboxInsightsPlacementProviders(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsPlacementProvider], Field(
+        description="One row per mailbox provider the measurement observed for this domain in the period.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsPlacementSeriesPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    date: Annotated[str, Field(
+        description="First UTC day of the bucket.",
+        examples=["2026-07-19"],
+        min_length=1,
+    )]
+    mailbox_provider: Annotated[Optional[str], Field(
+        description="The provider this point describes, or null on the domain-wide line. Per-provider points appear only when the request named providers.",
+        examples=["null"],
+        min_length=1,
+    )]
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Inbox share of the bucket's measured placements, as a percentage.",
+        examples=[90.6],
+    )]
+    spam_rate_percent: Annotated[Optional[float], Field(
+        description="Spam share of the bucket's measured placements, as a percentage.",
+        examples=[9.4],
+    )]
+    inbox_raw_count: Annotated[int, Field(
+        description="Measured placements observed in the inbox in this bucket.",
+        examples=[14201],
+        ge=0,
+    )]
+    spam_raw_count: Annotated[int, Field(
+        description="Measured placements observed in spam in this bucket.",
+        examples=[1473],
+        ge=0,
+    )]
+
+
+class EmailInboxInsightsPlacementSeries(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsPlacementSeriesPoint], Field(
+        description="One point per bucket with measured placements. With providers named in the request, one point per bucket per provider.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsGmailTab(str, Enum):
+    primary = "primary"
+    promotions = "promotions"
+    updates = "updates"
+    forums = "forums"
+    social = "social"
+    none = "none"
+
+
+class EmailInboxInsightsGmailTabCategory(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[Annotated[Union[EmailInboxInsightsGmailTab, str], Field(union_mode="left_to_right")], Field(
+        description="A Gmail tab, as the measurement identifies it. A lowercase identifier rather than a\ndisplay name, so pick your own label for it, and treat the set as open: these are\nGmail's own tabs, and the measurement reports whichever one it saw.\n\n`none` is a value rather than an absence: Gmail delivered the mail under no tab at all,\nwhich is an ordinary outcome and not a gap in the measurement.",
+    )]
+    overall_percent: Annotated[Optional[float], Field(
+        description="Share of the domain's Gmail-placed mail that landed under this tab, as a percentage.",
+        examples=[34.0],
+    )]
+    inbox_percent: Annotated[Optional[float], Field(
+        description="Share of this tab's mail that placed in the inbox, as a percentage.",
+        examples=[94.0],
+    )]
+    spam_percent: Annotated[Optional[float], Field(
+        description="Share of this tab's mail that placed in spam, as a percentage.",
+        examples=[6.0],
+    )]
+
+
+class EmailInboxInsightsGmailTabs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    categories: Annotated[List[EmailInboxInsightsGmailTabCategory], Field(
+        description="One entry per Gmail tab that received mail.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsPlacementIpDetail(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    ip: Annotated[str, Field(
+        description="The sending IP address.",
+        examples=["147.253.40.16"],
+        min_length=1,
+    )]
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this IP's measured placements that landed in the inbox, as a percentage.",
+        examples=[89.9],
+    )]
+    raw_counts: Annotated[EmailInboxInsightsPlacementCounts, Field(
+        description="Raw measured placements behind a set of rates, before any weighting. A measured placement is one message whose mailbox destination the measurement observed.",
+    )]
+    spf_pass_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this IP's measured mail that passed SPF, as a percentage.",
+        examples=[99.8],
+    )]
+    dkim_pass_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this IP's measured mail that passed DKIM, as a percentage.",
+        examples=[99.9],
+    )]
+
+
+class EmailInboxInsightsPlacementIpDetails(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsPlacementIpDetail], Field(
+        description="One row per sending IP the measurement observed for this domain in the period.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsPlacement(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[EmailInboxInsightsMeasurement, Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )]
+    generated_at: Annotated[str, Field(
+        description="When the measurement service computed these figures.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    window: Annotated[EmailInboxInsightsWindow, Field(
+        description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
+    )]
+    compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
+    )] = None
+    summary: Annotated[EmailInboxInsightsPlacementSummary, Field(
+        description="The domain-wide placement figures for the period.\n\nThese rates are weighted against the audience mix in `measurement.weighting`,\nso they can legitimately differ from any single provider row, which has no\nmix to weight. Rates are percentages of measured placements, never of\ndelivered volume.",
+    )]
+    providers: Annotated[EmailInboxInsightsPlacementProviders, Field(
+        description="The per-provider placement table.",
+    )]
+    series: Annotated[EmailInboxInsightsPlacementSeries, Field(
+        description="The placement time series, at the grain named in `window.group_by`.\n\nThe series is sparse: buckets with no measured placement are omitted rather\nthan returned as zeros, because an invented zero would be indistinguishable\nfrom a measured one. Index by date, never by position.",
+    )]
+    gmail_tabs: Annotated[EmailInboxInsightsGmailTabs, Field(
+        description="Where the domain's Gmail-placed mail landed across Gmail's tabs. The status is `not_applicable` when the domain had no Gmail placement in the period; hide the section rather than showing an empty split.",
+    )]
+    ip_details: Annotated[Optional[EmailInboxInsightsPlacementIpDetails], Field(
+        description="Per-IP placement detail for the domain's sending infrastructure. Returned only when the request asked for IP detail.",
+    )] = None
+
+
+class EmailInboxInsightsAuthPassRateSource(str, Enum):
+    dmarc_rua = "dmarc_rua"
+    google_postmaster = "google_postmaster"
+
+
+class EmailInboxInsightsAuthPassRate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    pass_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the domain's measured mail that passed this check, as a percentage.",
+        examples=[99.8],
+    )]
+    delta_pts: Annotated[Optional[float], Field(
+        description="How the pass rate moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
+        examples=[0.1],
+    )] = None
+    source: Annotated[Optional[Annotated[Union[EmailInboxInsightsAuthPassRateSource, str], Field(union_mode="left_to_right")]], Field(
+        description="Where this figure comes from. `dmarc_rua` is authoritative aggregate\nreporting and covers every sender of the domain, forwarders included;\n`google_postmaster` is a fallback covering only mail Google received. It\ncan differ from the source of the DMARC figures, so surface it per check\nrather than once per response.\n\nNull on a check that reports no figure at all, which is what a\n`not_configured` status means: there is no measurement, so there is no\nsource to name.",
+        examples=["dmarc_rua"],
+        min_length=1,
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsDmarcPolicy(str, Enum):
+    none = "none"
+    quarantine = "quarantine"
+    reject = "reject"
+
+
+class EmailInboxInsightsDmarcReadinessReason(str, Enum):
+    source_below_threshold = "source_below_threshold"
+    data_too_stale = "data_too_stale"
+    no_rua_data = "no_rua_data"
+    no_policy = "no_policy"
+
+
+class EmailInboxInsightsDmarcSource(str, Enum):
+    dmarc_rua = "dmarc_rua"
+    google_postmaster = "google_postmaster"
+
+
+class EmailInboxInsightsDmarc(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    aligned_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the domain's measured mail that passed DMARC alignment, as a percentage.",
+        examples=[98.6],
+    )]
+    policy: Annotated[Optional[EmailInboxInsightsDmarcPolicy], Field(
+        description="The policy published in the domain's DNS record, or null when the domain publishes no DMARC record at all. Null is not `none`: `none` is a policy, asking receivers to take no action while the domain monitors its reporting, and a domain that has one is already set up. A null asks for a record to be published, which is a different first step.",
+    )]
+    ready_for_reject: Annotated[Optional[bool], Field(
+        description="Whether the domain's authentication is consistent enough to move the policy to `reject` without losing legitimate mail. Deliberately conservative: false whenever the data is insufficient to be sure. Null when the measurement reached no verdict, which is what a `status` other than `ok` means here: false would read as a considered \"not yet\" rather than as no assessment having been made.",
+        examples=[False],
+    )]
+    readiness_reasons: Annotated[Optional[List[Annotated[Union[EmailInboxInsightsDmarcReadinessReason, str], Field(union_mode="left_to_right")]]], Field(
+        description="Why `ready_for_reject` is false, so the answer is actionable rather than a bare refusal. Empty when nothing is holding the domain back, and null when readiness was not assessed, which pairs with `ready_for_reject`: an empty list alongside a null verdict would say the opposite of what was measured. Render these rather than a plain \"not ready\": the fix differs per reason, and a domain held back only by stale reporting needs no configuration change at all.",
+    )]
+    delta_pts: Annotated[Optional[float], Field(
+        description="How the aligned rate moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
+        examples=[-0.2],
+    )] = None
+    source: Annotated[Optional[Annotated[Union[EmailInboxInsightsDmarcSource, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the DMARC figures come from. `dmarc_rua` is authoritative\naggregate reporting and covers every sender of the domain, forwarders\nincluded; `google_postmaster` is a fallback covering only mail Google\nreceived. The two are not equivalent, so surface which one is shown.\n\nNull when the section reports no figures, which is what a\n`not_configured` status means for a domain with no aggregate reporting\nand no Postmaster connection.",
+        examples=["dmarc_rua"],
+        min_length=1,
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsDmarcVerdict(str, Enum):
+    aligned = "aligned"
+    dkim_only = "dkim_only"
+    spf_only = "spf_only"
+    fails_policy = "fails_policy"
+
+
+class EmailInboxInsightsAuthSourceCategory(str, Enum):
+    esp = "esp"
+    unknown = "unknown"
+
+
+class EmailInboxInsightsAuthSource(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="The sending source as the reporting identifies it. Not a fixed list: unidentified senders, mostly forwarders, appear as a real category.",
+        examples=["Bird (mail.acme.com)"],
+        min_length=1,
+    )]
+    category: Annotated[Optional[Annotated[Union[EmailInboxInsightsAuthSourceCategory, str], Field(union_mode="left_to_right")]], Field(
+        description="A coarse classification of the source. The set can grow; treat values as labels. Null when the measurement did not classify this sender.",
+        examples=["esp"],
+        min_length=1,
+    )]
+    volume: Annotated[int, Field(
+        description="Messages the reporting attributes to this source over the period.",
+        examples=[4820000],
+        ge=0,
+    )]
+    spf_aligned_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this source's mail that passed SPF with alignment, as a percentage.",
+        examples=[99.8],
+    )]
+    dkim_aligned_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this source's mail that passed DKIM with alignment, as a percentage.",
+        examples=[99.9],
+    )]
+    dmarc_pass_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this source's mail that passed DMARC, as a percentage.",
+        examples=[99.9],
+    )]
+    verdict: Annotated[Annotated[Union[EmailInboxInsightsDmarcVerdict, str], Field(union_mode="left_to_right")], Field(
+        description="How a sending source's mail authenticates against the domain's DMARC policy. `aligned` passes with both SPF and DKIM aligned; `dkim_only` and `spf_only` pass on one mechanism; `fails_policy` passes neither. The reporting decides this set and can add to it, so treat an unrecognised value as a label to show rather than a case to exhaust. A source whose verdict is new still belongs in the table.",
+    )]
+    qualifies_for_readiness: Annotated[bool, Field(
+        description="Whether this source counts toward the reject recommendation. A source that does not is excluded from that judgement, which is what lets this table explain a conservative recommendation instead of contradicting it.",
+        examples=[True],
+    )]
+
+
+class EmailInboxInsightsAuthSources(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsAuthSource], Field(
+        description="One row per observed sending source.",
+    )]
+    latest_data_date: Annotated[Optional[str], Field(
+        description="The most recent UTC day the source reporting includes. Aggregate DMARC reports arrive on reporters' own schedules, routinely a day or more behind, so the newest days look sparse; label from this date rather than treating the dip as a regression.",
+        examples=["2026-08-15"],
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsAuthentication(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )] = None
+    generated_at: Annotated[str, Field(
+        description="When the measurement service computed these figures.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    window: Annotated[EmailInboxInsightsWindow, Field(
+        description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
+    )]
+    compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
+    )] = None
+    spf: Annotated[EmailInboxInsightsAuthPassRate, Field(
+        description="One authentication check's pass rate over the period.",
+    )]
+    dkim: Annotated[EmailInboxInsightsAuthPassRate, Field(
+        description="One authentication check's pass rate over the period.",
+    )]
+    dmarc: Annotated[EmailInboxInsightsDmarc, Field(
+        description="The domain's DMARC standing over the period.",
+    )]
+    sources: Annotated[EmailInboxInsightsAuthSources, Field(
+        description="Every system observed sending as this domain, with how each authenticates. This is the table that shows who else sends under the domain's name.",
+    )]
+
+
+class EmailInboxInsightsComplaintPeak(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    date: Annotated[str, Field(
+        description="The UTC day the highest rate fell on.",
+        examples=["2026-08-02"],
+        min_length=1,
+    )]
+    value_percent: Annotated[float, Field(
+        description="The rate on that day, as a percentage.",
+        examples=[0.34],
+    )]
+
+
+class EmailInboxInsightsComplaintRate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    gmail_postmaster_spam_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the domain's Gmail-received mail that recipients reported as spam, as a percentage, from Google Postmaster.",
+        examples=[0.11],
+    )]
+    delta_pts: Annotated[Optional[float], Field(
+        description="How the rate moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
+        examples=[0.03],
+    )] = None
+    peak: Annotated[Optional[EmailInboxInsightsComplaintPeak], Field(
+        description="The worst day for complaints in the period.",
+    )] = None
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsComplaintSeriesPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    date: Annotated[str, Field(
+        description="First UTC day of the bucket.",
+        examples=["2026-07-19"],
+        min_length=1,
+    )]
+    gmail_postmaster_spam_rate_percent: Annotated[Optional[float], Field(
+        description="The bucket's Google Postmaster spam rate, as a percentage.",
+        examples=[0.08],
+    )]
+
+
+class EmailInboxInsightsComplaintSeries(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsComplaintSeriesPoint], Field(
+        description="One point per bucket.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsComplaints(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )] = None
+    generated_at: Annotated[str, Field(
+        description="When the measurement service computed these figures.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    window: Annotated[EmailInboxInsightsWindow, Field(
+        description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
+    )]
+    compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
+    )] = None
+    rate: Annotated[EmailInboxInsightsComplaintRate, Field(
+        description="The rate at which the domain's mail is reported as spam, as Google Postmaster measures it.",
+    )]
+    series: Annotated[EmailInboxInsightsComplaintSeries, Field(
+        description="The complaint-rate series, at the grain named in `window.group_by`. Index by date, never by position.",
+    )]
+
+
+class EmailInboxInsightsTrapType(str, Enum):
+    pristine = "pristine"
+    recycled = "recycled"
+    typo = "typo"
+    parked = "parked"
+    mixed = "mixed"
+
+
+class EmailInboxInsightsSpamTrapTypeCount(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Annotated[Union[EmailInboxInsightsTrapType, str], Field(union_mode="left_to_right")], Field(
+        description="What kind of spam trap was hit. `pristine` addresses were never used by a real person and never subscribed to anything, so a hit means the address was harvested or guessed rather than collected. `recycled` addresses belonged to a real person once and were retired, so hits point at stale list data. `typo` addresses catch misspellings of real domains, `parked` addresses sit on domains that are registered but not used for real mail, and `mixed` covers hits the trap network reports without a single kind. The trap network decides this set and can add to it, so treat an unrecognised value as a label to show rather than a case to exhaust. A hit whose kind is new is still a hit worth acting on.",
+    )]
+    hits: Annotated[int, Field(
+        description="Hits of this kind over the period. A zero is a measured zero, not missing data: no pristine hits is a genuinely good result rather than an empty state.",
+        examples=[3],
+        ge=0,
+    )]
+
+
+class EmailInboxInsightsTrapSource(str, Enum):
+    cloudmark = "cloudmark"
+    abusix = "abusix"
+
+
+class EmailInboxInsightsSpamTrapSourceCount(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    source: Annotated[Annotated[Union[EmailInboxInsightsTrapSource, str], Field(union_mode="left_to_right")], Field(
+        description="The trap network that observed a hit. The set grows as coverage does, so treat the values as labels rather than a closed list.",
+    )]
+    hits: Annotated[int, Field(
+        description="Hits this network observed over the period.",
+        examples=[2],
+        ge=0,
+    )]
+
+
+class EmailInboxInsightsSpamTrapHit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    first_seen: Annotated[str, Field(
+        description="When the trap network first observed mail from this domain at this trap.",
+        examples=["2026-08-14T06:21:00Z"],
+        min_length=1,
+    )]
+    last_seen: Annotated[Optional[str], Field(
+        description="The most recent sighting, or null when the trap was seen only once. On a row with several hits this is the far end of the period they span.",
+        examples=["2026-08-16T11:04:00Z"],
+    )]
+    ip_address: Annotated[str, Field(
+        description="The sending IP the message came from.",
+        examples=["147.253.40.16"],
+        min_length=1,
+    )]
+    source: Annotated[Annotated[Union[EmailInboxInsightsTrapSource, str], Field(union_mode="left_to_right")], Field(
+        description="The trap network that observed a hit. The set grows as coverage does, so treat the values as labels rather than a closed list.",
+    )]
+    type: Annotated[Annotated[Union[EmailInboxInsightsTrapType, str], Field(union_mode="left_to_right")], Field(
+        description="What kind of spam trap was hit. `pristine` addresses were never used by a real person and never subscribed to anything, so a hit means the address was harvested or guessed rather than collected. `recycled` addresses belonged to a real person once and were retired, so hits point at stale list data. `typo` addresses catch misspellings of real domains, `parked` addresses sit on domains that are registered but not used for real mail, and `mixed` covers hits the trap network reports without a single kind. The trap network decides this set and can add to it, so treat an unrecognised value as a label to show rather than a case to exhaust. A hit whose kind is new is still a hit worth acting on.",
+    )]
+    hit_count: Annotated[Optional[int], Field(
+        description="How many times this trap was hit over the period, so rows do not sum to `total` on their own: one repeatedly hit trap is one row. Absent when the trap network does not break the count out, which is not the same as one hit. A row exists because the trap was reached at least once either way.",
+        examples=[2],
+        ge=1,
+    )] = None
+    trap_age_days: Annotated[Optional[int], Field(
+        description="How long the trap address has been a trap, in days, or null when the network does not say. A high age on a recycled trap suggests the address has been dead in the list for a long time.",
+        examples=[430],
+        ge=0,
+    )]
+
+
+class EmailInboxInsightsSpamTrapHits(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsSpamTrapHit], Field(
+        description="One entry per trap reached, newest first.",
+    )]
+    truncated_types: Annotated[List[Annotated[Union[EmailInboxInsightsTrapType, str], Field(union_mode="left_to_right")]], Field(
+        description="Trap kinds whose hits the measurement capped, so the rows shown for them are incomplete by design rather than by chance. Typo-trap hits, for instance, only ever cover the last seven days. An empty array means nothing was capped.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsSpamTraps(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )] = None
+    generated_at: Annotated[str, Field(
+        description="When the measurement service computed these figures.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    window: Annotated[EmailInboxInsightsWindow, Field(
+        description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
+    )]
+    compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
+    )] = None
+    total: Annotated[int, Field(
+        description="Trap hits observed over the period, across every trap network. The authoritative count: `hit_rows` holds a sample of the rows behind it.",
+        examples=[3],
+        ge=0,
+    )]
+    delta: Annotated[Optional[int], Field(
+        description="How the hit count moved against the prior period, as a change in the number of hits rather than in percentage points. Negative is an improvement. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
+        examples=[-2],
+    )] = None
+    by_type: Annotated[List[EmailInboxInsightsSpamTrapTypeCount], Field(
+        description="Hits split by kind, one entry per kind the trap network reported. Read counts from here rather than assuming a fixed set of kinds: the set can grow, and an entry that is absent was not reported rather than being a measured zero. These sum to `total`.",
+    )]
+    by_source: Annotated[List[EmailInboxInsightsSpamTrapSourceCount], Field(
+        description="Hits split by the trap network that observed them.",
+    )]
+    hit_rows: Annotated[EmailInboxInsightsSpamTrapHits, Field(
+        description="The individual trap hits behind the totals. A sample rather than a guaranteed complete list, and its rows do not count hits: one row is one trap address, carrying a `hit_count` for how many times that address was reached. Neither the number of rows nor the sum of `hit_count` reconstructs `total`, because that field is absent wherever the trap network does not break the figure out. Read `truncated_types` for what the measurement capped rather than inferring completeness by comparing counts.",
+    )]
+
+
+class EmailInboxInsightsBlocklistListing(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    is_active: Annotated[bool, Field(
+        description="Whether this listing is in force now. A false entry is history: it shows the target was listed and has since cleared, which is why the target's `is_listed` can be false while listings are present.",
+        examples=[False],
+    )]
+    reason_code: Annotated[Optional[str], Field(
+        description="The provider's own short code for the listing reason, or null when it gives none. Stable where the prose in `reason` is not, so branch on this and display that.",
+        examples=["CSS"],
+    )]
+    provider: Annotated[str, Field(
+        description="The blocklist that carries the listing. Providers publishing several lists are reported per list rather than under one combined name, because what a listing means and how it is cleared differ per list.",
+        examples=["Spamhaus CSS"],
+        min_length=1,
+    )]
+    reason: Annotated[Optional[str], Field(
+        description="The reason the provider gives for the listing, or null when it publishes none.",
+        examples=["Automated listing of a suspected snowshoe range"],
+    )]
+    first_detected: Annotated[str, Field(
+        description="When this listing was first observed.",
+        examples=["2026-07-31T00:00:00Z"],
+        min_length=1,
+    )]
+    last_detected: Annotated[Optional[str], Field(
+        description="When this listing was most recently observed, or null while the listing is still in force. A provider records a last sighting only once one exists, so a null here reads as \"still listed\" rather than \"never seen\".",
+        examples=["2026-08-04T00:00:00Z"],
+    )]
+
+
+class EmailInboxInsightsBlocklistTargetTargetType(str, Enum):
+    ip = "ip"
+    domain = "domain"
+
+
+class EmailInboxInsightsBlocklistTarget(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    target: Annotated[str, Field(
+        description="The sending IP or domain that was checked.",
+        examples=["147.253.40.18"],
+        min_length=1,
+    )]
+    target_type: Annotated[Optional[Annotated[Union[EmailInboxInsightsBlocklistTargetTargetType, str], Field(union_mode="left_to_right")]], Field(
+        description="Whether this target is an IP address or a hostname. Null when the measurement did not report a kind for it, which is possible on a target whose check did not complete.",
+        examples=["ip"],
+        min_length=1,
+    )]
+    is_listed: Annotated[bool, Field(
+        description="Whether the target is on at least one blocklist right now. Meaningful only when `status` is `ok`: on any other status this target was not checked, so the value carries no finding either way.",
+        examples=[False],
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+    checked_at: Annotated[Optional[str], Field(
+        description="When this target was looked up, or null when it was not. Per target rather than per response, because each is a separate live lookup.",
+        examples=["2026-08-20T09:12:04Z"],
+    )]
+    listings: Annotated[List[EmailInboxInsightsBlocklistListing], Field(
+        description="Listings seen against this target, including ones that have since cleared, so a recent history is visible even when nothing is active. Read each listing's `is_active` rather than assuming every entry is current.",
+    )]
+
+
+class EmailInboxInsightsBlocklists(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )] = None
+    generated_at: Annotated[str, Field(
+        description="When the measurement service computed these figures.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    active_count: Annotated[Optional[int], Field(
+        description="How many of the checked targets currently carry an active listing. A count of targets, not of listings: a target on three blocklists counts once. Null when no target could be checked at all, which is not the same as zero. Zero means every target was checked and none of them is listed.",
+        examples=[0],
+        ge=0,
+    )]
+    targets: Annotated[List[EmailInboxInsightsBlocklistTarget], Field(
+        description="One entry per sending IP or domain checked for this sending domain.",
+    )]
+
+
+class EmailInboxInsightsIndustry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="The measurement's own identifier for this industry, carried through so a client can tell two cohorts apart without comparing labels. No operation accepts it.",
+        examples=[44],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Display name of the industry. The classification is broad, so bind this label rather than assuming a finer category exists.",
+        examples=["Apparel"],
+        min_length=1,
+    )]
+
+
+class EmailInboxInsightsIndustryBenchmark(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )] = None
+    generated_at: Annotated[str, Field(
+        description="When the measurement service computed these figures.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    industry: Annotated[Optional[EmailInboxInsightsIndustry], Field(
+        description="The cohort the median describes, or null when the domain is not classified into an industry. This description already names that as a `no_data` cause and a normal state for a young cohort, so it needs a representation: without one the only way to report an unclassified domain is a cohort with a blank name.",
+    )]
+    median_inbox_rate_percent: Annotated[Optional[float], Field(
+        description="The industry's median inbox rate, as a percentage.",
+        examples=[92.1],
+    )]
+    window_days: Annotated[Optional[int], Field(
+        description="How many days the cohort figure covers. Reported rather than assumed because the period is the one the nightly computation produced, not one the caller chose, so a label built from a requested window would be wrong. Absent when the computation does not report it, in which case a label must not name a period at all.",
+        examples=[30],
+        ge=1,
+    )] = None
+    cohort_size: Annotated[Optional[int], Field(
+        description="How many measured senders the median was computed across.",
+        examples=[214],
+        ge=0,
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsDomain(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    domain: Annotated[str, Field(
+        description="The sending domain, lowercased, as it appears in your sending domains.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    monitored: Annotated[bool, Field(
+        description="Whether Inbox Insights reports on this domain. Switching it off stops the reporting and keeps the measurement history, so switching it back on restores the full history rather than starting again.",
+        examples=[True],
+    )]
+
+
+class EmailInboxInsightsDomains(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailInboxInsightsDomain], Field(
+        description="One entry per verified domain in this page, whether or not it is switched on. A domain that has not been verified does not appear, because verification is what proves the domain is yours to report on.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailInboxInsightsDomainUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    monitored: Annotated[bool, Field(
+        description="Whether the workspace wants this domain monitored. Enabling enrolls it with eDataSource; disabling removes only the workspace preference and preserves vendor enrollment and measurement history. Verified ownership governs report access.",
+        examples=[True],
+    )]
+
+
+class EmailInboxInsightsDomainMonitoringOutcome(str, Enum):
+    enabled = "enabled"
+    already_on = "already_on"
+    choice_required = "choice_required"
+    no_verified_domains = "no_verified_domains"
+
+
+class EmailInboxInsightsDomainMonitoringResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    outcome: Annotated[EmailInboxInsightsDomainMonitoringOutcome, Field(
+        description="What switching on the main sending domain did.\n\n- `enabled`: Inbox Insights is now switched on for the domain named alongside this.\n- `already_on`: at least one domain was already switched on, so nothing changed.\n- `choice_required`: the main sending domain could not be identified, most often\n  because the workspace has several verified domains and no sending to rank them\n  by. Ask the customer to choose.\n- `no_verified_domains`: the workspace has no verified sending domain, so there is\n  nothing to report on until one is verified.",
+    )]
+    domain: Annotated[Optional[str], Field(
+        description="The sending domain this call switched on, lowercased. The server sends a domain with the `enabled` outcome and null with the other three, `already_on` included: that outcome says only that the workspace had already made its choice, not which domain it chose. Read the domain list for that. Check `outcome` first rather than treating a domain as present.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
 
 
 class EmailStatsSeriesPeriod(BaseModel):
@@ -8265,6 +9548,95 @@ class EmailStatsByBroadcastResponse(BaseModel):
     )]
 
 
+class EmailHealthSignalThresholdsDirection(str, Enum):
+    above = "above"
+    below = "below"
+
+
+class EmailHealthSignalThresholds(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    direction: Annotated[EmailHealthSignalThresholdsDirection, Field(
+        description="Which side of the boundaries is at risk. `above` for higher-is-worse rates (bounce, complaint), `below` for lower-is-worse rates (delivery).",
+        examples=["above"],
+        min_length=1,
+    )]
+    watching: Annotated[float, Field(
+        description="Crossing this boundary in the risk direction moves the signal to `watching`, as a fraction.",
+        examples=[0.004],
+        ge=0,
+        le=1,
+    )]
+    throttled: Annotated[float, Field(
+        description="Crossing this boundary in the risk direction moves the signal to `throttled`, as a fraction.",
+        examples=[0.006],
+        ge=0,
+        le=1,
+    )]
+
+
+class EmailHealthSignalMetric(str, Enum):
+    delivery_rate = "delivery_rate"
+    open_rate = "open_rate"
+    bounce_rate = "bounce_rate"
+    complaint_rate = "complaint_rate"
+
+
+class EmailHealthSignalStatus(str, Enum):
+    strong = "strong"
+    healthy = "healthy"
+    watching = "watching"
+    throttled = "throttled"
+
+
+class EmailHealthSignal(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    metric: Annotated[EmailHealthSignalMetric, Field(
+        description="Which rate this signal reports.",
+        examples=["bounce_rate"],
+        min_length=1,
+    )]
+    value: Annotated[Optional[float], Field(
+        description="The current rate over the window, as a fraction. Null when its denominator is zero.",
+        examples=[0.004],
+        ge=0,
+        le=1,
+    )]
+    limit: Annotated[Optional[float], Field(
+        description="The reference deliverability limit for this rate, as a fraction (for example `0.005` for a 0.5% bounce-rate limit). Null for metrics that have no limit, such as delivery rate and open rate. The verdict is classified using `thresholds`, which can differ from this reference limit.",
+        examples=[0.005],
+        ge=0,
+        le=1,
+    )]
+    status: Annotated[EmailHealthSignalStatus, Field(
+        description="This metric's individual verdict, ordered best to worst: `strong`, `healthy`, `watching`, `throttled`. `strong` applies only to `open_rate`, for an open rate well above typical. For the other rates, `healthy`, `watching`, and `throttled` indicate how close the rate is to a level that risks deliverability. The verdict follows the `thresholds` boundaries rather than the displayed reference `limit`. A signal whose `value` is null, because its denominator was zero in the window, is reported as `healthy`.",
+        examples=["healthy"],
+        min_length=1,
+    )]
+    thresholds: Optional[EmailHealthSignalThresholds] = None
+
+
+class EmailHealthStatus(str, Enum):
+    healthy = "healthy"
+    watching = "watching"
+    throttled = "throttled"
+
+
+class EmailHealth(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsPeriod, Field(
+        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
+    )]
+    status: Annotated[EmailHealthStatus, Field(
+        description="Overall sending-health verdict for the window, taken as the worst status among the bounce-rate, complaint-rate, and delivery-rate signals. The open-rate signal, which can be `strong`, is not part of this roll-up. The overall verdict is one of `healthy`, `watching`, or `throttled`. It is `healthy` when the other three signals are each healthy or better. It is `watching` when at least one is watching, and `throttled` when at least one is throttled. This verdict describes deliverability risk. It never pauses your sending on its own.",
+        examples=["healthy"],
+        min_length=1,
+    )]
+    signals: Annotated[List[EmailHealthSignal], Field(
+        description="The per-rate signals include `delivery_rate`, `open_rate`, `bounce_rate`, and `complaint_rate`. Read a signal by matching on its `metric`. Each entry carries its current value, a reference deliverability limit (null where no limit applies), and its own verdict. Delivery rate, bounce rate, and complaint rate also carry the thresholds their verdict was classified against; open rate does not, because a high open rate is never a risk.",
+        min_length=4,
+    )]
+
+
 class DomainSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
     click_tracking: Annotated[Optional[bool], Field(
@@ -8485,9 +9857,13 @@ class Domain(BaseModel):
     verified_at: Annotated[Optional[str], Field(
         description="When the domain's ownership was confirmed: the moment `status` became `verified` via the DKIM record. Unchanged by later re-checks while it stays verified. `null` if the domain has never been verified.",
     )] = None
-    created_at: Annotated[str, Field(description="When the domain was added.")]
+    created_at: Annotated[str, Field(
+        description="When the domain was added.",
+        min_length=1,
+    )]
     updated_at: Annotated[str, Field(
         description="When the domain's configuration was last changed (such as a settings or return-path change). Verification re-checks do not change this; see `last_checked_at` and `verified_at` for verification timing.",
+        min_length=1,
     )]
 
 
@@ -8596,8 +9972,736 @@ class DomainUpdate(BaseModel):
     )] = None
 
 
+class SuppressionReasonFilter(str, Enum):
+    hard_bounce = "hard_bounce"
+    complaint = "complaint"
+    unsubscribe = "unsubscribe"
+    manual = "manual"
+
+
+class SuppressionScopeTypeFilter(str, Enum):
+    workspace = "workspace"
+    category = "category"
+    audience = "audience"
+    topic = "topic"
+    contact = "contact"
+    domain = "domain"
+
+
 class SuppressionID(RootModel[str]):
     root: str
+
+
+class SuppressionScopeType(str, Enum):
+    workspace = "workspace"
+    category = "category"
+    audience = "audience"
+    topic = "topic"
+    contact = "contact"
+    domain = "domain"
+
+
+class SuppressionScope(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[SuppressionScopeType, Field(
+        description="How widely the email suppression applies. Responses use `workspace`. The values `category`, `audience`, `topic`, `contact`, and `domain` are reserved and have no records. The record's `applies_to` field determines which message categories are blocked.",
+    )]
+    id: Annotated[str, Field(
+        description="Public ID or alias of the scoped resource. For workspace scope, this is the workspace ID.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+    )]
+
+
+class SuppressionReason(str, Enum):
+    hard_bounce = "hard_bounce"
+    complaint = "complaint"
+    manual = "manual"
+    unsubscribe = "unsubscribe"
+
+
+class SuppressionOrigin(str, Enum):
+    bounce_event = "bounce_event"
+    complaint_event = "complaint_event"
+    api_key = "api_key"
+    user = "user"
+    unsubscribe_event = "unsubscribe_event"
+    unsubscribe_link = "unsubscribe_link"
+
+
+class SuppressionAppliesTo(str, Enum):
+    all = "all"
+    non_transactional = "non_transactional"
+    category = "category"
+
+
+class Suppression(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["sup_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^sup_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    email: Annotated[str, Field(
+        description="The suppressed address, stored lowercase.",
+        examples=["user@example.com"],
+        min_length=5,
+    )]
+    scope: SuppressionScope
+    reason: Annotated[Annotated[Union[SuppressionReason, str], Field(union_mode="left_to_right")], Field(
+        description="Why the address is suppressed:\n\n- `hard_bounce`: A delivery permanently failed.\n- `complaint`: The recipient reported a message as spam.\n- `manual`: Added through the API or dashboard.\n- `unsubscribe`: The recipient opted out. Deprecated, and no new record carries it: an opt-out is a messaging preference rather than a suppression. Legacy records remain visible until they are moved to messaging preferences.\n\nAn address can hold one record per reason. This list grows over time. Treat unknown values as informational rather than rejecting the record.",
+        min_length=1,
+    )]
+    origin: Annotated[Annotated[Union[SuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
+        description="How the suppression came to exist:\n\n- `bounce_event`: Created automatically from a hard bounce.\n- `complaint_event`: Created from a spam complaint.\n- `api_key`: Added through the API with an API key.\n- `user`: Added by a user in the dashboard.\n- `unsubscribe_event`: The mailbox provider reported an opt-out. Deprecated with `reason: unsubscribe`.\n- `unsubscribe_link`: The recipient used a Bird unsubscribe link. Deprecated with `reason: unsubscribe`.\n\nThis list grows over time. Treat unknown values as informational rather than rejecting the record.",
+        min_length=1,
+    )]
+    applies_to: Annotated[Annotated[Union[SuppressionAppliesTo, str], Field(union_mode="left_to_right")], Field(
+        description="Which sends the suppression blocks.\n\n- `all`: blocks every message category, including transactional.\n- `non_transactional`: blocks marketing but allows transactional messages.\n  A recipient who complained can therefore still receive\n  mail such as password resets.\n- `category`: scopes the block to a preference category and blocks every\n  category until one is set.\n\nThis list grows over time, and any value other than `non_transactional`\nblocks every category, so treat an unknown value as blocking the send.",
+        min_length=1,
+    )]
+    source_email_id: Annotated[Optional[str], Field(
+        description="ID of the email that triggered suppression. Null for manual additions.",
+        examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    source_recipient_id: Annotated[Optional[str], Field(
+        description="ID of the recipient event that triggered suppression. Null for manual additions.",
+        examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When the address was suppressed.",
+        min_length=1,
+    )]
+
+
+class SuppressionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[Suppression], Field(
+        description="Page of suppression records.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class SuppressionCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    email: Annotated[str, Field(
+        description="The address to stop sending to. Normalized before storage and matching: lowercased and trimmed of surrounding whitespace.",
+        examples=["user@example.com"],
+        min_length=5,
+    )]
+
+
+class EmailCompetitivePeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    days: Annotated[int, Field(
+        description="Length of the period in days.",
+        examples=[30],
+    )]
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Start of the period, inclusive.",
+        examples=["2026-07-13T09:00:00Z"],
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="End of the period, exclusive. Daily figures therefore run through the previous whole UTC day and never include the one in progress.",
+        examples=["2026-08-12T09:00:00Z"],
+        min_length=1,
+    )]
+
+
+class EmailCompetitiveWatchlistSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    share_of_volume_percent: Annotated[Optional[float], Field(
+        description="Your share of everything the watched set sent over the period, your own sending included in the total. Your half of the ratio is an exact count of your own sending while the rest is the panel's estimate, so the two sides are measured differently.",
+        examples=[10.5],
+    )]
+    share_of_volume_change_points: Annotated[Optional[float], Field(
+        description="How that share moved against the period immediately before, in percentage points. A share that went from 11.7 to 10.5 reports -1.2.",
+        examples=[-1.2],
+    )]
+    competitor_sends: Annotated[Optional[int], Field(
+        description="Estimated volume the watched brands sent between them, excluding your own sending. A panel estimate, so read it as an order of magnitude rather than a count.",
+        examples=[4240000],
+    )]
+    competitor_sends_change_percent: Annotated[Optional[float], Field(
+        description="Change in that volume against the period immediately before.",
+        examples=[12],
+    )]
+    peer_cadence_median_per_week: Annotated[Optional[float], Field(
+        description="Median campaigns per week across the brands you watch, per sending domain. Your own row is excluded, since it is the figure being held against this one.",
+        examples=[4.4],
+    )]
+    peer_inbox_placement_median_rate: Annotated[Optional[float], Field(
+        description="Median inbox placement across the brands you watch. Your own row is excluded, as with the cadence median.",
+        examples=[0.892],
+    )]
+
+
+class CompetitiveWatchlistBrandID(RootModel[str]):
+    root: str
+
+
+class EmailCompetitivePanelStatus(str, Enum):
+    ok = "ok"
+    not_in_panel = "not_in_panel"
+    no_data = "no_data"
+    unavailable = "unavailable"
+
+
+class EmailCompetitiveCampaignSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="The identifier for this campaign. Use it to fetch this one campaign on its own.\n\nIt is a string, and it needs to stay one. The values are long enough that\nJavaScript, and any other language that stores every number as a floating point\nvalue, will round them, and a rounded identifier matches no campaign at all.\nCompare it and pass it back as text.",
+        examples=[3914827265],
+        min_length=1,
+    )]
+    subject: Annotated[str, Field(
+        description="The subject line the panel saw on this campaign.",
+        examples=["The Summer Sale: 40% off everything"],
+        min_length=1,
+    )]
+    sent_at: Annotated[str, Field(
+        description="When the panel first saw this campaign arrive.",
+        examples=["2026-08-09T14:02:00Z"],
+        min_length=1,
+    )]
+    image_url: Annotated[Optional[str], Field(
+        description="Where the panel's capture of the rendered email can be fetched, null when it captured none. Panels image only some of what they observe, so an absent creative is an ordinary outcome rather than a failed one. The image is served from the panel's own host rather than from ours, so a page embedding it has to allow that host.",
+        examples=["https://images.example.com/creatives/c154c8c4-6356-40e6-92d2-7c6727ec36ca.jpg"],
+    )]
+
+
+class EmailCompetitiveFieldSource(str, Enum):
+    measured = "measured"
+    panel = "panel"
+    none = "none"
+
+
+class EmailCompetitiveWatchlistRowProvenance(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sends: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+    cadence_per_week: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+    inbox_placement_rate: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+    read_rate: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+    audience_overlap_rate: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+    last_campaign: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+
+
+class EmailCompetitiveWatchlistRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    watchlist_brand_id: Annotated[Optional[str], Field(
+        examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    is_workspace: Annotated[bool, Field(
+        description="True on the row describing your own workspace's sending.",
+        examples=[False],
+    )]
+    name: Annotated[str, Field(
+        description="The brand's name as it was when the brand was added to the watchlist.",
+        examples=["Everlane"],
+        min_length=1,
+    )]
+    industry: Annotated[Optional[str], Field(
+        description="The brand's industry as it was when the brand was added, or null when the brand is not classified.",
+        examples=["DTC Apparel"],
+    )]
+    sending_domains: Annotated[List[str], Field(
+        description="The domains the brand's figures describe. Always one domain today: a brand is tracked by the single one the panel sees the most of its mail from, so a brand that splits its mail across several domains reports less than its full volume.",
+        min_length=1,
+    )]
+    esp: Annotated[Optional[str], Field(
+        description="A sending platform observed on the domain, or null when the panel has none on record. A brand sending through more than one platform reports one of them rather than the list. This is frequently unavailable and updates monthly at best, so treat its absence as normal rather than as pending. Populated only when you read a single brand; on the watchlist it is always null.",
+        examples=["Klaviyo"],
+    )]
+    list_size: Annotated[Optional[int], Field(
+        description="Estimated number of addresses the brand mails, or null when the panel has no estimate. Populated only when you read a single brand; on the watchlist it is always null.",
+        examples=[1240000],
+    )]
+    panel_status: Annotated[EmailCompetitivePanelStatus, Field(
+        description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
+    )]
+    sends: Annotated[Optional[int], Field(
+        description="Messages sent in the period.",
+        examples=[1240000],
+    )]
+    sends_change_percent: Annotated[Optional[float], Field(
+        description="Change in send volume against the period immediately before this one, as a percentage. Null when the earlier period has nothing to compare against.",
+        examples=[18.0],
+    )]
+    cadence_per_week: Annotated[Optional[float], Field(
+        description="Average campaigns sent per week over the period.",
+        examples=[5.2],
+    )]
+    inbox_placement_rate: Annotated[Optional[float], Field(
+        description="Share of the brand's observed mail that reached an inbox rather than a spam folder.",
+        examples=[0.889],
+    )]
+    read_rate: Annotated[Optional[float], Field(
+        description="Share of delivered mail that was read.",
+        examples=[0.192],
+    )]
+    audience_overlap_rate: Annotated[Optional[float], Field(
+        description="Share of your own audience the panel also sees receiving this brand's mail. Null on your own row, and null for a competitor the panel measured no overlap with, which is an answer rather than a gap.",
+        examples=[0.24],
+    )]
+    last_campaign: Annotated[Optional[EmailCompetitiveCampaignSummary], Field(
+        description="The most recent campaign observed in the period, or null when none was. Always null on your own row.",
+    )]
+    provenance: Annotated[EmailCompetitiveWatchlistRowProvenance, Field(
+        description="Where each figure on the row came from, so a comparison can be labelled\nhonestly. Every field on a competitor's row is a panel estimate. On your own\nrow the source varies by field: what is counted directly is reported as measured,\nfalls back to the panel for what is not, and reports `none` for a field this row\nnever carries at all.\n\nRead rate is a panel estimate even on your own row. Comparing a measured rate\nagainst a panel estimate of the same rate is not a like for like\ncomparison, because the two count an open differently, so both sides of the\ncomparison come from the panel.",
+    )]
+
+
+class EmailCompetitiveWatchlist(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailCompetitivePeriod, Field(
+        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+    )]
+    summary: Annotated[EmailCompetitiveWatchlistSummary, Field(
+        description="Where your sending sits against the brands you watch, over the same period as the\nrows.\n\nEvery figure here is derived from those rows rather than measured separately, so\nthe two always agree. As on a row, each is present and `null` when the rows cannot\nsupport it: the peer medians need at least one watched brand the panel reported\non, and the share figures need sending of your own to compare.",
+    )]
+    data: Annotated[List[EmailCompetitiveWatchlistRow], Field(
+        description="Your own row first, then each watched brand in the order it was added. Your row is present once your workspace has sent email, since before that there is no sending of yours to compare against. Empty for a workspace that has neither sent nor added a brand.",
+    )]
+
+
+class EmailCompetitiveCampaignSignal(str, Enum):
+    biggest_send = "biggest_send"
+    read_rate_standout = "read_rate_standout"
+    landing_in_spam = "landing_in_spam"
+
+
+class EmailCompetitiveNotableClaim(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    text: Annotated[str, Field(
+        description="The panel's own phrasing, which may name the window the claim was measured over (\"Biggest send in 7 days\") or not (\"Best-read campaign\"). Show it as written rather than rebuilding it from the signal, and do not parse a window out of it.",
+        examples=["Biggest send in 7 days"],
+        min_length=1,
+    )]
+
+
+class EmailCompetitiveNotableEvidence(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    ratio_to_median: Annotated[Optional[float], Field(
+        description="How many times the brand's own median volume this send was. A value of 29 means the send was twenty-nine times the brand's typical volume for the period. Null on every signal other than `biggest_send`, and on a `biggest_send` campaign the panel published no ratio for.",
+        examples=[29.61],
+    )]
+    read_rate_observations: Annotated[Optional[int], Field(
+        description="How many panel observations `campaign.read_rate` was measured over. A rate over thirty observations and one over a hundred and forty are not equally worth showing, and this is what separates them. Null on every signal other than `read_rate_standout`, and on a `read_rate_standout` campaign the panel published no denominator for.",
+        examples=[66],
+    )]
+    mailbox_provider_spam_rate: Annotated[Optional[float], Field(
+        description="Share of this campaign filed as spam at the one provider named in `mailbox_provider`, as a value between 0 and 1. A different measurement from the campaign's overall `spam_rate`, and the one this signal is about. Null on every signal other than `landing_in_spam`, and on a `landing_in_spam` campaign whose provider counts the panel did not publish, so a spam entry can arrive without the rate behind it.",
+        examples=[0.79],
+    )]
+    mailbox_provider_observations: Annotated[Optional[int], Field(
+        description="How many observations at that provider `mailbox_provider_spam_rate` was measured over. Null on the same terms.",
+        examples=[199],
+    )]
+
+
+class EmailCompetitivePanelMailboxProvider(RootModel[str]):
+    root: str
+
+
+class EmailCompetitiveCampaign(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="The identifier for this campaign. Use it to fetch this one campaign on its own.\n\nIt is a string, and it needs to stay one. The values are long enough that\nJavaScript, and any other language that stores every number as a floating point\nvalue, will round them, and a rounded identifier matches no campaign at all.\nCompare it and pass it back as text.",
+        examples=[3914827265],
+        min_length=1,
+    )]
+    subject: Annotated[str, Field(
+        description="The subject line the panel saw on this campaign.",
+        examples=["The Summer Sale: 40% off everything"],
+        min_length=1,
+    )]
+    sent_at: Annotated[str, Field(
+        description="When the panel first saw this campaign arrive.",
+        examples=["2026-08-09T14:02:00Z"],
+        min_length=1,
+    )]
+    image_url: Annotated[Optional[str], Field(
+        description="Where the panel's capture of the rendered email can be fetched, null when it captured none. Panels image only some of what they observe, so an absent creative is an ordinary outcome rather than a failed one. The image is served from the panel's own host rather than from ours, so a page embedding it has to allow that host.",
+        examples=["https://images.example.com/creatives/c154c8c4-6356-40e6-92d2-7c6727ec36ca.jpg"],
+    )]
+    reach: Annotated[Optional[int], Field(
+        description="Estimated recipients this campaign reached, null when the panel observed the campaign but published no estimate for it.",
+        examples=[410000],
+    )]
+    read_rate: Annotated[Optional[float], Field(
+        description="Estimated share of recipients who read this campaign, null when the panel published no rate for it. Panel read rates count dwell time, so they do not move with the automatic opens that inflate a sender's own open rate.",
+        examples=[0.228],
+    )]
+    has_creative: Annotated[bool, Field(
+        description="Whether the panel captured the rendered email for this campaign.",
+        examples=[True],
+    )]
+    discount_percent: Annotated[Optional[float], Field(
+        description="The discount the subject line leads with, null when it names none. Read from the subject text, so it finds a stated offer and not one revealed inside the email.",
+        examples=[40],
+    )]
+    inbox_rate: Annotated[Optional[float], Field(
+        description="Share of this campaign that reached an inbox, null when the panel observed it without recording where it landed. It describes this send rather than the brand's domain, so a single bad campaign is visible against a brand whose overall placement still looks healthy.",
+        examples=[0.879],
+    )]
+    spam_rate: Annotated[Optional[float], Field(
+        description="Share of this campaign that was filed as spam, null on the same terms.",
+        examples=[0.121],
+    )]
+
+
+class EmailCompetitiveNotableCampaign(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    watchlist_brand_id: Annotated[str, Field(
+        examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    brand_name: Annotated[str, Field(
+        description="The brand's name.",
+        examples=["Allbirds"],
+        min_length=1,
+    )]
+    signal: Annotated[Annotated[Union[EmailCompetitiveCampaignSignal, str], Field(union_mode="left_to_right")], Field(
+        description="Why this campaign was surfaced. The set is open and grows as new signals are added.\n\nEvery signal describes the campaign against its own brand's history, never against the\nother brands you watch, so several brands can carry the same signal in one period and\nnone of them is the top of anything.\n\n`biggest_send` is a send far above that brand's own median: unusual for the brand, not\nmerely large. `read_rate_standout` is a campaign read unusually well for its brand.\n`landing_in_spam` is one heavily filed as spam at a single mailbox provider, named in\n`mailbox_provider`, which is worth seeing even when the brand's overall placement looks healthy.",
+    )]
+    claim: Annotated[Optional[EmailCompetitiveNotableClaim], Field(
+        description="The panel's own headline for this campaign, or null where it surfaced the campaign without making one. Null is the common case and is not a fault.",
+    )]
+    evidence: Annotated[EmailCompetitiveNotableEvidence, Field(
+        description="The figures behind a campaign's signal, for ordering or filtering the list yourself. Which field carries a value depends on the signal, and each is null both on the signals it does not describe and on a campaign of its own signal the panel published no figure for.",
+    )]
+    mailbox_provider: Annotated[Optional[str], Field(
+        description="The provider a `landing_in_spam` campaign was heavily filed as spam at: spam placement is measured per provider, and this campaign's problem is at one of them. Null on every other signal.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    campaign: Annotated[EmailCompetitiveCampaign, Field(
+        description="One campaign an email panel observed a brand sending.",
+    )]
+
+
+class EmailCompetitiveNotableFeed(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailCompetitivePeriod, Field(
+        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+    )]
+    panel_status: Annotated[EmailCompetitivePanelStatus, Field(
+        description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
+    )]
+    data: Annotated[List[EmailCompetitiveNotableCampaign], Field(
+        description="Up to 100 campaigns selected across watched brands. Selection takes turns across\nbrands in watchlist order until the response is full, prioritizing spam placement,\nbiggest sends, then read-rate standouts within each brand. Within one signal, rows\ncompare the matching spam rate, volume ratio, or read rate descending; missing values\nsort last and ties retain tracked-domain and source order. Selected rows are returned\nin watchlist order, then biggest-send, read-rate, and spam signal order, followed by\ntracked-domain and source order.\n\nOne campaign may appear once per signal because each row carries different evidence.\nEmpty when nothing qualified; check `panel_status` to distinguish that from an\nunavailable panel.",
+        max_length=100,
+    )]
+    truncated: Annotated[bool, Field(
+        description="Whether Bird omitted eligible panel findings to keep this response to 100 rows. False does not promise that the panel observed every qualifying campaign in the period.",
+        examples=[False],
+    )]
+
+
+class EmailCompetitiveBrandID(RootModel[str]):
+    root: str
+
+
+class EmailCompetitiveWatchlistBrandCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    brand_id: Annotated[str, Field(
+        description="Identifier of the brand in the panel's catalog, used to add it to the watchlist. It is a string for the same reason a campaign id is: the values are wide enough that a client storing every number as a floating point value would round them, and a rounded identifier matches no brand at all.",
+        examples=[81531],
+        max_length=19,
+        min_length=1,
+        pattern="^[0-9]+$",
+    )]
+
+
+class EmailCompetitiveWatchlistBrand(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+    id: Annotated[str, Field(
+        examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    brand_id: Annotated[str, Field(
+        examples=[81531],
+        max_length=19,
+        min_length=1,
+        pattern="^[0-9]+$",
+    )]
+    name: Annotated[str, Field(
+        description="The brand's name when it was added. It is kept as it was so the row still reads correctly if the brand is later renamed or stops being tracked.",
+        examples=["Everlane"],
+        min_length=1,
+    )]
+    industry: Annotated[Optional[str], Field(
+        description="The brand's industry when it was added, or null when the brand is not classified.",
+        examples=["DTC Apparel"],
+    )]
+    sending_domains: Annotated[List[str], Field(
+        description="The domains this brand's figures describe. Always one domain today, chosen as the one the panel sees the most of its mail from.",
+        min_length=1,
+    )]
+
+
+class EmailCompetitiveProviderPlacement(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mailbox_provider: Annotated[str, Field(
+        description="A mailbox provider, as the email panel identifies it. A lowercase identifier rather than a\ndisplay name, so pick your own label for it, and treat the set as open: the panel reports\nwhichever providers it observed, and `gmail`, `hotmail`, `yahoo`, `aol` and `comcast` are the\nones it returns most. Apple never appears, because the panel does not measure it, so a surface\noffering an Apple row has no measurement behind it.\n\nThe panel's buckets are not the same as the ones the [mailbox-provider stats\nbreakdown](/docs/api/reference/get-email-stats-by-mailbox-provider) reports: Microsoft's\nproperties appear here as `hotmail` rather than `microsoft`, and Apple is absent, so the two\nare not a joinable dimension.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    inbox_rate: Annotated[float, Field(
+        description="Share of the brand's mail this provider put in the inbox. Recomputed from what the panel observed across every domain the brand sends from, so a small subdomain cannot move it as much as the brand's main one.",
+        examples=[0.862],
+    )]
+    spam_rate: Annotated[float, Field(
+        description="Share of the brand's mail this provider put in spam.",
+        examples=[0.091],
+    )]
+    workspace_inbox_rate: Annotated[Optional[float], Field(
+        description="Your own inbox rate at this provider, null when you have not sent or the panel has no breakdown for your sending domain. It is the panel's view of your sending rather than from our own measurement of it, because a measured rate and a rate the panel estimated are not comparable, and this figure exists to be compared with the brand's.",
+        examples=[0.921],
+    )]
+
+
+class EmailCompetitiveBrandProfile(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailCompetitivePeriod, Field(
+        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+    )]
+    brand: Annotated[EmailCompetitiveWatchlistRow, Field(
+        description="One brand on the watchlist, with its figures for the requested period. Your own\nworkspace appears as a row too, so the table can be read as a single ranking.\n\nEvery metric is present on every row and is `null` when it is unavailable for\nthat brand, so a `0` is always a real measurement rather than a gap. Check\n`panel_status` for why a metric is null.\n\n`esp` and `list_size` are the exception. They are populated only when you read a\nsingle brand, and are always `null` on the watchlist whatever `panel_status`\nreports.",
+    )]
+    providers: Annotated[List[EmailCompetitiveProviderPlacement], Field(
+        description="Placement per mailbox provider, in the order the panel returned them. Empty when the panel published no breakdown for the brand's domains.",
+    )]
+
+
+class EmailCompetitiveCampaignFeed(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailCompetitivePeriod, Field(
+        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+    )]
+    panel_status: Annotated[EmailCompetitivePanelStatus, Field(
+        description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
+    )]
+    captured: Annotated[int, Field(
+        description="Number of eligible campaigns in the first 300 newest panel rows for each tracked domain. This sampled value is independent of the returned page.",
+        examples=[38],
+    )]
+    promo_rate: Annotated[Optional[float], Field(
+        description="Fraction of captured campaigns whose subject leads with a discount. Null when captured is zero. This sampled value is independent of the returned page.",
+        examples=[0.64],
+    )]
+    truncated: Annotated[bool, Field(
+        description="Whether the sampled statistics or returned page omit part of the requested collection. Use next_cursor to determine whether another page is available.",
+        examples=[False],
+    )]
+    data: Annotated[List[EmailCompetitiveCampaign], Field(
+        description="Campaigns in this page, in the requested order.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailCompetitiveWeekday(str, Enum):
+    monday = "monday"
+    tuesday = "tuesday"
+    wednesday = "wednesday"
+    thursday = "thursday"
+    friday = "friday"
+    saturday = "saturday"
+    sunday = "sunday"
+
+
+class EmailCompetitiveSendTimeCell(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    weekday: Annotated[EmailCompetitiveWeekday, Field(
+        description="A day of the week. Named rather than numbered because the two common numberings disagree about which day the week starts on.",
+    )]
+    hour: Annotated[int, Field(
+        description="The hour this cell covers, in the timezone the response reports. `13` covers 13:00 to 14:00.",
+        examples=[13],
+        ge=0,
+        le=23,
+    )]
+    share_percent: Annotated[float, Field(
+        description="Share of everything the brand sent over the period that fell in this hour. It is `0` for an hour the brand demonstrably did not send in, which on a disciplined sender is the most useful thing this grid says.",
+        examples=[3.4],
+    )]
+    intensity: Annotated[float, Field(
+        description="How strongly the brand sends in this hour, against its own busiest hour at `1`.\nIt is this cell's sending per `sample_days` divided by the busiest cell's, so it\nis derivable from the two numbers beside it and reconciles with them rather than\ncompeting: it is published because that correction is easy to get wrong, not\nbecause it knows anything they do not.\n\nShade a cell by this rather than by `share_percent`: the period holds one more\nof some weekdays than others, so a share compares an hour that came round\nthirteen times against one that came round twelve.",
+        examples=[0.55],
+        ge=0,
+        le=1,
+    )]
+    sample_days: Annotated[int, Field(
+        description="How many days of the period fell on this weekday, whether or not the brand sent on them. It is what separates an hour the brand is quiet in from one there was little chance to observe.",
+        examples=[13],
+    )]
+
+
+class EmailCompetitiveSendTimePeak(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    start_hour: Annotated[int, Field(
+        description="The first hour of the window, in the timezone the response reports.",
+        examples=[13],
+        ge=0,
+        le=23,
+    )]
+    end_hour: Annotated[int, Field(
+        description="The hour the window ends at, exclusive: a window of `13` to `14` covers 13:00 to\n14:00. The window is always one hour wide on this endpoint, so this is always the\nhour after `start_hour`. The pair is kept rather than collapsed because the panel\ncomputes the window at whatever width it was asked for, and only this endpoint\npins that to an hour.\n\nIt can therefore be lower than `start_hour` in exactly one case: a peak at 23:00,\nwhose window runs past midnight and ends at `0`.",
+        examples=[14],
+        ge=0,
+        le=23,
+    )]
+    share_percent: Annotated[float, Field(
+        description="Share of everything the brand sent over the period that fell in this window.\n\nThis is the panel's own figure, while a cell's `share_percent` is recomputed from\nthe cells in the response. Adding up this hour's seven cells should therefore land\non this number but is not guaranteed to; where they disagree, this one is the\npanel's answer about its own peak and the cells are the arithmetic behind the grid.",
+        examples=[13.1],
+    )]
+
+
+class EmailCompetitiveSendTimeGrid(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailCompetitivePeriod, Field(
+        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+    )]
+    timezone: Annotated[str, Field(
+        description="IANA timezone identifier, such as `America/New_York`, `Europe/Amsterdam`, or `UTC`.",
+        examples=["America/New_York"],
+        min_length=1,
+    )]
+    panel_status: Annotated[EmailCompetitivePanelStatus, Field(
+        description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
+    )]
+    cells: Annotated[List[EmailCompetitiveSendTimeCell], Field(
+        description="Every weekday and hour of the week, Monday first and hour ascending: 168 in all, whether or not the brand sent in them, so the grid needs no filling in. Empty when there was nothing to read, which `panel_status` explains.",
+    )]
+    peak_send_window: Annotated[Optional[EmailCompetitiveSendTimePeak], Field(
+        description="The hour of the day the brand sends most of its mail in, totalled across the whole week, or null when nothing was observed. It carries no weekday: for most brands the hour of the day is where the pattern is and the day of the week barely moves, so naming a busiest weekday would give a figure more meaning than it has. It is also not always the darkest cell, on the same reasoning: one busy Wednesday can outweigh the hour the brand mails in every single day.",
+    )]
+
+
+class EmailCompetitiveBrandMatch(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    brand_id: Annotated[str, Field(
+        examples=[81531],
+        max_length=19,
+        min_length=1,
+        pattern="^[0-9]+$",
+    )]
+    name: Annotated[str, Field(
+        description="The brand's name.",
+        examples=["Everlane"],
+        min_length=1,
+    )]
+    sending_domains: Annotated[List[str], Field(
+        description="The domains this brand's figures would describe. Always one domain today, chosen as the one the panel sees the most of its mail from.",
+        min_length=1,
+    )]
+
+
+class EmailCompetitiveBrandSearchResults(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailCompetitiveBrandMatch], Field(
+        description="Matching brands. Empty when nothing matched, which for an unusual brand name means the panel does not track it rather than that the search failed.",
+    )]
+
+
+class EmailCompetitiveVolumePoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    date: Annotated[str, Field(
+        description="The UTC day this point covers.",
+        examples=["2026-08-09"],
+        min_length=1,
+    )]
+    sends: Annotated[int, Field(
+        description="Volume for the day. An estimate for a competitor and an exact count for your own line; `source` on the series records which. A day nothing was observed is `0` rather than a missing point, so every line shares one axis.",
+        examples=[41800],
+    )]
+
+
+class EmailCompetitiveBrandSeries(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    watchlist_brand_id: Annotated[Optional[str], Field(
+        examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    is_workspace: Annotated[bool, Field(
+        description="True on the line describing your own workspace's sending.",
+        examples=[False],
+    )]
+    name: Annotated[str, Field(
+        description="Label for the line: the brand's name, or your sending domain on your own line.",
+        examples=["Everlane"],
+        min_length=1,
+    )]
+    sending_domains: Annotated[List[str], Field(
+        description="The sending domains the line's figures describe. Always one domain today.",
+        min_length=1,
+    )]
+    panel_status: Annotated[EmailCompetitivePanelStatus, Field(
+        description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
+    )]
+    source: Annotated[EmailCompetitiveFieldSource, Field(
+        description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
+    )]
+    points: Annotated[List[EmailCompetitiveVolumePoint], Field(
+        description="One point per day of the period, oldest first, ending with the last whole UTC day rather than the one in progress. A domain the panel tracks but observed nothing for plots as zeros, which is a measured silence rather than a missing measurement. Points are empty only when there was nothing to plot at all, reported by `panel_status` as `not_in_panel` or `unavailable`.",
+    )]
+
+
+class EmailCompetitiveVolumeSeries(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailCompetitivePeriod, Field(
+        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+    )]
+    data: Annotated[List[EmailCompetitiveBrandSeries], Field(
+        description="Your own line first, then the requested brands in the order they were asked for. Your line is present once your workspace has sent email. Every line carries the same days in the same order, so they can be plotted against one axis without aligning them first.",
+    )]
 
 
 class EmailTemplateCategory(str, Enum):
@@ -8627,9 +10731,8 @@ class EmailTemplateTheme(str, Enum):
 
 class EmailTemplateLanguageState(BaseModel):
     model_config = ConfigDict(extra="allow")
-    status: Annotated[Union[TemplateLanguageStatus, str], Field(
+    status: Annotated[Annotated[Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")], Field(
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
-        union_mode="left_to_right",
     )]
     draft: Annotated[Optional[bool], Field(
         description="Whether the draft holds an edit to this language that has not been published. If this is true and the status is `live`, sends are still using the older content, and your edit goes out the next time you submit.",
@@ -8674,13 +10777,12 @@ class EmailTemplateSummary(BaseModel):
     category: Annotated[EmailTemplateCategory, Field(
         description="Whether the template is for `transactional` email or `marketing` email.",
     )]
-    source: Annotated[Union[EmailTemplateSource, str], Field(
+    source: Annotated[Annotated[Union[EmailTemplateSource, str], Field(union_mode="left_to_right")], Field(
         description="The authoring format the template is written in, fixed at creation. `html` is finished markup you provide, optionally personalized with Liquid.",
-        union_mode="left_to_right",
     )]
-    theme: Annotated[Optional[Union[EmailTemplateTheme, str]], Field(
+    theme: Annotated[Optional[Annotated[Union[EmailTemplateTheme, str], Field(union_mode="left_to_right")]], Field(
         description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
-        union_mode="left_to_right",
+        examples=["null"],
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
@@ -8849,13 +10951,12 @@ class EmailTemplate(BaseModel):
     category: Annotated[EmailTemplateCategory, Field(
         description="Whether the template is for `transactional` email or `marketing` email.",
     )]
-    source: Annotated[Union[EmailTemplateSource, str], Field(
+    source: Annotated[Annotated[Union[EmailTemplateSource, str], Field(union_mode="left_to_right")], Field(
         description="The authoring format the template is written in, fixed at creation. `html` is finished markup you provide, optionally personalized with Liquid.",
-        union_mode="left_to_right",
     )]
-    theme: Annotated[Optional[Union[EmailTemplateTheme, str]], Field(
+    theme: Annotated[Optional[Annotated[Union[EmailTemplateTheme, str], Field(union_mode="left_to_right")]], Field(
         description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
-        union_mode="left_to_right",
+        examples=["null"],
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
@@ -9067,9 +11168,8 @@ class EmailClientPlatform(str, Enum):
 
 class EmailClientSupport(BaseModel):
     model_config = ConfigDict(extra="allow")
-    family: Annotated[Union[EmailClientFamily, str], Field(
+    family: Annotated[Annotated[Union[EmailClientFamily, str], Field(union_mode="left_to_right")], Field(
         description="Which mail client a finding applies to. A finding's `message` names at most\nApple Mail, Gmail, Outlook, and Yahoo; its `unsupported_clients` and\n`partial_clients` name every client affected.\n\n- `gmail`: Gmail\n- `outlook`: Outlook\n- `yahoo`: Yahoo\n- `apple_mail`: Apple Mail\n- `aol`: AOL\n- `thunderbird`: Mozilla Thunderbird\n- `samsung_email`: Samsung Email\n- `sfr`: SFR\n- `orange`: Orange\n- `protonmail`: ProtonMail\n- `hey`: HEY\n- `mail_ru`: Mail.ru\n- `fastmail`: Fastmail\n- `laposte`: LaPoste.net\n- `gmx`: GMX\n- `web_de`: WEB.DE\n- `ionos_1and1`: 1&1\n- `wp_pl`: WP.pl",
-        union_mode="left_to_right",
     )]
     platforms: Annotated[List[Annotated[Union[EmailClientPlatform, str], Field(union_mode="left_to_right")]], Field(
         description="Which of the family's platforms this applies to, in alphabetical order.",
@@ -9079,9 +11179,8 @@ class EmailClientSupport(BaseModel):
 
 class EmailCompatibilityFinding(BaseModel):
     model_config = ConfigDict(extra="allow")
-    rule_id: Annotated[Union[EmailCompatibilityRuleID, str], Field(
+    rule_id: Annotated[Annotated[Union[EmailCompatibilityRuleID, str], Field(union_mode="left_to_right")], Field(
         description="Which rule produced a finding.\n\n- `html_script`: a `<script>` tag.\n- `html_event_handlers`: a JavaScript event-handler attribute such as `onclick`.\n- `html_embedded_content`: an `<iframe>`, `<embed>`, or `<object>`.\n- `html_linked_stylesheet`: a `<link rel=\"stylesheet\">`.\n- `css_at_import`: an `@import` rule.\n- `html_form`: a `<form>`, `<input>`, `<select>`, or `<textarea>`.\n- `html_svg`: an inline `<svg>`.\n- `html_media`: a `<video>` or `<audio>` element.\n- `css_display_flex_grid`: `display: flex` or `display: grid`, and their `inline-` forms.\n- `css_position_fixed_sticky`: `position: fixed` or `position: sticky`.\n- `css_variables_no_fallback`: a `var()` with no fallback value.\n- `css_viewport_units`: a `vh` or `vw` length.\n- `html_button`: a `<button>` element.\n- `css_math_functions`: `clamp()`, `min()`, or `max()`.\n- `css_modern_color`: `oklch()`, `oklab()`, `lch()`, or `lab()`.\n- `html_web_page_markup`: markup a web framework left behind, such as a `data-reactroot` attribute or a `__next` element id.",
-        union_mode="left_to_right",
     )]
     severity: Annotated[EmailCompatibilitySeverity, Field(
         description="What a finding costs you.\n\n- `problem`: the pattern does nothing at all. The client removes the markup, never loads the stylesheet carrying it, or will not operate the control. Where a finding names clients, that is what happens in those clients.\n- `warning`: it does something, but not what you wrote.\n\nNeither one refuses a save, a submit, or a send.",
@@ -9187,9 +11286,10 @@ class Actor(BaseModel):
         examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
     )]
-    type: Annotated[Union[ActorType, str], Field(
+    type: Annotated[Annotated[Union[ActorType, str], Field(union_mode="left_to_right")], Field(
         description="Who or what performed the action: `user` for a member's own session, `oauth_token` for a token issued to a caller on a member's behalf, `api_key` for a workspace API key, `system` for our own automation, `sso` for an organization's SSO connection, and `service_account` for a workspace's connected Integration acting with no member behind it. Open enum: new actor types may be added over time, so treat any unrecognized value as a future type rather than an error.",
-        union_mode="left_to_right",
+        examples=["user"],
+        min_length=1,
     )]
     display_name: Annotated[Optional[str], Field(
         description="The label the actor is shown under: typically a member's name or email address, or the API key's name. Null when it could not be resolved.",
@@ -9679,6 +11779,7 @@ class Mailbox(BaseModel):
     )]
     retention_tier: Annotated[MailboxRetentionTier, Field(
         description="How long message metadata, extracted text, and attachments are kept. Original bodies and inbound raw MIME are limited to 30 days on every tier.",
+        min_length=1,
     )]
     message_count: Annotated[int, Field(
         description="Number of retained messages across all threads.",
@@ -10017,7 +12118,7 @@ class EmailThread(BaseModel):
         min_length=1,
     )]
     labels: Annotated[List[str], Field(
-        description="Labels on this conversation. Exactly one system placement label is always present, set by the message that started the conversation:\n\n- `inbox`: The conversation is in the inbox.\n- `archive`: The conversation was filed away and is done for now.\n- `spam`: The conversation's opening message failed sender authentication.\n- `blocked`: The conversation's opening message was rejected by the mailbox's receive policy or rules.\n\nMove a conversation by updating its labels. Add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox`, or remove `spam`, `blocked`, or `archive`, to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list, and a conversation has at most 20 labels in total.",
+        description="Labels on this conversation. Exactly one system placement label is always present, set by the message that started the conversation:\n\n- `inbox`: The conversation is in the inbox.\n- `archive`: The conversation was filed away and is done for now.\n- `spam`: The conversation's opening message is filed in Spam.\n- `blocked`: The conversation's opening message was rejected by the mailbox's receive policy or rules.\n\nMove a conversation by updating its labels. Add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox`, or remove `spam`, `blocked`, or `archive`, to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list, and a conversation has at most 20 labels in total.",
         max_length=20,
     )]
     created_at: Annotated[str, Field(
@@ -10176,7 +12277,7 @@ class EmailThreadMessage(BaseModel):
         description="Plain-text content of the message with quoted history stripped. Readable for the mailbox's full retention tier, in both directions. Always present when fetching a single message. On list endpoints it is included only when the request sets `include=extracted_text`. Null when no text could be extracted.",
     )] = None
     labels: Annotated[List[str], Field(
-        description="Labels on this message. A received message always has exactly one placement label:\n\n- `inbox`: Accepted mail.\n- `archive`: The message's conversation was filed away.\n- `spam`: The message failed sender authentication.\n- `blocked`: The message was rejected by the mailbox's receive policy or rules.\n\nA received message also has `unread` until it is read. `trash` marks a message in the trash, in either direction. Custom labels share the same list, and a message has at most 20 labels in total.",
+        description="Labels on this message. A received message always has exactly one placement label:\n\n- `inbox`: Accepted mail.\n- `archive`: The message's conversation was filed away.\n- `spam`: The message is filed in Spam.\n- `blocked`: The message was rejected by the mailbox's receive policy or rules.\n\nA received message also has `unread` until it is read. `trash` marks a message in the trash, in either direction. Custom labels share the same list, and a message has at most 20 labels in total.",
         max_length=20,
     )]
     status: Annotated[Optional[str], Field(
@@ -10186,16 +12287,16 @@ class EmailThreadMessage(BaseModel):
         description="Terminal per-recipient delivery outcomes of a sent message, filled in as each one becomes known and kept for the mailbox's full retention tier. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.",
     )]
     authentication: Annotated[Optional[EmailThreadMessageAuthentication], Field(
-        description="Whether the sender of a received message was authenticated.\n\n- `pass`: the sender's identity was verified.\n- `fail`: it was checked and did not verify.\n- `unknown`: no verdict could be determined, so do not treat the\n  sender as verified.\n\nNull for sent messages. This field is readable for the mailbox's full\nretention tier, so the verdict is still available after the 30-day\nreceived-message log has expired.",
+        description="DMARC result for the domain in the received message's `From` header.\n\n- `pass`: SPF or DKIM passed and aligned with that domain.\n- `fail`: DMARC was evaluated and did not pass.\n- `unknown`: no trustworthy verdict is available.\n\nThis follows `dmarc_pass` and does not verify a particular person. The receiving provider currently supplies no DMARC result, so received messages report `unknown`.\n\nNull for sent messages. This field is readable for the mailbox's full\nretention tier, so the verdict is still available after the 30-day\nreceived-message log has expired.",
     )]
     spf_pass: Annotated[Optional[bool], Field(
-        description="Whether SPF passed for the sender of a received message. Null for sent messages and when no verdict is available. This field is kept for the mailbox's retention tier.",
+        description="Whether the receiving provider reports that SPF authorized the envelope sender for the sending server. A soft failure is `false`. Missing, neutral and inconclusive results are `null`. Sent messages have `null` results. Kept for the mailbox retention tier.",
     )]
     dkim_pass: Annotated[Optional[bool], Field(
-        description="Whether DKIM passed for the sender of a received message. Null for sent messages and when no verdict is available. This field is kept for the mailbox's retention tier.",
+        description="Whether the receiving provider verified a DKIM signature. A passing signature makes this `true` even when another signature fails. Missing signatures and inconclusive verification results are `null`. Sent messages have `null` results. Kept for the mailbox retention tier.",
     )]
     dmarc_pass: Annotated[Optional[bool], Field(
-        description="Whether DMARC passed for the sender of a received message. Null for sent messages and when no verdict is available. This field is kept for the mailbox's retention tier.",
+        description="Whether SPF or DKIM passed and aligned with the domain in the message's `From` header. The receiving provider currently supplies no DMARC result, so this is `null`. Sent messages have `null` results. Kept for the mailbox retention tier.",
     )]
     purge_at: Annotated[str, Field(
         description="Scheduled permanent-deletion time. This is the end of the mailbox's retention tier, moved to no more than 30 days in the future while the message is in the trash. Restore a trashed message before then with `PATCH {\"labels\": {\"remove\": [\"trash\"]}}`.",
@@ -11365,7 +13466,7 @@ class EventEmailReceivedData(BaseModel):
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Envelope-from address.",
+        description="Address from the message's From header, with the relay's parsed sender and then the SMTP envelope sender as fallbacks when that header cannot be read.",
         examples=["alice@example.com"],
         min_length=1,
     )]
@@ -11381,19 +13482,19 @@ class EventEmailReceivedData(BaseModel):
         examples=["<previous-message@example.com>"],
     )] = None
     authentication: Annotated[Optional[EventEmailReceivedDataAuthentication], Field(
-        description="Whether the sender of the received message was authenticated.\n\n- `pass`: the sender's identity was verified.\n- `fail`: it was checked and did not verify.\n- `unknown`: no verdict is available, so do not treat the sender\n  as verified.",
+        description="DMARC result for the domain in the received message's `From` header.\n\n- `pass`: SPF or DKIM passed and aligned with that domain.\n- `fail`: DMARC was evaluated and did not pass.\n- `unknown`: no trustworthy verdict is available.\n\nThis follows `dmarc_pass` and does not verify a particular person. The receiving provider currently supplies no DMARC result, so received messages report `unknown`.",
     )] = None
     spf_pass: Annotated[Optional[bool], Field(
-        description="Whether SPF passed for the sender, or null when the result did not carry an SPF verdict.",
+        description="Whether the receiving provider reports that SPF authorized the envelope sender for the sending server. A soft failure is `false`. Missing, neutral and inconclusive results are `null`.",
     )] = None
     dkim_pass: Annotated[Optional[bool], Field(
-        description="Whether DKIM passed for the sender, or null when the result did not carry a DKIM verdict.",
+        description="Whether the receiving provider verified a DKIM signature. A passing signature makes this `true` even when another signature fails. Missing signatures and inconclusive verification results are `null`.",
     )] = None
     dmarc_pass: Annotated[Optional[bool], Field(
-        description="Whether DMARC passed for the sender, or null when the result did not carry a DMARC verdict.",
+        description="Whether SPF or DKIM passed and aligned with the domain in the message's `From` header. The receiving provider currently supplies no DMARC result, so this is `null`.",
     )] = None
     spam_score: Annotated[Optional[float], Field(
-        description="Spam score carried on the received message, or null when it carries no score.",
+        description="Content spam score when available. The receiving provider currently supplies no score, so this is `null`.",
     )] = None
 
 
@@ -11711,16 +13812,16 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
         ge=0,
     )]
     authentication: Annotated[Optional[EventEmailMailboxMessageReceivedDataAuthentication], Field(
-        description="Whether the sender of the received message was authenticated.\n\n- `pass`: the sender's identity was verified.\n- `fail`: it was checked and did not verify.\n- `unknown`: no verdict is available, so do not treat the sender\n  as verified.",
+        description="DMARC result for the domain in the received message's `From` header.\n\n- `pass`: SPF or DKIM passed and aligned with that domain.\n- `fail`: DMARC was evaluated and did not pass.\n- `unknown`: no trustworthy verdict is available.\n\nThis follows `dmarc_pass` and does not verify a particular person. The receiving provider currently supplies no DMARC result, so received messages report `unknown`.",
     )] = None
     spf_pass: Annotated[Optional[bool], Field(
-        description="Whether SPF passed for the sender, or null when no verdict was computable.",
+        description="Whether the receiving provider reports that SPF authorized the envelope sender for the sending server. A soft failure is `false`. Missing, neutral and inconclusive results are `null`.",
     )] = None
     dkim_pass: Annotated[Optional[bool], Field(
-        description="Whether DKIM passed for the sender, or null when no verdict was computable.",
+        description="Whether the receiving provider verified a DKIM signature. A passing signature makes this `true` even when another signature fails. Missing signatures and inconclusive verification results are `null`.",
     )] = None
     dmarc_pass: Annotated[Optional[bool], Field(
-        description="Whether DMARC passed for the sender, or null when no verdict was computable.",
+        description="Whether SPF or DKIM passed and aligned with the domain in the message's `From` header. The receiving provider currently supplies no DMARC result, so this is `null`.",
     )] = None
 
 
@@ -11872,9 +13973,10 @@ class EventEmailSuppressionCreatedData(BaseModel):
         examples=["user@example.com"],
         min_length=1,
     )]
-    reason: Annotated[Union[EventEmailSuppressionCreatedDataReason, str], Field(
+    reason: Annotated[Annotated[Union[EventEmailSuppressionCreatedDataReason, str], Field(union_mode="left_to_right")], Field(
         description="Why the address was suppressed. New values may be added over time; treat unknown values as informational.",
-        union_mode="left_to_right",
+        examples=["hard_bounce"],
+        min_length=1,
     )]
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -12082,6 +14184,35 @@ class EventSMSAcceptedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
     )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
@@ -12135,6 +14266,35 @@ class EventSMSDeliveredData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
+    )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -12195,6 +14355,35 @@ class EventSMSExpiredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
     )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
@@ -12249,6 +14438,35 @@ class EventSMSFailedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
     )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
@@ -12302,6 +14520,35 @@ class EventSMSReceivedData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
+    )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -12371,6 +14618,35 @@ class EventSMSRejectedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
     )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
@@ -12424,6 +14700,35 @@ class EventSMSSentData(BaseModel):
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
+    )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -12484,6 +14789,35 @@ class EventSMSUndeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
     )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered at acceptance, or null for a free-text message.",
+        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a free-text message.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
@@ -12528,9 +14862,7 @@ class EventSMSSuppressionCreatedData(BaseModel):
         max_length=20,
         min_length=1,
     )]
-    reason: Annotated[Union[SMSSuppressionReason, str], Field(
-        union_mode="left_to_right",
-    )]
+    reason: Annotated[Union[SMSSuppressionReason, str], Field(union_mode="left_to_right")]
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -12571,9 +14903,8 @@ class EventVerifyAttemptDeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.",
     )]
-    channel: Annotated[Union[VerificationChannel, str], Field(
+    channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
-        union_mode="left_to_right",
     )]
     address: Annotated[str, Field(
         description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
@@ -12630,9 +14961,8 @@ class EventVerifyAttemptSentData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.",
     )]
-    channel: Annotated[Union[VerificationChannel, str], Field(
+    channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
-        union_mode="left_to_right",
     )]
     address: Annotated[str, Field(
         description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
@@ -12686,18 +15016,16 @@ class EventVerifyAttemptUndeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.",
     )]
-    channel: Annotated[Union[VerificationChannel, str], Field(
+    channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
-        union_mode="left_to_right",
     )]
     address: Annotated[str, Field(
         description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
         examples=[+14155550100],
         min_length=1,
     )]
-    reason: Annotated[Union[VerificationAttemptFailureReason, str], Field(
+    reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
         description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: The channel does not carry passcodes to this\n  destination country. The verification moves to the next channel enabled\n  there, or fails when the country has no other.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
-        union_mode="left_to_right",
     )]
     error: Annotated[Optional[str], Field(
         description="Diagnostic text describing the failure, for display only. Null when none was reported.",
@@ -12727,6 +15055,10 @@ class EventVerifyAttemptUndelivered(BaseModel):
     )]
 
 
+class EventVerifyVerificationCreatedDataStatus(str, Enum):
+    pending = "pending"
+
+
 class EventVerifyVerificationCreatedData(BaseModel):
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
@@ -12745,11 +15077,10 @@ class EventVerifyVerificationCreatedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.",
     )]
-    channel: Annotated[Union[VerificationChannel, str], Field(
+    channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
-        union_mode="left_to_right",
     )]
-    status: Annotated[Literal["pending"], Field(
+    status: Annotated[Annotated[Union[EventVerifyVerificationCreatedDataStatus, str], Field(union_mode="left_to_right")], Field(
         description="The verification's state at creation, always `pending`. Open enum for forward compatibility.",
         examples=["pending"],
         min_length=1,
@@ -12778,6 +15109,10 @@ class EventVerifyVerificationCreated(BaseModel):
     )]
 
 
+class EventVerifyVerificationFailedDataStatus(str, Enum):
+    failed = "failed"
+
+
 class EventVerifyVerificationFailedData(BaseModel):
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
@@ -12796,22 +15131,20 @@ class EventVerifyVerificationFailedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.",
     )]
-    status: Annotated[Literal["failed"], Field(
+    status: Annotated[Annotated[Union[EventVerifyVerificationFailedDataStatus, str], Field(union_mode="left_to_right")], Field(
         description="The verification's state, always `failed`. Open enum for forward compatibility.",
         examples=["failed"],
         min_length=1,
     )]
-    reason: Annotated[Union[VerificationTerminalReason, str], Field(
+    reason: Annotated[Annotated[Union[VerificationTerminalReason, str], Field(union_mode="left_to_right")], Field(
         description="Why a verification session reached its final state without succeeding: `attempts_exhausted` (too many incorrect passcodes), `ttl_elapsed` (the time window elapsed before a correct passcode), or `undeliverable` (no planned channel could deliver a passcode, so the recipient never had one to submit). Open enum: new reasons may be added over time, so treat any unrecognized value as a future reason rather than an error.",
-        union_mode="left_to_right",
     )]
-    channel: Annotated[Optional[Union[VerificationChannel, str]], Field(
+    channel: Annotated[Optional[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]], Field(
         description="The last channel the verification tried, the one whose failure left it with nowhere else to go. Null when no channel was attributed.",
-        union_mode="left_to_right",
+        examples=["sms"],
     )]
-    last_attempt_reason: Annotated[Union[VerificationAttemptFailureReason, str], Field(
+    last_attempt_reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
         description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: The channel does not carry passcodes to this\n  destination country. The verification moves to the next channel enabled\n  there, or fails when the country has no other.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
-        union_mode="left_to_right",
     )]
     failed_at: Annotated[str, Field(
         description="Time the verification was resolved.",
@@ -12835,6 +15168,10 @@ class EventVerifyVerificationFailed(BaseModel):
     )]
 
 
+class EventVerifyVerificationVerifiedDataStatus(str, Enum):
+    verified = "verified"
+
+
 class EventVerifyVerificationVerifiedData(BaseModel):
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
@@ -12853,14 +15190,14 @@ class EventVerifyVerificationVerifiedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided when the verification was created, echoed on every event for the session so you can correlate events with your own records. Null when the verification carried no metadata.",
     )]
-    status: Annotated[Literal["verified"], Field(
+    status: Annotated[Annotated[Union[EventVerifyVerificationVerifiedDataStatus, str], Field(union_mode="left_to_right")], Field(
         description="The verification's state, always `verified`. Open enum for forward compatibility.",
         examples=["verified"],
         min_length=1,
     )]
-    channel: Annotated[Optional[Union[VerificationChannel, str]], Field(
+    channel: Annotated[Optional[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]], Field(
         description="The channel whose passcode the recipient confirmed, the channel that converted. Null when the verification was resolved without attributing a channel.",
-        union_mode="left_to_right",
+        examples=["sms"],
     )]
     verified_at: Annotated[str, Field(
         description="Time the verification was verified.",
@@ -13535,6 +15872,10 @@ class EventWhatsAppSent(BaseModel):
     )]
 
 
+class EventWhatsAppSuppressionCreatedDataReason(str, Enum):
+    manual = "manual"
+
+
 class EventWhatsAppSuppressionCreatedData(BaseModel):
     model_config = ConfigDict(extra="allow")
     suppression_id: Annotated[str, Field(
@@ -13551,7 +15892,7 @@ class EventWhatsAppSuppressionCreatedData(BaseModel):
         description="The WhatsApp Business Account the suppression is limited to, identified by its WhatsApp-issued account ID, or null when it covers the whole workspace.",
         examples=["null"],
     )]
-    reason: Annotated[Literal["manual"], Field(
+    reason: Annotated[Annotated[Union[EventWhatsAppSuppressionCreatedDataReason, str], Field(union_mode="left_to_right")], Field(
         description="Why the address is suppressed. `manual` means it was added directly rather than created automatically from a delivery outcome. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
         min_length=1,
     )]
@@ -13638,9 +15979,8 @@ class WebhookAttempt(BaseModel):
         min_length=1,
         pattern="^whe_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    event_type: Annotated[Union[WebhookEventType, str], Field(
+    event_type: Annotated[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")], Field(
         description="Webhook event type. This is an open enum, so accept unrecognized values in deliveries. Subscribing to a type outside the event catalog returns a `422`.",
-        union_mode="left_to_right",
     )]
     status: Annotated[WebhookAttemptStatus, Field(
         description="Outcome of this attempt.\n\n- `delivered`: your endpoint accepted it with a `2xx` response.\n- `pending`: the attempt is still in flight.\n- `failed`: it returned a non-`2xx` response or no response at all. A `failed`\n  attempt is not final for the event: automatic retries appear as further\n  attempts with the same `event_id`.",
@@ -13739,9 +16079,8 @@ class Number(BaseModel):
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )]
-    number_type: Annotated[Union[NumberType, str], Field(
+    number_type: Annotated[Annotated[Union[NumberType, str], Field(union_mode="left_to_right")], Field(
         description="Physical type of this phone number.",
-        union_mode="left_to_right",
     )]
     capabilities: Annotated[List[Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]], Field(
         description="Capabilities supported by this number.",
@@ -13792,9 +16131,8 @@ class AvailableNumber(BaseModel):
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )]
-    number_type: Annotated[Union[NumberType, str], Field(
+    number_type: Annotated[Annotated[Union[NumberType, str], Field(union_mode="left_to_right")], Field(
         description="Physical type of this phone number.",
-        union_mode="left_to_right",
     )]
     capabilities: Annotated[List[Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]], Field(
         description="Capabilities supported by this number.",
@@ -13848,9 +16186,8 @@ class NumbersOrder(BaseModel):
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )]
-    number_type: Annotated[Union[NumberType, str], Field(
+    number_type: Annotated[Annotated[Union[NumberType, str], Field(union_mode="left_to_right")], Field(
         description="Physical type of the number being acquired.",
-        union_mode="left_to_right",
     )]
     status: Annotated[Union[NumbersOrderStatus, str], Field(union_mode="left_to_right")]
     number_id: Annotated[Optional[str], Field(
@@ -13903,7 +16240,6 @@ class VoiceCallRouteType(str, Enum):
     reject = "reject"
     trunk = "trunk"
     forward = "forward"
-    voicemail = "voicemail"
 
 
 class VoiceInboundForwardAs(str, Enum):

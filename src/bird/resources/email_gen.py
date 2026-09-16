@@ -7,6 +7,7 @@ from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
+    EmailHealth,
     EmailMessage,
 )
 from bird._resource import AsyncResource, Resource
@@ -27,6 +28,13 @@ class EmailListParams(TypedDict, total=False):
     category: str
     to: str
     from_: str
+
+
+class EmailHealthParams(TypedDict, total=False):
+    """Query params for ``client.email.health``. Every key is optional."""
+
+    from_: str
+    to: str
 
 
 class EmailBase(Resource):
@@ -104,6 +112,32 @@ class EmailBase(Resource):
             options,
         )
 
+    def health(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailHealth:
+        """Deliverability verdict for one window: an overall `healthy`, `watching`, or `throttled` status, plus signals for delivery, opens, bounces, and complaints. Each signal carries its rate and verdict. Delivery, bounce, and complaint signals include the thresholds that set their verdicts; open rate has no risk thresholds. Reports risk only and never pauses sending. Window defaults to the 7 days before today (UTC), maximum 365 days. For the counts and rates behind the verdict use `email.stats.summary`.
+
+        ```python
+        health = client.email.health(from_="2026-05-01", to="2026-05-31")
+        print(health.status)
+        for signal in health.signals:
+            print(signal.metric, signal.value, signal.status)
+        ```
+        """
+        return self._get(
+            "/v1/email/health",
+            {
+                "from": from_,
+                "to": to,
+            },
+            EmailHealth,
+            options,
+        )
+
 
 class AsyncEmailBase(AsyncResource):
     async def get(
@@ -177,5 +211,31 @@ class AsyncEmailBase(AsyncResource):
         await self._action_none(
             "POST",
             f"/v1/email/messages/{quote(message_id, safe='')}/cancel",
+            options,
+        )
+
+    async def health(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailHealth:
+        """Deliverability verdict for one window: an overall `healthy`, `watching`, or `throttled` status, plus signals for delivery, opens, bounces, and complaints. Each signal carries its rate and verdict. Delivery, bounce, and complaint signals include the thresholds that set their verdicts; open rate has no risk thresholds. Reports risk only and never pauses sending. Window defaults to the 7 days before today (UTC), maximum 365 days. For the counts and rates behind the verdict use `email.stats.summary`.
+
+        ```python
+        health = await client.email.health(from_="2026-05-01", to="2026-05-31")
+        print(health.status)
+        for signal in health.signals:
+            print(signal.metric, signal.value, signal.status)
+        ```
+        """
+        return await self._get(
+            "/v1/email/health",
+            {
+                "from": from_,
+                "to": to,
+            },
+            EmailHealth,
             options,
         )

@@ -116,7 +116,16 @@ from bird._generated import (
     SMSMessage,
     SMSMessageBatchResponse,
     SMSTemplate,
+    SMSTemplateLanguage,
+    SMSTemplateLanguageList,
+    SMSTemplateLanguageSummary,
     SMSTemplateList,
+    SMSTemplateSummary,
+    SMSTemplateVersion,
+    SMSTemplateVersionSummary,
+    Suppression,
+    SuppressionList,
+    SuppressionScope,
     TemplateStatus,
     EmailLookup,
     PhoneNumberLookup,
@@ -167,6 +176,7 @@ from bird.resources.domains_gen import (
     DomainListParams,
     DomainUpdateParams,
 )
+from bird.resources.suppressions_gen import SuppressionsAddParams, SuppressionsListParams
 from bird.resources.lookup_gen import LookupEmailParams, LookupPhoneNumberParams
 from bird.resources.email_stats_gen import (
     EmailStatsByBounceCodeParams,
@@ -206,6 +216,7 @@ from bird.resources.email_templates_versions_languages_gen import (
     EmailTemplatesVersionsLanguagesUpdateParams,
 )
 from bird.resources.sms_templates_gen import SmsTemplateListParams
+from bird.resources.sms_templates_versions_gen import SmsTemplatesVersionsListParams
 from bird.resources.verify_verifications_gen import (
     VerifyVerificationsCheckParams,
     VerifyVerificationsCreateParams,
@@ -217,6 +228,13 @@ from bird._open_enums import (
     EmailClientFamily,
     EmailClientPlatform,
     EmailCompatibilityRuleID,
+    EmailInboxInsightsGmailTab,
+    EmailInboxInsightsDmarcReadinessReason,
+    EmailInboxInsightsDmarcVerdict,
+    EmailInboxInsightsTrapType,
+    EmailInboxInsightsTrapSource,
+    EmailCompetitiveCampaignSignal,
+
     EmailEventType,
     EmailLookupFlag,
     EmailLookupReason,
@@ -284,7 +302,102 @@ from bird._exceptions import (
 from bird.pagination import AsyncPage, SyncPage
 from bird._version import __version__
 
+from bird.resources.email_competitive_brands_gen import (
+    EmailCompetitiveBrandsSearchParams,
+)
+from bird.resources.email_competitive_gen import (
+    EmailCompetitiveVolumeSeriesParams,
+)
+from bird.resources.email_competitive_watchlist_brands_campaigns_gen import (
+    EmailCompetitiveWatchlistBrandsCampaignsListParams,
+)
+from bird.resources.email_competitive_watchlist_brands_gen import (
+    EmailCompetitiveWatchlistBrandsCreateParams,
+    EmailCompetitiveWatchlistBrandsGetParams,
+    EmailCompetitiveWatchlistBrandsSendTimeParams,
+)
+from bird.resources.email_competitive_watchlist_gen import (
+    EmailCompetitiveWatchlistGetParams,
+    EmailCompetitiveWatchlistNotableParams,
+)
+from bird.resources.email_inbox_insights_benchmarks_gen import (
+    EmailInboxInsightsBenchmarksIndustryParams,
+)
+from bird.resources.email_inbox_insights_domains_gen import (
+    EmailInboxInsightsDomainsListParams,
+    EmailInboxInsightsDomainsUpdateParams,
+)
+from bird.resources.email_inbox_insights_gen import (
+    EmailInboxInsightsPlacementParams,
+    EmailInboxInsightsAuthenticationParams,
+    EmailInboxInsightsComplaintsParams,
+    EmailInboxInsightsSpamTrapsParams,
+    EmailInboxInsightsBlocklistsParams,
+)
+from bird._generated import (
+    EmailCompetitiveBrandProfile,
+    EmailCompetitiveBrandSearchResults,
+    EmailCompetitiveCampaign,
+    EmailCompetitiveNotableFeed,
+    EmailCompetitiveSendTimeGrid,
+    EmailCompetitiveVolumeSeries,
+    EmailCompetitiveWatchlist,
+    EmailCompetitiveWatchlistBrand,
+    EmailCompetitiveWatchlistBrandCreate,
+    EmailInboxInsightsAuthentication,
+    EmailInboxInsightsBlocklists,
+    EmailInboxInsightsComplaints,
+    EmailInboxInsightsDomain,
+    EmailInboxInsightsDomainMonitoringResult,
+    EmailInboxInsightsDomainUpdate,
+    EmailInboxInsightsIndustryBenchmark,
+    EmailInboxInsightsPlacement,
+    EmailInboxInsightsSpamTraps,
+)
+
 __all__ = [
+    "EmailInboxInsightsGmailTab",
+    "EmailInboxInsightsDmarcReadinessReason",
+    "EmailInboxInsightsDmarcVerdict",
+    "EmailInboxInsightsTrapType",
+    "EmailInboxInsightsTrapSource",
+    "EmailCompetitiveCampaignSignal",
+
+    "EmailCompetitiveBrandsSearchParams",
+    "EmailCompetitiveVolumeSeriesParams",
+    "EmailCompetitiveWatchlistBrandsCampaignsListParams",
+    "EmailCompetitiveWatchlistBrandsCreateParams",
+    "EmailCompetitiveWatchlistBrandsGetParams",
+    "EmailCompetitiveWatchlistBrandsSendTimeParams",
+    "EmailCompetitiveWatchlistGetParams",
+    "EmailCompetitiveWatchlistNotableParams",
+    "EmailInboxInsightsBenchmarksIndustryParams",
+    "EmailInboxInsightsDomainsListParams",
+    "EmailInboxInsightsDomainsUpdateParams",
+    "EmailInboxInsightsPlacementParams",
+    "EmailInboxInsightsAuthenticationParams",
+    "EmailInboxInsightsComplaintsParams",
+    "EmailInboxInsightsSpamTrapsParams",
+    "EmailInboxInsightsBlocklistsParams",
+    "EmailCompetitiveBrandProfile",
+    "EmailCompetitiveBrandSearchResults",
+    "EmailCompetitiveCampaign",
+    "EmailCompetitiveNotableFeed",
+    "EmailCompetitiveSendTimeGrid",
+    "EmailCompetitiveVolumeSeries",
+    "EmailCompetitiveWatchlist",
+    "EmailCompetitiveWatchlistBrand",
+    "EmailCompetitiveWatchlistBrandCreate",
+    "EmailInboxInsightsAuthentication",
+    "EmailInboxInsightsBlocklists",
+    "EmailInboxInsightsComplaints",
+    "EmailInboxInsightsDomain",
+    "EmailInboxInsightsDomainMonitoringResult",
+    "EmailInboxInsightsDomainUpdate",
+    "EmailInboxInsightsIndustryBenchmark",
+    "EmailInboxInsightsPlacement",
+    "EmailInboxInsightsSpamTraps",
+
     "Bird",
     "AsyncBird",
     "RequestOptions",
@@ -325,6 +438,11 @@ __all__ = [
     "DNSRecord",
     "DomainDKIM",
     "DomainCapabilities",
+    "SuppressionsListParams",
+    "SuppressionsAddParams",
+    "Suppression",
+    "SuppressionList",
+    "SuppressionScope",
     "APIResponse",
     "SyncPage",
     "AsyncPage",
@@ -422,8 +540,15 @@ __all__ = [
     "SMSMessage",
     "SMSMessageBatchResponse",
     "SMSTemplate",
+    "SMSTemplateLanguage",
+    "SMSTemplateLanguageList",
+    "SMSTemplateLanguageSummary",
     "SMSTemplateList",
+    "SMSTemplateSummary",
+    "SMSTemplateVersion",
+    "SMSTemplateVersionSummary",
     "SmsTemplateListParams",
+    "SmsTemplatesVersionsListParams",
     "EmailTemplateLanguageContentParams",
     "EmailTemplatesBroadcastsListParams",
     "EmailTemplatesDuplicateParams",

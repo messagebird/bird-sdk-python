@@ -17,18 +17,23 @@ import pydantic
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._exceptions import BirdError
-from bird._types import RequestOptions
+from bird._types import RequestOptions, omit
 
 T = TypeVar("T", bound=pydantic.BaseModel)
 
 
-def _request_kwargs(options: RequestOptions | None, query: dict[str, object]) -> dict[str, Any]:
+def _request_kwargs(
+    options: RequestOptions | None, query: dict[str, object], cursor: str | None = None,
+) -> dict[str, Any]:
     clean = {key: value for key, value in query.items() if value is not None}
     kwargs: dict[str, Any] = dict(options or {})
     # `credentials` is consumed by the credential resolver, not the transport, which
     # has no such parameter. Mirrors _resource._opts.
     kwargs.pop("credentials", None)
     kwargs["extra_query"] = {**(kwargs.get("extra_query") or {}), **clean}
+    if cursor is not None:
+        kwargs["extra_query"]["ending_before"] = omit
+        kwargs["extra_query"]["starting_after"] = cursor
     return kwargs
 
 
@@ -48,8 +53,8 @@ class SyncPage(Generic[T]):
         self._options = options
         self.data, self.next_cursor = self._fetch(query)
 
-    def _fetch(self, query: dict[str, object]) -> tuple[list[T], str | None]:
-        body = self._client.request("GET", self._path, **_request_kwargs(self._options, query)).json()
+    def _fetch(self, query: dict[str, object], cursor: str | None = None) -> tuple[list[T], str | None]:
+        body = self._client.request("GET", self._path, **_request_kwargs(self._options, query, cursor)).json()
         return [self._item.model_validate(row) for row in body.get("data", [])], body.get("next_cursor")
 
     def has_next_page(self) -> bool:
@@ -61,7 +66,7 @@ class SyncPage(Generic[T]):
             yield from data
             if cursor is None:
                 return
-            data, cursor = self._fetch({**self._query, "starting_after": cursor})
+            data, cursor = self._fetch(self._query, cursor)
 
 
 class AsyncPage(Generic[T]):
@@ -85,8 +90,8 @@ class AsyncPage(Generic[T]):
         self.data: list[T] = []
         self.next_cursor: str | None = None
 
-    async def _fetch(self, query: dict[str, object]) -> tuple[list[T], str | None]:
-        body = (await self._client.request("GET", self._path, **_request_kwargs(self._options, query))).json()
+    async def _fetch(self, query: dict[str, object], cursor: str | None = None) -> tuple[list[T], str | None]:
+        body = (await self._client.request("GET", self._path, **_request_kwargs(self._options, query, cursor))).json()
         return [self._item.model_validate(row) for row in body.get("data", [])], body.get("next_cursor")
 
     async def _load_first(self) -> AsyncPage[T]:
@@ -116,4 +121,4 @@ class AsyncPage(Generic[T]):
                 yield row
             if cursor is None:
                 return
-            data, cursor = await self._fetch({**self._query, "starting_after": cursor})
+            data, cursor = await self._fetch(self._query, cursor)

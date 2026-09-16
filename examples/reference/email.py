@@ -25,6 +25,14 @@ def email_list() -> None:
     page = client.email.list(status="delivered")  # page.data, page.next_cursor
     print(len(page.data), page.next_cursor)
 
+
+def email_health() -> None:
+    health = client.email.health(from_="2026-05-01", to="2026-05-31")
+    print(health.status)
+    for signal in health.signals:
+        print(signal.metric, signal.value, signal.status)
+
+
 def email_stats_summary() -> None:
     summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
     print(summary.sends_accepted, summary.delivery)
@@ -250,3 +258,205 @@ def mailbox_thread_message_reply() -> None:
 def email_templates_list() -> None:
     for template in client.email.templates.list(scope="workspace"):
         print(template.slug, template.name)
+
+
+def insights_email_competitive_brands_search() -> None:
+    # Requires Insights preview access for the organization.
+    report = client.email.competitive.brands.search(q="Everlane")
+    print(report.model_dump_json())
+
+
+def insights_email_competitive_watchlist_get() -> None:
+    # Requires Insights preview access for the organization.
+    report = client.email.competitive.watchlist.get(range=30)
+    print(report.model_dump_json())
+
+
+def insights_email_competitive_watchlist_brands_create() -> None:
+    # Requires Insights preview access for the organization.
+    matches = client.email.competitive.brands.search(q="Everlane")
+    match = next((brand for brand in matches.data if brand.name == "Everlane"), None)
+    if match is None:
+        raise ValueError("No exact Everlane match")
+    entry = client.email.competitive.watchlist.brands.create(brand_id=match.brand_id)
+    print(entry.id)
+
+
+def insights_email_competitive_watchlist_brands_get() -> None:
+    # Requires Insights preview access for the organization.
+    watchlist = client.email.competitive.watchlist.get(range=30)
+    entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
+    if entry is None or entry.watchlist_brand_id is None:
+        raise ValueError("Add Everlane to the watchlist first")
+    watchlist_brand_id = entry.watchlist_brand_id
+    report = client.email.competitive.watchlist.brands.get(watchlist_brand_id, range=30)
+    print(report.model_dump_json())
+
+
+def insights_email_competitive_watchlist_brands_sendTime() -> None:
+    # Requires Insights preview access for the organization.
+    watchlist = client.email.competitive.watchlist.get(range=30)
+    entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
+    if entry is None or entry.watchlist_brand_id is None:
+        raise ValueError("Add Everlane to the watchlist first")
+    watchlist_brand_id = entry.watchlist_brand_id
+    report = client.email.competitive.watchlist.brands.send_time(watchlist_brand_id, timezone="UTC")
+    print(report.model_dump_json())
+
+
+def insights_email_competitive_watchlist_brands_delete() -> None:
+    # Requires Insights preview access for the organization.
+    watchlist = client.email.competitive.watchlist.get(range=30)
+    entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
+    if entry is None or entry.watchlist_brand_id is None:
+        raise ValueError("Add Everlane to the watchlist first")
+    watchlist_brand_id = entry.watchlist_brand_id
+    client.email.competitive.watchlist.brands.delete(watchlist_brand_id)
+
+
+def insights_email_competitive_watchlist_notable() -> None:
+    # Requires Insights preview access for the organization.
+    report = client.email.competitive.watchlist.notable(range=30)
+    print(report.model_dump_json())
+
+
+def insights_email_competitive_volumeSeries() -> None:
+    # Requires Insights preview access for the organization.
+    watchlist = client.email.competitive.watchlist.get(range=30)
+    entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
+    if entry is None or entry.watchlist_brand_id is None:
+        raise ValueError("Add Everlane to the watchlist first")
+    watchlist_brand_id = entry.watchlist_brand_id
+    report = client.email.competitive.volume_series(range=30, brand_ids=[watchlist_brand_id])
+    print(report.model_dump_json())
+
+
+def insights_email_competitive_watchlist_brands_campaigns_list() -> None:
+    # Requires Insights preview access for the organization.
+    watchlist = client.email.competitive.watchlist.get(range=30)
+    entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
+    if entry is None or entry.watchlist_brand_id is None:
+        raise ValueError("Add Everlane to the watchlist first")
+    watchlist_brand_id = entry.watchlist_brand_id
+    for campaign in client.email.competitive.watchlist.brands.campaigns.list(watchlist_brand_id, range=30, limit=25):
+        print(campaign.id)
+
+
+def insights_email_competitive_watchlist_brands_campaigns_get() -> None:
+    # Requires Insights preview access for the organization.
+    watchlist = client.email.competitive.watchlist.get(range=30)
+    entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
+    if entry is None or entry.watchlist_brand_id is None:
+        raise ValueError("Add Everlane to the watchlist first")
+    watchlist_brand_id = entry.watchlist_brand_id
+    campaign_id = None
+    for campaign in client.email.competitive.watchlist.brands.campaigns.list(watchlist_brand_id, range=30, limit=1):
+        campaign_id = campaign.id
+        break
+    if campaign_id is None:
+        raise ValueError("No captured campaigns")
+    report = client.email.competitive.watchlist.brands.campaigns.get(watchlist_brand_id, campaign_id)
+    print(report.model_dump_json())
+
+
+def insights_email_inboxInsights_domains_list() -> None:
+    # Requires Insights preview access for the organization.
+    for domain in client.email.inbox_insights.domains.list(limit=25):
+        print(domain.domain, domain.monitored)
+
+
+def insights_email_inboxInsights_domains_update() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.domains.update(sending_domain, monitored=False)
+    print(report.monitored)
+
+
+def insights_email_inboxInsights_domainMonitoring_upsert() -> None:
+    # Requires Insights preview access for the organization.
+    result = client.email.inbox_insights.domain_monitoring.upsert()
+    print(result.outcome, result.domain)
+
+
+def insights_email_inboxInsights_placement() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.placement(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def insights_email_inboxInsights_authentication() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.authentication(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def insights_email_inboxInsights_complaints() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.complaints(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def insights_email_inboxInsights_spamTraps() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.spam_traps(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def insights_email_inboxInsights_blocklists() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.blocklists(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def insights_email_inboxInsights_benchmarks_industry() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.benchmarks.industry(sending_domain=sending_domain)
+    print(report.model_dump_json())

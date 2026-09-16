@@ -68,6 +68,14 @@ class EmailCompatibilityRuleID:
     HTML_WEB_PAGE_MARKUP: Final = "html_web_page_markup"
 
 
+class EmailCompetitiveCampaignSignal:
+    """Values of EmailCompetitiveCampaignSignal known at this SDK version (open enum)."""
+
+    BIGGEST_SEND: Final = "biggest_send"
+    LANDING_IN_SPAM: Final = "landing_in_spam"
+    READ_RATE_STANDOUT: Final = "read_rate_standout"
+
+
 class EmailEventType:
     """Values of EmailEventType known at this SDK version (open enum)."""
 
@@ -85,6 +93,52 @@ class EmailEventType:
     EMAIL_REJECTED: Final = "email.rejected"
     EMAIL_SCHEDULED: Final = "email.scheduled"
     EMAIL_UNSUBSCRIBED: Final = "email.unsubscribed"
+
+
+class EmailInboxInsightsDmarcReadinessReason:
+    """Values of EmailInboxInsightsDmarcReadinessReason known at this SDK version (open enum)."""
+
+    DATA_TOO_STALE: Final = "data_too_stale"
+    NO_POLICY: Final = "no_policy"
+    NO_RUA_DATA: Final = "no_rua_data"
+    SOURCE_BELOW_THRESHOLD: Final = "source_below_threshold"
+
+
+class EmailInboxInsightsDmarcVerdict:
+    """Values of EmailInboxInsightsDmarcVerdict known at this SDK version (open enum)."""
+
+    ALIGNED: Final = "aligned"
+    DKIM_ONLY: Final = "dkim_only"
+    FAILS_POLICY: Final = "fails_policy"
+    SPF_ONLY: Final = "spf_only"
+
+
+class EmailInboxInsightsGmailTab:
+    """Values of EmailInboxInsightsGmailTab known at this SDK version (open enum)."""
+
+    FORUMS: Final = "forums"
+    NONE: Final = "none"
+    PRIMARY: Final = "primary"
+    PROMOTIONS: Final = "promotions"
+    SOCIAL: Final = "social"
+    UPDATES: Final = "updates"
+
+
+class EmailInboxInsightsTrapSource:
+    """Values of EmailInboxInsightsTrapSource known at this SDK version (open enum)."""
+
+    ABUSIX: Final = "abusix"
+    CLOUDMARK: Final = "cloudmark"
+
+
+class EmailInboxInsightsTrapType:
+    """Values of EmailInboxInsightsTrapType known at this SDK version (open enum)."""
+
+    MIXED: Final = "mixed"
+    PARKED: Final = "parked"
+    PRISTINE: Final = "pristine"
+    RECYCLED: Final = "recycled"
+    TYPO: Final = "typo"
 
 
 class EmailLookupFlag:
@@ -563,7 +617,13 @@ __all__ = [
     "EmailClientFamily",
     "EmailClientPlatform",
     "EmailCompatibilityRuleID",
+    "EmailCompetitiveCampaignSignal",
     "EmailEventType",
+    "EmailInboxInsightsDmarcReadinessReason",
+    "EmailInboxInsightsDmarcVerdict",
+    "EmailInboxInsightsGmailTab",
+    "EmailInboxInsightsTrapSource",
+    "EmailInboxInsightsTrapType",
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",

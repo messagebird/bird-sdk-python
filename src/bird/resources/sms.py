@@ -2,7 +2,9 @@
 template), read a message, and list the message log.
 
 A send carries either ``text`` (with ``category`` and ``from_``) or a ``template``
-(by id or slug, with its ``parameters``). The two are mutually exclusive.
+(by id or slug, with its ``parameters``). A workspace template requires an owned
+``from_``; a built-in template selects its sender and rejects ``from_``. The two
+content forms are mutually exclusive.
 """
 
 from __future__ import annotations
@@ -105,8 +107,9 @@ class Sms(SmsBase):
     ) -> SMSMessage:
         """Send one SMS to a single recipient. Supply either ``text`` (with a
         ``category`` and ``from_``) or a stored ``template`` (by id or slug, with
-        ``parameters``). The API accepts the message for delivery. Read it back
-        with ``get`` for the latest status.
+        ``parameters``). A workspace template requires an owned ``from_``; a
+        built-in template selects its sender and rejects ``from_``. The API accepts
+        the message for delivery. Read it back with ``get`` for the latest status.
 
         ```python
         msg = client.sms.send(
@@ -120,7 +123,7 @@ class Sms(SmsBase):
 
         ```python
         client.sms.send(
-            to="+15551234567",
+            to="+14155550100",
             template="bird_otp_verification",
             parameters={"code": "123456"},
         )
@@ -189,7 +192,11 @@ class AsyncSms(AsyncSmsBase):
         smart_encoding: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Send one SMS to a single recipient (free text or by template)."""
+        """Send one SMS to a single recipient (free text or by template).
+
+        A workspace template requires an owned ``from_``; a built-in template
+        selects its sender and rejects ``from_``.
+        """
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,

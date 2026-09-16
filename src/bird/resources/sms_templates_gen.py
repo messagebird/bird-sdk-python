@@ -7,10 +7,11 @@ from urllib.parse import quote
 
 from bird._generated import (
     SMSTemplate,
-    SMSTemplateList,
+    SMSTemplateSummary,
 )
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
+from bird.pagination import AsyncPage, SyncPage
 
 
 class SmsTemplateListParams(TypedDict, total=False):
@@ -18,36 +19,52 @@ class SmsTemplateListParams(TypedDict, total=False):
 
     scope: str
     category: str
+    status: str
     language: str
+    q: str
+    sort: str
+    order: str
+    limit: int
+    starting_after: str
+    ending_before: str
 
 
-class SmsTemplates(Resource):
+class SmsTemplatesBase(Resource):
     def list(
         self,
         *,
         scope: str | None = None,
         category: str | None = None,
+        status: str | None = None,
         language: str | None = None,
+        q: str | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         options: RequestOptions | None = None,
-    ) -> SMSTemplateList:
-        """List the SMS templates available to your workspace, including our built-in templates. Filter by scope, category, or language. The catalog is small and returned in full; this list is not paginated. Use `sms_templates.get` to read one template's variables before sending with it.
+    ) -> SyncPage[SMSTemplateSummary]:
+        """List workspace and built-in SMS templates as a cursor page. Filter by scope, category, status, language, or a search across slug, name, and description. Read a version to retrieve content and variables.
 
         ```python
-        templates = client.sms_templates.list(scope="system")
-        for template in templates.data:
+        for template in client.sms_templates.list(scope="system"):
             print(template.id, template.slug)
         ```
         """
-        return self._get(
-            "/v1/sms/templates",
-            {
-                "scope": scope,
-                "category": category,
-                "language": language,
-            },
-            SMSTemplateList,
-            options,
-        )
+        query = {
+            "scope": scope,
+            "category": category,
+            "status": status,
+            "language": language,
+            "q": q,
+            "sort": sort,
+            "order": order,
+            "limit": limit,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return SyncPage(self._client, "/v1/sms/templates", query, SMSTemplateSummary, options)
 
     def get(
         self,
@@ -55,11 +72,11 @@ class SmsTemplates(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSTemplate:
-        """Get one SMS template by its slug or ID, including its body and the variables it expects. Fetch it before `sms.send` to see which parameter keys a template send requires.
+        """Read one SMS template's metadata, language states, draft revision, and draft and live version IDs. The response omits content and variables; read a version to retrieve them.
 
         ```python
         template = client.sms_templates.get("bird_otp_verification")
-        print(template.body, template.variables)
+        print(template.default_language, template.live_version_id)
         ```
         """
         return self._get(
@@ -70,33 +87,42 @@ class SmsTemplates(Resource):
         )
 
 
-class AsyncSmsTemplates(AsyncResource):
-    async def list(
+class AsyncSmsTemplatesBase(AsyncResource):
+    def list(
         self,
         *,
         scope: str | None = None,
         category: str | None = None,
+        status: str | None = None,
         language: str | None = None,
+        q: str | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         options: RequestOptions | None = None,
-    ) -> SMSTemplateList:
-        """List the SMS templates available to your workspace, including our built-in templates. Filter by scope, category, or language. The catalog is small and returned in full; this list is not paginated. Use `sms_templates.get` to read one template's variables before sending with it.
+    ) -> AsyncPage[SMSTemplateSummary]:
+        """List workspace and built-in SMS templates as a cursor page. Filter by scope, category, status, language, or a search across slug, name, and description. Read a version to retrieve content and variables.
 
         ```python
-        templates = await client.sms_templates.list(scope="system")
-        for template in templates.data:
+        async for template in client.sms_templates.list(scope="system"):
             print(template.id, template.slug)
         ```
         """
-        return await self._get(
-            "/v1/sms/templates",
-            {
-                "scope": scope,
-                "category": category,
-                "language": language,
-            },
-            SMSTemplateList,
-            options,
-        )
+        query = {
+            "scope": scope,
+            "category": category,
+            "status": status,
+            "language": language,
+            "q": q,
+            "sort": sort,
+            "order": order,
+            "limit": limit,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return AsyncPage(self._client, "/v1/sms/templates", query, SMSTemplateSummary, options)
 
     async def get(
         self,
@@ -104,11 +130,11 @@ class AsyncSmsTemplates(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> SMSTemplate:
-        """Get one SMS template by its slug or ID, including its body and the variables it expects. Fetch it before `sms.send` to see which parameter keys a template send requires.
+        """Read one SMS template's metadata, language states, draft revision, and draft and live version IDs. The response omits content and variables; read a version to retrieve them.
 
         ```python
         template = await client.sms_templates.get("bird_otp_verification")
-        print(template.body, template.variables)
+        print(template.default_language, template.live_version_id)
         ```
         """
         return await self._get(
