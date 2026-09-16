@@ -1178,7 +1178,7 @@ class EmailBroadcast(BaseModel):
         ge=0,
     )]
     sent_count: Annotated[Optional[int], Field(
-        description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending or canceling it, none of which read the counters. Absent from a list row for a broadcast that has no delivery events yet, such as a draft, where reading that one broadcast answers 0 instead. Absent too when the event store cannot be reached, which still returns 200. Read the broadcast again for the numbers.",
+        description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending or canceling it, none of which read the counters. List and single-broadcast reads return 0 when no delivery events are recorded. When counters are unavailable, those reads still return 200 and omit the counters. Read the broadcast again for the numbers.",
         examples=[4820],
         ge=0,
     )] = None
