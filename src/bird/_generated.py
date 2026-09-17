@@ -403,6 +403,10 @@ class EmailTemplateVersionID(RootModel[str]):
     root: str
 
 
+class EmailBroadcastID(RootModel[str]):
+    root: str
+
+
 class Tag(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
@@ -547,6 +551,11 @@ class EmailMessage(BaseModel):
         examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    broadcast_id: Annotated[Optional[str], Field(
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Labels on this message, each one a `name` and a `value`, that you can filter and search messages by. Use tags for anything you want to find messages by later, and `metadata` for data you only want handed back to you.",
@@ -859,10 +868,9 @@ class EmailRecipient(BaseModel):
         pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     parent_id: Annotated[str, Field(
-        description="ID of the message or broadcast this recipient belongs to. For a message send, this is the message's `em_`-prefixed ID. For a broadcast, this field is also `em_`-prefixed, but currently does not resolve to a retrievable message.",
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
-        pattern="^(em|eb)_[0-9a-hjkmnp-tv-z]{26}$",
+        pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     role: Annotated[RecipientRole, Field(
         description="Envelope position of a recipient on an outbound email event.",
@@ -1387,10 +1395,6 @@ class EmailBroadcastUpdateRequest(BaseModel):
     category: Annotated[Optional[EmailBroadcastUpdateRequestCategory], Field(
         description="What kind of email this is. It decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing` is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way reaches people who have already unsubscribed from you.",
     )] = None
-
-
-class EmailBroadcastID(RootModel[str]):
-    root: str
 
 
 class EmailBroadcastCounts(BaseModel):
@@ -8269,7 +8273,7 @@ class EmailInboxInsightsBlocklistTargetTargetType(str, Enum):
 class EmailInboxInsightsBlocklistTarget(BaseModel):
     model_config = ConfigDict(extra="allow")
     target: Annotated[str, Field(
-        description="The sending IP or domain that was checked.",
+        description="The sending IP or domain selected for lookup.",
         examples=["147.253.40.18"],
         min_length=1,
     )]
@@ -8322,12 +8326,12 @@ class EmailInboxInsightsBlocklists(BaseModel):
         examples=["2026-08-18T09:40:02Z"],
     )] = None
     active_count: Annotated[Optional[int], Field(
-        description="How many of the checked targets currently carry an active listing. A count of targets, not of listings: a target on three blocklists counts once. Null when no target could be checked at all, which is not the same as zero. Zero means every target was checked and none of them is listed.",
+        description="Number of successfully checked targets reported with an active listing. A target on three blocklists counts once. Null when the lookup service supplies no count; do not treat null as zero. Zero does not establish that the domain or its IPs were checked. Inspect `targets` and each target's `status` for lookup coverage, including partial failures.",
         examples=[0],
         ge=0,
     )]
     targets: Annotated[List[EmailInboxInsightsBlocklistTarget], Field(
-        description="One entry per sending IP or domain checked for this sending domain.",
+        description="Returned sending IP or domain lookup results, including failed lookups. An empty array does not establish that the domain or its IPs are clear.",
     )]
 
 
@@ -16053,7 +16057,7 @@ class NumberKind(str, Enum):
 
 class NumberStatus(str, Enum):
     active = "active"
-    pending_compliance = "pending_compliance"
+    pending_ownership_registration = "pending_ownership_registration"
     released = "released"
 
 
@@ -16086,7 +16090,7 @@ class Number(BaseModel):
         description="Capabilities supported by this number.",
     )]
     status: Annotated[NumberStatus, Field(
-        description="Whether this number can carry traffic.\n\n- `active` means this number is allocated to your workspace and usable.\n- `pending_compliance` means this number is allocated to your workspace and billed,\n  but it cannot carry traffic until the ownership paperwork its country requires is\n  accepted. Read `ownership.next` for what advances it, and re-read later if\n  `ownership` is momentarily `null`.\n- `released` means this number is no longer allocated to your workspace.\n\nAn allocated number is not always enough to send from it: some destination\ncountries also require an approved registration for the sender.",
+        description="The allocation and ownership-approval status of this number.\n\n- `active` means this number is allocated to your workspace and usable.\n- `pending_ownership_registration` means this number is allocated to your workspace and billed,\n  but outbound SMS and both inbound and outbound voice calls are blocked until the ownership paperwork\n  its country requires is accepted. This ownership status does not gate inbound SMS or WhatsApp.\n  Read `ownership.next` for what advances it, and re-read later if\n  `ownership` is momentarily `null`.\n- `released` means this number is no longer allocated to your workspace.\n\nAn allocated number is not always enough to send from it: some destination\ncountries also require an approved registration for the sender.",
         min_length=1,
     )]
     allocated_at: Annotated[str, Field(
@@ -16097,7 +16101,7 @@ class Number(BaseModel):
         description="When this number was released. `null` while it is still allocated to your workspace.",
     )] = None
     ownership: Annotated[Optional[NumberOwnership], Field(
-        description="Where this number stands with the ownership paperwork its country requires. `null` when the country requires none, which is the usual case: a number with no `ownership` object is usable as soon as it is allocated. Also `null` when that standing cannot be established right now; `status` still reads `pending_compliance` while the number is blocked, so re-read this field rather than caching its absence. We manage the paperwork for shared short codes, so this field is always `null` for them.",
+        description="Where this number stands with the ownership paperwork its country requires. `null` when the country requires none, which is the usual case: a number with no `ownership` object is usable as soon as it is allocated. Also `null` when that standing cannot be established right now; `status` still reads `pending_ownership_registration` while the number is blocked, so re-read this field rather than caching its absence. We manage the paperwork for shared short codes, so this field is always `null` for them.",
     )] = None
 
 
@@ -16136,6 +16140,9 @@ class AvailableNumber(BaseModel):
     )]
     capabilities: Annotated[List[Annotated[Union[NumberCapability, str], Field(union_mode="left_to_right")]], Field(
         description="Capabilities supported by this number.",
+    )]
+    ownership_registration_required: Annotated[bool, Field(
+        description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any setup fee is charged during purchase. Monthly billing starts at assignment even while approval is pending; assignment may follow completion of a pending supplier order.",
     )]
 
 

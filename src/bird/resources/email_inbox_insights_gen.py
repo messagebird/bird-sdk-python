@@ -237,7 +237,7 @@ class EmailInboxInsightsBase(Resource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsBlocklists:
-        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means no target could be checked, not that every target is clear. API-key calls require Insights preview access for your organization.
+        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means the lookup service supplied no count. Zero and an empty target list do not establish complete coverage. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.
@@ -421,7 +421,7 @@ class AsyncEmailInboxInsightsBase(AsyncResource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsBlocklists:
-        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means no target could be checked, not that every target is clear. API-key calls require Insights preview access for your organization.
+        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means the lookup service supplied no count. Zero and an empty target list do not establish complete coverage. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.
