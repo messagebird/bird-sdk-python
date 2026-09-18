@@ -141,6 +141,10 @@ class SortOrder(str, Enum):
     desc = "desc"
 
 
+class CurrencyCode(RootModel[str]):
+    root: str
+
+
 class CountryCode(RootModel[str]):
     root: str
 
@@ -2152,10 +2156,6 @@ class SMSSegments(BaseModel):
         description="Character count of the body, counted in Unicode code points under either encoding. This is not the segment measure: a `GSM_7BIT` extended-table character counts once here but costs two septets, and a `UCS2` emoji outside the Basic Multilingual Plane counts once here but costs two of the segment's 70 code units.",
         ge=0,
     )]
-
-
-class CurrencyCode(RootModel[str]):
-    root: str
 
 
 class MessageCost(BaseModel):
@@ -4351,6 +4351,10 @@ class WhatsAppMessageStatus(str, Enum):
     received = "received"
 
 
+class WhatsAppGroupID(RootModel[str]):
+    root: str
+
+
 class WhatsAppMessageID(RootModel[str]):
     root: str
 
@@ -4366,6 +4370,12 @@ class WhatsAppAddress(BaseModel):
         description="Business-scoped user ID, Meta's identifier for the WhatsApp user. Present only on the WhatsApp-user side of the message.",
         examples=["NL.xxxx"],
         min_length=1,
+    )] = None
+    group_id: Annotated[Optional[str], Field(
+        description="The group this address was addressed as, or reached through. It appears on a message's `to` and nowhere else: never on `from`, and never on an event's `recipient`. Outbound, it stands in for the recipient, because a group send names no single phone number. Inbound, it qualifies one: `to` carries the business `phone_number` that received the message and the group it arrived through, while `from` stays the participant who wrote it. Its presence on `to` is what tells a group message from a one-to-one one, in either direction.",
+        examples=["wag_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wag_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     username: Annotated[Optional[str], Field(
         description="Present only on a message received from a WhatsApp user, on `from`; never on an outbound send's `to`, where the profile is not known. Absent when the contact has not adopted one, and on a message received before this workspace started recording them. Same form as a number's own username (`WhatsAppNumberProfile.username`), without a leading `@`; a message cannot be addressed by it.",
@@ -5074,6 +5084,18 @@ class WhatsAppMessage(BaseModel):
         description="Emoji reactions standing on this message right now, one per sender. Absent when the message has none. A reaction that was replaced by a different emoji, or taken back, is not listed; the message's reaction log keeps that history. WhatsApp accepts a reaction on a message up to 30 days old, and we keep provider ids for 15, so a reaction placed on a message older than that cannot be matched to it and does not appear here.",
     )] = None
     status: WhatsAppMessageStatus
+    recipient_count: Annotated[Optional[int], Field(
+        description="How many recipients a group send was addressed to, taken when the send\nwas accepted. It is the group's membership at that moment, not its\nmembership now: someone joining through the invite link while the message\nis in flight does not receive it and does not change this count.\n\nAbsent on a one-to-one message, along with `delivered_count` and\n`read_count`. A message with one recipient has no fan-out to report, and\nits delivery is what `status`, `delivered_at` and `read_at` already say.\nAbsent for the same reason on a group message sent before Bird recorded\nthe count, and on a send to a group nobody had joined yet: there is no\ndenominator to report, and none can be recovered after the fact, since\nmembership has moved on. `to.group_id` is what tells a group message from\na one-to-one one in every case, including those two. With no denominator\nto resolve against, `status` is read as stored, the way a one-to-one\nmessage's is: it reaches `sent` when the message is handed to WhatsApp and\nstops there, because delivery is confirmed per participant and a send with\nno participants collects no confirmations.\n\nIt is also the denominator `status` is resolved against: on a group\nmessage `status` reports the furthest point *every* recipient has\nreached, so it turns `delivered` only once `delivered_count` equals this\nnumber, and stays `sent` while some have confirmed and others have not.\n`failed` and `rejected` are never per recipient: there is one hand-off to\nthe WhatsApp network and one way for that to be refused. `delivered_at`\nand `read_at` are the first recipient's, not the last.",
+        ge=1,
+    )] = None
+    delivered_count: Annotated[Optional[int], Field(
+        description="How many of the `recipient_count` recipients WhatsApp has confirmed the\nmessage reached. A recipient who reported only a read counts here too:\nWhatsApp skips the delivery receipt when someone is already looking at\nthe chat, so waiting for one would leave that person uncounted for ever.\n\nAbsent on a one-to-one message, which has no fan-out to count, and on a\ngroup message with no `recipient_count` to count against.",
+        ge=0,
+    )] = None
+    read_count: Annotated[Optional[int], Field(
+        description="How many of the `recipient_count` recipients have opened the message.\nRead receipts do not move `status`, which has no `read` value; they\nsurface here and in `read_at`.\n\nAbsent on a one-to-one message, which has no fan-out to count, and on a\ngroup message with no `recipient_count` to count against.",
+        ge=0,
+    )] = None
     last_error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )] = None
@@ -5675,18 +5697,18 @@ class WhatsAppContactCardSend(BaseModel):
 class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
-        description="The message recipient: a phone number in E.164 format (for example `+31612345678`), or the recipient's business-scoped user ID (for example `US.13491208655302741918`), which addresses a WhatsApp user whose phone number you do not have. A value that is neither returns a `422` `WhatsAppInvalidRecipient`. One-time-passcode templates require a phone number and return a `422` `WhatsAppRecipientNotSupportedForTemplate` when sent to a business-scoped user ID.",
+        description="The message recipient: a phone number in E.164 format (for example `+31612345678`), the recipient's business-scoped user ID (for example `US.13491208655302741918`), which addresses a WhatsApp user whose phone number you do not have, or a WhatsApp group ID (for example `wag_01krdgeqcxet5s7t44vh8rt9mg`), which sends to every participant of that group. A value that is none of these returns a `422` `WhatsAppInvalidRecipient`. One-time-passcode templates require a phone number and return a `422` `WhatsAppRecipientNotSupportedForTemplate` when sent to a business-scoped user ID. A group ID naming no group this workspace holds returns a `404` `WhatsAppGroupNotFound`, and one whose group is not active returns a `409` `WhatsAppGroupNotActive`. Content a group cannot take is refused ahead of both, so a group ID paired with interactive content returns the `422` below whether or not the group exists.",
         examples=[+31612345678],
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="The business phone number to send from, in E.164 format. Omit it for a Bird-managed template, which selects its own number from its category: setting it there returns a `422` `WhatsAppSenderNotAllowed`. Every other send, whether free-form content of any kind or a template your workspace authored, requires it, and the number must be one this workspace owns. Omitting it returns a `422` `WhatsAppSenderRequired`, and naming a number this workspace cannot send from returns a `422` `WhatsAppSenderNotFound`. Naming a number this workspace owns but that sits on a different WhatsApp Business Account than an authored template returns a `422` `WhatsAppSenderWABAMismatch`. A number this workspace holds but has not finished connecting returns a `422` `WhatsAppSenderNotConnected`.",
+        description="The business phone number to send from, in E.164 format. Omit it for a Bird-managed template, which selects its own number from its category: setting it there returns a `422` `WhatsAppSenderNotAllowed`. Every other send, whether free-form content of any kind or a template your workspace authored, requires it, and the number must be one this workspace owns. Omitting it returns a `422` `WhatsAppSenderRequired`, and naming a number this workspace cannot send from returns a `422` `WhatsAppSenderNotFound`. Naming a number this workspace owns but that sits on a different WhatsApp Business Account than an authored template returns a `422` `WhatsAppSenderWABAMismatch`. A number this workspace holds but has not finished connecting returns a `422` `WhatsAppSenderNotConnected`. Omit it for a group send too: the group sends on its own number, so naming one returns a `422` `WhatsAppSenderNotAllowed`.",
         examples=[+13124495648],
         min_length=1,
     )] = None
     template: Annotated[Optional[WhatsAppTemplateSend], Field(
-        description="The template to send. A Bird-managed template selects the sender number from the template's category, so `from` must be omitted. A template is the only content deliverable outside a customer service window.",
+        description="The template to send. A Bird-managed template selects the sender number from the template's category, so `from` must be omitted. A template is the only content deliverable outside a customer service window. A group send takes a template your workspace authored in any category but authentication: WhatsApp does not deliver an authentication template to a group, which returns a `422` `WhatsAppGroupContentNotSupported`. A Bird-managed template sends from a Bird-owned number that no group is scoped to, so addressing one to a group returns a `422` `WhatsAppInvalidRecipient`.",
     )] = None
     text: Annotated[Optional[WhatsAppTextSend], Field(
         description="Free-form text to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
@@ -5710,7 +5732,7 @@ class WhatsAppMessageSendRequest(BaseModel):
         description="A free-form location to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractiveSend], Field(
-        description="Free-form interactive content to send instead of a template: body text plus reply buttons, a menu, a link button, media cards, or a single button asking the recipient to share their location or their phone number. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="Free-form interactive content to send instead of a template: body text plus reply buttons, a menu, a link button, media cards, or a single button asking the recipient to share their location or their phone number. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`. WhatsApp does not deliver interactive content to a group, so a group recipient returns a `422` `WhatsAppGroupContentNotSupported`.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCardSend]], Field(
         description="Contact cards to send instead of a template. Up to five: WhatsApp accepts far more, and a message that opens as one name plus a count of the rest is not a card the recipient will read.",
@@ -5776,6 +5798,9 @@ class WhatsAppEvent(BaseModel):
         description="When this event occurred.",
         min_length=1,
     )]
+    recipient: Annotated[Optional[WhatsAppAddress], Field(
+        description="The participant this confirmation is about, on a group message. Present only on `whatsapp.delivered` and `whatsapp.read`, the two events a group send fans out: one per participant, so a group of eight produces up to eight of each. The rest describe the message as a whole and carry no recipient, because there is one hand-off to the WhatsApp network and one way for that to be refused. Absent on a one-to-one message, whose `to` already names its recipient. Never carries `group_id`: the group belongs to the message's `to`, not to a participant.",
+    )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )] = None
@@ -5869,10 +5894,6 @@ class WhatsAppReactionEventList(BaseModel):
 
 
 class WhatsAppNumberID(RootModel[str]):
-    root: str
-
-
-class WhatsAppBusinessAccountID(RootModel[str]):
     root: str
 
 
@@ -6989,6 +7010,10 @@ class WhatsAppNumberStatus(str, Enum):
     restricted = "restricted"
 
 
+class WhatsAppBusinessAccountID(RootModel[str]):
+    root: str
+
+
 class WhatsAppNumberScope(str, Enum):
     system = "system"
     workspace = "workspace"
@@ -7444,6 +7469,116 @@ class WhatsAppBusinessAccountList(BaseModel):
 
 class WhatsAppSuppressionID(RootModel[str]):
     root: str
+
+
+class WhatsAppKeywordOperation(str, Enum):
+    opt_in = "opt_in"
+    opt_out = "opt_out"
+
+
+class WhatsAppKeywordRuleScope(str, Enum):
+    system = "system"
+    workspace = "workspace"
+
+
+class WhatsAppKeywordRuleID(RootModel[str]):
+    root: str
+
+
+class WhatsAppKeywordRule(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wkr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wkr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    scope: Annotated[WhatsAppKeywordRuleScope, Field(
+        description="Whether the rule is one Bird ships (`system`) or one your workspace created (`workspace`). Both kinds carry a `wkr_` ID and can be read; only a `workspace` rule can be changed or deleted. A `workspace` rule takes precedence over Bird's at the same grain, so it is how you replace a reply without losing the keywords Bird ships.",
+    )]
+    operation: Annotated[Annotated[Union[WhatsAppKeywordOperation, str], Field(union_mode="left_to_right")], Field(
+        description="What Bird does when an inbound message matches the rule.\n\n- `opt_out` records that the sender no longer consents to receive any messages from your\n  WhatsApp Business Account, including transactional ones. Typing the word is the person's\n  own statement, so it covers everything, unlike WhatsApp's built-in marketing opt-out\n  control, which stops marketing alone.\n- `opt_in` records that they consent again.\n\nA rule's operation is fixed once created, and a keyword belongs to exactly one operation, so\na keyword Bird ships for `opt_out` cannot be reused for `opt_in`.\n\nThis is an open enum. Accept unrecognized values: SMS already answers `help`, `info`, `confirm`\nand `custom`, and WhatsApp gains an operation without a new API version. Sending one Bird does\nnot answer yet is refused with `E15082`.",
+    )]
+    country: Annotated[Optional[str], Field(
+        description="The country the rule applies in, as an ISO 3166-1 alpha-2 code. It is the country of the person who messaged you, worked out from their phone number, not the country of the account they messaged. Null means the rule applies worldwide, which is what Bird's own rules do. A rule for a country outranks a worldwide rule for the people it covers.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+    )] = None
+    waba: Annotated[Optional[str], Field(
+        description="The WhatsApp Business Account the rule is limited to, identified by its WhatsApp-issued account ID, or null when it covers every account in your workspace. Bird's own rules are always null.",
+        examples=[102290129340398],
+    )] = None
+    keywords: Annotated[List[str], Field(
+        description="The keywords this rule adds. For one of Bird's own rules this is the full set Bird ships. For a rule you created it is only what you added on top: it never restates or removes Bird's keywords, so `effective_keywords` is what actually matches.",
+    )]
+    effective_keywords: Annotated[List[str], Field(
+        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so a sender in a country Bird ships a rule for is answered by that rule and your reply is not used. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
+    )]
+    reply: Annotated[Optional[str], Field(
+        description="The message sent back when one of the keywords matches, or null when no reply is sent. The reply goes out on the conversation the inbound message opened.",
+        examples=["You're off the list. ACME Courier won't message you again."],
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When the rule was created. On one of Bird's own rules this is when Bird last shipped a change to it.",
+        examples=["2026-09-15T10:04:00Z"],
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When the rule was last changed. On one of Bird's own rules this is when Bird last shipped a change to it.",
+        examples=["2026-09-15T10:04:00Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppKeywordRuleList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppKeywordRule], Field(
+        description="The keyword rules that apply to your workspace, Bird's own included. Ordered most specific first, so the first rule whose keywords match an inbound message is the one that runs. The set is small and returned in full; this list is not paginated.",
+    )]
+
+
+class WhatsAppKeywordOperationWrite(str, Enum):
+    opt_in = "opt_in"
+    opt_out = "opt_out"
+
+
+class WhatsAppKeywordRuleCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    operation: Annotated[WhatsAppKeywordOperationWrite, Field(
+        description="What Bird does when an inbound message matches the rule.\n\n- `opt_out` records that the sender no longer consents to receive any messages from your\n  WhatsApp Business Account, including transactional ones. Typing the word is the person's\n  own statement, so it covers everything, unlike WhatsApp's built-in marketing opt-out\n  control, which stops marketing alone.\n- `opt_in` records that they consent again.\n\nA rule's operation is fixed once created, and a keyword belongs to exactly one operation, so\na keyword Bird ships for `opt_out` cannot be reused for `opt_in`.\n\nClosed on the write side: an operation Bird does not answer is rejected here rather than\nstored as a rule that never fires. The read side is open, because Bird can gain an operation\nwithout a new API version.",
+    )]
+    country: Annotated[Optional[str], Field(
+        description="The country this rule applies in, as an ISO 3166-1 alpha-2 code. It matches the country of the person who messaged you, worked out from their phone number. Omit it to cover everyone, which is what Bird's own rules do.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+    )] = None
+    waba: Annotated[Optional[str], Field(
+        description="Limit the rule to one WhatsApp Business Account, identified by its WhatsApp-issued account ID or by the `waa_` ID Bird gives it. Either form resolves to the same account, and the rule stores and returns the WhatsApp-issued one. Omit it to cover every account in your workspace. The account must be one of yours.",
+        examples=[102290129340398],
+        min_length=1,
+    )] = None
+    keywords: Annotated[Optional[List[str]], Field(
+        description="Extra keywords to match, on top of the ones Bird already ships for this operation. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. You cannot remove one of Bird's keywords, and a keyword Bird has bound to the other operation cannot be reused here.",
+    )] = None
+    reply: Annotated[Optional[str], Field(
+        description="The message to send back when a keyword matches. Omit it to send nothing.",
+        examples=["You're off the list. ACME Courier won't message you again."],
+        min_length=1,
+    )] = None
+
+
+class WhatsAppKeywordRuleUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    keywords: Annotated[Optional[List[str]], Field(
+        description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.",
+    )] = None
+    reply: Annotated[Optional[str], Field(
+        description="Replaces the message sent back when a keyword matches. Set it to null to send nothing. Omit to leave it unchanged.",
+        examples=["You're off the list. ACME Courier won't message you again."],
+        min_length=1,
+    )] = None
 
 
 class EmailInboxInsightsGroupBy(str, Enum):
@@ -11281,6 +11416,7 @@ class ActorType(str, Enum):
     system = "system"
     sso = "sso"
     service_account = "service_account"
+    automation = "automation"
 
 
 class Actor(BaseModel):
@@ -11291,7 +11427,7 @@ class Actor(BaseModel):
         min_length=1,
     )]
     type: Annotated[Annotated[Union[ActorType, str], Field(union_mode="left_to_right")], Field(
-        description="Who or what performed the action: `user` for a member's own session, `oauth_token` for a token issued to a caller on a member's behalf, `api_key` for a workspace API key, `system` for our own automation, `sso` for an organization's SSO connection, and `service_account` for a workspace's connected Integration acting with no member behind it. Open enum: new actor types may be added over time, so treat any unrecognized value as a future type rather than an error.",
+        description="New actor types may be added. Treat unrecognized values as future types, not errors.\n- `user`: a member's own session.\n- `api_key`: a workspace API key.\n- `oauth_token`: a token issued to a caller on a member's behalf.\n- `system`: an action we perform without a customer actor.\n- `sso`: an organization's SSO connection.\n- `service_account`: a workspace's connected Integration acting with no member behind it.\n- `automation`: an automation execution in your workspace.",
         examples=["user"],
         min_length=1,
     )]
@@ -13470,12 +13606,12 @@ class EventEmailReceivedData(BaseModel):
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Address from the message's From header, with the relay's parsed sender and then the SMTP envelope sender as fallbacks when that header cannot be read.",
+        description="Address from the message's From header, with the relay's parsed sender and then the SMTP envelope sender as fallbacks when that header cannot be read. This field alone does not authenticate the sender.",
         examples=["alice@example.com"],
         min_length=1,
     )]
     to: Annotated[List[str], Field(
-        description="Recipient addresses the message was sent to.",
+        description="Parsed recipient addresses from the message headers, not the envelope recipient used to route this delivery.",
     )]
     subject: Annotated[Optional[str], Field(
         description="Subject line as received, or null when the message had no subject.",
@@ -15517,6 +15653,9 @@ class EventWhatsAppDeliveredData(BaseModel):
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    recipient: Annotated[Optional[WhatsAppAddress], Field(
+        description="The participant delivery was confirmed to, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
+    )] = None
 
 
 class EventWhatsAppReadData(BaseModel):
@@ -15553,6 +15692,9 @@ class EventWhatsAppReadData(BaseModel):
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    recipient: Annotated[Optional[WhatsAppAddress], Field(
+        description="The participant who opened the message, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
     )] = None
 
 

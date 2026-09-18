@@ -33,6 +33,7 @@ class WhatsappListParams(TypedDict, total=False):
     phone_number: str
     bsuid: str
     category: str
+    group_id: str
     tag: Sequence[str]
 
 
@@ -84,10 +85,11 @@ class WhatsappBase(Resource):
         phone_number: str | None = None,
         bsuid: str | None = None,
         category: str | None = None,
+        group_id: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document, location, interactive or contact_cards. An inbound tap on a reply button or list row carries interactive_reply instead. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document, location, interactive or contact_cards. An inbound tap on a reply button or list row carries interactive_reply instead. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), group (group_id), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Neither matches a group, so group_id is what narrows the list to one group's messages. Use whatsapp_get for one message's current state.
 
         ```python
         for msg in client.whatsapp.list(status=["delivered"]):
@@ -107,6 +109,7 @@ class WhatsappBase(Resource):
             "phone_number": phone_number,
             "bsuid": bsuid,
             "category": category,
+            "group_id": group_id,
             "tag": tag,
         }
         return SyncPage(self._client, "/v1/whatsapp/messages", query, WhatsAppMessage, options)
@@ -200,10 +203,11 @@ class AsyncWhatsappBase(AsyncResource):
         phone_number: str | None = None,
         bsuid: str | None = None,
         category: str | None = None,
+        group_id: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppMessage]:
-        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document, location, interactive or contact_cards. An inbound tap on a reply button or list row carries interactive_reply instead. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Use whatsapp_get for one message's current state.
+        """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document, location, interactive or contact_cards. An inbound tap on a reply button or list row carries interactive_reply instead. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), group (group_id), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Neither matches a group, so group_id is what narrows the list to one group's messages. Use whatsapp_get for one message's current state.
 
         ```python
         async for msg in client.whatsapp.list(status=["delivered"]):
@@ -223,6 +227,7 @@ class AsyncWhatsappBase(AsyncResource):
             "phone_number": phone_number,
             "bsuid": bsuid,
             "category": category,
+            "group_id": group_id,
             "tag": tag,
         }
         return AsyncPage(self._client, "/v1/whatsapp/messages", query, WhatsAppMessage, options)

@@ -190,3 +190,39 @@ def whatsapp_stats_inbound_by_phone_number() -> None:
     stats = client.whatsapp.stats.inbound.by_phone_number(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.phone_number, row.received)
+
+
+def whatsapp_keyword_rules_list() -> None:
+    rules = client.whatsapp.keyword_rules.list(operation="opt_out")
+    for rule in rules.data or []:
+        print(rule.scope, rule.effective_keywords)
+
+
+def whatsapp_keyword_rules_get() -> None:
+    # Bird's rules and yours share the wkr_ id space; scope tells them apart.
+    rule = client.whatsapp.keyword_rules.get("wkr_01m2kj8x4te9p0rr7e5w2n1abc")
+    print(rule.scope, rule.reply)
+
+
+def whatsapp_keyword_rules_create() -> None:
+    rule = client.whatsapp.keyword_rules.create(
+        operation="opt_out",
+        country="US",  # the SENDER's country, from their own number
+        reply="You're off the list. ACME Courier won't message you again.",
+    )
+    # effective_keywords is Bird's set plus any of your own.
+    print(rule.id, rule.effective_keywords)
+
+
+def whatsapp_keyword_rules_update() -> None:
+    # Omitting keywords leaves the set alone; an empty list clears your additions
+    # back to Bird's.
+    rule = client.whatsapp.keyword_rules.update(
+        "wkr_01m2kj8x4te9p0rr7e5w2n1abc", keywords=["no more texts", "remove me"]
+    )
+    print(rule.effective_keywords)
+
+
+def whatsapp_keyword_rules_delete() -> None:
+    # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one; STOP never stops working.
+    client.whatsapp.keyword_rules.delete("wkr_01m2kj8x4te9p0rr7e5w2n1abc")

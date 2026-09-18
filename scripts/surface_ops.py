@@ -110,6 +110,8 @@ KEEP: dict[str, set[str]] = {
     "/v1/whatsapp/business-accounts": {"get"},
     "/v1/whatsapp/numbers/{number_id}/profile": {"get"},
     "/v1/whatsapp/business-accounts/{business_account_ref}": {"get"},
+    "/v1/whatsapp/keyword-rules": {"get", "post"},
+    "/v1/whatsapp/keyword-rules/{id}": {"delete", "get", "patch"},
     "/v1/whatsapp/stats/summary": {"get"},
     "/v1/whatsapp/stats/daily": {"get"},
     "/v1/whatsapp/stats/hourly": {"get"},

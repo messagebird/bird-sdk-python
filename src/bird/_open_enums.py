@@ -488,6 +488,13 @@ class WhatsAppInteractiveType:
     REQUEST_CONTACT_INFO: Final = "request_contact_info"
 
 
+class WhatsAppKeywordOperation:
+    """Values of WhatsAppKeywordOperation known at this SDK version (open enum)."""
+
+    OPT_IN: Final = "opt_in"
+    OPT_OUT: Final = "opt_out"
+
+
 class WhatsAppNumberErrorCode:
     """Values of WhatsAppNumberErrorCode known at this SDK version (open enum)."""
 
@@ -659,6 +666,7 @@ __all__ = [
     "WhatsAppInteractiveHeaderType",
     "WhatsAppInteractiveReplyType",
     "WhatsAppInteractiveType",
+    "WhatsAppKeywordOperation",
     "WhatsAppNumberErrorCode",
     "WhatsAppNumberMessagingLimit",
     "WhatsAppNumberQualityRating",
