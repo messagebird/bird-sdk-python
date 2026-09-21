@@ -3246,6 +3246,10 @@ class SMSKeywordRuleUpdate(BaseModel):
     )] = None
 
 
+class ComplianceSubmissionID(RootModel[str]):
+    root: str
+
+
 class SMSStatsSummaryPeriod(BaseModel):
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
@@ -16164,6 +16168,15 @@ class WebhookAttemptList(BaseModel):
     )]
 
 
+class SIPTrunkID(RootModel[str]):
+    root: str
+
+
+class VoiceInboundForwardAs(str, Enum):
+    dialed_number = "dialed_number"
+    calling_number = "calling_number"
+
+
 class NumberType(str, Enum):
     mobile = "mobile"
     local = "local"
@@ -16179,16 +16192,35 @@ class NumberCapability(str, Enum):
     voice = "voice"
 
 
+class NumberOwnershipStatus(str, Enum):
+    needs_input = "needs_input"
+    under_review = "under_review"
+    approval_pending = "approval_pending"
+    approved = "approved"
+    not_required = "not_required"
+    rejected = "rejected"
+    unknown = "unknown"
+
+
 class NumberOwnership(BaseModel):
     model_config = ConfigDict(extra="allow")
+    submission_id: Annotated[Optional[str], Field(
+        description="The most recent ownership submission for this number, including after approval. Users with compliance read access can view the filed answers and their review status from the number's details in the dashboard. This may be a newer filing than the one that cleared the number for use. Absent when no submission was found or submission progress could not be read.",
+        examples=["csb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^csb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     satisfied: Annotated[bool, Field(
-        description="Whether the paperwork is accepted. Read `next` for what advances it while this is false. Whether sending is currently refused is reported by `blocked_at` instead: a number bought before its country asked for anything is unsatisfied and still usable until a review says otherwise.",
+        description="Whether the ownership paperwork is accepted or is no longer required. This can remain true while an external verifier asks for a correction or activation is pending. Read `status` and `next` for the current step, and `blocked_at` for the ownership block on outbound SMS and inbound and outbound voice.",
+    )]
+    status: Annotated[NumberOwnershipStatus, Field(
+        description="Current ownership registration approval status. Operational activation is separate:\n`blocked_at` records the ownership block on number use, and `next` describes remaining work.\n\n- `needs_input` means ownership details or a submission correction are needed.\n- `under_review` means your current answers are being reviewed.\n- `approval_pending` means your paperwork is accepted but registration approval is still pending.\n- `approved` means ownership registration is approved. Number activation can still be pending while `blocked_at` is non-null.\n- `not_required` means no active ownership requirement applies, including after a requirement is withdrawn.\n- `rejected` means the submission was closed or the verifier correction deadline passed. Corrections are no longer accepted for this submission.\n- `unknown` means current approval status could not be determined. Read `blocked_at` for any recorded ownership block. Retry the read.",
     )]
     blocked_at: Annotated[Optional[str], Field(
-        description="When the number stopped being able to carry traffic, and null while it can. Always null when `satisfied` is true, but null does not imply it: a number whose country began asking after you bought it is usable with its paperwork still outstanding. A number can also arrive blocked, and one that was usable can be blocked again if its approval is withdrawn.",
+        description="When ownership requirements began blocking outbound SMS and inbound and outbound voice calls. Null when that block is clear. Accepted paperwork can still await activation with a block in place. A number bought before ownership requirements were introduced can have outstanding paperwork without a block.",
     )] = None
     next: Annotated[List[NextAction], Field(
-        description="What you do about it, in the order to do it. Empty only when `satisfied` is true, so while anything is outstanding there is always at least one step. When what you already sent is being reviewed and nothing is needed from you, that step has kind `wait` and says so. Re-read it after each call rather than caching the first list you saw.",
+        description="Actions that advance ownership registration or activation, in order. Empty when neither needs further action. A `wait` step means no customer action is needed now, including while accepted paperwork awaits activation. Read this list again after each change.",
     )]
 
 
@@ -16232,7 +16264,7 @@ class Number(BaseModel):
         description="Capabilities supported by this number.",
     )]
     status: Annotated[NumberStatus, Field(
-        description="The allocation and ownership-approval status of this number.\n\n- `active` means this number is allocated to your workspace and usable.\n- `pending_ownership_registration` means this number is allocated to your workspace and billed,\n  but outbound SMS and both inbound and outbound voice calls are blocked until the ownership paperwork\n  its country requires is accepted. This ownership status does not gate inbound SMS or WhatsApp.\n  Read `ownership.next` for what advances it, and re-read later if\n  `ownership` is momentarily `null`.\n- `released` means this number is no longer allocated to your workspace.\n\nAn allocated number is not always enough to send from it: some destination\ncountries also require an approved registration for the sender.",
+        description="The allocation and ownership-approval status of this number.\n\n- `active` means this number is allocated to your workspace and usable.\n- `pending_ownership_registration` means this number is allocated to your workspace and billed,\n  but outbound SMS and both inbound and outbound voice calls are blocked until ownership registration\n  is approved and activation completes, or the ownership requirement is withdrawn.\n  This ownership status does not gate inbound SMS or WhatsApp.\n  Read `ownership.status` and `ownership.next` for the current decision and remaining work.\n- `released` means this number is no longer allocated to your workspace.\n\nAn allocated number is not always enough to send from it: some destination\ncountries also require an approved registration for the sender.",
         min_length=1,
     )]
     allocated_at: Annotated[str, Field(
@@ -16243,7 +16275,7 @@ class Number(BaseModel):
         description="When this number was released. `null` while it is still allocated to your workspace.",
     )] = None
     ownership: Annotated[Optional[NumberOwnership], Field(
-        description="Where this number stands with the ownership paperwork its country requires. `null` when the country requires none, which is the usual case: a number with no `ownership` object is usable as soon as it is allocated. Also `null` when that standing cannot be established right now; `status` still reads `pending_ownership_registration` while the number is blocked, so re-read this field rather than caching its absence. We manage the paperwork for shared short codes, so this field is always `null` for them.",
+        description="Ownership paperwork and activation progress. `null` when no ownership requirements, recorded block, or recorded decision apply, or when requirements or progress cannot be read and no ownership block or decision has been recorded. A recorded block still returns an ownership object with `status: unknown` when progress cannot be read; retry the read. We manage the paperwork for shared short codes, so this field is always `null` for them. Other sending requirements can apply even when ownership registration is complete.",
     )] = None
 
 
@@ -16381,19 +16413,10 @@ class NumbersOrderCreate(BaseModel):
     )]
 
 
-class SIPTrunkID(RootModel[str]):
-    root: str
-
-
 class VoiceCallRouteType(str, Enum):
     reject = "reject"
     trunk = "trunk"
     forward = "forward"
-
-
-class VoiceInboundForwardAs(str, Enum):
-    dialed_number = "dialed_number"
-    calling_number = "calling_number"
 
 
 class VoiceCallRejectionReason(str, Enum):
