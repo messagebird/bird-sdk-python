@@ -52,6 +52,19 @@ _BROADCAST_DEFAULT_KEYS = tuple(
 )
 
 
+def _create_template(template: str | None, language: str | None) -> dict[str, Any] | None:
+    # The language is one of the template's own languages, so it travels inside
+    # the template reference rather than beside it.
+    if template is None:
+        if language is not None:
+            raise ValueError("language needs a template: the language is chosen from the template it belongs to")
+        return None
+    nested: dict[str, Any] = {"id": template}
+    if language is not None:
+        nested["language"] = language
+    return nested
+
+
 def _create_body(
     from_: EmailAddressInput | None,
     audience_id: str | None,
@@ -67,11 +80,12 @@ def _create_body(
     send: bool | None,
     scheduled_at: str | datetime | None,
     defaults: EmailDefaults | None = None,
+    language: str | None = None,
 ) -> dict[str, Any]:
     fields: dict[str, Any] = {
         "from": from_,
         "audience_id": audience_id,
-        "template": {"id": template} if template is not None else None,
+        "template": _create_template(template, language),
         "reply_to": reply_to,
         "headers": headers,
         "tags": tags,
@@ -107,6 +121,7 @@ def _update_body(
     track_clicks: bool | None,
     ip_pool_id: str | None | Omit,
     category: str | None,
+    language: str | None | Omit = omit,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {}
     if from_ is not None:
@@ -114,9 +129,22 @@ def _update_body(
     if audience_id is not None:
         body["audience_id"] = audience_id
     # None clears (JSON null); omit leaves the stored value unchanged. The two
-    # are distinct on the wire, so the sentinel is what separates them.
-    if not isinstance(template, Omit):
-        body["template"] = {"id": template} if template is not None else None
+    # are distinct on the wire, so the sentinel is what separates them. Naming a
+    # template releases the version the broadcast is fixed to, so a language on
+    # its own is sent without an id and keeps it.
+    # Clearing the template clears its language too, so ``language=None``
+    # beside ``template=None`` asks for the same clear twice and goes through.
+    if not isinstance(template, Omit) and template is None:
+        if not isinstance(language, Omit) and language is not None:
+            raise ValueError("language needs a template: the language is chosen from the template it belongs to")
+        body["template"] = None
+    elif not isinstance(template, Omit) or not isinstance(language, Omit):
+        nested: dict[str, Any] = {}
+        if not isinstance(template, Omit):
+            nested["id"] = template
+        if not isinstance(language, Omit):
+            nested["language"] = language
+        body["template"] = nested
     if not isinstance(reply_to, Omit):
         body["reply_to"] = reply_to
     if headers is not None:
@@ -164,6 +192,7 @@ class Broadcasts(BroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None = None,
         category: str | None = None,
+        language: str | None = None,
         send: bool | None = None,
         scheduled_at: str | datetime | None = None,
         options: RequestOptions | None = None,
@@ -172,7 +201,10 @@ class Broadcasts(BroadcastsBase):
         case it goes out immediately, or at ``scheduled_at`` when one is given.
         A send needs a ``from_`` on a verified domain, an ``audience_id``, and a
         ``template`` with a published version; without them the call is refused
-        with a ``422`` rather than saved as a draft.
+        with a ``422`` rather than saved as a draft. ``language`` selects one of
+        the template's languages for the whole audience and needs ``template``;
+        it has to be an exact match for a language on the published version, so
+        ``fr-CA`` does not select ``fr``.
 
         ```python
         broadcast = client.broadcasts.create(
@@ -186,7 +218,7 @@ class Broadcasts(BroadcastsBase):
         body = _create_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
-            self._defaults,
+            self._defaults, language,
         )
         return self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -205,12 +237,13 @@ class Broadcasts(BroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
+        language: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a broadcast that is still a draft or is scheduled, and return
         it as it now stands. Omitted arguments keep their current value;
-        ``template``, ``reply_to`` and ``ip_pool_id`` take an explicit ``None``
-        to clear. A broadcast that has started sending can no longer be edited
+        ``template``, ``language``, ``reply_to`` and ``ip_pool_id`` take
+        ``None`` to clear. A broadcast that has started sending can no longer be edited
         and raises a ``409``.
 
         ```python
@@ -223,7 +256,7 @@ class Broadcasts(BroadcastsBase):
         """
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category,
+            track_opens, track_clicks, ip_pool_id, category, language,
         )
         return self._write(
             "PATCH",
@@ -280,6 +313,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None = None,
         category: str | None = None,
+        language: str | None = None,
         send: bool | None = None,
         scheduled_at: str | datetime | None = None,
         options: RequestOptions | None = None,
@@ -288,7 +322,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         body = _create_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
-            self._defaults,
+            self._defaults, language,
         )
         return await self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -307,12 +341,13 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
+        language: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a draft or scheduled broadcast. See `Broadcasts.update`."""
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category,
+            track_opens, track_clicks, ip_pool_id, category, language,
         )
         return await self._write(
             "PATCH",

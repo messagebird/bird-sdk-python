@@ -28,7 +28,12 @@ from bird.resources.whatsapp_keyword_rules_gen import (
 from bird.resources.whatsapp_messages import AsyncWhatsappMessages, WhatsappMessages
 from bird.resources.whatsapp_numbers import AsyncWhatsappNumbers, WhatsappNumbers
 from bird.resources.whatsapp_reaction_gen import AsyncWhatsappReaction, WhatsappReaction
+from bird.resources.whatsapp_suppressions_gen import (
+    AsyncWhatsappSuppressions,
+    WhatsappSuppressions,
+)
 from bird.resources.whatsapp_stats import AsyncWhatsappStats, WhatsappStats
+from bird.resources.whatsapp_groups import AsyncWhatsappGroups, WhatsappGroups
 from bird.resources.whatsapp_templates import AsyncWhatsappTemplates, WhatsappTemplates
 
 _PATH = "/v1/whatsapp/messages"
@@ -97,10 +102,12 @@ class Whatsapp(WhatsappBase):
         self.stats = WhatsappStats(client)
         self.messages = WhatsappMessages(client)
         self.templates = WhatsappTemplates(client)
+        self.groups = WhatsappGroups(client)
         self.reaction = WhatsappReaction(client)
         self.numbers = WhatsappNumbers(client)
         self.business_accounts = WhatsappBusinessAccounts(client)
         self.keyword_rules = WhatsappKeywordRules(client)
+        self.suppressions = WhatsappSuppressions(client)
 
     def send(
         self,
@@ -177,10 +184,12 @@ class AsyncWhatsapp(AsyncWhatsappBase):
         self.stats = AsyncWhatsappStats(client)
         self.messages = AsyncWhatsappMessages(client)
         self.templates = AsyncWhatsappTemplates(client)
+        self.groups = AsyncWhatsappGroups(client)
         self.reaction = AsyncWhatsappReaction(client)
         self.numbers = AsyncWhatsappNumbers(client)
         self.business_accounts = AsyncWhatsappBusinessAccounts(client)
         self.keyword_rules = AsyncWhatsappKeywordRules(client)
+        self.suppressions = AsyncWhatsappSuppressions(client)
 
     async def send(
         self,

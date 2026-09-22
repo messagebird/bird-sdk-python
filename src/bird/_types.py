@@ -269,13 +269,15 @@ class PreferenceCreateParams(_PreferenceCreateRequired, total=False):
 class BroadcastCreateParams(TypedDict, total=False):
     """Params for ``client.broadcasts.create``. Every key is optional on a draft;
     a send needs ``from_``, ``audience_id``, and a ``template`` with a published
-    version. ``scheduled_at`` accepts a timezone-aware ``datetime`` (serialized
-    to RFC 3339) or an already-wire string, and is only meaningful alongside
-    ``send``."""
+    version. ``language`` selects one of that template's published languages
+    for the whole audience. ``scheduled_at`` accepts a timezone-aware
+    ``datetime`` (serialized to RFC 3339) or an already-wire string, and is only
+    meaningful alongside ``send``."""
 
     from_: EmailAddressInput
     audience_id: str
     template: str
+    language: str
     reply_to: Sequence[EmailAddressInput]
     headers: Mapping[str, str]
     tags: Sequence[Mapping[str, str]]
@@ -290,13 +292,15 @@ class BroadcastCreateParams(TypedDict, total=False):
 
 class BroadcastUpdateParams(TypedDict, total=False):
     """Params for ``client.broadcasts.update`` (the broadcast id is positional).
-    An absent key keeps the stored value; ``template``, ``reply_to`` and
-    ``ip_pool_id`` present with ``None`` clear it, which is why those three are
-    the nullable ones."""
+    An absent key keeps the stored value; ``template``, ``language``,
+    ``reply_to`` and ``ip_pool_id`` present with ``None`` clear it, which is why
+    those four are the nullable ones. A ``language`` needs a ``template`` to
+    belong to, so clearing the template clears the language with it."""
 
     from_: EmailAddressInput
     audience_id: str
     template: str | None
+    language: str | None
     reply_to: Sequence[EmailAddressInput] | None
     headers: Mapping[str, str]
     tags: Sequence[Mapping[str, str]]

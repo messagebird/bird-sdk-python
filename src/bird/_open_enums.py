@@ -495,10 +495,21 @@ class WhatsAppKeywordOperation:
     OPT_OUT: Final = "opt_out"
 
 
+class WhatsAppMetaHealthEntityType:
+    """Values of WhatsAppMetaHealthEntityType known at this SDK version (open enum)."""
+
+    APP: Final = "app"
+    BUSINESS: Final = "business"
+    MESSAGE_TEMPLATE: Final = "message_template"
+    PHONE_NUMBER: Final = "phone_number"
+    WABA: Final = "waba"
+
+
 class WhatsAppNumberErrorCode:
     """Values of WhatsAppNumberErrorCode known at this SDK version (open enum)."""
 
     BUSINESS_ACCOUNT_LOCKED: Final = "business_account_locked"
+    BUSINESS_VERIFICATION_REQUIRED: Final = "business_verification_required"
     CREDIT_CURRENCY_MISMATCH: Final = "credit_currency_mismatch"
     INTERNAL_ERROR: Final = "internal_error"
     INVALID_REQUEST: Final = "invalid_request"
@@ -667,6 +678,7 @@ __all__ = [
     "WhatsAppInteractiveReplyType",
     "WhatsAppInteractiveType",
     "WhatsAppKeywordOperation",
+    "WhatsAppMetaHealthEntityType",
     "WhatsAppNumberErrorCode",
     "WhatsAppNumberMessagingLimit",
     "WhatsAppNumberQualityRating",

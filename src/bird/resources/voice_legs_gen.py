@@ -7,19 +7,19 @@ from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
-    VoiceCall,
+    VoiceLeg,
 )
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
 
 
-class VoiceListParams(TypedDict, total=False):
-    """Query params for ``client.voice.list``. Every key is optional."""
+class VoiceLegsListParams(TypedDict, total=False):
+    """Query params for ``client.voice.legs.list``. Every key is optional."""
 
     direction: str
     status: Sequence[str]
-    session_id: str
+    call_id: str
     sip_trunk_id: str
     from_: str
     to: str
@@ -32,13 +32,13 @@ class VoiceListParams(TypedDict, total=False):
     ending_before: str
 
 
-class Voice(Resource):
+class VoiceLegs(Resource):
     def list(
         self,
         *,
         direction: str | None = None,
         status: Sequence[str] | None = None,
-        session_id: str | None = None,
+        call_id: str | None = None,
         sip_trunk_id: str | None = None,
         from_: str | None = None,
         to: str | None = None,
@@ -50,18 +50,18 @@ class Voice(Resource):
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
-    ) -> SyncPage[VoiceCall]:
-        """List the workspace's calls, newest first. Filter to `ringing`/`in_progress` for the calls in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-call records and do not include aggregate rates or totals. Use `voice.get` to follow one call to settlement.
+    ) -> SyncPage[VoiceLeg]:
+        """List the workspace's legs, newest first. Filter to `ringing`/`in_progress` for the legs in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-leg records and do not include aggregate rates or totals. Use `voice.legs.get` to follow one leg to settlement.
 
         ```python
-        for call in client.voice.list(status=["ringing", "in_progress"]):
-            print(call.id, call.status)
+        for leg in client.voice.legs.list():
+            print(leg.id, leg.status)
         ```
         """
         query = {
             "direction": direction,
             "status": None if not status else ",".join(status),
-            "session_id": session_id,
+            "call_id": call_id,
             "sip_trunk_id": sip_trunk_id,
             "from": from_,
             "to": to,
@@ -73,37 +73,37 @@ class Voice(Resource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return SyncPage(self._client, "/v1/voice/calls", query, VoiceCall, options)
+        return SyncPage(self._client, "/v1/voice/legs", query, VoiceLeg, options)
 
     def get(
         self,
-        call_id: str,
+        leg_id: str,
         *,
         options: RequestOptions | None = None,
-    ) -> VoiceCall:
-        """Fetch one call by ID, at any point in its lifecycle. A call still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known call; use `voice.list` to find calls in the first place. When a call was refused, `rejection_reason` names the gate that turned it away.
+    ) -> VoiceLeg:
+        """Fetch one leg by ID, at any point in its lifecycle. A leg still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known leg; use `voice.legs.list` to find legs in the first place. When a leg was refused, `rejection_reason` names the gate that turned it away.
 
         ```python
-        call = client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
+        call = client.voice.legs.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
         # A call still ringing or connected carries no economics yet.
         print(call.status, call.duration_ms, call.cost)
         ```
         """
         return self._get(
-            f"/v1/voice/calls/{quote(call_id, safe='')}",
+            f"/v1/voice/legs/{quote(leg_id, safe='')}",
             {},
-            VoiceCall,
+            VoiceLeg,
             options,
         )
 
 
-class AsyncVoice(AsyncResource):
+class AsyncVoiceLegs(AsyncResource):
     def list(
         self,
         *,
         direction: str | None = None,
         status: Sequence[str] | None = None,
-        session_id: str | None = None,
+        call_id: str | None = None,
         sip_trunk_id: str | None = None,
         from_: str | None = None,
         to: str | None = None,
@@ -115,18 +115,18 @@ class AsyncVoice(AsyncResource):
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
-    ) -> AsyncPage[VoiceCall]:
-        """List the workspace's calls, newest first. Filter to `ringing`/`in_progress` for the calls in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-call records and do not include aggregate rates or totals. Use `voice.get` to follow one call to settlement.
+    ) -> AsyncPage[VoiceLeg]:
+        """List the workspace's legs, newest first. Filter to `ringing`/`in_progress` for the legs in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-leg records and do not include aggregate rates or totals. Use `voice.legs.get` to follow one leg to settlement.
 
         ```python
-        async for call in client.voice.list(status=["ringing", "in_progress"]):
-            print(call.id, call.status)
+        async for leg in client.voice.legs.list():
+            print(leg.id, leg.status)
         ```
         """
         query = {
             "direction": direction,
             "status": None if not status else ",".join(status),
-            "session_id": session_id,
+            "call_id": call_id,
             "sip_trunk_id": sip_trunk_id,
             "from": from_,
             "to": to,
@@ -138,25 +138,25 @@ class AsyncVoice(AsyncResource):
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return AsyncPage(self._client, "/v1/voice/calls", query, VoiceCall, options)
+        return AsyncPage(self._client, "/v1/voice/legs", query, VoiceLeg, options)
 
     async def get(
         self,
-        call_id: str,
+        leg_id: str,
         *,
         options: RequestOptions | None = None,
-    ) -> VoiceCall:
-        """Fetch one call by ID, at any point in its lifecycle. A call still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known call; use `voice.list` to find calls in the first place. When a call was refused, `rejection_reason` names the gate that turned it away.
+    ) -> VoiceLeg:
+        """Fetch one leg by ID, at any point in its lifecycle. A leg still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known leg; use `voice.legs.list` to find legs in the first place. When a leg was refused, `rejection_reason` names the gate that turned it away.
 
         ```python
-        call = await client.voice.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
+        call = await client.voice.legs.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
         # A call still ringing or connected carries no economics yet.
         print(call.status, call.duration_ms, call.cost)
         ```
         """
         return await self._get(
-            f"/v1/voice/calls/{quote(call_id, safe='')}",
+            f"/v1/voice/legs/{quote(leg_id, safe='')}",
             {},
-            VoiceCall,
+            VoiceLeg,
             options,
         )

@@ -124,6 +124,20 @@ class Resource:
         kwargs = _request_kwargs(options, query) if query else _opts(options)
         self._client.request("DELETE", path, **kwargs)
 
+    def _delete_model(
+        self,
+        path: str,
+        model: type[T],
+        options: RequestOptions | None,
+        query: dict[str, object] | None = None,
+    ) -> T:
+        """A delete the caller reads back. Most answer nothing worth returning;
+        one whose work finishes after the call returns the accepted state, whose
+        ``last_operation`` is the only handle on it."""
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        response = self._client.request("DELETE", path, **kwargs)
+        return model.model_validate(response.json())
+
 
 class AsyncResource:
     """Async mirror of :class:`Resource`."""
@@ -194,3 +208,15 @@ class AsyncResource:
     ) -> None:
         kwargs = _request_kwargs(options, query) if query else _opts(options)
         await self._client.request("DELETE", path, **kwargs)
+
+    async def _delete_model(
+        self,
+        path: str,
+        model: type[T],
+        options: RequestOptions | None,
+        query: dict[str, object] | None = None,
+    ) -> T:
+        """Async mirror of :meth:`Resource._delete_model`."""
+        kwargs = _request_kwargs(options, query) if query else _opts(options)
+        response = await self._client.request("DELETE", path, **kwargs)
+        return model.model_validate(response.json())

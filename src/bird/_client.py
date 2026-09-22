@@ -37,7 +37,7 @@ from bird.resources.sms_suppressions_gen import AsyncSmsSuppressions, SmsSuppres
 from bird.resources.sms_templates import AsyncSmsTemplates, SmsTemplates
 from bird.resources.suppressions_gen import AsyncSuppressions, Suppressions
 from bird.resources.verify import AsyncVerify, Verify
-from bird.resources.voice_gen import AsyncVoice, Voice
+from bird.resources.voice import AsyncVoice, Voice
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
 

@@ -1102,6 +1102,12 @@ class EmailBroadcastTemplate(BaseModel):
         min_length=1,
         pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    language: Annotated[Optional[str], Field(
+        description="The BCP-47 language tag selected for the whole audience, such as `en` or `pt-BR`. `null` means no language is selected, so the broadcast uses the published version's default language, unless the template has `language_source_required` set. Send `template.language` in an update to change or clear the selection.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
     version_id: Annotated[Optional[str], Field(
         description="The template version this broadcast is fixed to. It is chosen when the broadcast is prepared for sending, so publishing a new version while the broadcast is going out cannot change what the rest of the recipients get. Null until the broadcast is prepared.",
         examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -1142,10 +1148,10 @@ class EmailBroadcast(BaseModel):
         pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     template: Annotated[Optional[EmailBroadcastTemplate], Field(
-        description="The template this broadcast sends. A broadcast sends the template's published version, and the exact version is fixed when the broadcast is prepared for sending, so publishing a new version afterwards does not change what this broadcast sends. Null on a draft that has not chosen a template yet.",
+        description="The template this broadcast sends, and the language it sends in. A broadcast sends the template's published version, and the exact version is fixed when the broadcast is prepared for sending, so publishing a new version afterwards does not change what this broadcast sends. Null on a draft that has not chosen a template yet.",
     )] = None
     html_bytes: Annotated[Optional[int], Field(
-        description="Size of the HTML body this broadcast sends, in bytes, or 0 when its content has no HTML part. Measured on the template version the broadcast sends, so this is the real body we send and differs per recipient only by that recipient's own merge values. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which measure the content. Absent too when the broadcast has no template or its content can no longer be read.",
+        description="Size of the HTML body this broadcast sends, in bytes, or 0 when its content has no HTML part. Measured on the template version the broadcast sends, using the selected language. Recipient merge values can change its size. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which measure the content. Absent too when the broadcast has no template or its content can no longer be read.",
         examples=[18432],
         ge=0,
     )] = None
@@ -1177,7 +1183,7 @@ class EmailBroadcast(BaseModel):
         description="What to do next about this broadcast, given the state it is in. Each entry names one action and\nsays why it is worth taking. Present on reads that compute it: an empty list means there is\nnothing to do, and the field is absent entirely on responses that do not report next actions.",
     )] = None
     failure_reason: Annotated[Optional[EmailBroadcastFailureReason], Field(
-        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` says exactly what was wrong. It is one of these:\n  - The broadcast has no template, or its template has been deleted.\n  - The template has no published version, or no sendable content.\n  - The template uses a loop that a broadcast cannot fill.\n  - The template requires every send to name a language.\n  - The sending domain is no longer verified.\n  - The IP pool has nothing to send from.\n  - The message could not be handed off for delivery.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.",
+        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` explains what went wrong. It is one of these:\n  - The broadcast has no template, or the template it uses no longer exists. Choose an existing template and send the broadcast again.\n  - The template has no published version, or its published version has no subject and no body. Publish the template, or add content and publish it.\n  - The template uses a loop or reads a value that a broadcast cannot provide. Remove it, or use a contact property instead, then publish the template again.\n  - The template requires a language, but the broadcast has not selected one. Set `template.language` to one of the template's languages and send the broadcast again.\n  - The selected language is not available on the published template version. Choose one of that version's languages, or publish a version that includes the selected language.\n  - The sending domain is no longer verified. Verify the domain again.\n  - The configured IP pool has no usable IP address.\n  - We could not hand the prepared message to the delivery system. This is a problem on our side.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.",
         examples=["null"],
     )] = None
     failure_detail: Annotated[Optional[str], Field(
@@ -1297,6 +1303,21 @@ class EmailBroadcastList(BaseModel):
     )]
 
 
+class EmailBroadcastTemplateCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    language: Annotated[Optional[str], Field(
+        description="The BCP-47 language tag that goes to the whole audience, such as `en` or `pt-BR`. It must be an exact match for a language on the template's published version, so `fr-CA` does not select `fr`. If you leave it out, the broadcast uses the version's default language, unless the template has `language_source_required` set, in which case sending fails until you select a language. Send `template.language` in an update to change or clear it later.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+
+
 class EmailBroadcastCreateRequestCategory(str, Enum):
     marketing = "marketing"
     transactional = "transactional"
@@ -1313,8 +1334,8 @@ class EmailBroadcastCreateRequest(BaseModel):
         min_length=1,
         pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    template: Annotated[Optional[EmailBroadcastTemplate], Field(
-        description="The template a broadcast sends, and the exact version of it the broadcast is fixed to. The template cannot be one that requires every send to name a language, because a broadcast never names one, so a template that insists on it has nothing to work with.",
+    template: Annotated[Optional[EmailBroadcastTemplateCreate], Field(
+        description="The template a new broadcast sends, and which of that template's languages goes out.",
     )] = None
     reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
         description="Where replies to this broadcast should go. Give each address as a plain address, as `Jane <jane@acme.com>` to include a display name, or as an object with an address and a name. You can list more than one.",
@@ -1352,6 +1373,22 @@ class EmailBroadcastCreateRequest(BaseModel):
     )] = None
 
 
+class EmailBroadcastTemplateUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[Optional[str], Field(
+        description="Move the broadcast to this template. Sending an `id` releases the version the broadcast was fixed to, so the next send fixes on the template's published version at that point; repeating the `id` the broadcast already has does the same thing, which is how you take a newly published version, and keeps the language already selected. Leave it out to keep the template and the version it is fixed to, and send a `language` on its own to change only the language. To take the template off a draft, set `template` itself to null.",
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    language: Annotated[Optional[str], Field(
+        description="The BCP-47 language tag that goes to the whole audience, such as `en` or `pt-BR`. It must be an exact match for a language on the template's published version, so `fr-CA` does not select `fr`. Leave it out to keep the language already selected. If you change the template `id` in the same request, the old language is cleared with the old template. Set this to `null` to use the published version's default language, unless the template has `language_source_required` set.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+
+
 class EmailBroadcastUpdateRequestCategory(str, Enum):
     marketing = "marketing"
     transactional = "transactional"
@@ -1368,8 +1405,8 @@ class EmailBroadcastUpdateRequest(BaseModel):
         min_length=1,
         pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    template: Annotated[Optional[EmailBroadcastTemplate], Field(
-        description="The template the broadcast sends. Its published version is fixed when the broadcast is prepared for sending. Set this to null to take the template off a draft, or leave it out to keep the one already set.",
+    template: Annotated[Optional[EmailBroadcastTemplateUpdate], Field(
+        description="The template the broadcast sends, and the language to send it in, each changeable on its own. Set this to null to take the template and its language off a draft, or leave it out to keep the template, language and fixed version already set.",
     )] = None
     reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
         description="Where replies to this broadcast should go. Set this to null to remove the addresses already set.",
@@ -5897,8 +5934,369 @@ class WhatsAppReactionEventList(BaseModel):
     )]
 
 
+class WhatsAppGroupStatus(str, Enum):
+    pending = "pending"
+    active = "active"
+    suspended = "suspended"
+    deleted = "deleted"
+    failed = "failed"
+
+
 class WhatsAppNumberID(RootModel[str]):
     root: str
+
+
+class WhatsAppGroupJoinApprovalMode(str, Enum):
+    auto_approve = "auto_approve"
+    approval_required = "approval_required"
+
+
+class WhatsAppGroupOperationType(str, Enum):
+    create = "create"
+    settings_update = "settings_update"
+    delete = "delete"
+    remove = "remove"
+
+
+class WhatsAppGroupOperationStatus(str, Enum):
+    pending = "pending"
+    success = "success"
+    failed = "failed"
+
+
+class WhatsAppGroupOperationField(str, Enum):
+    subject = "subject"
+    description = "description"
+    profile_picture_url = "profile_picture_url"
+
+
+class WhatsAppGroupError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    description: Annotated[str, Field(
+        description="WhatsApp's own explanation of the refusal, passed through. Show it to the person who asked for the change; never match on its text. Carries Bird's own words instead when the failure was Bird's verdict, such as a confirmation that never arrived.",
+        examples=["Group subject contains content that cannot be used."],
+        min_length=1,
+    )]
+    meta_error_code: Annotated[Optional[str], Field(
+        description="WhatsApp's most specific code for the refusal: its error subcode where it sent one, otherwise its top-level code. Treat it as an opaque string. Null when the failure was Bird's own verdict rather than a WhatsApp refusal.",
+        examples=[2388024],
+    )] = None
+
+
+class WhatsAppGroupOperationResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    field: Annotated[WhatsAppGroupOperationField, Field(
+        description="The setting this result reports on.",
+    )]
+    applied: Annotated[bool, Field(
+        description="Whether WhatsApp applied this field. False when it refused this one, whatever it did with the others.",
+        examples=[False],
+    )]
+    error: Annotated[Optional[WhatsAppGroupError], Field(
+        description="Why a change to a group did not take effect. Meta documents no code vocabulary for a group refusal, since every sample payload carries an undocumented `code` beside its message, so this relays what it said rather than classifying it, the way a template submission failure does.",
+    )] = None
+
+
+class WhatsAppGroupOperation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[WhatsAppGroupOperationType, Field(description="What was asked.")]
+    status: Annotated[WhatsAppGroupOperationStatus, Field(
+        description="Where it got to. `pending` is what a client shows as in-progress, and what refuses the next change.",
+    )]
+    requested_at: Annotated[str, Field(
+        description="When Bird accepted the request.",
+        examples=["2026-08-27T14:02:11Z"],
+        min_length=1,
+    )]
+    settled_at: Annotated[Optional[str], Field(
+        description="When WhatsApp reported the outcome. Null while `pending`.",
+        examples=["2026-08-27T14:02:14Z"],
+    )] = None
+    results: Annotated[Optional[List[WhatsAppGroupOperationResult]], Field(
+        description="Per-field outcomes, on a `settings_update` that has settled. One entry per field the update carried, so a client can put a refusal next to the input it came from. Absent on every other operation type, which change one thing and report it on `status`.",
+        max_length=3,
+    )] = None
+    last_error: Annotated[Optional[WhatsAppGroupError], Field(
+        description="Why a change to a group did not take effect. Meta documents no code vocabulary for a group refusal, since every sample payload carries an undocumented `code` beside its message, so this relays what it said rather than classifying it, the way a template submission failure does.",
+    )] = None
+
+
+class WhatsAppGroupParticipant(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bsuid: Annotated[str, Field(
+        description="Business-scoped user ID, Meta's identifier for this person against your business. The one identifier every participant has: WhatsApp always sends it, and it is stable for as long as they are in the group.",
+        examples=["BR.1566655121691972"],
+        min_length=1,
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Phone number in E.164 format. Absent when WhatsApp withholds it, which it does for anyone who has not shared their number with your business, so a group is normally a mix of participants with one and without.",
+        examples=[+16505551234],
+        min_length=1,
+    )] = None
+    username: Annotated[Optional[str], Field(
+        description="The WhatsApp username this person chose. Absent when they have none, and not an identifier to address them by: it is theirs to change, so it names them in a list rather than keying anything.",
+        examples=["jim.almeida"],
+        min_length=1,
+    )] = None
+    last_operation: Annotated[Optional[WhatsAppGroupOperation], Field(
+        description="The last change asked of this group or participant, and where it got to. WhatsApp confirms a change on a webhook rather than in its reply, so an operation is `pending` until that arrives. While it is, another change to the same thing is refused with a `409` `WhatsAppGroupUpdateInProgress`; a change to a different participant is not, so several removals can be in flight at once. Absent on something nothing has been asked of yet.",
+    )] = None
+
+
+class WhatsAppGroupPinnedMessage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    message_id: Annotated[str, Field(
+        description="The pinned message, as returned in the send response's `id`.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    pinned_until: Annotated[str, Field(
+        description="When the pin is due to lapse, projected from the `duration_days` the pin was asked for. An entry stays listed until it is unpinned, so a time in the past means WhatsApp has already taken the message off the chat.",
+        examples=["2026-09-01T09:14:52Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppGroup(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the group. Accepted by every `/v1/whatsapp/groups/{group_id}` operation, and as `to` when sending a message to the group.",
+        examples=["wag_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wag_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    whatsapp_number_id: Annotated[str, Field(
+        description="The business number that created the group. It is the group's admin and the number every message to the group is sent from. Fixed when the group is created.",
+        examples=["wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    waba: Annotated[Optional[str], Field(
+        description="Meta's identifier for the WhatsApp Business Account recorded when the group was created. This is a historical snapshot, not a live account directory projection. Null for a number we operate on your behalf, whose account is not yours to see.",
+        examples=[102290129340398],
+        min_length=1,
+    )]
+    subject: Annotated[str, Field(
+        description="The group's name, shown to participants and to anyone who opens the invite link.",
+        examples=["New Purchase Inquiry"],
+        max_length=128,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="The group's description, shown alongside the subject. Null when the group has none.",
+        examples=["Jim would like to learn about new car purchase options for current year models."],
+        max_length=2048,
+    )] = None
+    status: Annotated[WhatsAppGroupStatus, Field(
+        description="Where the group stands. A group is messageable only while it is `active`.",
+    )]
+    join_approval_mode: Annotated[WhatsAppGroupJoinApprovalMode, Field(
+        description="Whether opening the invite link joins the group outright or raises a join request to approve.",
+    )]
+    invite_link: Annotated[Optional[str], Field(
+        description="The link that lets someone join the group, which is the only way in. A group has one link at a time. Null while the group is `pending`, since WhatsApp issues the link when it confirms the group. Rotating it through `POST /v1/whatsapp/groups/{group_id}/invite-link/rotate` replaces it, and every link the group had before then stops working.",
+        examples=["https://chat.whatsapp.com/JZm4S9tCkQx2LpVr7Ny8Ab"],
+    )] = None
+    participants: Annotated[Optional[List[WhatsAppGroupParticipant]], Field(
+        description="Who is in the group, as of the last update WhatsApp sent, and the whole set rather than a page: WhatsApp holds a group to a handful of people, so there is never a page's worth to return. The business number that created the group is its admin and is not listed.",
+    )] = None
+    participant_count: Annotated[int, Field(
+        description="How many people are in the group, excluding your business.",
+        examples=[6],
+        ge=0,
+    )]
+    pinned_messages: Annotated[Optional[List[WhatsAppGroupPinnedMessage]], Field(
+        description="The group's pins, newest first. WhatsApp holds a few at once, and pinning past that unpins the oldest rather than refusing. No entry here is merely requested. An entry stays listed until it is unpinned, so one whose `pinned_until` has passed is still listed after WhatsApp has taken it off the chat.",
+    )] = None
+    profile_picture_url: Annotated[Optional[str], Field(
+        description="Address of the group's picture, as WhatsApp serves it. Null when the group has none.",
+        examples=["https://media.example.com/whatsapp/groups/JZm4S9tCkQx2.jpg"],
+    )] = None
+    last_operation: Annotated[Optional[WhatsAppGroupOperation], Field(
+        description="The last change asked of this group or participant, and where it got to. WhatsApp confirms a change on a webhook rather than in its reply, so an operation is `pending` until that arrives. While it is, another change to the same thing is refused with a `409` `WhatsAppGroupUpdateInProgress`; a change to a different participant is not, so several removals can be in flight at once. Absent on something nothing has been asked of yet.",
+    )] = None
+    suspended_at: Annotated[Optional[str], Field(
+        description="When WhatsApp suspended the group. Present only while the group is `suspended`, and gone once WhatsApp lifts the suspension.",
+        examples=["2026-08-20T11:04:00Z"],
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class WhatsAppGroupList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppGroup], Field(
+        description="The groups your workspace created, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppGroupCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_number_id: Annotated[str, Field(
+        description="The business number that will own and administer the group, as its id in `GET /v1/whatsapp/numbers`. It must be a number your workspace can send from, and WhatsApp must have granted it Official Business Account status; a number without that status returns a `412` `WhatsAppGroupsNotEligible`. The number cannot be changed afterwards, and every message to the group is sent from it.",
+        examples=["wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    subject: Annotated[str, Field(
+        description="The group's name, shown to participants and to anyone who opens the invite link. Surrounding whitespace is trimmed.",
+        examples=["New Purchase Inquiry"],
+        max_length=128,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="The group's description, shown alongside the subject.",
+        examples=["Jim would like to learn about new car purchase options for current year models."],
+        max_length=2048,
+    )] = None
+    join_approval_mode: Annotated[Optional[WhatsAppGroupJoinApprovalMode], Field(
+        description="Whether opening the invite link joins the group outright, or raises a join request for you to approve. Defaults to `auto_approve`. It cannot be changed once the group exists.",
+    )] = None
+
+
+class WhatsAppGroupUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[Optional[str], Field(
+        description="A new name for the group. Participants see the change in the group's chat.",
+        examples=["Watch Enthusiasts"],
+        max_length=128,
+        min_length=1,
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="A new description for the group. Send `null` to clear it; an empty string is a `422` rather than a second way to clear.",
+        examples=["Discuss the latest timepieces and share reviews."],
+        max_length=2048,
+        min_length=1,
+    )] = None
+    profile_picture_url: Annotated[Optional[str], Field(
+        description="A new picture for the group, naming a file in your workspace's media library. WhatsApp takes a square JPEG of at least 192 by 192 pixels and up to 5 MB; anything else returns a `422`. Sending `null` clears the picture Bird stores, and an empty string is a `422` rather than a second way to clear it; WhatsApp has no operation for removing a group's photo, so the one participants see stays until another picture replaces it.",
+        examples=["https://media.example.com/whatsapp/groups/square.jpg"],
+        min_length=1,
+    )] = None
+
+
+class WhatsAppGroupInviteLink(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    invite_link: Annotated[str, Field(
+        description="The group's one invite link. Every link the group had before this one stops working.",
+        examples=["https://chat.whatsapp.com/JZm4S9tCkQx2LpVr7Ny8Ab"],
+        min_length=1,
+    )]
+
+
+class WhatsAppGroupPinnedMessageCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    message_id: Annotated[str, Field(
+        description="The message to pin. It has to be one this group carries: a message in another group, or a one-to-one message, returns a `422` `WhatsAppMessageNotInGroup`.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    duration_days: Annotated[Optional[int], Field(
+        description="How many days the message stays pinned before WhatsApp unpins it, from 1 to 30.",
+        examples=[7],
+        ge=1,
+        le=30,
+    )] = None
+
+
+class WhatsAppGroupJoinRequestID(RootModel[str]):
+    root: str
+
+
+class WhatsAppGroupJoinRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the join request. Pass it to the batch-approve and batch-reject operations.",
+        examples=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wgj_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    bsuid: Annotated[str, Field(
+        description="Business-scoped user ID, Meta's identifier for this person against your business. The one identifier every request has, and the one that carries over to `participants` if you approve it.",
+        examples=["BR.1566655121691972"],
+        min_length=1,
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Phone number in E.164 format. Absent when WhatsApp withholds it, which it does for anyone who has not shared their number with your business.",
+        examples=[+16505551234],
+        min_length=1,
+    )] = None
+    username: Annotated[Optional[str], Field(
+        description="The WhatsApp username this person chose. Absent when they have none, and theirs to change, so it names them in a list rather than keying anything.",
+        examples=["jim.almeida"],
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When the request was made.",
+        examples=["2026-08-24T10:07:57Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppGroupJoinRequestList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppGroupJoinRequest], Field(
+        description="The join requests still waiting for a decision, oldest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppGroupJoinRequestDecision(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    join_request_ids: Annotated[List[str], Field(
+        description="The join requests to act on, as returned by `GET /v1/whatsapp/groups/{group_id}/join-requests`. Each is decided on its own, so one can fail while the rest succeed. An ID that names no waiting request returns a `422` `WhatsAppGroupJoinRequestNotFound`. The 50 is Bird's own request bound, not a WhatsApp one: how many people the group can hold does not limit how many can queue at its link, so a rejection sweep is not held to the size of the group it is refusing entry to.",
+        max_length=50,
+        min_length=1,
+    )]
+
+
+class WhatsAppGroupJoinRequestFailure(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    join_request_id: Annotated[str, Field(
+        description="The join request that was not decided.",
+        examples=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wgj_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    error: Annotated[WhatsAppGroupError, Field(
+        description="Why WhatsApp refused. The common one is a person who has not accepted WhatsApp's current terms, which no retry fixes.",
+    )]
+
+
+class WhatsAppGroupJoinRequestDecisionResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    decided: Annotated[List[str], Field(
+        description="The join requests WhatsApp accepted the decision for. A person approved here can enter the group; a person rejected here sees the join button again.",
+    )]
+    failed: Annotated[List[WhatsAppGroupJoinRequestFailure], Field(
+        description="The join requests WhatsApp refused, each with its reason. Empty when the whole batch was applied.",
+    )]
 
 
 class WhatsAppTemplateExampleParameter(BaseModel):
@@ -7034,6 +7432,7 @@ class WhatsAppNumberErrorCode(str, Enum):
     verification_code_not_received = "verification_code_not_received"
     verification_rate_limited = "verification_rate_limited"
     business_account_locked = "business_account_locked"
+    business_verification_required = "business_verification_required"
     credit_currency_mismatch = "credit_currency_mismatch"
     permission_denied = "permission_denied"
     invalid_request = "invalid_request"
@@ -7402,6 +7801,68 @@ class WhatsAppBusinessAccountBan(BaseModel):
     )] = None
 
 
+class WhatsAppMetaHealthVerdict(str, Enum):
+    available = "available"
+    limited = "limited"
+    blocked = "blocked"
+
+
+class WhatsAppMetaHealthEntityType(str, Enum):
+    waba = "waba"
+    business = "business"
+    app = "app"
+    phone_number = "phone_number"
+    message_template = "message_template"
+
+
+class WhatsAppMetaHealthError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    error_code: Annotated[int, Field(
+        description="Meta's numeric health error code, for example `141006` (payment method error), `141010` (business not verified), `141014` (account banned).",
+        examples=[141006],
+    )]
+    error_description: Annotated[str, Field(
+        description="Meta's own sentence describing the block.",
+        examples=["There is an error with the payment method. This will block business initiated conversations."],
+        min_length=1,
+    )]
+    possible_solution: Annotated[Optional[str], Field(
+        description="Meta's own suggested remedy. Absent when Meta gave none.",
+        examples=["There was an error with your payment method. Please add a new payment method to the account."],
+        min_length=1,
+    )] = None
+
+
+class WhatsAppMetaHealthEntity(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    entity_type: Annotated[Union[WhatsAppMetaHealthEntityType, str], Field(union_mode="left_to_right")]
+    meta_id: Annotated[str, Field(
+        description="Meta's identifier for the node. Treat it as an opaque string.",
+        examples=[1028574859896003],
+        min_length=1,
+    )]
+    can_send_message: Annotated[WhatsAppMetaHealthVerdict, Field(
+        description="Whether this node lets messages through.",
+    )]
+    can_receive_call_sip: Annotated[Optional[WhatsAppMetaHealthVerdict], Field(
+        description="Whether this node can receive a WhatsApp call over SIP, which Meta reports on `phone_number` and `app` entities. Absent on an account read: Meta reports it only when a phone number or template is the node asked about.",
+    )] = None
+    additional_info: Annotated[Optional[List[str]], Field(
+        description="Meta's own notes on a `limited` verdict. Absent on an account read: Meta reports it only when a phone number or template is the node asked about.",
+    )] = None
+    errors: Annotated[Optional[List[WhatsAppMetaHealthError]], Field(
+        description="Why this node is not `available`. Absent when Meta gave no reason.",
+    )] = None
+
+
+class WhatsAppMetaHealthStatus(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    can_send_message: WhatsAppMetaHealthVerdict
+    entities: Annotated[List[WhatsAppMetaHealthEntity], Field(
+        description="One entry per node Meta evaluated. Order is Meta's.",
+    )]
+
+
 class WhatsAppBusinessAccount(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
@@ -7438,8 +7899,11 @@ class WhatsAppBusinessAccount(BaseModel):
     ban: Annotated[Optional[WhatsAppBusinessAccountBan], Field(
         description="WhatsApp's ban on this account, absent unless Bird was told of one. `status` is what the account said when Bird last read it; this is what WhatsApp announced, which arrives only on the webhook that announces it and is never re-read.",
     )] = None
+    meta_health_status: Annotated[Optional[WhatsAppMetaHealthStatus], Field(
+        description="Meta's own messaging health for this account as of `meta_synced_at`. Absent until Bird has read it, and absent again when the stored reading did not parse at all. An entity whose verdict falls outside this vocabulary is dropped on its own and the rest of the report still ships, so `entities` can be shorter than Meta's. A `blocked` verdict on the `waba` entity is why template sends fail with Meta's `#200` even though the number reads `active`: for example `error_code` `141006` names a payment method Meta rejected on the account.",
+    )] = None
     meta_synced_at: Annotated[Optional[str], Field(
-        description="When Bird last read this account's state from WhatsApp. `status`, `account_review_status`, `business_verification_status`, `marketing_messages_onboarding_status` and `portfolio` are all that reading rather than live values; Bird re-reads roughly hourly. Absent for an account Bird has never read back.",
+        description="When Bird last read this account's state from WhatsApp. `status`, `account_review_status`, `business_verification_status`, `marketing_messages_onboarding_status`, `portfolio` and `meta_health_status` are all that reading rather than live values; Bird re-reads roughly hourly. Absent for an account Bird has never read back.",
         min_length=1,
     )] = None
     created_at: Annotated[str, Field(
@@ -7473,6 +7937,102 @@ class WhatsAppBusinessAccountList(BaseModel):
 
 class WhatsAppSuppressionID(RootModel[str]):
     root: str
+
+
+class WhatsAppSuppressionReason(str, Enum):
+    manual = "manual"
+
+
+class WhatsAppSuppressionOrigin(str, Enum):
+    api_key = "api_key"
+    user = "user"
+
+
+class WhatsAppSuppressionAppliesTo(str, Enum):
+    all = "all"
+
+
+class WhatsAppSuppressionEndedReason(str, Enum):
+    api_key = "api_key"
+    user = "user"
+
+
+class WhatsAppSuppression(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["was_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^was_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    address: Annotated[str, Field(
+        description="The suppressed WhatsApp address. For a phone number this is canonical E.164 with a leading plus sign, such as `+5511977670804`.",
+        examples=[+5511977670804],
+        min_length=1,
+    )]
+    waba: Annotated[Optional[str], Field(
+        description="The WhatsApp Business Account the suppression is limited to, identified by its WhatsApp-issued account ID, or null when it covers the whole workspace.",
+        examples=["null"],
+    )] = None
+    reason: Annotated[Annotated[Union[WhatsAppSuppressionReason, str], Field(union_mode="left_to_right")], Field(
+        description="Why the address is suppressed. `manual` means it was added directly rather than created automatically from a delivery outcome. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+        min_length=1,
+    )]
+    origin: Annotated[Annotated[Union[WhatsAppSuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
+        description="How the suppression came to exist: `api_key` (added through the API with an API key) or `user` (added by a user in the dashboard). This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+        min_length=1,
+    )]
+    applies_to: Annotated[Annotated[Union[WhatsAppSuppressionAppliesTo, str], Field(union_mode="left_to_right")], Field(
+        description="Blocking policy. `all` blocks every message category. Treat an unrecognized value as blocking.",
+        min_length=1,
+    )]
+    source_whatsapp_id: Annotated[Optional[str], Field(
+        description="ID of the WhatsApp message that caused this address to be suppressed, when the suppression was created automatically. Omitted for addresses added manually.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    ended_at: Annotated[Optional[str], Field(
+        description="When this stopped applying. Null while it is still stopping messages, which is the case for every record in the list.",
+    )] = None
+    ended_reason: Annotated[Optional[Annotated[Union[WhatsAppSuppressionEndedReason, str], Field(union_mode="left_to_right")]], Field(
+        description="What ended it: `api_key` (deleted through the API with an API key) or `user` (deleted by a user in the dashboard). Null while it is still stopping messages. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When the suppression was created.",
+        min_length=1,
+    )]
+
+
+class WhatsAppSuppressionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[WhatsAppSuppression]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppSuppressionCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    address: Annotated[str, Field(
+        description="WhatsApp address to suppress. For a phone number, supply canonical E.164 with a leading plus sign, such as `+5511977670804`. A value that is not a valid phone number returns a `422`.",
+        examples=[+5511977670804],
+        min_length=1,
+    )]
+    waba: Annotated[Optional[str], Field(
+        description="Limit the suppression to messages sent from this WhatsApp Business Account, identified by its WhatsApp-issued account ID. Omit it to block the address for the whole workspace, whichever account sends.",
+        examples=[102290129340398],
+        max_length=64,
+        min_length=1,
+    )] = None
 
 
 class WhatsAppKeywordOperation(str, Enum):
@@ -11052,7 +11612,7 @@ class EmailTemplateCreate(BaseModel):
         description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on email.",
     )] = None
     language_source_required: Annotated[Optional[bool], Field(
-        description="Whether a send has to name a language. Set it to true to reject a send that names none instead of serving the default language. Pair it with `on_missing_language: fail` when every send must pick a language deliberately: on its own, `fail` is bypassed by naming no language at all. A template with this set cannot be used for a broadcast, which has no way to name one. Defaults to false.",
+        description="Whether a send has to name a language. Set it to true to reject a send that names none instead of serving the default language. Pair it with `on_missing_language: fail` when every send must pick a language deliberately: on its own, `fail` is bypassed by naming no language at all. A broadcast must select a template language when this is set. Defaults to false.",
     )] = None
 
 
@@ -11139,7 +11699,7 @@ class EmailTemplate(BaseModel):
         description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on email.",
     )]
     language_source_required: Annotated[bool, Field(
-        description="Whether a send has to name a language. When true, a send that names none is rejected instead of being served the default language, and the template cannot be used for a broadcast, which has no way to name one.",
+        description="Whether a send has to name a language. When true, a send that names none is rejected instead of being served the default language. A broadcast must select a template language when this is set.",
     )]
     last_submitted_at: Annotated[Optional[str], Field(
         description="When this template was last submitted. Null if it never has been. Submitting is the only thing that moves this timestamp: rolling back changes which version is live without counting as a submit, so this keeps reporting the last real submit. Read it alongside `languages`, which says where each language stands.",
@@ -11181,7 +11741,7 @@ class EmailTemplateUpdate(BaseModel):
         description="What a send does when it asks for a language this template does not carry.",
     )] = None
     language_source_required: Annotated[Optional[bool], Field(
-        description="Whether a send has to name a language. Turning it on rejects a send that names none instead of serving the default language, and makes the template unusable for a broadcast, which has no way to name one.",
+        description="Whether a send has to name a language. Turning it on rejects a send that names none instead of serving the default language. A broadcast must select a template language when this is set.",
     )] = None
 
 
@@ -16419,7 +16979,7 @@ class VoiceCallRouteType(str, Enum):
     forward = "forward"
 
 
-class VoiceCallRejectionReason(str, Enum):
+class VoiceLegRejectionReason(str, Enum):
     source_not_allowed = "source_not_allowed"
     caller_id_not_verified = "caller_id_not_verified"
     routing_not_configured = "routing_not_configured"
@@ -16434,43 +16994,43 @@ class VoiceCallRejectionReason(str, Enum):
     number_ownership_not_verified = "number_ownership_not_verified"
 
 
-class VoiceCallInboundRouteReject(BaseModel):
+class VoiceLegInboundRouteReject(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[VoiceCallRouteType, Field(
-        description="The number turned the call away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
+        description="The number turned the leg away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
     )]
 
 
-class VoiceCallInboundRouteTrunk(BaseModel):
+class VoiceLegInboundRouteTrunk(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[VoiceCallRouteType, Field(
-        description="The call was delivered to one of your SIP trunks.",
+        description="The leg was delivered to one of your SIP trunks.",
     )]
     trunk_id: Annotated[str, Field(
-        description="The SIP trunk the call was delivered to. Recorded as it was at the time, so it may name a trunk you have since changed or deleted.",
+        description="The SIP trunk the leg was delivered to. Recorded as it was at the time, so it may name a trunk you have since changed or deleted.",
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
     )]
 
 
-class VoiceCallInboundRouteForward(BaseModel):
+class VoiceLegInboundRouteForward(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[VoiceCallRouteType, Field(
-        description="The call was forwarded to another of your numbers.",
+        description="The leg was forwarded to another of your numbers.",
     )]
     forward_to: Annotated[str, Field(
-        description="The number the call was forwarded to, in E.164 format. Recorded as it was at the time, so it may name a number you have since stopped verifying.",
+        description="The number the leg was forwarded to, in E.164 format. Recorded as it was at the time, so it may name a number you have since stopped verifying.",
         examples=[+14155551234],
         min_length=1,
     )]
     forward_as: Annotated[VoiceInboundForwardAs, Field(
-        description="Which of the call's two numbers the forwarded leg presented as its caller. The value that went on the wire, not the one the number is set to now.",
+        description="Which of the leg's two numbers the forwarded leg presented as its caller. The value that went on the wire, not the one the number is set to now.",
     )]
 
 
-class VoiceCallInboundRoute(RootModel[VoiceCallInboundRouteReject | VoiceCallInboundRouteTrunk | VoiceCallInboundRouteForward]):
-    root: VoiceCallInboundRouteReject | VoiceCallInboundRouteTrunk | VoiceCallInboundRouteForward
+class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward]):
+    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward
 
 
 class VoiceMediaQuality(BaseModel):
@@ -16498,7 +17058,7 @@ class VoiceMediaQuality(BaseModel):
     )]
 
 
-class VoiceCallCost(BaseModel):
+class VoiceLegCost(BaseModel):
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
         description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
@@ -16513,11 +17073,11 @@ class VoiceCallCost(BaseModel):
         pattern="^[A-Z]{3}$",
     )]
     outbound_amount: Annotated[Optional[str], Field(
-        description="What we charged to carry the call to the destination network, as a decimal string. `null` until this component is priced.",
+        description="What we charged to carry the leg to the destination network, as a decimal string. `null` until this component is priced.",
         examples=[0.013000],
     )]
     inbound_amount: Annotated[Optional[str], Field(
-        description="What we charged to receive the call from the originating network, as a decimal string. Only a call that arrived at your number can carry it. `null` until this component is priced.",
+        description="What we charged to receive the leg from the originating network, as a decimal string. Only a leg that arrived at your number can carry it. `null` until this component is priced.",
         examples=["null"],
     )]
     call_handling_amount: Annotated[Optional[str], Field(
@@ -16525,24 +17085,24 @@ class VoiceCallCost(BaseModel):
         examples=["null"],
     )]
     recording_amount: Annotated[Optional[str], Field(
-        description="What we charged to record the call, as a decimal string, billed per second over the same billable time as the rest of the call. `null` until this component is priced.",
+        description="What we charged to record the leg, as a decimal string, billed per second over the same billable time as the rest of the leg. `null` until this component is priced.",
         examples=["null"],
     )]
     transcription_amount: Annotated[Optional[str], Field(
-        description="What we charged to transcribe the call's audio, as a decimal string, billed per second of recorded audio rather than for the length of the call. A transcript is produced after the call ends, so this can appear after the rest of the cost. `null` until this component is priced.",
+        description="What we charged to transcribe the leg's audio, as a decimal string, billed per second of recorded audio rather than for the length of the leg. A transcript is produced after the leg ends, so this can appear after the rest of the cost. `null` until this component is priced.",
         examples=["null"],
     )]
 
 
-class VoiceCall(BaseModel):
+class VoiceLeg(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    session_id: Annotated[Optional[str], Field(
-        description="Session identifier shared across all legs of a multi-party or transferred call. Use this to correlate related call records. `null` when session correlation is not available for the call.",
+    call_id: Annotated[Optional[str], Field(
+        description="Call identifier shared across all legs of a multi-party or transferred call. Use this to correlate related leg records. `null` when call correlation is not available for the leg.",
         examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
@@ -16565,10 +17125,10 @@ class VoiceCall(BaseModel):
         min_length=1,
     )]
     actor: Annotated[Optional[Actor], Field(
-        description="Who placed the call: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the call was admitted only by its source IP address, or when no actor was recorded.",
+        description="Who placed the leg: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the leg was admitted only by its source IP address, or when no actor was recorded.",
     )] = None
     sip_trunk_id: Annotated[Optional[str], Field(
-        description="Identifier of the SIP trunk that originated this call. `null` when no trunk is associated.",
+        description="Identifier of the SIP trunk that originated this leg. `null` when no trunk is associated.",
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
@@ -16579,50 +17139,50 @@ class VoiceCall(BaseModel):
         examples=[200],
         ge=100,
     )] = None
-    rejection_reason: Annotated[Optional[VoiceCallRejectionReason], Field(
-        description="Why we rejected the call. Absent on connected calls and calls rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the call a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
+    rejection_reason: Annotated[Optional[VoiceLegRejectionReason], Field(
+        description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
     )] = None
-    route: Annotated[Optional[VoiceCallInboundRoute], Field(
-        description="Which answer your number gave an incoming call: a SIP trunk, a forward, or a refusal. Recorded when the call was handled, so changing the number's setup afterwards does not change what its past calls say. Absent on outbound calls, and on calls recorded before this field existed.",
+    route: Annotated[Optional[VoiceLegInboundRoute], Field(
+        description="Which answer your number gave an incoming leg: a SIP trunk, a forward, or a refusal. Recorded when the leg was handled, so changing the number's setup afterwards does not change what its past legs say. Absent on outbound legs, and on legs recorded before this field existed.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Your own `{name, value}` labels for this call, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise calls by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a call is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the call still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the call carried none, and on calls recorded before this field existed.",
+        description="Your own `{name, value}` labels for this leg, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise legs by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a leg is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the leg still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the leg carried none, and on legs recorded before this field existed.",
         max_length=5,
     )] = None
     started_at: Annotated[str, Field(
-        description="When the call was initiated.",
+        description="When the leg was initiated.",
         min_length=1,
     )]
     answered_at: Annotated[Optional[str], Field(
-        description="When the call was answered (`200` OK received). `null` for unanswered calls.",
+        description="When the leg was answered (`200` OK received). `null` for unanswered legs.",
     )] = None
     ended_at: Annotated[Optional[str], Field(
-        description="When the call ended (BYE or final non-2xx response). `null` for calls that ended abnormally without a recorded end event.",
+        description="When the leg ended (BYE or final non-2xx response). `null` for legs that ended abnormally without a recorded end event.",
     )] = None
     duration_ms: Annotated[Optional[int], Field(
-        description="Total call duration in milliseconds, measured from the first INVITE to the BYE or final response. `null` while the call is still in progress and has no final duration yet.",
+        description="Total leg duration in milliseconds, measured from the first INVITE to the BYE or final response. `null` while the leg is still in progress and has no final duration yet.",
         examples=[65000],
         ge=0,
     )] = None
     pdd_ms: Annotated[Optional[int], Field(
-        description="Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the call `not going through`. Absent when the call never rang, either because it failed first or because the carrier answered it immediately.",
+        description="Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the leg `not going through`. Absent when the leg never rang, either because it failed first or because the carrier answered it immediately.",
         examples=[850],
         ge=0,
     )] = None
     billable_ms: Annotated[Optional[int], Field(
-        description="Billable duration in milliseconds, measured from answer to call end. Zero for unanswered calls, and `null` while the call is still in progress.",
+        description="Billable duration in milliseconds, measured from answer to leg end. Zero for unanswered legs, and `null` while the leg is still in progress.",
         examples=[60000],
         ge=0,
     )] = None
     media_quality: Optional[VoiceMediaQuality] = None
-    cost: Annotated[Optional[VoiceCallCost], Field(
-        description="What was charged for a call, split into the components that make it up.",
+    cost: Annotated[Optional[VoiceLegCost], Field(
+        description="What was charged for a leg, split into the components that make it up.",
     )] = None
 
 
-class VoiceCallList(BaseModel):
+class VoiceLegList(BaseModel):
     model_config = ConfigDict(extra="allow")
-    data: List[VoiceCall]
+    data: List[VoiceLeg]
     next_cursor: Annotated[Optional[str], Field(
         description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],

@@ -192,6 +192,89 @@ def whatsapp_stats_inbound_by_phone_number() -> None:
         print(row.phone_number, row.received)
 
 
+def whatsapp_groups_create() -> None:
+    group = client.whatsapp.groups.create(
+        whatsapp_number_id="wan_01krdgeqcxet5s7t44vh8rt9mg",
+        subject="Norwood Fleet — Tuesday route",
+    )
+    print(group.id, group.status)  # pending; read it back for the invite link
+
+
+def whatsapp_groups_list() -> None:
+    for group in client.whatsapp.groups.list():
+        print(group.id, group.subject, group.participant_count)
+
+
+def whatsapp_groups_get() -> None:
+    group = client.whatsapp.groups.get("wag_01krdgeqcxet5s7t44vh8rt9mg")
+    print(group.status, group.invite_link)
+
+
+def whatsapp_groups_update() -> None:
+    group = client.whatsapp.groups.update(
+        "wag_01krdgeqcxet5s7t44vh8rt9mg",
+        subject="Norwood Fleet — Wednesday route",
+    )
+    print(group.last_operation)  # pending until WhatsApp reports back
+
+
+def whatsapp_groups_delete() -> None:
+    group = client.whatsapp.groups.delete("wag_01krdgeqcxet5s7t44vh8rt9mg")
+    if group.last_operation:
+        print(group.last_operation.status)  # pending until WhatsApp confirms it
+
+
+def whatsapp_groups_invite_link_rotate() -> None:
+    link = client.whatsapp.groups.invite_link.rotate("wag_01krdgeqcxet5s7t44vh8rt9mg")
+    print(link.invite_link)  # every earlier link has stopped working
+
+
+def whatsapp_groups_participants_remove() -> None:
+    group = client.whatsapp.groups.participants.remove(
+        "wag_01krdgeqcxet5s7t44vh8rt9mg",
+        "BR.1566655121691972",
+    )
+    print(len(group.participants or []))
+
+
+def whatsapp_groups_join_requests_list() -> None:
+    for request in client.whatsapp.groups.join_requests.list("wag_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(request.id, request.bsuid)
+
+
+def whatsapp_groups_join_requests_approve() -> None:
+    result = client.whatsapp.groups.join_requests.approve(
+        "wag_01krdgeqcxet5s7t44vh8rt9mg",
+        join_request_ids=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
+    )
+    print(len(result.decided), len(result.failed))
+
+
+def whatsapp_groups_join_requests_reject() -> None:
+    result = client.whatsapp.groups.join_requests.reject(
+        "wag_01krdgeqcxet5s7t44vh8rt9mg",
+        join_request_ids=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
+    )
+    for failure in result.failed:
+        print(failure.join_request_id, failure.error.description)
+
+
+def whatsapp_groups_pins_create() -> None:
+    pin = client.whatsapp.groups.pins.create(
+        "wag_01krdgeqcxet5s7t44vh8rt9mg",
+        message_id="wam_01kya19eknftrs2s6p82asmvnh",
+    )
+    print(pin.pinned_until)
+
+
+def whatsapp_groups_pins_delete() -> None:
+    group = client.whatsapp.groups.pins.delete(
+        "wag_01krdgeqcxet5s7t44vh8rt9mg",
+        "wam_01kya19eknftrs2s6p82asmvnh",
+    )
+    print(len(group.pinned_messages or []))
+
+
 def whatsapp_keyword_rules_list() -> None:
     rules = client.whatsapp.keyword_rules.list(operation="opt_out")
     for rule in rules.data or []:
@@ -226,3 +309,33 @@ def whatsapp_keyword_rules_update() -> None:
 def whatsapp_keyword_rules_delete() -> None:
     # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one; STOP never stops working.
     client.whatsapp.keyword_rules.delete("wkr_01m2kj8x4te9p0rr7e5w2n1abc")
+
+
+def whatsapp_suppressions_list() -> None:
+    # address is a prefix, so a partial value matches every address under it.
+    suppressions = client.whatsapp.suppressions.list(address="+1555")
+    for suppression in suppressions.data or []:
+        print(suppression.address, suppression.waba or "every account")
+
+
+def whatsapp_suppressions_get() -> None:
+    # Resolves a record that has already ended, which the list leaves out.
+    suppression = client.whatsapp.suppressions.get("was_01krdgeqcxet5s7t44vh8rt9mg")
+    print(suppression.reason, suppression.ended_at or "still in force")
+
+
+def whatsapp_suppressions_add() -> None:
+    # Omit waba to block the address for the whole workspace, whichever account
+    # sends. With it, your other accounts keep reaching them, and the same
+    # address for two accounts is two records.
+    suppression = client.whatsapp.suppressions.add(
+        address="+15550001234",
+        waba="102290129340398",
+    )
+    print(suppression.id, suppression.applies_to)
+
+
+def whatsapp_suppressions_remove() -> None:
+    # Only a manual suppression can be ended; a recipient's own opt-out is
+    # theirs to reverse. The record is kept and still reads back by id.
+    client.whatsapp.suppressions.remove("was_01krdgeqcxet5s7t44vh8rt9mg")
