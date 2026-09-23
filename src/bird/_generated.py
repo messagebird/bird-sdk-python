@@ -4430,6 +4430,14 @@ class DomainID(RootModel[str]):
     root: str
 
 
+class WhatsAppNumberID(RootModel[str]):
+    root: str
+
+
+class WhatsAppTemplateID(RootModel[str]):
+    root: str
+
+
 class WhatsAppMessageStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
@@ -5232,10 +5240,6 @@ class WhatsAppMessageList(BaseModel):
     )]
 
 
-class WhatsAppTemplateID(RootModel[str]):
-    root: str
-
-
 class WhatsAppTemplateSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
@@ -5989,10 +5993,6 @@ class WhatsAppGroupStatus(str, Enum):
     suspended = "suspended"
     deleted = "deleted"
     failed = "failed"
-
-
-class WhatsAppNumberID(RootModel[str]):
-    root: str
 
 
 class WhatsAppGroupJoinApprovalMode(str, Enum):
@@ -16777,13 +16777,81 @@ class WebhookAttemptList(BaseModel):
     )]
 
 
-class SIPTrunkID(RootModel[str]):
-    root: str
+class VoicePartyEndpointType(str, Enum):
+    pstn = "pstn"
+    sip = "sip"
+    voicemail = "voicemail"
+    bridge_pstn = "bridge_pstn"
+    bridge_sip = "bridge_sip"
+    webhook = "webhook"
+
+
+class VoicePartySIPEndpoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    contact: Annotated[str, Field(
+        description="The address the user agent registered, as a `sip:` or `sips:` URI. It is where the endpoint asked to be reached, which is not always the address that was dialled.",
+        examples=["sip:ua@203.0.113.7:5060"],
+        min_length=1,
+    )]
 
 
 class VoiceInboundForwardAs(str, Enum):
     dialed_number = "dialed_number"
     calling_number = "calling_number"
+
+
+class VoicePartyBridgePSTNEndpoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    forward_to: Annotated[str, Field(
+        description="The number the platform placed the leg onward to, in E.164. The party's own `address` is the number that was dialled, so the two together are one hop of the call.",
+        examples=[+31612345678],
+        max_length=16,
+        min_length=3,
+        pattern="^\\+[1-9][0-9]{1,14}$",
+    )]
+    forward_as: Annotated[VoiceInboundForwardAs, Field(
+        description="Which of a forwarded call's two numbers it shows as the caller.\n\n\"dialed_number\" is the number the caller dialled, which is one of yours.\nCarriers treat it as fully yours, so it is the least likely to be altered or\nscreened. Whoever answers sees which of your numbers was called, not who called\nit. It needs your workspace approved to place calls from numbers you bought from\nus; where it is not, this value is refused and the call shows the calling\nnumber.\n\n\"calling_number\" is the caller's own number, so the phone rings as though they\nhad dialled it directly and the call can be returned from the call log. Because\nthe number is not one you own, some carriers (most often in the US and parts of\nEurope) mark such calls as unverified, replace the number, or screen them.",
+    )]
+
+
+class SIPTrunkID(RootModel[str]):
+    root: str
+
+
+class VoicePartyBridgeSIPEndpoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    trunk_id: Annotated[str, Field(
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoicePartyEndpoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Annotated[Union[VoicePartyEndpointType, str], Field(union_mode="left_to_right")], Field(
+        description="The technical participant observed on one side of a call. Additional endpoint types may appear in retained observations.",
+    )]
+    sip: Optional[VoicePartySIPEndpoint] = None
+    bridge_pstn: Optional[VoicePartyBridgePSTNEndpoint] = None
+    bridge_sip: Optional[VoicePartyBridgeSIPEndpoint] = None
+
+
+class VoiceParty(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    endpoint: Annotated[Optional[VoicePartyEndpoint], Field(
+        description="What kind of participant sat on this side of a leg, and the coordinate that kind carries: a telephone endpoint off the platform, a SIP or WebRTC endpoint, Bird answering, or the platform placing a leg onward. It does not name a person.\n`null` on an observation this API could not read. The entry stays, because the session counted it when it deduplicated, and dropping it here would report fewer participants than were observed.",
+    )] = None
+    address: Annotated[Optional[str], Field(
+        description="This side's own address, in E.164 or as a `sip:` URI. `null` when the observation carried none, which does not say whether one was withheld, missing, or nonexistent.",
+        examples=[+14155551234],
+    )] = None
+    trunk_id: Annotated[Optional[str], Field(
+        description="The workspace trunk on this side of the leg. `null` when this side sat behind no trunk.",
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class NumberType(str, Enum):
@@ -17028,6 +17096,14 @@ class VoiceCallRouteType(str, Enum):
     forward = "forward"
 
 
+class VoiceSequenceID(RootModel[str]):
+    root: str
+
+
+class VoiceSequenceNodeID(RootModel[str]):
+    root: str
+
+
 class VoiceLegRejectionReason(str, Enum):
     source_not_allowed = "source_not_allowed"
     caller_id_not_verified = "caller_id_not_verified"
@@ -17244,3 +17320,108 @@ class VoiceLegList(BaseModel):
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
+
+
+class VoiceSequencePhoneNumber(RootModel[str]):
+    root: str
+
+
+class VoiceSequenceRunID(RootModel[str]):
+    root: str
+
+
+class VoiceCallSequence(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    run_id: Annotated[str, Field(
+        examples=["vsr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vsr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceCall(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    initial_leg_id: Annotated[str, Field(
+        examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[VoiceCallDirection, Field(
+        description="Direction of the initial leg.",
+    )]
+    started_at: Annotated[Optional[str], Field(
+        description="When the initial leg started. `null` in the acceptance snapshot returned by call creation.",
+        min_length=1,
+    )]
+    ended_at: Annotated[Optional[str], Field(
+        description="When the call's last leg ended. `null` while any leg is still in progress. Recordings and transcripts can still arrive after this instant, so it does not mean the call is finished being written.",
+    )] = None
+    live: Annotated[bool, Field(
+        description="Whether any leg in the call currently holds a lease. `false` covers the interval between a leg ending and its settlement being confirmed, and says nothing about whether transcription has finished.",
+    )]
+    has_recording: Annotated[bool, Field(
+        description="Whether the call ever produced a recording. It stays `true` for the life of the call, so it records that a recording was made rather than promising one can still be fetched.",
+    )]
+    has_transcript: Annotated[bool, Field(
+        description="Whether the call ever produced a transcript. A failed transcription attempt does not set it, and a later failure does not clear it.",
+    )]
+    parties: Annotated[List[VoiceParty], Field(
+        description="The distinct participant observations the call's legs recorded, for display beside the call. The length is not a count of people and not a reconstruction of the leg graph.",
+    )]
+    sequence: Optional[VoiceCallSequence] = None
+
+
+class CreateVoiceCallSequenceRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    entry_node_id: Annotated[str, Field(
+        description="Stable identifier for a node within one sequence definition.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    trigger_data: Annotated[Dict[str, Any], Field(
+        description="Data matching the selected entry's configured schema, limited to 16 KiB before and after normalization. Use an empty object when the entry needs no data. Fields remain application data and cannot provide trusted call identity or routing authority.",
+    )]
+
+
+class CreateVoiceCallRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Canonical E.164 phone number, with a leading plus sign and four to fifteen digits.",
+        max_length=16,
+        min_length=5,
+        pattern="^\\+[1-9][0-9]{3,14}$",
+    )]
+    to: Annotated[str, Field(
+        description="Canonical E.164 phone number, with a leading plus sign and four to fifteen digits.",
+        max_length=16,
+        min_length=5,
+        pattern="^\\+[1-9][0-9]{3,14}$",
+    )]
+    ringing_timeout_seconds: Annotated[Optional[int], Field(
+        description="Maximum ringing time for the original dialing attempt, shared across routing candidates.",
+        ge=5,
+        le=120,
+    )] = None
+    sequence: CreateVoiceCallSequenceRequest

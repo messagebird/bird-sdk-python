@@ -347,6 +347,17 @@ class VerificationTerminalReason:
     UNDELIVERABLE: Final = "undeliverable"
 
 
+class VoicePartyEndpointType:
+    """Values of VoicePartyEndpointType known at this SDK version (open enum)."""
+
+    BRIDGE_PSTN: Final = "bridge_pstn"
+    BRIDGE_SIP: Final = "bridge_sip"
+    PSTN: Final = "pstn"
+    SIP: Final = "sip"
+    VOICEMAIL: Final = "voicemail"
+    WEBHOOK: Final = "webhook"
+
+
 class WhatsAppBusinessAccountMarketingMessagesStatus:
     """Values of WhatsAppBusinessAccountMarketingMessagesStatus known at this SDK version (open enum)."""
 
@@ -665,6 +676,7 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
+    "VoicePartyEndpointType",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
     "WhatsAppBusinessAccountReviewStatus",
     "WhatsAppBusinessAccountStatus",

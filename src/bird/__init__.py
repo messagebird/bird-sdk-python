@@ -144,6 +144,7 @@ from bird._generated import (
     PhoneNumberLookup,
     Verification,
     VerificationCheckResult,
+    VoiceCall,
     VoiceLeg,
     VoiceLegList,
     WebhookEvent,
@@ -252,6 +253,7 @@ from bird.resources.verify_verifications_gen import (
     VerifyVerificationsCreateParams,
     VerifyVerificationsNextChannelParams,
 )
+from bird.resources.voice_calls_gen import CreateVoiceCallSequenceRequest, VoiceCallsCreateParams
 from bird.resources.voice_legs_gen import VoiceLegsListParams
 from bird._event_types import WebhookEventType
 from bird._open_enums import (
@@ -288,6 +290,7 @@ from bird._open_enums import (
     VerificationAttemptFailureReason,
     VerificationChannel,
     VerificationTerminalReason,
+    VoicePartyEndpointType,
     WhatsAppBusinessAccountMarketingMessagesStatus,
     WhatsAppBusinessAccountReviewStatus,
     WhatsAppBusinessAccountStatus,
@@ -645,6 +648,9 @@ __all__ = [
     "VerifyVerificationsNextChannelParams",
     "Verification",
     "VerificationCheckResult",
+    "CreateVoiceCallSequenceRequest",
+    "VoiceCallsCreateParams",
+    "VoiceCall",
     "VoiceLegsListParams",
     "VoiceLeg",
     "VoiceLegList",
@@ -678,6 +684,7 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
+    "VoicePartyEndpointType",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
     "WhatsAppBusinessAccountReviewStatus",
     "WhatsAppBusinessAccountStatus",

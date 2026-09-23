@@ -168,6 +168,7 @@ def test_surface_conformance() -> None:
     assert callable(client.whatsapp.stats.inbound.daily)
     assert callable(client.whatsapp.stats.inbound.hourly)
     assert callable(client.whatsapp.stats.inbound.by_phone_number)
+    assert callable(client.voice.calls.create)
     assert callable(client.voice.legs.list)
     assert callable(client.voice.legs.get)
     assert callable(client.verify.verifications.create)

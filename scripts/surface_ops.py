@@ -136,6 +136,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/whatsapp/stats/inbound/daily": {"get"},
     "/v1/whatsapp/stats/inbound/hourly": {"get"},
     "/v1/whatsapp/stats/inbound/phone-numbers": {"get"},
+    "/v1/voice/calls": {"post"},
     "/v1/voice/legs": {"get"},
     "/v1/voice/legs/{leg_id}": {"get"},
     "/v1/verify/verifications": {"post"},
