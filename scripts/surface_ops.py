@@ -143,6 +143,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/verify/verifications/next-channel": {"post"},
     "/v1/lookup/phone-number": {"post"},
     "/v1/lookup/email": {"post"},
+    "/v1/lookup/email/batch": {"post"},
     "/v1/numbers": {"get"},
     "/v1/numbers/{number_id}": {"delete", "get"},
     "/v1/numbers/available": {"get"},

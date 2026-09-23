@@ -53,6 +53,7 @@ class ErrorBodyType(str, Enum):
     auth_error = "auth_error"
     bad_request_error = "bad_request_error"
     billing_error = "billing_error"
+    client_closed_request_error = "client_closed_request_error"
     conflict_error = "conflict_error"
     gone_error = "gone_error"
     internal_error = "internal_error"
@@ -2005,7 +2006,7 @@ class ContactProperty(BaseModel):
         max_length=500,
     )] = None
     archived: Annotated[Optional[bool], Field(
-        description="Whether the property is archived. An archived property is rejected in new contact writes and stops rendering in templates, but every value already stored on contacts is preserved. Reactivate it with unarchive.",
+        description="Whether the property is archived. Archived keys are rejected in new contact writes and when publishing a new template version. Stored contact values are preserved, and previously published versions keep rendering them. Unarchive the property to use its key in new writes and template versions.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -4162,6 +4163,7 @@ class EmailLookupReason(str, Enum):
     invalid_syntax = "invalid_syntax"
     invalid_domain = "invalid_domain"
     invalid_recipient = "invalid_recipient"
+    disposable_domain = "disposable_domain"
 
 
 class EmailLookup(BaseModel):
@@ -4172,7 +4174,7 @@ class EmailLookup(BaseModel):
         min_length=3,
     )]
     valid: Annotated[bool, Field(
-        description="Whether the address is well-formed and its domain is set up to receive mail at all. It says nothing about the mailbox itself, so a `valid` domain with no such mailbox is `true` here and `undeliverable` in `result`.",
+        description="The provider's validity assessment for the address. Read it with `result` and `delivery_confidence` when deciding whether to send; it does not guarantee delivery.",
     )]
     result: Annotated[Union[EmailLookupResult, str], Field(union_mode="left_to_right")]
     delivery_confidence: Annotated[int, Field(
@@ -4184,13 +4186,60 @@ class EmailLookup(BaseModel):
         description="Notable characteristics of the address. Empty when none apply.",
     )]
     reason: Annotated[Optional[Annotated[Union[EmailLookupReason, str], Field(union_mode="left_to_right")]], Field(
-        description="Why the address cannot receive mail. Absent unless `result` is `undeliverable`.",
+        description="An explanation for the assessment. Can accompany an undeliverable, risky, or typo result; omitted when no recognized reason is available.",
     )] = None
     did_you_mean: Annotated[Optional[str], Field(
         description="The address this one looks like a misspelling of. Absent unless a correction was found, which in practice means `result` is `typo`. Offer it to whoever typed the original rather than sending to it unasked, because it is a guess and the address they meant may be neither one.",
         max_length=254,
         min_length=3,
     )] = None
+
+
+class EmailLookupBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    emails: Annotated[List[str], Field(
+        description="Addresses to assess in submission order. Surrounding whitespace is trimmed and case is preserved. Malformed addresses receive individual assessments. Duplicates are assessed and billed at each position. The request must also fit within the 128 KiB request-body limit.",
+        max_length=1000,
+        min_length=1,
+    )]
+
+
+class EmailLookupBatchItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    email: Annotated[str, Field(
+        description="The submitted value after trimming surrounding whitespace. May be empty or malformed.",
+        max_length=254,
+        min_length=0,
+    )]
+    valid: Annotated[bool, Field(
+        description="The provider's validity assessment for the address. Read it with `result` and `delivery_confidence` when deciding whether to send; it does not guarantee delivery.",
+    )]
+    result: Annotated[Union[EmailLookupResult, str], Field(union_mode="left_to_right")]
+    delivery_confidence: Annotated[int, Field(
+        description="How likely mail to this address is to be delivered, from 0 (certain not to be) to 100 (certain to be). Read it alongside `result` rather than instead of it, because the same score can sit under `neutral` or `risky` for different reasons.",
+        ge=0,
+        le=100,
+    )]
+    flags: Annotated[List[Annotated[Union[EmailLookupFlag, str], Field(union_mode="left_to_right")]], Field(
+        description="Notable characteristics of the address. Empty when none apply.",
+    )]
+    reason: Annotated[Optional[Annotated[Union[EmailLookupReason, str], Field(union_mode="left_to_right")]], Field(
+        description="An explanation for the assessment. Can accompany an undeliverable, risky, or typo result; omitted when no recognized reason is available.",
+    )] = None
+    did_you_mean: Annotated[Optional[str], Field(
+        description="The address this one looks like a misspelling of. Absent unless a correction was found, which in practice means `result` is `typo`. Offer it to whoever typed the original rather than sending to it unasked, because it is a guess and the address they meant may be neither one.",
+        max_length=254,
+        min_length=3,
+    )] = None
+
+
+class EmailLookupBatchResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EmailLookupBatchItem], Field(
+        description="One assessment per submitted address, in submission order, including duplicates.",
+        max_length=1000,
+        min_length=1,
+    )]
 
 
 class VerificationChannel(str, Enum):
@@ -8484,7 +8533,7 @@ class EmailInboxInsightsPlacement(BaseModel):
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )]
     generated_at: Annotated[str, Field(
-        description="When the measurement service computed these figures.",
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
         examples=["2026-08-18T09:34:00Z"],
         min_length=1,
     )]
@@ -8671,7 +8720,7 @@ class EmailInboxInsightsAuthentication(BaseModel):
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
-        description="When the measurement service computed these figures.",
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
         examples=["2026-08-18T09:34:00Z"],
         min_length=1,
     )]
@@ -8772,7 +8821,7 @@ class EmailInboxInsightsComplaints(BaseModel):
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
-        description="When the measurement service computed these figures.",
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
         examples=["2026-08-18T09:34:00Z"],
         min_length=1,
     )]
@@ -8897,7 +8946,7 @@ class EmailInboxInsightsSpamTraps(BaseModel):
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
-        description="When the measurement service computed these figures.",
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
         examples=["2026-08-18T09:34:00Z"],
         min_length=1,
     )]
@@ -9013,7 +9062,7 @@ class EmailInboxInsightsBlocklists(BaseModel):
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
-        description="When the measurement service computed these figures.",
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
         examples=["2026-08-18T09:34:00Z"],
         min_length=1,
     )]
@@ -9064,7 +9113,7 @@ class EmailInboxInsightsIndustryBenchmark(BaseModel):
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
-        description="When the measurement service computed these figures.",
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
         examples=["2026-08-18T09:34:00Z"],
         min_length=1,
     )]
@@ -13258,7 +13307,7 @@ class WebhookEndpoint(BaseModel):
         description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).",
     )]
     status: Annotated[WebhookEndpointStatus, Field(
-        description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then recover\n  the missed events with\n  [Replay missed events](/docs/api/reference/create-webhook-replay).",
+        description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then\n  [Replay failed deliveries](/docs/api/reference/create-webhook-replay) to\n  recover the deliveries that failed before the pause. Events that arrived\n  while it was paused were never attempted, so a replay does not reach them.",
         min_length=1,
     )]
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -13326,7 +13375,7 @@ class WebhookEndpointCreated(BaseModel):
         description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).",
     )]
     status: Annotated[WebhookEndpointStatus, Field(
-        description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then recover\n  the missed events with\n  [Replay missed events](/docs/api/reference/create-webhook-replay).",
+        description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then\n  [Replay failed deliveries](/docs/api/reference/create-webhook-replay) to\n  recover the deliveries that failed before the pause. Events that arrived\n  while it was paused were never attempted, so a replay does not reach them.",
         min_length=1,
     )]
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -13360,7 +13409,7 @@ class WebhookEndpointUpdate(BaseModel):
         min_length=1,
     )] = None
     status: Annotated[Optional[WebhookEndpointUpdateStatus], Field(
-        description="`paused` stops all deliveries; `active` re-enables a paused endpoint. Omit to leave the status unchanged. Events that fire while paused are not delivered; after re-enabling, recover them with [Replay missed events](/docs/api/reference/create-webhook-replay). A `degraded` endpoint cannot be reset through this field: it returns to `active` automatically once deliveries succeed again.",
+        description="`paused` stops all deliveries; `active` re-enables a paused endpoint. Omit to leave the status unchanged. Events that fire while paused are not delivered and a replay cannot recover them, because they were never attempted; after re-enabling, [Replay failed deliveries](/docs/api/reference/create-webhook-replay) reaches only the deliveries that failed before the pause. A `degraded` endpoint cannot be reset through this field: it returns to `active` automatically once deliveries succeed again.",
     )] = None
 
 
@@ -16693,7 +16742,7 @@ class WebhookAttempt(BaseModel):
         description="Webhook event type. This is an open enum, so accept unrecognized values in deliveries. Subscribing to a type outside the event catalog returns a `422`.",
     )]
     status: Annotated[WebhookAttemptStatus, Field(
-        description="Outcome of this attempt.\n\n- `delivered`: your endpoint accepted it with a `2xx` response.\n- `pending`: the attempt is still in flight.\n- `failed`: it returned a non-`2xx` response or no response at all. A `failed`\n  attempt is not final for the event: automatic retries appear as further\n  attempts with the same `event_id`.",
+        description="Outcome of this attempt.\n\n- `delivered`: your endpoint accepted it with a `2xx` response.\n- `pending`: the attempt is still in flight.\n- `failed`: it returned a non-`2xx` response or no response at all. Automatic\n  retries appear as further attempts with the same `event_id`, so a `failed`\n  attempt is final for the event only once the retry schedule is spent. A\n  replayed delivery takes a single attempt and is never retried.",
         min_length=1,
     )]
     url: Annotated[str, Field(
@@ -17143,7 +17192,7 @@ class VoiceLeg(BaseModel):
         description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
     )] = None
     route: Annotated[Optional[VoiceLegInboundRoute], Field(
-        description="Which answer your number gave an incoming leg: a SIP trunk, a forward, or a refusal. Recorded when the leg was handled, so changing the number's setup afterwards does not change what its past legs say. Absent on outbound legs, and on legs recorded before this field existed.",
+        description="Which answer your number gave an incoming leg. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can receive. Recorded when the leg was handled, so changing the number's setup afterwards does not change what its past legs say. Absent on outbound legs, and on legs recorded before this field existed.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Your own `{name, value}` labels for this leg, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise legs by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a leg is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the leg still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the leg carried none, and on legs recorded before this field existed.",

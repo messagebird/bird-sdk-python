@@ -7,6 +7,8 @@ from typing import TypedDict
 
 from bird._generated import (
     EmailLookup,
+    EmailLookupBatchRequest,
+    EmailLookupBatchResponse,
     EmailLookupRequest,
     PhoneNumberLookup,
     PhoneNumberLookupRequest,
@@ -32,6 +34,14 @@ class _LookupEmailRequired(TypedDict):
 
 class LookupEmailParams(_LookupEmailRequired, total=False):
     """Params for ``client.lookup.email``. ``email`` is required."""
+
+
+class _LookupEmailBatchRequired(TypedDict):
+    emails: Sequence[str]
+
+
+class LookupEmailBatchParams(_LookupEmailBatchRequired, total=False):
+    """Params for ``client.lookup.email_batch``. ``emails`` is required."""
 
 
 class Lookup(Resource):
@@ -75,7 +85,7 @@ class Lookup(Resource):
         email: str,
         options: RequestOptions | None = None,
     ) -> EmailLookup:
-        """Create a deliverability lookup for one email address. Returns `result`, `delivery_confidence`, address `flags`, an undeliverable `reason`, and `did_you_mean` when a correction is available. Treat unknown `result` and `reason` values as valid additions and use `delivery_confidence` as the fallback; each completed lookup incurs the same charge.
+        """Create a deliverability lookup for one email address. Returns `result`, `delivery_confidence`, address `flags`, an assessment `reason`, and `did_you_mean` when a correction is available. Treat unknown `result` and `reason` values as valid additions and use `delivery_confidence` as the fallback; each completed lookup incurs the same charge.
 
         ```python
         answer = client.lookup.email(email="aisha.khan@example.com")
@@ -94,6 +104,34 @@ class Lookup(Resource):
             "/v1/lookup/email",
             body,
             EmailLookup,
+            options,
+        )
+
+    def email_batch(
+        self,
+        *,
+        emails: Sequence[str],
+        options: RequestOptions | None = None,
+    ) -> EmailLookupBatchResponse:
+        """Assess up to 1,000 email addresses in one request. Results preserve input order and duplicates; malformed addresses receive individual assessments. Each answered entry is billed. Use a separate idempotency key per batch and reuse it for retries. Requests are limited to 128 KiB; responses over 256 KiB cannot be replayed and a retry can incur another charge.
+
+        ```python
+        answer = client.lookup.email_batch(emails=["aisha.khan@example.com", "not-an-email"])
+        for item in answer.data:
+            print(item.email, item.result)
+        ```
+        """
+        body = to_wire(
+            EmailLookupBatchRequest,
+            {
+                "emails": emails,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/lookup/email/batch",
+            body,
+            EmailLookupBatchResponse,
             options,
         )
 
@@ -139,7 +177,7 @@ class AsyncLookup(AsyncResource):
         email: str,
         options: RequestOptions | None = None,
     ) -> EmailLookup:
-        """Create a deliverability lookup for one email address. Returns `result`, `delivery_confidence`, address `flags`, an undeliverable `reason`, and `did_you_mean` when a correction is available. Treat unknown `result` and `reason` values as valid additions and use `delivery_confidence` as the fallback; each completed lookup incurs the same charge.
+        """Create a deliverability lookup for one email address. Returns `result`, `delivery_confidence`, address `flags`, an assessment `reason`, and `did_you_mean` when a correction is available. Treat unknown `result` and `reason` values as valid additions and use `delivery_confidence` as the fallback; each completed lookup incurs the same charge.
 
         ```python
         answer = await client.lookup.email(email="aisha.khan@example.com")
@@ -158,5 +196,33 @@ class AsyncLookup(AsyncResource):
             "/v1/lookup/email",
             body,
             EmailLookup,
+            options,
+        )
+
+    async def email_batch(
+        self,
+        *,
+        emails: Sequence[str],
+        options: RequestOptions | None = None,
+    ) -> EmailLookupBatchResponse:
+        """Assess up to 1,000 email addresses in one request. Results preserve input order and duplicates; malformed addresses receive individual assessments. Each answered entry is billed. Use a separate idempotency key per batch and reuse it for retries. Requests are limited to 128 KiB; responses over 256 KiB cannot be replayed and a retry can incur another charge.
+
+        ```python
+        answer = await client.lookup.email_batch(emails=["aisha.khan@example.com", "not-an-email"])
+        for item in answer.data:
+            print(item.email, item.result)
+        ```
+        """
+        body = to_wire(
+            EmailLookupBatchRequest,
+            {
+                "emails": emails,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/lookup/email/batch",
+            body,
+            EmailLookupBatchResponse,
             options,
         )

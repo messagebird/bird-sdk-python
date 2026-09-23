@@ -152,6 +152,7 @@ class EmailLookupFlag:
 class EmailLookupReason:
     """Values of EmailLookupReason known at this SDK version (open enum)."""
 
+    DISPOSABLE_DOMAIN: Final = "disposable_domain"
     INVALID_DOMAIN: Final = "invalid_domain"
     INVALID_RECIPIENT: Final = "invalid_recipient"
     INVALID_SYNTAX: Final = "invalid_syntax"

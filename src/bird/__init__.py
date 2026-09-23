@@ -139,6 +139,8 @@ from bird._generated import (
     SuppressionScope,
     TemplateStatus,
     EmailLookup,
+    EmailLookupBatchItem,
+    EmailLookupBatchResponse,
     PhoneNumberLookup,
     Verification,
     VerificationCheckResult,
@@ -205,7 +207,7 @@ from bird.resources.domains_gen import (
     DomainUpdateParams,
 )
 from bird.resources.suppressions_gen import SuppressionsAddParams, SuppressionsListParams
-from bird.resources.lookup_gen import LookupEmailParams, LookupPhoneNumberParams
+from bird.resources.lookup_gen import LookupEmailBatchParams, LookupEmailParams, LookupPhoneNumberParams
 from bird.resources.email_stats_gen import (
     EmailStatsByBounceCodeParams,
     EmailStatsByBroadcastParams,
@@ -546,6 +548,9 @@ __all__ = [
     "EmailStatsByComplaintTypeParams",
     "EmailStatsByBroadcastParams",
     "EmailLookup",
+    "EmailLookupBatchItem",
+    "EmailLookupBatchResponse",
+    "LookupEmailBatchParams",
     "PhoneNumberLookup",
     "LookupEmailParams",
     "LookupPhoneNumberParams",

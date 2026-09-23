@@ -175,6 +175,7 @@ def test_surface_conformance() -> None:
     assert callable(client.verify.verifications.next_channel)
     assert callable(client.lookup.phone_number)
     assert callable(client.lookup.email)
+    assert callable(client.lookup.email_batch)
     assert callable(client.numbers.list)
     assert callable(client.numbers.get)
     assert callable(client.numbers.release)

@@ -24,3 +24,9 @@ def lookup_phone_number() -> None:
     # Only a block whose status is ok carries a value, and only that one is billed.
     if answer.score is not None and answer.score.status == "ok":
         print(answer.score.value)
+
+
+def lookup_email_batch() -> None:
+    answer = client.lookup.email_batch(emails=["aisha.khan@example.com", "not-an-email"])
+    for item in answer.data:
+        print(item.email, item.result)
