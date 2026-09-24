@@ -65,6 +65,9 @@ dev = [
 [tool.hatch.version]
 path = "src/bird/_version.py"
 
+[tool.hatch.build]
+artifacts = ["src/bird/_generated.py"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/bird"]
 

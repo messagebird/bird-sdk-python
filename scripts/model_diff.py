@@ -130,15 +130,6 @@ def one_value_enum(mod, name: str) -> bool:
 # These exact vocabularies follow the source fields; dcg narrows the voice
 # branches from their parent discriminator and over-widens the media header.
 ORACLE_ANNOTATION_DIFFERENCES = {
-    ("VoiceLegInboundRouteForward", "type"): (
-        typing.Literal["forward", "reject", "trunk"], typing.Literal["forward"],
-    ),
-    ("VoiceLegInboundRouteReject", "type"): (
-        typing.Literal["forward", "reject", "trunk"], typing.Literal["reject"],
-    ),
-    ("VoiceLegInboundRouteTrunk", "type"): (
-        typing.Literal["forward", "reject", "trunk"], typing.Literal["trunk"],
-    ),
     ("WhatsAppInteractiveHeaderSend2", "type"): (
         typing.Literal["image", "video", "document"],
         typing.Literal["text", "image", "video", "document"],

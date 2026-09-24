@@ -146,6 +146,22 @@ class CurrencyCode(RootModel[str]):
     root: str
 
 
+class DestinationRegion(str, Enum):
+    western_europe = "western_europe"
+    nordics_baltics = "nordics_baltics"
+    southern_europe = "southern_europe"
+    central_eastern_europe = "central_eastern_europe"
+    north_america = "north_america"
+    latin_america_caribbean = "latin_america_caribbean"
+    middle_east_north_africa = "middle_east_north_africa"
+    sub_saharan_africa = "sub_saharan_africa"
+    central_asia_caucasus = "central_asia_caucasus"
+    south_asia = "south_asia"
+    south_east_asia = "south_east_asia"
+    east_asia = "east_asia"
+    oceania = "oceania"
+
+
 class CountryCode(RootModel[str]):
     root: str
 
@@ -176,6 +192,10 @@ class Workspace(BaseModel):
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class APIKeyID(RootModel[str]):
+    root: str
 
 
 class RealtimeEventName(RootModel[str]):
@@ -3925,6 +3945,28 @@ class SMSInboundStatsByNumberResponse(BaseModel):
     )]
 
 
+class DestinationSuperRegion(str, Enum):
+    europe = "europe"
+    americas = "americas"
+    middle_east_africa = "middle_east_africa"
+    asia_pacific = "asia_pacific"
+
+
+class DestinationSetting(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country_code: Annotated[str, Field(
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    enabled: Annotated[bool, Field(
+        description="Whether to enable (`true`) or disable (`false`) this destination country.",
+        examples=[True],
+    )]
+
+
 class AllocatedNumberID(RootModel[str]):
     root: str
 
@@ -6074,7 +6116,7 @@ class WhatsAppGroupParticipant(BaseModel):
     model_config = ConfigDict(extra="allow")
     bsuid: Annotated[str, Field(
         description="Business-scoped user ID, Meta's identifier for this person against your business. The one identifier every participant has: WhatsApp always sends it, and it is stable for as long as they are in the group.",
-        examples=["BR.1566655121691972"],
+        examples=["US.1566655121691972"],
         min_length=1,
     )]
     phone_number: Annotated[Optional[str], Field(
@@ -6084,7 +6126,7 @@ class WhatsAppGroupParticipant(BaseModel):
     )] = None
     username: Annotated[Optional[str], Field(
         description="The WhatsApp username this person chose. Absent when they have none, and not an identifier to address them by: it is theirs to change, so it names them in a list rather than keying anything.",
-        examples=["jim.almeida"],
+        examples=["john.doe"],
         min_length=1,
     )] = None
     last_operation: Annotated[Optional[WhatsAppGroupOperation], Field(
@@ -6277,7 +6319,7 @@ class WhatsAppGroupJoinRequest(BaseModel):
     )]
     bsuid: Annotated[str, Field(
         description="Business-scoped user ID, Meta's identifier for this person against your business. The one identifier every request has, and the one that carries over to `participants` if you approve it.",
-        examples=["BR.1566655121691972"],
+        examples=["US.1566655121691972"],
         min_length=1,
     )]
     phone_number: Annotated[Optional[str], Field(
@@ -6287,7 +6329,7 @@ class WhatsAppGroupJoinRequest(BaseModel):
     )] = None
     username: Annotated[Optional[str], Field(
         description="The WhatsApp username this person chose. Absent when they have none, and theirs to change, so it names them in a list rather than keying anything.",
-        examples=["jim.almeida"],
+        examples=["john.doe"],
         min_length=1,
     )] = None
     created_at: Annotated[str, Field(
@@ -9594,9 +9636,538 @@ class EmailStatsTagsResponse(BaseModel):
         description="Tag breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no tagged sends occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[173],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailStatsQueryMetric(str, Enum):
+    sends_accepted = "sends_accepted"
+    accepted = "accepted"
+    processed = "processed"
+    delivered = "delivered"
+    bounced = "bounced"
+    hard_bounced = "hard_bounced"
+    soft_bounced = "soft_bounced"
+    admin_bounced = "admin_bounced"
+    block_bounced = "block_bounced"
+    undetermined_bounced = "undetermined_bounced"
+    complained = "complained"
+    deferred = "deferred"
+    rejected = "rejected"
+    oob_bounces = "oob_bounces"
+    opens = "opens"
+    opens_non_prefetched = "opens_non_prefetched"
+    clicks = "clicks"
+    unsubscribes = "unsubscribes"
+    unique_opens = "unique_opens"
+    unique_opens_non_prefetched = "unique_opens_non_prefetched"
+    unique_clicks = "unique_clicks"
+    confirmed_unique_opens = "confirmed_unique_opens"
+    confirmed_unique_opens_non_prefetched = "confirmed_unique_opens_non_prefetched"
+    effective_delivered = "effective_delivered"
+    all_bounces = "all_bounces"
+    delivery_rate = "delivery_rate"
+    bounce_rate = "bounce_rate"
+    complaint_rate = "complaint_rate"
+    deferral_rate = "deferral_rate"
+    open_rate = "open_rate"
+    click_rate = "click_rate"
+    unsubscribe_rate = "unsubscribe_rate"
+    oob_rate = "oob_rate"
+    processing_p50_ms = "processing_p50_ms"
+    processing_p95_ms = "processing_p95_ms"
+    processing_p99_ms = "processing_p99_ms"
+    total_p50_ms = "total_p50_ms"
+    total_p95_ms = "total_p95_ms"
+    total_p99_ms = "total_p99_ms"
+
+
+class EmailStatsQueryDimension(str, Enum):
+    sending_domain = "sending_domain"
+    category = "category"
+    template_id = "template_id"
+    tag = "tag"
+    recipient_domain = "recipient_domain"
+    mailbox_provider = "mailbox_provider"
+    mailbox_provider_region = "mailbox_provider_region"
+    sending_ip = "sending_ip"
+    ip_pool_id = "ip_pool_id"
+    broadcast_id = "broadcast_id"
+    country = "country"
+    region = "region"
+    city = "city"
+    agent_family = "agent_family"
+    os_family = "os_family"
+    device_family = "device_family"
+    smtp_error_code = "smtp_error_code"
+    feedback_type = "feedback_type"
+
+
+class EmailStatsQueryGrain(str, Enum):
+    quarter_hour = "quarter_hour"
+    hour = "hour"
+    half_day = "half_day"
+    day = "day"
+    week = "week"
+    month = "month"
+
+
+class EmailStatsQueryStringFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
+
+
+class EmailStatsQueryCategoryFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    include: Optional[List[EmailMessageCategory]] = None
+    exclude: Optional[List[EmailMessageCategory]] = None
+
+
+class EmailStatsQueryTemplateFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
+
+
+class EmailStatsQueryTagFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(examples=["campaign"], min_length=1)]
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
+
+
+class IPPoolID(RootModel[str]):
+    root: str
+
+
+class EmailStatsQueryIPPoolFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
+
+
+class EmailStatsQueryBroadcastFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
+
+
+class EmailStatsQueryFilters(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sending_domain: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    category: Annotated[Optional[EmailStatsQueryCategoryFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    template_id: Annotated[Optional[EmailStatsQueryTemplateFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    tag: Annotated[Optional[EmailStatsQueryTagFilter], Field(
+        description="Select one case-sensitive tag name. A name without values requires that tag to exist. Exclude-only predicates retain events without that tag. Include and exclude together accept at most 20 distinct normalized values with no overlap.",
+    )] = None
+    recipient_domain: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    mailbox_provider: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    mailbox_provider_region: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    sending_ip: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    ip_pool_id: Annotated[Optional[EmailStatsQueryIPPoolFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    broadcast_id: Annotated[Optional[EmailStatsQueryBroadcastFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    country: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    region: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    city: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    agent_family: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    os_family: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    device_family: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    smtp_error_code: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+    feedback_type: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
+
+
+class EmailStatsQueryRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start, as a calendar date or RFC 3339 instant. Use the same form for from and to. Instants round down to a local quarter-hour; use Z when timezone is supplied.",
+        examples=["2026-08-03"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end. Dates include the whole local day; instants round down to a local quarter-hour and include that quarter-hour. Dates allow up to 365 local days; instants allow up to 720 hours, subject to available history. Preserve this original bound when following cursors.",
+        examples=["2026-08-16"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    timezone: Annotated[Optional[str], Field(
+        description="IANA timezone for dates and bucket boundaries. Defaults to UTC.",
+        examples=["Europe/Amsterdam"],
+        min_length=1,
+    )] = None
+    metrics: Annotated[List[EmailStatsQueryMetric], Field(
+        description="Distinct metrics to return. Unselected metrics are absent.",
+        max_length=39,
+        min_length=1,
+    )]
+    group_by: Annotated[Optional[EmailStatsQueryDimension], Field(
+        description="Recorded event context used to group results. Grouping by `tag` requires `filters.tag.name`.\nMissing values form a null group when the metric supports that dimension.\n\nEvery selected metric must support the grouping dimension and every filter dimension.\nUnsupported combinations return validation error `E04074`, even when the workspace has no events.\n\n- `sending_domain`, `category`, `template_id`, `tag`: all metrics.\n- `recipient_domain`, `ip_pool_id`, `broadcast_id`: all metrics except `sends_accepted`.\n- `mailbox_provider`, `mailbox_provider_region`: all metrics except `sends_accepted`, `accepted`, and `rejected`.\n- `sending_ip`: `delivered`, `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`,\n  `undetermined_bounced`, `deferred`, `oob_bounces`, `effective_delivered`, `all_bounces`, `delivery_rate`,\n  `bounce_rate`, `deferral_rate`, `oob_rate`, `total_p50_ms`, `total_p95_ms`, and `total_p99_ms`.\n- `country`, `region`, `city`, `agent_family`, `os_family`, `device_family`: `opens`, `opens_non_prefetched`,\n  `clicks`, `unique_opens`, `unique_opens_non_prefetched`, `unique_clicks`, `confirmed_unique_opens`,\n  and `confirmed_unique_opens_non_prefetched`.\n- `smtp_error_code`: `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`, and `undetermined_bounced`.\n- `feedback_type`: `complained`.",
+    )] = None
+    grain: Annotated[Optional[EmailStatsQueryGrain], Field(
+        description="Time buckets in the requested timezone. Weeks start on Monday; months start on the first day. Half days start at midnight and noon. Edge buckets count events inside the normalized period.",
+    )] = None
+    filters: Annotated[Optional[EmailStatsQueryFilters], Field(
+        description="Predicates on the context recorded for each event. Dimensions combine with AND. Unsupported metric and dimension combinations return 422, including for an empty workspace.",
+    )] = None
+    sort: Annotated[Optional[EmailStatsQueryMetric], Field(
+        description="Metric selected for period totals, time buckets, or group ranking. Counts estimate distinct identities; rates are ratios. Latency metrics measure milliseconds from Bird acceptance to processing or delivery.",
+    )] = None
+    order: Annotated[Optional[SortOrder], Field(
+        description="Sort direction, ascending or descending.",
+    )] = None
+    limit: Annotated[Optional[int], Field(
+        description="Grouped requests only. Maximum groups per page; defaults to 25. Each group retains its complete series.",
+        ge=1,
+        le=100,
+    )] = None
+    starting_after: Annotated[Optional[str], Field(
+        description="Grouped requests only. Opaque next_cursor from the previous response. Mutually exclusive with ending_before.",
+        max_length=2048,
+    )] = None
+    ending_before: Annotated[Optional[str], Field(
+        description="Grouped requests only. Opaque prev_cursor for backward navigation, or refresh_cursor to read groups before the anchor in the current sort order. Mutually exclusive with starting_after.",
+        max_length=2048,
+    )] = None
+
+
+class EmailStatsQueryDimensions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sending_domain: Annotated[Optional[str], Field(
+        description="Recorded sending domain value. Null represents missing context and differs from an empty string.",
+    )] = None
+    category: Annotated[Optional[str], Field(
+        description="Recorded category value. Null represents missing context and differs from an empty string.",
+    )] = None
+    template_id: Annotated[Optional[str], Field(
+        description="Recorded template id value. Null represents missing context and differs from an empty string.",
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    tag: Annotated[Optional[str], Field(
+        description="Recorded tag value. Null represents missing context and differs from an empty string.",
+    )] = None
+    recipient_domain: Annotated[Optional[str], Field(
+        description="Recorded recipient domain value. Null represents missing context and differs from an empty string.",
+    )] = None
+    mailbox_provider: Annotated[Optional[str], Field(
+        description="Recorded mailbox provider value. Null represents missing context and differs from an empty string.",
+    )] = None
+    mailbox_provider_region: Annotated[Optional[str], Field(
+        description="Recorded mailbox provider region value. Null represents missing context and differs from an empty string.",
+    )] = None
+    sending_ip: Annotated[Optional[str], Field(
+        description="Recorded sending ip value. Null represents missing context and differs from an empty string.",
+    )] = None
+    ip_pool_id: Annotated[Optional[str], Field(
+        description="Recorded ip pool id value. Null represents missing context and differs from an empty string.",
+        examples=["ipp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ipp_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    broadcast_id: Annotated[Optional[str], Field(
+        description="Recorded broadcast id value. Null represents missing context and differs from an empty string.",
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country: Annotated[Optional[str], Field(
+        description="Recorded country value. Null represents missing context and differs from an empty string.",
+    )] = None
+    region: Annotated[Optional[str], Field(
+        description="Recorded region value. Null represents missing context and differs from an empty string.",
+    )] = None
+    city: Annotated[Optional[str], Field(
+        description="Recorded city value. Null represents missing context and differs from an empty string.",
+    )] = None
+    agent_family: Annotated[Optional[str], Field(
+        description="Recorded agent family value. Null represents missing context and differs from an empty string.",
+    )] = None
+    os_family: Annotated[Optional[str], Field(
+        description="Recorded os family value. Null represents missing context and differs from an empty string.",
+    )] = None
+    device_family: Annotated[Optional[str], Field(
+        description="Recorded device family value. Null represents missing context and differs from an empty string.",
+    )] = None
+    smtp_error_code: Annotated[Optional[str], Field(
+        description="Recorded smtp error code value. Null represents missing context and differs from an empty string.",
+    )] = None
+    feedback_type: Annotated[Optional[str], Field(
+        description="Recorded feedback type value. Null represents missing context and differs from an empty string.",
+    )] = None
+
+
+class EmailStatsQueryMetrics(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sends_accepted: Annotated[Optional[int], Field(
+        description="Distinct sends accepted by Bird, counted by email identity.",
+        ge=0,
+    )] = None
+    accepted: Annotated[Optional[int], Field(
+        description="Distinct message recipients accepted by Bird.",
+        ge=0,
+    )] = None
+    processed: Annotated[Optional[int], Field(
+        description="Distinct message recipients processed for delivery.",
+        ge=0,
+    )] = None
+    delivered: Annotated[Optional[int], Field(
+        description="Distinct message recipients with a delivery event.",
+        ge=0,
+    )] = None
+    bounced: Annotated[Optional[int], Field(
+        description="Distinct message recipients with bounced events.",
+        ge=0,
+    )] = None
+    hard_bounced: Annotated[Optional[int], Field(
+        description="Distinct message recipients with hard bounced events.",
+        ge=0,
+    )] = None
+    soft_bounced: Annotated[Optional[int], Field(
+        description="Distinct message recipients with soft bounced events.",
+        ge=0,
+    )] = None
+    admin_bounced: Annotated[Optional[int], Field(
+        description="Distinct message recipients with admin bounced events.",
+        ge=0,
+    )] = None
+    block_bounced: Annotated[Optional[int], Field(
+        description="Distinct message recipients with block bounced events.",
+        ge=0,
+    )] = None
+    undetermined_bounced: Annotated[Optional[int], Field(
+        description="Distinct message recipients with undetermined bounced events.",
+        ge=0,
+    )] = None
+    complained: Annotated[Optional[int], Field(
+        description="Distinct message recipients with complained events.",
+        ge=0,
+    )] = None
+    deferred: Annotated[Optional[int], Field(
+        description="Distinct message recipients with a deferral event.",
+        ge=0,
+    )] = None
+    rejected: Annotated[Optional[int], Field(
+        description="Distinct message recipients rejected before provider delivery.",
+        ge=0,
+    )] = None
+    oob_bounces: Annotated[Optional[int], Field(
+        description="Distinct out-of-band bounce events.",
+        ge=0,
+    )] = None
+    opens: Annotated[Optional[int], Field(
+        description="Distinct open events, including prefetched opens.",
+        ge=0,
+    )] = None
+    opens_non_prefetched: Annotated[Optional[int], Field(
+        description="Distinct open events excluding prefetched opens. An absent prefetch flag counts as false.",
+        ge=0,
+    )] = None
+    clicks: Annotated[Optional[int], Field(description="Distinct click events.", ge=0)] = None
+    unsubscribes: Annotated[Optional[int], Field(
+        description="Distinct unsubscribe events.",
+        ge=0,
+    )] = None
+    unique_opens: Annotated[Optional[int], Field(
+        description="Distinct message recipients with an open event.",
+        ge=0,
+    )] = None
+    unique_opens_non_prefetched: Annotated[Optional[int], Field(
+        description="Distinct message recipients with a non-prefetched open event.",
+        ge=0,
+    )] = None
+    unique_clicks: Annotated[Optional[int], Field(
+        description="Distinct message recipients with a click event.",
+        ge=0,
+    )] = None
+    confirmed_unique_opens: Annotated[Optional[int], Field(
+        description="Distinct message recipients with an open or click event, deduplicated across both.",
+        ge=0,
+    )] = None
+    confirmed_unique_opens_non_prefetched: Annotated[Optional[int], Field(
+        description="Distinct message recipients with a non-prefetched open or click event, deduplicated across both.",
+        ge=0,
+    )] = None
+    effective_delivered: Annotated[Optional[int], Field(
+        description="Delivered recipients less out-of-band bounce events, calculated as `max(delivered - oob_bounces, 0)`.",
+        ge=0,
+    )] = None
+    all_bounces: Annotated[Optional[int], Field(
+        description="In-band bounced recipients plus out-of-band bounce events, calculated as `bounced + oob_bounces`.",
+        ge=0,
+    )] = None
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Ratio of `effective_delivered / (delivered + bounced)`, from 0 to 1. Null when `delivered + bounced` is zero.",
+        ge=0,
+        le=1,
+    )] = None
+    bounce_rate: Annotated[Optional[float], Field(
+        description="Ratio of `all_bounces / (delivered + bounced)`, capped at 1. Null when `delivered + bounced` is zero.",
+        ge=0,
+        le=1,
+    )] = None
+    complaint_rate: Annotated[Optional[float], Field(
+        description="Ratio of `complained / effective_delivered`. Uncapped and can exceed 1 when complaints and deliveries fall in different windows. Null when `effective_delivered` is zero.",
+        ge=0,
+    )] = None
+    deferral_rate: Annotated[Optional[float], Field(
+        description="Ratio of `deferred / (delivered + bounced)`, capped at 1. Null when `delivered + bounced` is zero.",
+        ge=0,
+        le=1,
+    )] = None
+    open_rate: Annotated[Optional[float], Field(
+        description="Ratio of `unique_opens_non_prefetched / effective_delivered`. Uncapped and can exceed 1 when opens and deliveries fall in different windows. Null when `effective_delivered` is zero.",
+        ge=0,
+    )] = None
+    click_rate: Annotated[Optional[float], Field(
+        description="Ratio of `unique_clicks / effective_delivered`. Uncapped and can exceed 1 when clicks and deliveries fall in different windows. Null when `effective_delivered` is zero.",
+        ge=0,
+    )] = None
+    unsubscribe_rate: Annotated[Optional[float], Field(
+        description="Ratio of `unsubscribes / effective_delivered`, using distinct unsubscribe events as the numerator. Uncapped and can exceed 1. Null when `effective_delivered` is zero.",
+        ge=0,
+    )] = None
+    oob_rate: Annotated[Optional[float], Field(
+        description="Ratio of `oob_bounces / (delivered + bounced)`, using distinct out-of-band bounce events as the numerator. Uncapped and can exceed 1. Null when `delivered + bounced` is zero.",
+        ge=0,
+    )] = None
+    processing_p50_ms: Annotated[Optional[int], Field(
+        description="Processing latency at the 50th percentile, in integer milliseconds from Bird acceptance. One sample per logical event; null when no eligible sample exists.",
+        ge=0,
+    )] = None
+    processing_p95_ms: Annotated[Optional[int], Field(
+        description="Processing latency at the 95th percentile, in integer milliseconds from Bird acceptance. One sample per logical event; null when no eligible sample exists.",
+        ge=0,
+    )] = None
+    processing_p99_ms: Annotated[Optional[int], Field(
+        description="Processing latency at the 99th percentile, in integer milliseconds from Bird acceptance. One sample per logical event; null when no eligible sample exists.",
+        ge=0,
+    )] = None
+    total_p50_ms: Annotated[Optional[int], Field(
+        description="Delivery latency at the 50th percentile, in integer milliseconds from Bird acceptance. One sample per logical event; null when no eligible sample exists.",
+        ge=0,
+    )] = None
+    total_p95_ms: Annotated[Optional[int], Field(
+        description="Delivery latency at the 95th percentile, in integer milliseconds from Bird acceptance. One sample per logical event; null when no eligible sample exists.",
+        ge=0,
+    )] = None
+    total_p99_ms: Annotated[Optional[int], Field(
+        description="Delivery latency at the 99th percentile, in integer milliseconds from Bird acceptance. One sample per logical event; null when no eligible sample exists.",
+        ge=0,
+    )] = None
+
+
+class EmailStatsQueryPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="Nominal bucket start as a UTC RFC 3339 instant.",
+        min_length=1,
+    )]
+    metrics: Annotated[EmailStatsQueryMetrics, Field(
+        description="Selected metric values. Counts are nonnegative approximate distinct counts. Period uniques and rates are computed independently of buckets; summing bucket or group values does not reconstruct period totals. Zero means a supported empty population; undefined rates and empty latency samples are null.",
+    )]
+
+
+class EmailStatsQueryGroup(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    dimensions: Annotated[EmailStatsQueryDimensions, Field(
+        description="Contains the requested group_by property, including a null value when context is missing. Ungrouped results use an empty object.",
+    )]
+    metrics: Annotated[EmailStatsQueryMetrics, Field(
+        description="Selected metric values. Counts are nonnegative approximate distinct counts. Period uniques and rates are computed independently of buckets; summing bucket or group values does not reconstruct period totals. Zero means a supported empty population; undefined rates and empty latency samples are null.",
+    )]
+    series: Annotated[Optional[List[EmailStatsQueryPoint]], Field(
+        description="Present when grain is requested; absent otherwise.",
+    )] = None
+
+
+class EmailStatsQueryPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive normalized start as a UTC instant.",
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="Exclusive normalized end as a UTC instant.",
+        min_length=1,
+    )]
+    timezone: Annotated[str, Field(
+        description="Timezone used to normalize bounds and buckets.",
+        min_length=1,
+    )]
+    grain: Annotated[Optional[EmailStatsQueryGrain], Field(
+        description="Requested grain, or null when no series was requested.",
+    )]
+
+
+class EmailStatsQueryResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[EmailStatsQueryGroup]
+    period: Annotated[EmailStatsQueryPeriod, Field(
+        description="Normalized half-open period. The response end is exclusive; replay the original inclusive request bounds when following cursors.",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Always null for this endpoint. It does not report a refresh boundary, claim completeness, or record request time.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Pass as starting_after for the next grouped page. Null when no next page exists or the request is ungrouped.",
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Pass as ending_before for the previous grouped page. Null when no previous page exists or the request is ungrouped.",
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Anchor for the first group. Pass as ending_before to read groups sorting before it. Null for empty or ungrouped results. Ranking can change between reads; refresh by repeating the original query.",
     )]
 
 
@@ -9705,10 +10276,6 @@ class EmailStatsSummary(BaseModel):
     comparison: Optional[EmailStatsComparison] = None
 
 
-class IPPoolID(RootModel[str]):
-    root: str
-
-
 class EmailSendingIpDeliveryStats(BaseModel):
     model_config = ConfigDict(extra="allow")
     delivered: Annotated[int, Field(
@@ -9811,9 +10378,21 @@ class EmailStatsBySendingIpResponse(BaseModel):
         description="Sending-IP breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no per-IP-attributable activity (delivery, bounce, deferral, or late bounce) occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct sending IP addresses with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct sending IP addresses with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[6],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -9841,9 +10420,21 @@ class EmailStatsBySendingDomainResponse(BaseModel):
         description="Sending-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct sending domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct sending domains with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[12],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -9871,9 +10462,21 @@ class EmailStatsByCategoryResponse(BaseModel):
         description="Category breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no sends occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct categories with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[2],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -9974,9 +10577,21 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
         description="Mailbox-provider breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no eligible activity occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[14],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10009,9 +10624,21 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
         description="Provider-region breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no deliveries occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[31],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10039,9 +10666,21 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
         description="Recipient-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[412],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10070,9 +10709,21 @@ class EmailStatsByTemplateResponse(BaseModel):
         description="Template breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no messages were sent with a template in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct templates with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct templates with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[42],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10146,9 +10797,21 @@ class EmailStatsByLocationResponse(BaseModel):
         description="Location breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a resolved location occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct locations at the requested `group_by` level with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct locations at the requested `group_by` level with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[86],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10178,9 +10841,21 @@ class EmailStatsByClientResponse(BaseModel):
         description="Client breakdown rows, ranked by the `sort` metric (default `unique_opens`) descending. Empty when no opens or clicks with a detected client occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[9],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10237,9 +10912,21 @@ class EmailStatsByBounceCodeResponse(BaseModel):
         description="Bounce-code breakdown rows, ranked by the `sort` metric (default `bounced`) descending. Empty when no bounces occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[17],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10266,9 +10953,21 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
         description="Complaint-type breakdown rows, ranked by `complained` descending. Empty when no complaints occurred in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct feedback types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct feedback types with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[4],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -10294,9 +10993,21 @@ class EmailStatsByBroadcastResponse(BaseModel):
         description="Broadcast breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no broadcast messages were active in the period.",
     )]
     total: Annotated[int, Field(
-        description="Total number of distinct broadcasts with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped. Raise `limit` (up to 200) or narrow the window to see more.",
+        description="Total number of distinct broadcasts with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[57],
         ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -13278,6 +13989,8 @@ class WebhookEventType(str, Enum):
     whatsapp_accepted = "whatsapp.accepted"
     whatsapp_delivered = "whatsapp.delivered"
     whatsapp_failed = "whatsapp.failed"
+    whatsapp_group_join_request_created = "whatsapp.group.join_request_created"
+    whatsapp_group_join_request_revoked = "whatsapp.group.join_request_revoked"
     whatsapp_reacted = "whatsapp.reacted"
     whatsapp_read = "whatsapp.read"
     whatsapp_received = "whatsapp.received"
@@ -16487,6 +17200,86 @@ class EventWhatsAppFailed(BaseModel):
     )]
 
 
+class WhatsAppGroupJoinRequestSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the join request. Pass it to the batch-approve and batch-reject operations.",
+        examples=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wgj_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    bsuid: Annotated[str, Field(
+        description="Business-scoped user ID, Meta's identifier for this person against your business. The one identifier every request has, and the one that carries over to `participants` if you approve it.",
+        examples=["US.1566655121691972"],
+        min_length=1,
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Phone number in E.164 format. Null when WhatsApp withholds it, which it does for anyone who has not shared their number with your business.",
+        examples=[+16505551234],
+        min_length=1,
+    )]
+    username: Annotated[Optional[str], Field(
+        description="The WhatsApp username this person chose. Null when they have none, and theirs to change, so it names them in a list rather than keying anything.",
+        examples=["john.doe"],
+        min_length=1,
+    )]
+
+
+class EventWhatsAppGroupJoinRequestData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    group_id: Annotated[str, Field(
+        description="The group the person asked to join.",
+        examples=["wag_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wag_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    whatsapp_number_id: Annotated[str, Field(
+        description="The business number that created the group and administers it.",
+        examples=["wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        description="The workspace that owns the group.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    join_request: Annotated[WhatsAppGroupJoinRequestSummary, Field(
+        description="Someone who asked to be let into a group, as named by a join-request webhook event.",
+    )]
+
+
+class EventWhatsAppGroupJoinRequestCreated(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["whatsapp.group.join_request_created"], Field(
+        description="Always `whatsapp.group.join_request_created` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When the person asked to join.",
+        examples=["2026-09-22T10:07:57Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventWhatsAppGroupJoinRequestData, Field(
+        description="Payload shared by the whatsapp.group.join_request_created and whatsapp.group.join_request_revoked events. Everything about the person who asked is nested under `join_request`; the sibling identifiers name the business side.",
+    )]
+
+
+class EventWhatsAppGroupJoinRequestRevoked(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["whatsapp.group.join_request_revoked"], Field(
+        description="Always `whatsapp.group.join_request_revoked` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When the person withdrew their request.",
+        examples=["2026-09-22T11:12:03Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventWhatsAppGroupJoinRequestData, Field(
+        description="Payload shared by the whatsapp.group.join_request_created and whatsapp.group.join_request_revoked events. Everything about the person who asked is nested under `join_request`; the sibling identifiers name the business side.",
+    )]
+
+
 class EventWhatsAppReactedData(BaseModel):
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
@@ -16682,8 +17475,8 @@ class WebhookTestResponseStatus(str, Enum):
     failed = "failed"
 
 
-class WebhookEvent(RootModel[EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
-    root: EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
+class WebhookEvent(RootModel[EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
+    root: EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
 
 
 class WebhookTestResponse(BaseModel):
@@ -16810,7 +17603,7 @@ class VoicePartyBridgePSTNEndpoint(BaseModel):
         pattern="^\\+[1-9][0-9]{1,14}$",
     )]
     forward_as: Annotated[VoiceInboundForwardAs, Field(
-        description="Which of a forwarded call's two numbers it shows as the caller.\n\n\"dialed_number\" is the number the caller dialled, which is one of yours.\nCarriers treat it as fully yours, so it is the least likely to be altered or\nscreened. Whoever answers sees which of your numbers was called, not who called\nit. It needs your workspace approved to place calls from numbers you bought from\nus; where it is not, this value is refused and the call shows the calling\nnumber.\n\n\"calling_number\" is the caller's own number, so the phone rings as though they\nhad dialled it directly and the call can be returned from the call log. Because\nthe number is not one you own, some carriers (most often in the US and parts of\nEurope) mark such calls as unverified, replace the number, or screen them.",
+        description="Which of a forwarded call's two numbers it shows as the caller.\n\n`dialed_number` presents the Bird number the caller dialed. Whoever answers\nsees which of your numbers was called. Older configurations without a stored\nchoice use this value. Carrier screening can still affect delivery.\n\n`calling_number` presents the caller's own number, so the phone rings as though\nthey had dialed it directly and the call can be returned from the call log. Because\nthe number is not one you own, some carriers (most often in the US and parts of\nEurope) mark such calls as unverified, replace the number, or screen them.",
     )]
 
 
@@ -17090,10 +17883,402 @@ class NumbersOrderCreate(BaseModel):
     )]
 
 
-class VoiceCallRouteType(str, Enum):
-    reject = "reject"
-    trunk = "trunk"
-    forward = "forward"
+class SIPTrunkACLID(RootModel[str]):
+    root: str
+
+
+class VoiceTrunkIPACL(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["sta_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^sta_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    trunk_id: Annotated[str, Field(
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    cidr: Annotated[str, Field(
+        description="IPv4 or IPv6 CIDR block that is allowed to send SIP traffic to this trunk.",
+        examples=["203.0.113.0/24"],
+        min_length=7,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="Optional human-readable label for this ACL entry.",
+        examples=["Office network"],
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class VoiceSIPDigestAlgorithm(str, Enum):
+    SHA_256 = "SHA-256"
+    MD5 = "MD5"
+
+
+class VoiceTrunk(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="A human-readable label for this SIP trunk. Mutable, and distinct from the generated wire domain.",
+        examples=["Production PBX trunk"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="Full SIP address for this trunk, generated as `{trunk-id}.trunk.{region}.sip.bird.com`. This is the trunk's identity, so configure your PBX or SIP client to send calls to this address. It is derived from the trunk id and cannot be chosen or changed.",
+        examples=["01kxp5bb9qf878642atrf0xy5r.trunk.eu1.sip.bird.com"],
+        min_length=1,
+    )]
+    outbound_enabled: Annotated[bool, Field(
+        description="Whether this trunk may place calls: your PBX connects to us to dial out. Off on a new trunk. While it is off the trunk refuses every call attempt no matter what its allow lists say, and the connection and authentication settings below have no effect. Set `outbound_enabled` through the trunk update operation.",
+    )]
+    inbound_enabled: Annotated[bool, Field(
+        description="Whether this trunk may receive calls: we dial the addresses you declared, for the numbers this trunk answers. Off on a new trunk. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. Set `inbound_enabled` through the trunk update operation.",
+    )]
+    media_bypass: Annotated[bool, Field(
+        description="Whether we take ourselves out of the audio path for calls we forward to this trunk: your equipment and the originating carrier exchange audio directly, and only the call signalling passes through us. Off by default. It applies to inbound calls alone (calls this trunk places are always carried through us, whatever this says). While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped. Your equipment must be reachable for audio from the public internet. Set `media_bypass` through the trunk update operation.",
+    )]
+    ip_acls: Annotated[List[VoiceTrunkIPACL], Field(
+        description="The trunk's IP allow list. IP filtering is active whenever this has at least one entry: calls admitted through the allow lists must come from those CIDR ranges. This restriction does not apply to session credentials when `session_credentials_enabled` is true. An empty list means no IP restriction. Replace the whole `ip_acls` list through the trunk update operation.",
+    )]
+    allowed_api_key_ids: Annotated[List[str], Field(
+        description="The API keys allowed to authenticate this trunk over SIP Digest. A key must hold `voice` at write level and be neither revoked nor expired to authenticate. `ineligible_api_key_ids` names the entries that currently cannot. A nonempty list enables API-key authentication, limited to its eligible keys. An empty list means no API-key authentication. A trunk with empty `ip_acls` and `allowed_api_key_ids` lists accepts nothing when `session_credentials_enabled` is false. Replace the whole `allowed_api_key_ids` list through the trunk update operation.",
+    )]
+    ineligible_api_key_ids: Annotated[List[str], Field(
+        description="The entries in `allowed_api_key_ids` that cannot authenticate this trunk right now because the key lacks `voice` at write level, has expired, or was revoked. The bindings remain until you remove them from the trunk. Restoring `voice` at write level makes a key eligible again if it is still unexpired and unrevoked, without changing its secret or trunk binding. Empty when every allowed key can authenticate.",
+    )]
+    digest_algorithms: Annotated[List[VoiceSIPDigestAlgorithm], Field(
+        description="The Digest hash algorithms this trunk offers, in the order they are offered. We send one challenge line per algorithm and your PBX answers with the first it supports, so the order decides what most equipment picks. Always populated: a trunk with no explicit setting reports the default, `[\"SHA-256\", \"MD5\"]`. A trunk answering with an algorithm that is not on this list is rejected, so narrowing the list also narrows what the trunk accepts. Replace `digest_algorithms` through the trunk update operation.",
+        min_length=1,
+    )]
+    session_credentials_enabled: Annotated[bool, Field(
+        description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP, alongside whatever the allow lists admit. Off by default. It grants nothing on its own: a call still has to present a credential issued to this workspace, and each one expires within minutes. Set `session_credentials_enabled` through the trunk update operation.",
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class VoiceTrunkList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[VoiceTrunk]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class VoiceTrunkCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="A human-readable label for this SIP trunk. Mutable, and distinct from the generated wire domain.",
+        examples=["Production PBX trunk"],
+        min_length=1,
+    )]
+    outbound_enabled: Annotated[Optional[bool], Field(
+        description="Whether the new trunk may place calls. Omit it to create a trunk that does neither direction yet, and enable the ones you want once you know what the trunk is for. The settings below configure outbound, so send this as `true` alongside them.",
+        examples=[True],
+    )] = None
+    inbound_enabled: Annotated[Optional[bool], Field(
+        description="Whether the new trunk may receive calls. Omit it to create a trunk that does neither direction yet. A trunk receives no calls until it also has at least one gateway and at least one number, both added after create.",
+        examples=[True],
+    )] = None
+    media_bypass: Annotated[Optional[bool], Field(
+        description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Omit it to create the trunk with this off, which is what suits equipment behind NAT and any account that wants call recording. It is an inbound setting, so `true` is accepted only alongside `inbound_enabled: true`; `false` is always accepted. It can be changed later.",
+        examples=[True],
+    )] = None
+    digest_algorithms: Annotated[Optional[List[VoiceSIPDigestAlgorithm]], Field(
+        description="The Digest hash algorithms to offer, in the order they should be offered. Omit this to use the default of `[\"SHA-256\", \"MD5\"]`, which suits most equipment. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. This can be changed later without re-issuing credentials.",
+        min_length=1,
+    )] = None
+    session_credentials_enabled: Annotated[Optional[bool], Field(
+        description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Omit it to create the trunk with this off, which is what a trunk reached only by a PBX wants. It can be changed later.",
+        examples=[True],
+    )] = None
+
+
+class VoiceTrunkIPACLCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    cidr: Annotated[str, Field(
+        description="IPv4 or IPv6 CIDR block to allow. Use /32 for a single IPv4 address or /128 for a single IPv6 address.",
+        examples=["203.0.113.0/24"],
+        min_length=7,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="Optional human-readable label for this ACL entry.",
+        examples=["Office network"],
+        min_length=1,
+    )] = None
+
+
+class VoiceTrunkUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="A human-readable label for this SIP trunk. Mutable, and distinct from the generated wire domain.",
+        examples=["Production PBX trunk"],
+        min_length=1,
+    )] = None
+    outbound_enabled: Annotated[Optional[bool], Field(
+        description="Whether this trunk may place calls. Turning it off stops the trunk admitting call attempts at the next call setup and leaves its connection and authentication settings stored, so turning it back on restores a working trunk. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
+    inbound_enabled: Annotated[Optional[bool], Field(
+        description="Whether this trunk may receive calls. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. The gateways remain configured. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
+    media_bypass: Annotated[Optional[bool], Field(
+        description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Turning it on takes effect at the next call setup and leaves calls already up untouched. It is an inbound setting, so the trunk must have `inbound_enabled` on; one update can do both. While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped, and your equipment must be reachable for audio from the public internet. Turning it off puts us back in the path at the next call setup. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
+    ip_acls: Annotated[Optional[List[VoiceTrunkIPACLCreate]], Field(
+        description="Replaces the trunk's entire IP allow list. When present, the allow list is set to exactly these CIDR blocks: ranges not listed are removed and new ones are added. Send an empty array to clear the list, turning IP filtering off. Omit the field to leave the allow list unchanged.",
+    )] = None
+    allowed_api_key_ids: Annotated[Optional[List[str]], Field(
+        description="Replaces the trunk's entire set of allowed API keys. When present, exactly these keys may authenticate the trunk over SIP Digest. Each key you ADD must belong to this workspace and hold `voice` at write level; a key that does not is refused and the whole update is rolled back. A key already on the list that has since lost the permission or expired does not block the update, so you can keep editing the trunk while you put its permission back. A non-empty list turns API-key authentication on; send an empty array to turn it off. Omit the field to leave the allowed keys unchanged.",
+    )] = None
+    digest_algorithms: Annotated[Optional[List[VoiceSIPDigestAlgorithm]], Field(
+        description="Replaces the Digest hash algorithms this trunk offers, in the order they should be offered. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. Send an empty array to return to the default of `[\"SHA-256\", \"MD5\"]`. The offer is never empty, because a trunk that offered nothing could not be authenticated at all. Narrowing the list also narrows what the trunk accepts: an answer using an algorithm no longer offered is rejected. Takes effect on the next call setup; no credential is re-issued. Omit the field to leave the offer unchanged.",
+    )] = None
+    session_credentials_enabled: Annotated[Optional[bool], Field(
+        description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Off by default; turning it on does not change what the allow lists admit, and turning it off stops those connections at the next call setup without re-issuing anything. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
+
+
+class VoiceSessionCredential(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    username: Annotated[str, Field(
+        description="SIP digest username. Always `bird`. The credential identifies the workspace through `realm`. The username does not identify the workspace.",
+        examples=["bird"],
+        max_length=64,
+        min_length=1,
+    )]
+    password: Annotated[str, Field(
+        description="SIP digest password, returned once. Treat it as a bearer secret: until it expires it can place calls billed to this workspace.",
+        examples=["8Kx2mQ7pR4tYvB9nL3sW6dF1gH5jC0aZ"],
+        max_length=128,
+        min_length=1,
+    )]
+    realm: Annotated[str, Field(
+        description="SIP digest realm to authenticate against. Workspace-scoped, so a credential minted for one workspace cannot authenticate against another.",
+        examples=["01ARZ3NDEKTSV4RRFFQ69G5FAV.sip.bird.com"],
+        max_length=253,
+        min_length=1,
+    )]
+    expires_at: Annotated[str, Field(
+        description="When the credential stops authenticating, five minutes after creation. Existing calls may continue; use a fresh credential for later authentication.",
+        examples=["2026-07-30T12:05:00Z"],
+        min_length=1,
+    )]
+    handshake_token: Annotated[Optional[str], Field(
+        description="Short-lived token required when upgrading the WebSocket connection. The token authorizes the connection only; each call still authenticates with `password`.",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODU0NDMwMzV9.fp1xWxROEmgCafwiJ-ZHbZg9cIdYC-wLGcH-5gIVbco"],
+        max_length=4096,
+        min_length=1,
+    )] = None
+
+
+class VoiceTrunkGatewayID(RootModel[str]):
+    root: str
+
+
+class VoiceTrunkGateway(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vtg_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vtg_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    trunk_id: Annotated[str, Field(
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    sip_uri: Annotated[str, Field(
+        description="SIP URI an inbound call to this trunk is forwarded to. The host only: which number is dialed at that host comes from `destination_format`, because it changes with every call.",
+        examples=["sip:pbx.example.com:5060"],
+        max_length=512,
+        min_length=1,
+    )]
+    priority: Annotated[int, Field(
+        description="The order gateways are tried in, lowest first. Gateways sharing a priority take an equal share of calls, and any of them may be tried first on a given call.",
+        examples=[0],
+        ge=0,
+    )]
+    origination_format: Annotated[str, Field(
+        description="How the calling number is spelled to this gateway, as a template whose\n`{number}` stands for the number without its leading `+`. It is stated\nin the `P-Asserted-Identity` header of the delivered call.\n\nA gateway that has not asked for anything else reports `+{number}`,\nwhich is E.164. A format with no `{number}` states that same identity on\nevery call, whoever called.",
+        examples=["+{number}"],
+        max_length=64,
+        min_length=1,
+    )]
+    destination_format: Annotated[str, Field(
+        description="How this gateway formats the dialed number. In the template,\n`{number}` represents the number without its leading `+`. The result\nis placed before the `sip_uri` host. For example, `1234#{number}`\nformats `+31201234567` as\n`sip:1234#31201234567@pbx.example.com:5060`.\n\nA gateway that has not asked for anything else reports `+{number}`,\nwhich is E.164. A format with no `{number}` is dialed as it stands, so\nevery number the trunk answers reaches that one number.",
+        examples=["+{number}"],
+        max_length=64,
+        min_length=1,
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class VoiceTrunkGatewayList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[VoiceTrunkGateway], Field(
+        description="The trunk's gateways, in priority order.",
+    )]
+
+
+class VoiceTrunkGatewayCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sip_uri: Annotated[str, Field(
+        description="SIP URI an inbound call to this trunk should be forwarded to. Give the host only, with an optional port: which number is dialed there comes from `destination_format`, so a URI carrying a user part is rejected.",
+        examples=["sip:pbx.example.com:5060"],
+        max_length=512,
+        min_length=1,
+    )]
+    priority: Annotated[int, Field(
+        description="The order gateways are tried in, lowest first. Give two gateways the same priority to share calls between them evenly.",
+        examples=[0],
+        ge=0,
+        le=2147483647,
+    )]
+    origination_format: Annotated[Optional[str], Field(
+        description="How this gateway wants the calling number spelled. Write a template whose\n`{number}` stands for the number without its leading `+`; the result is\nstated in the `P-Asserted-Identity` header of the delivered call.\n\nOmit it for E.164, which is `+{number}`. The template may add digits,\nletters and the characters `-_.!~*'()&=+$,;?/%#` around `{number}`, which\nmay appear at most once, and anything else in braces is rejected so a\nmisspelled placeholder cannot reach a call.\n\nA format with no `{number}` at all states the same identity on every call,\nwhich is what a peer that only accepts one authorized number wants. The\ncall then carries nothing about who really called.",
+        examples=["+{number}"],
+        max_length=64,
+    )] = None
+    destination_format: Annotated[Optional[str], Field(
+        description="How this gateway formats the dialed number. In the template, `{number}`\nrepresents the number without its leading `+`. The result is placed before\nthe `sip_uri` host. For example, `1234#{number}` formats `+31201234567` as\n`sip:1234#31201234567@pbx.example.com:5060`.\n\nOmit it for E.164, which is `+{number}`. A format with no `{number}` at all\nsends every number this trunk answers to one fixed number, so\n`777000447973` reaches `sip:777000447973@pbx.example.com:5060` whatever was\ndialed. The same rules as `origination_format` apply to what the template\nmay contain.",
+        examples=["1234#{number}"],
+        max_length=64,
+    )] = None
+
+
+class VoiceTrunkGatewayUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sip_uri: Annotated[Optional[str], Field(
+        description="SIP URI an inbound call to this trunk should be forwarded to. Give the host only, with an optional port: which number is dialed there comes from `destination_format`, so a URI carrying a user part is rejected.",
+        examples=["sip:pbx.example.com:5060"],
+        max_length=512,
+        min_length=1,
+    )] = None
+    priority: Annotated[Optional[int], Field(
+        description="The order gateways are tried in, lowest first. Give two gateways the same priority to share calls between them evenly.",
+        examples=[0],
+        ge=0,
+        le=2147483647,
+    )] = None
+    origination_format: Annotated[Optional[str], Field(
+        description="How this gateway wants the calling number spelled, as a template whose\n`{number}` stands for the number without its leading `+`. The result is\nstated in the `P-Asserted-Identity` header of the delivered call.\n\nSend an empty string to go back to E.164, which is `+{number}`. The template\nmay add digits, letters and the characters `-_.!~*'()&=+$,;?/%#` around\n`{number}`, which may appear at most once, and anything else in braces is\nrejected so a misspelled placeholder cannot reach a call.\n\nA format with no `{number}` at all states the same identity on every call,\nwhich is what a peer that only accepts one authorized number wants. The\ncall then carries nothing about who really called.",
+        examples=["+{number}"],
+        max_length=64,
+    )] = None
+    destination_format: Annotated[Optional[str], Field(
+        description="How this gateway formats the dialed number. In the template, `{number}`\nrepresents the number without its leading `+`. The result is placed before\nthe `sip_uri` host. For example, `1234#{number}` formats `+31201234567` as\n`sip:1234#31201234567@pbx.example.com:5060`.\n\nSend an empty string to go back to E.164, which is `+{number}`. A format\nwith no `{number}` at all sends every number this trunk answers to one fixed\nnumber, so `777000447973` reaches `sip:777000447973@pbx.example.com:5060`\nwhatever was dialed. The same rules as `origination_format` apply to what\nthe template may contain.",
+        examples=["1234#{number}"],
+        max_length=64,
+    )] = None
+
+
+class VoiceNumberID(RootModel[str]):
+    root: str
+
+
+class VoiceNumberProviderAllocation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["allocation"], Field(
+        description="Where a number came from. `allocation` is a number we allocated to your workspace, and the only kind whose calls reach us. `verified_number` is a number from another carrier that you registered and proved you control, so it can be presented on a call you place.",
+    )]
+    number_id: Annotated[Optional[str], Field(
+        description="Identifier of this number's allocation, to pass to the numbers operations. Null when the allocation behind this number cannot be resolved.",
+        examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceCallerIDStatus(str, Enum):
+    pending = "pending"
+    verified = "verified"
+    failed = "failed"
+
+
+class VoiceNumberProviderVerifiedNumber(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["verified_number"], Field(
+        description="Where a number came from. `allocation` is a number we allocated to your workspace, and the only kind whose calls reach us. `verified_number` is a number from another carrier that you registered and proved you control, so it can be presented on a call you place.",
+    )]
+    status: Annotated[Annotated[Union[VoiceCallerIDStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace completed the verification call, so the number can\n  be presented as the outbound caller ID.\n- `failed`: terminal because the verification challenge expired or the attempt\n  limit was exhausted. Use the dashboard to remove and register the caller ID\n  again to retry.",
+    )]
+    verified_at: Annotated[Optional[str], Field(
+        description="When control of this number was last proven. Null until it is.",
+    )]
+
+
+class VoiceNumberProvider(RootModel[VoiceNumberProviderAllocation | VoiceNumberProviderVerifiedNumber]):
+    root: VoiceNumberProviderAllocation | VoiceNumberProviderVerifiedNumber
+
+
+class VoiceNumberDirections(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inbound: Annotated[bool, Field(
+        description="Whether calls to this number arrive here. False for a number from another carrier, whose calls that carrier routes, and for one allocated to you that cannot carry calls.",
+    )]
+    outbound: Annotated[bool, Field(
+        description="Whether this number can be presented on a call you place. Buying a number does not grant this on its own: proving control of it does.",
+    )]
+
+
+class VoiceCallRouteReject(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["reject"], Field(
+        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+    )]
+
+
+class VoiceCallRouteTrunk(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["trunk"], Field(
+        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+    )]
+    trunk_id: Annotated[str, Field(
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceCallRouteForward(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["forward"], Field(
+        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+    )]
+    forward_to: Annotated[str, Field(
+        description="The number calls are forwarded to, in E.164 format. It has to be one of your verified caller IDs. That is checked when you set it and again on every call it forwards, so a caller ID you later remove stops forwarding rather than carrying on.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    forward_as: Annotated[VoiceInboundForwardAs, Field(
+        description="Which of a forwarded call's two numbers it shows as the caller.\n\n`dialed_number` presents the Bird number the caller dialed. Whoever answers\nsees which of your numbers was called. Older configurations without a stored\nchoice use this value. Carrier screening can still affect delivery.\n\n`calling_number` presents the caller's own number, so the phone rings as though\nthey had dialed it directly and the call can be returned from the call log. Because\nthe number is not one you own, some carriers (most often in the US and parts of\nEurope) mark such calls as unverified, replace the number, or screen them.",
+    )]
 
 
 class VoiceSequenceID(RootModel[str]):
@@ -17102,6 +18287,179 @@ class VoiceSequenceID(RootModel[str]):
 
 class VoiceSequenceNodeID(RootModel[str]):
     root: str
+
+
+class VoiceCallRouteSequence(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["sequence"], Field(
+        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+    )]
+    sequence_id: Annotated[str, Field(
+        examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    entry_node_id: Annotated[str, Field(
+        description="Stable identifier for a node within one sequence definition.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+
+
+class VoiceCallRoute(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteSequence]):
+    root: VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteSequence
+
+
+class VoiceInboundConfiguration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    route: Annotated[Optional[VoiceCallRoute], Field(
+        description="Null when the stored route type is unsupported; inspect configuration_error before changing it.",
+    )]
+    configuration_error: Optional[Literal["unsupported_route_type"]] = None
+    forward_as_options: Annotated[Optional[List[VoiceInboundForwardAs]], Field(
+        description="Caller identities available when configuring a forward. Use these values to populate the choice in your editor. The current choices are `dialed_number` and `calling_number`.",
+    )] = None
+
+
+class VoiceNumber(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vnu_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vnu_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    phone_number: Annotated[str, Field(
+        description="The phone number in E.164 format.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    country_code: Annotated[Optional[str], Field(
+        description="Country the number belongs to. Null when the number is not geographic or its country cannot be determined.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    name: Annotated[Optional[str], Field(
+        description="Your own label for this number, to tell several apart. Null when it has none. Only you see it, so it never affects what a caller sees.",
+        examples=["Support line"],
+        max_length=100,
+        min_length=1,
+    )]
+    provider: Annotated[VoiceNumberProvider, Field(
+        description="Where this number came from, and the facts that belong to that answer. The type selects the shape. `allocation` is a number we allocated to your workspace, and it carries that allocation's identifier. `verified_number` is a number from another carrier, and it carries how far proving control of it has got.",
+    )]
+    directions: VoiceNumberDirections
+    inbound_configuration: VoiceInboundConfiguration
+    created_at: Annotated[str, Field(
+        description="When this number became usable for voice: when it was allocated to you, or when you first registered it, whichever this number is.",
+        min_length=1,
+    )]
+
+
+class VoiceNumberList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[VoiceNumber]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class VoiceCallRouteWritable(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward]):
+    root: VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward
+
+
+class VoiceInboundConfigurationPut(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    route: Annotated[VoiceCallRouteWritable, Field(
+        description="What happens to a call arriving for this number. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can set. An unconfigured number uses \"reject\".",
+    )]
+
+
+class VoiceNumberUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="Your own label for this number. Send null to remove the one it has. Omit the field to leave it alone.",
+        examples=["Support line"],
+        max_length=100,
+        min_length=1,
+    )] = None
+    inbound_configuration: Optional[VoiceInboundConfigurationPut] = None
+
+
+class VoiceCallerIDID(RootModel[str]):
+    root: str
+
+
+class VoiceCallerID(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vci_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vci_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    phone_number: Annotated[str, Field(
+        description="The phone number in E.164 format registered as a caller ID.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    name: Annotated[Optional[str], Field(
+        description="Your label for this caller ID, to tell several registered numbers apart. `null` when the caller ID has no label. It is yours to choose and appears nowhere on a call, so changing it never affects what the person you are calling sees. Set it with the caller ID update operation.",
+        examples=["Support line"],
+        max_length=100,
+        min_length=1,
+    )]
+    status: Annotated[Annotated[Union[VoiceCallerIDStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace completed the verification call, so the number can\n  be presented as the outbound caller ID.\n- `failed`: terminal because the verification challenge expired or the attempt\n  limit was exhausted. Use the dashboard to remove and register the caller ID\n  again to retry.",
+    )]
+    verified_at: Annotated[Optional[str], Field(
+        description="When the caller ID was verified. `null` when its status is `pending` or `failed`.",
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class VoiceCallerIDList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[VoiceCallerID]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class VoiceCallerIDVerifyRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[str, Field(
+        description="The 6-digit verification code read out by the verification call.",
+        examples=[123456],
+        max_length=6,
+        min_length=6,
+        pattern="^\\d{6}$",
+    )]
 
 
 class VoiceLegRejectionReason(str, Enum):
@@ -17121,14 +18479,14 @@ class VoiceLegRejectionReason(str, Enum):
 
 class VoiceLegInboundRouteReject(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[VoiceCallRouteType, Field(
+    type: Annotated[Literal["reject"], Field(
         description="The number turned the leg away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
     )]
 
 
 class VoiceLegInboundRouteTrunk(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[VoiceCallRouteType, Field(
+    type: Annotated[Literal["trunk"], Field(
         description="The leg was delivered to one of your SIP trunks.",
     )]
     trunk_id: Annotated[str, Field(
@@ -17141,7 +18499,7 @@ class VoiceLegInboundRouteTrunk(BaseModel):
 
 class VoiceLegInboundRouteForward(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[VoiceCallRouteType, Field(
+    type: Annotated[Literal["forward"], Field(
         description="The leg was forwarded to another of your numbers.",
     )]
     forward_to: Annotated[str, Field(
@@ -17154,8 +18512,27 @@ class VoiceLegInboundRouteForward(BaseModel):
     )]
 
 
-class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward]):
-    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward
+class VoiceLegInboundRouteSequence(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["sequence"], Field(
+        description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.",
+    )]
+    sequence_id: Annotated[str, Field(
+        description="The sequence that handled the leg. Recorded as it was at the time, so it may name a sequence you have since changed or deleted.",
+        examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    entry_node_id: Annotated[str, Field(
+        description="The entry the leg started from in the publication that handled it. Recorded as it was at the time, so it may name an entry the sequence no longer has.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+
+
+class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence]):
+    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence
 
 
 class VoiceMediaQuality(BaseModel):
@@ -17425,3 +18802,54 @@ class CreateVoiceCallRequest(BaseModel):
         le=120,
     )] = None
     sequence: CreateVoiceCallSequenceRequest
+
+
+class VoiceDestinationStatus(str, Enum):
+    available = "available"
+    not_supported = "not_supported"
+
+
+class VoiceDestination(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country_code: Annotated[str, Field(
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    country_name: Annotated[str, Field(
+        description="Full English country name.",
+        examples=["Netherlands"],
+        min_length=1,
+    )]
+    dial_code: Annotated[Optional[str], Field(
+        description="International dialling prefix, without the leading plus. Absent for countries that have none.",
+        examples=[31],
+    )] = None
+    region: Optional[Annotated[Union[DestinationRegion, str], Field(union_mode="left_to_right")]] = None
+    super_region: Optional[Annotated[Union[DestinationSuperRegion, str], Field(union_mode="left_to_right")]] = None
+    enabled: Annotated[bool, Field(
+        description="Whether your workspace has enabled calling to this country.",
+    )]
+    status: Annotated[Annotated[Union[VoiceDestinationStatus, str], Field(union_mode="left_to_right")], Field(
+        description="This country's Voice callability at the destination level, independent of your enabled setting. `available` means we place calls there; `not_supported` means we do not.",
+        min_length=1,
+    )]
+    high_risk_destination: Annotated[bool, Field(
+        description="Whether we treat this country as a high-risk calling destination.",
+    )]
+
+
+class VoiceDestinationList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[VoiceDestination], Field(
+        description="The Voice destination countries, each annotated with your workspace's enabled setting.",
+    )]
+    total: Annotated[int, Field(description="Total number of destination countries.")]
+
+
+class VoiceDestinationsUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    destinations: Annotated[List[DestinationSetting], Field(
+        description="The destination countries to enable or disable. Only the countries listed here change; any country you do not list keeps its current setting.",
+    )]

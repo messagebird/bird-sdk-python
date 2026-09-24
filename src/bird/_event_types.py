@@ -62,6 +62,8 @@ class WebhookEventType:
     WHATSAPP_ACCEPTED: Final = "whatsapp.accepted"
     WHATSAPP_DELIVERED: Final = "whatsapp.delivered"
     WHATSAPP_FAILED: Final = "whatsapp.failed"
+    WHATSAPP_GROUP_JOIN_REQUEST_CREATED: Final = "whatsapp.group.join_request_created"
+    WHATSAPP_GROUP_JOIN_REQUEST_REVOKED: Final = "whatsapp.group.join_request_revoked"
     WHATSAPP_REACTED: Final = "whatsapp.reacted"
     WHATSAPP_READ: Final = "whatsapp.read"
     WHATSAPP_RECEIVED: Final = "whatsapp.received"

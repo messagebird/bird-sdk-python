@@ -11,6 +11,7 @@ page request.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any, AsyncIterator, Generator, Generic, Iterator, TypeVar
 
 import pydantic
@@ -24,6 +25,7 @@ T = TypeVar("T", bound=pydantic.BaseModel)
 
 def _request_kwargs(
     options: RequestOptions | None, query: dict[str, object], cursor: str | None = None,
+    body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     clean = {key: value for key, value in query.items() if value is not None}
     kwargs: dict[str, Any] = dict(options or {})
@@ -31,7 +33,19 @@ def _request_kwargs(
     # has no such parameter. Mirrors _resource._opts.
     kwargs.pop("credentials", None)
     kwargs["extra_query"] = {**(kwargs.get("extra_query") or {}), **clean}
-    if cursor is not None:
+    if body is not None:
+        page_body = {**body, **(kwargs.pop("extra_body", None) or {})}
+        if cursor is not None:
+            page_body.pop("ending_before", None)
+            page_body["starting_after"] = cursor
+            kwargs.pop("idempotency_key", None)
+            if kwargs.get("extra_headers"):
+                kwargs["extra_headers"] = {
+                    key: value for key, value in kwargs["extra_headers"].items()
+                    if key.lower() != "idempotency-key"
+                }
+        kwargs["body"] = page_body
+    elif cursor is not None:
         kwargs["extra_query"]["ending_before"] = omit
         kwargs["extra_query"]["starting_after"] = cursor
     return kwargs
@@ -45,16 +59,24 @@ class SyncPage(Generic[T]):
         query: dict[str, object],
         item: type[T],
         options: RequestOptions | None = None,
+        *,
+        method: str = "GET",
+        body: dict[str, Any] | None = None,
     ) -> None:
         self._client = client
         self._path = path
         self._query = query
         self._item = item
         self._options = options
+        self._method = method
+        self._body = deepcopy(body)
+        self.response: dict[str, Any] | None = None
         self.data, self.next_cursor = self._fetch(query)
 
     def _fetch(self, query: dict[str, object], cursor: str | None = None) -> tuple[list[T], str | None]:
-        body = self._client.request("GET", self._path, **_request_kwargs(self._options, query, cursor)).json()
+        body = self._client.request(self._method, self._path, **_request_kwargs(self._options, query, cursor, self._body)).json()
+        if self.response is None:
+            self.response = body
         return [self._item.model_validate(row) for row in body.get("data", [])], body.get("next_cursor")
 
     def has_next_page(self) -> bool:
@@ -80,18 +102,26 @@ class AsyncPage(Generic[T]):
         query: dict[str, object],
         item: type[T],
         options: RequestOptions | None = None,
+        *,
+        method: str = "GET",
+        body: dict[str, Any] | None = None,
     ) -> None:
         self._client = client
         self._path = path
         self._query = query
         self._item = item
         self._options = options
+        self._method = method
+        self._body = deepcopy(body)
+        self.response: dict[str, Any] | None = None
         self._loaded = False
         self.data: list[T] = []
         self.next_cursor: str | None = None
 
     async def _fetch(self, query: dict[str, object], cursor: str | None = None) -> tuple[list[T], str | None]:
-        body = (await self._client.request("GET", self._path, **_request_kwargs(self._options, query, cursor))).json()
+        body = (await self._client.request(self._method, self._path, **_request_kwargs(self._options, query, cursor, self._body))).json()
+        if self.response is None:
+            self.response = body
         return [self._item.model_validate(row) for row in body.get("data", [])], body.get("next_cursor")
 
     async def _load_first(self) -> AsyncPage[T]:

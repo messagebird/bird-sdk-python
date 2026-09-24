@@ -460,3 +460,15 @@ def insights_email_inboxInsights_benchmarks_industry() -> None:
         raise ValueError("Verify mail.example.com in this workspace first")
     report = client.email.inbox_insights.benchmarks.industry(sending_domain=sending_domain)
     print(report.model_dump_json())
+
+
+def email_stats_query() -> None:
+    for group in client.email.stats.query(
+        from_="2026-08-03",
+        to="2026-08-16",
+        metrics=["delivered", "bounce_rate"],
+        group_by="recipient_domain",
+        grain="week",
+        limit=25,
+    ):
+        print(group.dimensions, group.metrics, group.series)

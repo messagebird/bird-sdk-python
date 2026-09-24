@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TypedDict
 
 from bird._generated import (
+    EmailBounceCodeStatsPoint,
+    EmailBroadcastStatsPoint,
+    EmailCategoryStatsPoint,
+    EmailClientStatsPoint,
+    EmailComplaintTypeStatsPoint,
+    EmailLocationStatsPoint,
+    EmailMailboxProviderRegionStatsPoint,
+    EmailMailboxProviderStatsPoint,
+    EmailRecipientDomainStatsPoint,
+    EmailSendingDomainStatsPoint,
+    EmailSendingIpStatsPoint,
     EmailStatsByBounceCodeResponse,
     EmailStatsByBroadcastResponse,
     EmailStatsByCategoryResponse,
@@ -17,12 +29,93 @@ from bird._generated import (
     EmailStatsBySendingDomainResponse,
     EmailStatsBySendingIpResponse,
     EmailStatsByTemplateResponse,
+    EmailStatsQueryGroup,
+    EmailStatsQueryRequest,
     EmailStatsResponse,
     EmailStatsSummary,
     EmailStatsTagsResponse,
+    EmailTagStatsPoint,
+    EmailTemplateStatsPoint,
 )
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
+from bird.pagination import AsyncPage, SyncPage
+
+
+class EmailStatsQueryStringFilter(TypedDict, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
+
+
+class EmailStatsQueryCategoryFilter(TypedDict, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
+
+
+class EmailStatsQueryTemplateFilter(TypedDict, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
+
+
+class _EmailStatsQueryTagFilterRequired(TypedDict):
+    name: str
+
+
+class EmailStatsQueryTagFilter(_EmailStatsQueryTagFilterRequired, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
+
+
+class EmailStatsQueryIPPoolFilter(TypedDict, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
+
+
+class EmailStatsQueryBroadcastFilter(TypedDict, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
+
+
+class EmailStatsQueryFilters(TypedDict, total=False):
+    sending_domain: EmailStatsQueryStringFilter
+    category: EmailStatsQueryCategoryFilter
+    template_id: EmailStatsQueryTemplateFilter
+    tag: EmailStatsQueryTagFilter
+    recipient_domain: EmailStatsQueryStringFilter
+    mailbox_provider: EmailStatsQueryStringFilter
+    mailbox_provider_region: EmailStatsQueryStringFilter
+    sending_ip: EmailStatsQueryStringFilter
+    ip_pool_id: EmailStatsQueryIPPoolFilter
+    broadcast_id: EmailStatsQueryBroadcastFilter
+    country: EmailStatsQueryStringFilter
+    region: EmailStatsQueryStringFilter
+    city: EmailStatsQueryStringFilter
+    agent_family: EmailStatsQueryStringFilter
+    os_family: EmailStatsQueryStringFilter
+    device_family: EmailStatsQueryStringFilter
+    smtp_error_code: EmailStatsQueryStringFilter
+    feedback_type: EmailStatsQueryStringFilter
+
+
+class _EmailStatsQueryRequired(TypedDict):
+    from_: str
+    to: str
+    metrics: Sequence[str]
+
+
+class EmailStatsQueryParams(_EmailStatsQueryRequired, total=False):
+    """Params for ``client.email.stats.query``. ``from_``, ``to``, and ``metrics`` are required."""
+
+    timezone: str
+    group_by: str
+    grain: str
+    filters: EmailStatsQueryFilters
+    sort: str
+    order: str
+    limit: int
+    starting_after: str
+    ending_before: str
 
 
 class EmailStatsSummaryParams(TypedDict, total=False):
@@ -71,6 +164,9 @@ class EmailStatsHourlyParams(TypedDict, total=False):
 class EmailStatsByTagParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_tag``. Every key is optional."""
 
+    name: str
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -84,6 +180,8 @@ class EmailStatsByTagParams(TypedDict, total=False):
 class EmailStatsByCategoryParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_category``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -96,6 +194,8 @@ class EmailStatsByCategoryParams(TypedDict, total=False):
 class EmailStatsBySendingIpParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_sending_ip``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -109,6 +209,8 @@ class EmailStatsBySendingIpParams(TypedDict, total=False):
 class EmailStatsBySendingDomainParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_sending_domain``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -122,6 +224,8 @@ class EmailStatsBySendingDomainParams(TypedDict, total=False):
 class EmailStatsByRecipientDomainParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_recipient_domain``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -135,6 +239,8 @@ class EmailStatsByRecipientDomainParams(TypedDict, total=False):
 class EmailStatsByMailboxProviderParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_mailbox_provider``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -148,6 +254,8 @@ class EmailStatsByMailboxProviderParams(TypedDict, total=False):
 class EmailStatsByMailboxProviderRegionParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_mailbox_provider_region``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -161,6 +269,8 @@ class EmailStatsByMailboxProviderRegionParams(TypedDict, total=False):
 class EmailStatsByTemplateParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_template``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -174,6 +284,8 @@ class EmailStatsByTemplateParams(TypedDict, total=False):
 class EmailStatsByLocationParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_location``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -186,6 +298,8 @@ class EmailStatsByLocationParams(TypedDict, total=False):
 class EmailStatsByClientParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_client``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -198,6 +312,8 @@ class EmailStatsByClientParams(TypedDict, total=False):
 class EmailStatsByBounceCodeParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_bounce_code``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -209,6 +325,8 @@ class EmailStatsByBounceCodeParams(TypedDict, total=False):
 class EmailStatsByComplaintTypeParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_complaint_type``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     timezone: str
@@ -220,6 +338,8 @@ class EmailStatsByComplaintTypeParams(TypedDict, total=False):
 class EmailStatsByBroadcastParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_broadcast``. Every key is optional."""
 
+    starting_after: str
+    ending_before: str
     from_: str
     to: str
     category: str
@@ -228,6 +348,58 @@ class EmailStatsByBroadcastParams(TypedDict, total=False):
 
 
 class EmailStats(Resource):
+    def query(
+        self,
+        *,
+        from_: str,
+        to: str,
+        timezone: str | None = None,
+        metrics: Sequence[str],
+        group_by: str | None = None,
+        grain: str | None = None,
+        filters: EmailStatsQueryFilters | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailStatsQueryGroup]:
+        """Select email metrics over a date or instant window, optionally grouped by one dimension with complete time series per group. Events are selected and bucketed by when they occurred, including activity on messages sent earlier. Filters match recorded event context. Unsupported combinations and unavailable history return 422. Follow cursors by replaying the original body and changing its cursor fields; the response period has an exclusive end and must not replace the request end. Use a new idempotency key for each continuation page; reuse a key only to retry the same page.
+
+        ```python
+        for group in client.email.stats.query(
+            from_="2026-08-03",
+            to="2026-08-16",
+            metrics=["delivered", "bounce_rate"],
+            group_by="recipient_domain",
+            grain="week",
+            limit=25,
+        ):
+            print(group.dimensions, group.metrics, group.series)
+        ```
+        """
+        body = to_wire(
+            EmailStatsQueryRequest,
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "metrics": metrics,
+                "group_by": group_by,
+                "grain": grain,
+                "filters": filters,
+                "sort": sort,
+                "order": order,
+                "limit": limit,
+                "starting_after": starting_after,
+                "ending_before": ending_before,
+            },
+        )
+        query = {
+        }
+        return SyncPage(self._client, "/v1/email/stats/query", query, EmailStatsQueryGroup, options, method="POST", body=body)
+
     def summary(
         self,
         *,
@@ -352,6 +524,9 @@ class EmailStats(Resource):
     def by_tag(
         self,
         *,
+        name: str | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -374,6 +549,9 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/tags",
             {
+                "name": name,
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -387,9 +565,43 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_tag_all(
+        self,
+        *,
+        name: str | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailTagStatsPoint]:
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row."""
+        query = {
+            "name": name,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/tags", query, EmailTagStatsPoint, options)
+
     def by_category(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -410,6 +622,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/categories",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -422,9 +636,39 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_category_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailCategoryStatsPoint]:
+        """Email delivery and engagement stats grouped by category, meaning `transactional` compared with `marketing`. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/categories", query, EmailCategoryStatsPoint, options)
+
     def by_sending_ip(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -448,6 +692,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/sending-ips",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -461,9 +707,41 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_sending_ip_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailSendingIpStatsPoint]:
+        """Delivery and bounce stats grouped by sending IP, with deferral counts alongside them. `sort=bounces.block` surfaces reputation-damaged IPs first. Engagement, accepted, and processed counts aren't available per IP, and complaint and out-of-band bounce counts always read `0` here. For workspace-wide figures, use `email.stats.daily`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/sending-ips", query, EmailSendingIpStatsPoint, options)
+
     def by_sending_domain(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -485,6 +763,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/sending-domains",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -498,9 +778,41 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_sending_domain_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailSendingDomainStatsPoint]:
+        """Email delivery and engagement stats grouped by sending (`From`) domain, so you can compare deliverability across your workspace's verified domains. For per-IP reputation instead, use `email.stats.by_sending_ip`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/sending-domains", query, EmailSendingDomainStatsPoint, options)
+
     def by_recipient_domain(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -522,6 +834,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/recipient-domains",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -535,9 +849,41 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_recipient_domain_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailRecipientDomainStatsPoint]:
+        """Email delivery and engagement stats grouped by exact recipient mailbox domain, for example `gmail.com`. Finer-grained than `email.stats.by_mailbox_provider`, which buckets domains into providers."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/recipient-domains", query, EmailRecipientDomainStatsPoint, options)
+
     def by_mailbox_provider(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -559,6 +905,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/mailbox-providers",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -572,9 +920,41 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_mailbox_provider_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailMailboxProviderStatsPoint]:
+        """Email delivery and engagement stats grouped by recipient mailbox provider, for example `gmail`, `microsoft`, or `yahoo`. It covers the delivery stage onward and omits accepted or processed counts. For a per-region split within a provider, use `email.stats.by_mailbox_provider_region`; for exact destination domains instead, use `email.stats.by_recipient_domain`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/mailbox-providers", query, EmailMailboxProviderStatsPoint, options)
+
     def by_mailbox_provider_region(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -596,6 +976,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/mailbox-provider-regions",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -609,9 +991,41 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_mailbox_provider_region_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailMailboxProviderRegionStatsPoint]:
+        """Email delivery and engagement stats grouped by a mailbox provider and provider region pair, for example `gmail` in `NA`. It covers the delivery stage onward and omits accepted or processed counts. For the provider-level view without the region split, use `email.stats.by_mailbox_provider`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/mailbox-provider-regions", query, EmailMailboxProviderRegionStatsPoint, options)
+
     def by_template(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -633,6 +1047,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/templates",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -646,9 +1062,41 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_template_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailTemplateStatsPoint]:
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return SyncPage(self._client, "/v1/email/stats/templates", query, EmailTemplateStatsPoint, options)
+
     def by_location(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -671,6 +1119,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/locations",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -683,9 +1133,39 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_location_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        group_by: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailLocationStatsPoint]:
+        """Opens and clicks grouped by country, region, or city, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by mail client or device instead, use `email.stats.by_client`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "group_by": group_by,
+            "sort": sort,
+            "limit": limit,
+        }
+        return SyncPage(self._client, "/v1/email/stats/locations", query, EmailLocationStatsPoint, options)
+
     def by_client(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -708,6 +1188,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/clients",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -720,9 +1202,39 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_client_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        group_by: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailClientStatsPoint]:
+        """Opens and clicks grouped by mail client, operating system, or device type, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by geography instead, use `email.stats.by_location`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "group_by": group_by,
+            "sort": sort,
+            "limit": limit,
+        }
+        return SyncPage(self._client, "/v1/email/stats/clients", query, EmailClientStatsPoint, options)
+
     def by_bounce_code(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -742,6 +1254,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/bounce-codes",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -753,9 +1267,37 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_bounce_code_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailBounceCodeStatsPoint]:
+        """Bounce counts grouped by the SMTP error code the receiving mail server returned. Each row also breaks the bounce down into its hard, soft, admin, block, and undetermined split. It omits delivered, open, and click counts because a bounce code only appears on a bounce event. For bounces broken down by destination instead, use `email.stats.by_recipient_domain` or `email.stats.by_mailbox_provider`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return SyncPage(self._client, "/v1/email/stats/bounce-codes", query, EmailBounceCodeStatsPoint, options)
+
     def by_complaint_type(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -775,6 +1317,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/complaint-types",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -786,9 +1330,37 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_complaint_type_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailComplaintTypeStatsPoint]:
+        """Spam-complaint counts grouped by the feedback-loop complaint type, for example `abuse`, `fraud`, or `virus`. This complaint-only breakdown omits delivery and engagement counts. For complaints broken down by destination instead, use `email.stats.by_mailbox_provider` or `email.stats.by_recipient_domain`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return SyncPage(self._client, "/v1/email/stats/complaint-types", query, EmailComplaintTypeStatsPoint, options)
+
     def by_broadcast(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         category: str | None = None,
@@ -807,6 +1379,8 @@ class EmailStats(Resource):
         return self._get(
             "/v1/email/stats/broadcasts",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "category": category,
@@ -817,8 +1391,84 @@ class EmailStats(Resource):
             options,
         )
 
+    def by_broadcast_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailBroadcastStatsPoint]:
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return SyncPage(self._client, "/v1/email/stats/broadcasts", query, EmailBroadcastStatsPoint, options)
+
 
 class AsyncEmailStats(AsyncResource):
+    def query(
+        self,
+        *,
+        from_: str,
+        to: str,
+        timezone: str | None = None,
+        metrics: Sequence[str],
+        group_by: str | None = None,
+        grain: str | None = None,
+        filters: EmailStatsQueryFilters | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailStatsQueryGroup]:
+        """Select email metrics over a date or instant window, optionally grouped by one dimension with complete time series per group. Events are selected and bucketed by when they occurred, including activity on messages sent earlier. Filters match recorded event context. Unsupported combinations and unavailable history return 422. Follow cursors by replaying the original body and changing its cursor fields; the response period has an exclusive end and must not replace the request end. Use a new idempotency key for each continuation page; reuse a key only to retry the same page.
+
+        ```python
+        async for group in client.email.stats.query(
+            from_="2026-08-03",
+            to="2026-08-16",
+            metrics=["delivered", "bounce_rate"],
+            group_by="recipient_domain",
+            grain="week",
+            limit=25,
+        ):
+            print(group.dimensions, group.metrics, group.series)
+        ```
+        """
+        body = to_wire(
+            EmailStatsQueryRequest,
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "metrics": metrics,
+                "group_by": group_by,
+                "grain": grain,
+                "filters": filters,
+                "sort": sort,
+                "order": order,
+                "limit": limit,
+                "starting_after": starting_after,
+                "ending_before": ending_before,
+            },
+        )
+        query = {
+        }
+        return AsyncPage(self._client, "/v1/email/stats/query", query, EmailStatsQueryGroup, options, method="POST", body=body)
+
     async def summary(
         self,
         *,
@@ -943,6 +1593,9 @@ class AsyncEmailStats(AsyncResource):
     async def by_tag(
         self,
         *,
+        name: str | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -965,6 +1618,9 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/tags",
             {
+                "name": name,
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -978,9 +1634,43 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_tag_all(
+        self,
+        *,
+        name: str | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailTagStatsPoint]:
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row."""
+        query = {
+            "name": name,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/tags", query, EmailTagStatsPoint, options)
+
     async def by_category(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1001,6 +1691,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/categories",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1013,9 +1705,39 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_category_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailCategoryStatsPoint]:
+        """Email delivery and engagement stats grouped by category, meaning `transactional` compared with `marketing`. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/categories", query, EmailCategoryStatsPoint, options)
+
     async def by_sending_ip(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1039,6 +1761,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/sending-ips",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1052,9 +1776,41 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_sending_ip_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailSendingIpStatsPoint]:
+        """Delivery and bounce stats grouped by sending IP, with deferral counts alongside them. `sort=bounces.block` surfaces reputation-damaged IPs first. Engagement, accepted, and processed counts aren't available per IP, and complaint and out-of-band bounce counts always read `0` here. For workspace-wide figures, use `email.stats.daily`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/sending-ips", query, EmailSendingIpStatsPoint, options)
+
     async def by_sending_domain(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1076,6 +1832,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/sending-domains",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1089,9 +1847,41 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_sending_domain_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailSendingDomainStatsPoint]:
+        """Email delivery and engagement stats grouped by sending (`From`) domain, so you can compare deliverability across your workspace's verified domains. For per-IP reputation instead, use `email.stats.by_sending_ip`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/sending-domains", query, EmailSendingDomainStatsPoint, options)
+
     async def by_recipient_domain(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1113,6 +1903,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/recipient-domains",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1126,9 +1918,41 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_recipient_domain_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailRecipientDomainStatsPoint]:
+        """Email delivery and engagement stats grouped by exact recipient mailbox domain, for example `gmail.com`. Finer-grained than `email.stats.by_mailbox_provider`, which buckets domains into providers."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/recipient-domains", query, EmailRecipientDomainStatsPoint, options)
+
     async def by_mailbox_provider(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1150,6 +1974,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/mailbox-providers",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1163,9 +1989,41 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_mailbox_provider_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailMailboxProviderStatsPoint]:
+        """Email delivery and engagement stats grouped by recipient mailbox provider, for example `gmail`, `microsoft`, or `yahoo`. It covers the delivery stage onward and omits accepted or processed counts. For a per-region split within a provider, use `email.stats.by_mailbox_provider_region`; for exact destination domains instead, use `email.stats.by_recipient_domain`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/mailbox-providers", query, EmailMailboxProviderStatsPoint, options)
+
     async def by_mailbox_provider_region(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1187,6 +2045,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/mailbox-provider-regions",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1200,9 +2060,41 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_mailbox_provider_region_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailMailboxProviderRegionStatsPoint]:
+        """Email delivery and engagement stats grouped by a mailbox provider and provider region pair, for example `gmail` in `NA`. It covers the delivery stage onward and omits accepted or processed counts. For the provider-level view without the region split, use `email.stats.by_mailbox_provider`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/mailbox-provider-regions", query, EmailMailboxProviderRegionStatsPoint, options)
+
     async def by_template(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1224,6 +2116,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/templates",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1237,9 +2131,41 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_template_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailTemplateStatsPoint]:
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+            "include_trend": include_trend,
+            "trend_grain": trend_grain,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/templates", query, EmailTemplateStatsPoint, options)
+
     async def by_location(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1262,6 +2188,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/locations",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1274,9 +2202,39 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_location_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        group_by: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailLocationStatsPoint]:
+        """Opens and clicks grouped by country, region, or city, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by mail client or device instead, use `email.stats.by_client`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "group_by": group_by,
+            "sort": sort,
+            "limit": limit,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/locations", query, EmailLocationStatsPoint, options)
+
     async def by_client(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1299,6 +2257,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/clients",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1311,9 +2271,39 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_client_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        group_by: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailClientStatsPoint]:
+        """Opens and clicks grouped by mail client, operating system, or device type, whichever you choose with `group_by`. It only has engagement counts, no delivery counts or rates. For engagement grouped by geography instead, use `email.stats.by_location`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "group_by": group_by,
+            "sort": sort,
+            "limit": limit,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/clients", query, EmailClientStatsPoint, options)
+
     async def by_bounce_code(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1333,6 +2323,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/bounce-codes",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1344,9 +2336,37 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_bounce_code_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailBounceCodeStatsPoint]:
+        """Bounce counts grouped by the SMTP error code the receiving mail server returned. Each row also breaks the bounce down into its hard, soft, admin, block, and undetermined split. It omits delivered, open, and click counts because a bounce code only appears on a bounce event. For bounces broken down by destination instead, use `email.stats.by_recipient_domain` or `email.stats.by_mailbox_provider`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/bounce-codes", query, EmailBounceCodeStatsPoint, options)
+
     async def by_complaint_type(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
@@ -1366,6 +2386,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/complaint-types",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
@@ -1377,9 +2399,37 @@ class AsyncEmailStats(AsyncResource):
             options,
         )
 
+    def by_complaint_type_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailComplaintTypeStatsPoint]:
+        """Spam-complaint counts grouped by the feedback-loop complaint type, for example `abuse`, `fraud`, or `virus`. This complaint-only breakdown omits delivery and engagement counts. For complaints broken down by destination instead, use `email.stats.by_mailbox_provider` or `email.stats.by_recipient_domain`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/complaint-types", query, EmailComplaintTypeStatsPoint, options)
+
     async def by_broadcast(
         self,
         *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
         category: str | None = None,
@@ -1398,6 +2448,8 @@ class AsyncEmailStats(AsyncResource):
         return await self._get(
             "/v1/email/stats/broadcasts",
             {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
                 "from": from_,
                 "to": to,
                 "category": category,
@@ -1407,3 +2459,27 @@ class AsyncEmailStats(AsyncResource):
             EmailStatsByBroadcastResponse,
             options,
         )
+
+    def by_broadcast_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailBroadcastStatsPoint]:
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/broadcasts", query, EmailBroadcastStatsPoint, options)

@@ -11,6 +11,33 @@ from __future__ import annotations
 from typing import Final
 
 
+class DestinationRegion:
+    """Values of DestinationRegion known at this SDK version (open enum)."""
+
+    CENTRAL_ASIA_CAUCASUS: Final = "central_asia_caucasus"
+    CENTRAL_EASTERN_EUROPE: Final = "central_eastern_europe"
+    EAST_ASIA: Final = "east_asia"
+    LATIN_AMERICA_CARIBBEAN: Final = "latin_america_caribbean"
+    MIDDLE_EAST_NORTH_AFRICA: Final = "middle_east_north_africa"
+    NORDICS_BALTICS: Final = "nordics_baltics"
+    NORTH_AMERICA: Final = "north_america"
+    OCEANIA: Final = "oceania"
+    SOUTH_ASIA: Final = "south_asia"
+    SOUTH_EAST_ASIA: Final = "south_east_asia"
+    SOUTHERN_EUROPE: Final = "southern_europe"
+    SUB_SAHARAN_AFRICA: Final = "sub_saharan_africa"
+    WESTERN_EUROPE: Final = "western_europe"
+
+
+class DestinationSuperRegion:
+    """Values of DestinationSuperRegion known at this SDK version (open enum)."""
+
+    AMERICAS: Final = "americas"
+    ASIA_PACIFIC: Final = "asia_pacific"
+    EUROPE: Final = "europe"
+    MIDDLE_EAST_AFRICA: Final = "middle_east_africa"
+
+
 class EmailClientFamily:
     """Values of EmailClientFamily known at this SDK version (open enum)."""
 
@@ -347,6 +374,14 @@ class VerificationTerminalReason:
     UNDELIVERABLE: Final = "undeliverable"
 
 
+class VoiceCallerIDStatus:
+    """Values of VoiceCallerIDStatus known at this SDK version (open enum)."""
+
+    FAILED: Final = "failed"
+    PENDING: Final = "pending"
+    VERIFIED: Final = "verified"
+
+
 class VoicePartyEndpointType:
     """Values of VoicePartyEndpointType known at this SDK version (open enum)."""
 
@@ -644,6 +679,8 @@ class WhatsAppUsernameStatus:
 
 
 __all__ = [
+    "DestinationRegion",
+    "DestinationSuperRegion",
     "EmailClientFamily",
     "EmailClientPlatform",
     "EmailCompatibilityRuleID",
@@ -676,6 +713,7 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
+    "VoiceCallerIDStatus",
     "VoicePartyEndpointType",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
     "WhatsAppBusinessAccountReviewStatus",
