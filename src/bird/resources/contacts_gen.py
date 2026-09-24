@@ -206,7 +206,7 @@ class ContactsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a contact and remove it from every audience it belongs to. Suppression records for the address are unaffected.
+        """Delete a contact and remove it from every audience it belongs to. Refused when an eSIM subscriber links to the contact. Suppression records for the address are unaffected.
 
         ```python
         client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
@@ -388,7 +388,7 @@ class AsyncContactsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a contact and remove it from every audience it belongs to. Suppression records for the address are unaffected.
+        """Delete a contact and remove it from every audience it belongs to. Refused when an eSIM subscriber links to the contact. Suppression records for the address are unaffected.
 
         ```python
         await client.contacts.delete("con_01krdgeqcxet5s7t44vh8rt9mg")
