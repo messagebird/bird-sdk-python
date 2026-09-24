@@ -157,7 +157,7 @@ class EmailTemplatesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a template and every version it holds, freeing its slug for reuse in the workspace. The deletion cannot be undone, and a later send naming the template is rejected. A template a `scheduled` or `accepted` broadcast still references cannot be deleted, and returns a conflict."""
+        """Delete a template and every version it holds, freeing its slug for reuse in the workspace. The deletion cannot be undone, and a later send naming the template is rejected. A template a `scheduled` or `accepted` broadcast still references cannot be deleted, and returns a conflict. A scheduled message send using the template does not block the delete, and is rejected with `generation_failure` when it falls due."""
         self._delete(f"/v1/email/templates/{quote(template_ref, safe='')}", options)
 
     def duplicate(
@@ -300,7 +300,7 @@ class AsyncEmailTemplatesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a template and every version it holds, freeing its slug for reuse in the workspace. The deletion cannot be undone, and a later send naming the template is rejected. A template a `scheduled` or `accepted` broadcast still references cannot be deleted, and returns a conflict."""
+        """Delete a template and every version it holds, freeing its slug for reuse in the workspace. The deletion cannot be undone, and a later send naming the template is rejected. A template a `scheduled` or `accepted` broadcast still references cannot be deleted, and returns a conflict. A scheduled message send using the template does not block the delete, and is rejected with `generation_failure` when it falls due."""
         await self._delete(f"/v1/email/templates/{quote(template_ref, safe='')}", options)
 
     async def duplicate(
