@@ -51,6 +51,13 @@ def webhook_attempts() -> None:
         print(attempt.status, attempt.response_status_code)
 
 
+def webhook_replay() -> None:
+    from datetime import datetime, timedelta, timezone
+
+    since = datetime.now(timezone.utc) - timedelta(hours=6)
+    client.webhooks.replay("whk_01krdgeqcxet5s7t44vh8rt9mg", since=since.isoformat())
+
+
 def webhook_rotate_secret() -> None:
     rotated = client.webhooks.rotate_secret("whk_01krdgeqcxet5s7t44vh8rt9mg")
     print(rotated.secret)

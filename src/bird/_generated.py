@@ -20221,6 +20221,20 @@ class WebhookTestResponse(BaseModel):
     )] = None
 
 
+class WebhookReplayRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    since: Annotated[Optional[str], Field(
+        description="Replay events whose delivery attempt failed at or after this timestamp. The bound is inclusive and applies to attempt time, not to when the event occurred, so a retry that trailed its event by a day falls in the window by the hour it was attempted. Defaults to 24 hours before the request when omitted. Attempts are retained for three days, so that is the oldest history a replay reaches: an earlier `since` widens the window without recovering anything older.",
+        examples=["2026-05-07T00:00:00Z"],
+        min_length=1,
+    )] = None
+    until: Annotated[Optional[str], Field(
+        description="Replay events whose delivery attempt failed at or before this timestamp, on the same attempt-time bound as `since`. Omitted, it resolves to the time of the request.",
+        examples=["2026-05-07T23:59:59Z"],
+        min_length=1,
+    )] = None
+
+
 class WebhookEventID(RootModel[str]):
     root: str
 

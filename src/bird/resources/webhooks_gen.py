@@ -12,6 +12,7 @@ from bird._generated import (
     WebhookEndpointCreate,
     WebhookEndpointCreated,
     WebhookEndpointUpdate,
+    WebhookReplayRequest,
     WebhookRotateSecretResponse,
     WebhookTestRequest,
     WebhookTestResponse,
@@ -56,6 +57,13 @@ class WebhooksAttemptsParams(TypedDict, total=False):
     limit: int
     before: str
     after: str
+
+
+class WebhooksReplayParams(TypedDict, total=False):
+    """Params for ``client.webhooks.replay``. Every key is optional."""
+
+    since: str
+    until: str
 
 
 class WebhooksUpdateParams(TypedDict, total=False):
@@ -221,6 +229,37 @@ class WebhooksBase(Resource):
                 "after": after,
             },
             WebhookAttemptList,
+            options,
+        )
+
+    def replay(
+        self,
+        webhook_id: str,
+        *,
+        since: str | None = None,
+        until: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Queue redelivery of this endpoint's failed attempts in a window (default: the last 24 hours). An event is skipped only if one of its attempts inside the window was delivered, so re-running a replay whose `until` has passed redelivers everything the first one sent; the receiver must deduplicate on `webhook-id`. Only failed attempts are replayed, the window reaches back at most three days, and a paused endpoint redelivers nothing until it is re-enabled. One replay covers at most the oldest 10,000 events in the window. Nothing is returned beyond acceptance; each redelivery is one attempt, so check the outcome with the delivery attempts list. Limited to 20 per organization per UTC day.
+
+        ```python
+        from datetime import datetime, timedelta, timezone
+
+        since = datetime.now(timezone.utc) - timedelta(hours=6)
+        client.webhooks.replay("whk_01krdgeqcxet5s7t44vh8rt9mg", since=since.isoformat())
+        ```
+        """
+        body = to_wire(
+            WebhookReplayRequest,
+            {
+                "since": since,
+                "until": until,
+            },
+        )
+        self._write_none(
+            "POST",
+            f"/v1/webhooks/{quote(webhook_id, safe='')}/replay",
+            body,
             options,
         )
 
@@ -436,6 +475,37 @@ class AsyncWebhooksBase(AsyncResource):
                 "after": after,
             },
             WebhookAttemptList,
+            options,
+        )
+
+    async def replay(
+        self,
+        webhook_id: str,
+        *,
+        since: str | None = None,
+        until: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Queue redelivery of this endpoint's failed attempts in a window (default: the last 24 hours). An event is skipped only if one of its attempts inside the window was delivered, so re-running a replay whose `until` has passed redelivers everything the first one sent; the receiver must deduplicate on `webhook-id`. Only failed attempts are replayed, the window reaches back at most three days, and a paused endpoint redelivers nothing until it is re-enabled. One replay covers at most the oldest 10,000 events in the window. Nothing is returned beyond acceptance; each redelivery is one attempt, so check the outcome with the delivery attempts list. Limited to 20 per organization per UTC day.
+
+        ```python
+        from datetime import datetime, timedelta, timezone
+
+        since = datetime.now(timezone.utc) - timedelta(hours=6)
+        await client.webhooks.replay("whk_01krdgeqcxet5s7t44vh8rt9mg", since=since.isoformat())
+        ```
+        """
+        body = to_wire(
+            WebhookReplayRequest,
+            {
+                "since": since,
+                "until": until,
+            },
+        )
+        await self._write_none(
+            "POST",
+            f"/v1/webhooks/{quote(webhook_id, safe='')}/replay",
+            body,
             options,
         )
 

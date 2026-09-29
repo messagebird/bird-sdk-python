@@ -7,6 +7,7 @@ from bird import Bird
 from bird import APIStatusError, RateLimitError, ValidationError
 from bird import AsyncBird
 from bird import EmailMessage
+from datetime import datetime, timedelta, timezone
 
 client = Bird(api_key="bk_eu1_example")
 request: Any = None
@@ -1657,11 +1658,16 @@ async def _ex_251() -> None:
 
 
 async def _ex_252() -> None:
+    since = datetime.now(timezone.utc) - timedelta(hours=6)
+    client.webhooks.replay("whk_01krdgeqcxet5s7t44vh8rt9mg", since=since.isoformat())
+
+
+async def _ex_253() -> None:
     rotated = client.webhooks.rotate_secret("whk_01krdgeqcxet5s7t44vh8rt9mg")
     print(rotated.secret)
 
 
-async def _ex_253() -> None:
+async def _ex_254() -> None:
     result = client.webhooks.test(
         "whk_01krdgeqcxet5s7t44vh8rt9mg",
         event_type="email.delivered",
@@ -1669,14 +1675,14 @@ async def _ex_253() -> None:
     print(result.status)
 
 
-async def _ex_254() -> None:
+async def _ex_255() -> None:
     # Pass the RAW request body (bytes) and the request headers.
     event = client.webhooks.unwrap(request.body, request.headers)
     if event.root.type == "email.delivered":
         print(event.root.data.email_id)
 
 
-async def _ex_255() -> None:
+async def _ex_256() -> None:
     endpoint = client.webhooks.update(
         "whk_01krdgeqcxet5s7t44vh8rt9mg",
         events=["email.delivered"],
@@ -1684,22 +1690,22 @@ async def _ex_255() -> None:
     print(endpoint.events)
 
 
-async def _ex_256() -> None:
+async def _ex_257() -> None:
     account = client.whatsapp.business_accounts.get("waa_01krdgeqcxet5s7t44vh8rt9mg")
     print(account.account_review_status, account.business_verification_status)
 
 
-async def _ex_257() -> None:
+async def _ex_258() -> None:
     for account in client.whatsapp.business_accounts.list():
         print(account.id, account.name, account.status)
 
 
-async def _ex_258() -> None:
+async def _ex_259() -> None:
     msg = client.whatsapp.get("wa_abc123")
     print(msg.id, msg.status)
 
 
-async def _ex_259() -> None:
+async def _ex_260() -> None:
     group = client.whatsapp.groups.create(
         whatsapp_number_id="wan_01krdgeqcxet5s7t44vh8rt9mg",
         subject="Norwood Fleet — Tuesday route",
@@ -1707,23 +1713,23 @@ async def _ex_259() -> None:
     print(group.id, group.status)  # pending; read it back for the invite link
 
 
-async def _ex_260() -> None:
+async def _ex_261() -> None:
     group = client.whatsapp.groups.delete("wag_01krdgeqcxet5s7t44vh8rt9mg")
     if group.last_operation:
         print(group.last_operation.status)  # pending until WhatsApp confirms it
 
 
-async def _ex_261() -> None:
+async def _ex_262() -> None:
     group = client.whatsapp.groups.get("wag_01krdgeqcxet5s7t44vh8rt9mg")
     print(group.status, group.invite_link)
 
 
-async def _ex_262() -> None:
+async def _ex_263() -> None:
     link = client.whatsapp.groups.invite_link.rotate("wag_01krdgeqcxet5s7t44vh8rt9mg")
     print(link.invite_link)  # every earlier link has stopped working
 
 
-async def _ex_263() -> None:
+async def _ex_264() -> None:
     result = client.whatsapp.groups.join_requests.approve(
         "wag_01krdgeqcxet5s7t44vh8rt9mg",
         join_request_ids=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -1731,12 +1737,12 @@ async def _ex_263() -> None:
     print(len(result.decided), len(result.failed))
 
 
-async def _ex_264() -> None:
+async def _ex_265() -> None:
     for request in client.whatsapp.groups.join_requests.list("wag_01krdgeqcxet5s7t44vh8rt9mg"):
         print(request.id, request.bsuid)
 
 
-async def _ex_265() -> None:
+async def _ex_266() -> None:
     result = client.whatsapp.groups.join_requests.reject(
         "wag_01krdgeqcxet5s7t44vh8rt9mg",
         join_request_ids=["wgj_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -1745,12 +1751,12 @@ async def _ex_265() -> None:
         print(failure.join_request_id, failure.error.description)
 
 
-async def _ex_266() -> None:
+async def _ex_267() -> None:
     for group in client.whatsapp.groups.list():
         print(group.id, group.subject, group.participant_count)
 
 
-async def _ex_267() -> None:
+async def _ex_268() -> None:
     group = client.whatsapp.groups.participants.remove(
         "wag_01krdgeqcxet5s7t44vh8rt9mg",
         "BR.1566655121691972",
@@ -1758,7 +1764,7 @@ async def _ex_267() -> None:
     print(len(group.participants or []))
 
 
-async def _ex_268() -> None:
+async def _ex_269() -> None:
     pin = client.whatsapp.groups.pins.create(
         "wag_01krdgeqcxet5s7t44vh8rt9mg",
         message_id="wam_01kya19eknftrs2s6p82asmvnh",
@@ -1766,7 +1772,7 @@ async def _ex_268() -> None:
     print(pin.pinned_until)
 
 
-async def _ex_269() -> None:
+async def _ex_270() -> None:
     group = client.whatsapp.groups.pins.delete(
         "wag_01krdgeqcxet5s7t44vh8rt9mg",
         "wam_01kya19eknftrs2s6p82asmvnh",
@@ -1774,7 +1780,7 @@ async def _ex_269() -> None:
     print(len(group.pinned_messages or []))
 
 
-async def _ex_270() -> None:
+async def _ex_271() -> None:
     group = client.whatsapp.groups.update(
         "wag_01krdgeqcxet5s7t44vh8rt9mg",
         subject="Norwood Fleet — Wednesday route",
@@ -1782,7 +1788,7 @@ async def _ex_270() -> None:
     print(group.last_operation)  # pending until WhatsApp reports back
 
 
-async def _ex_271() -> None:
+async def _ex_272() -> None:
     rule = client.whatsapp.keyword_rules.create(
         operation="opt_out",
         country="US",  # the SENDER's country, from their own number
@@ -1792,24 +1798,24 @@ async def _ex_271() -> None:
     print(rule.id, rule.effective_keywords)
 
 
-async def _ex_272() -> None:
+async def _ex_273() -> None:
     # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one; STOP never stops working.
     client.whatsapp.keyword_rules.delete("wkr_01m2kj8x4te9p0rr7e5w2n1abc")
 
 
-async def _ex_273() -> None:
+async def _ex_274() -> None:
     # Bird's rules and yours share the wkr_ id space; scope tells them apart.
     rule = client.whatsapp.keyword_rules.get("wkr_01m2kj8x4te9p0rr7e5w2n1abc")
     print(rule.scope, rule.reply)
 
 
-async def _ex_274() -> None:
+async def _ex_275() -> None:
     rules = client.whatsapp.keyword_rules.list(operation="opt_out")
     for rule in rules.data or []:
         print(rule.scope, rule.effective_keywords)
 
 
-async def _ex_275() -> None:
+async def _ex_276() -> None:
     # Omitting keywords leaves the set alone; an empty list clears your additions
     # back to Bird's.
     rule = client.whatsapp.keyword_rules.update(
@@ -1818,64 +1824,64 @@ async def _ex_275() -> None:
     print(rule.effective_keywords)
 
 
-async def _ex_276() -> None:
+async def _ex_277() -> None:
     for msg in client.whatsapp.list(status=["delivered"]):
         print(msg.id, msg.status)
 
 
-async def _ex_277() -> None:
+async def _ex_278() -> None:
     events = client.whatsapp.list_events("wa_abc123")
     for event in events.data:
         print(event.type, event.occurred_at)
 
 
-async def _ex_278() -> None:
+async def _ex_279() -> None:
     ack = client.whatsapp.mark_read("wam_01krdgeqcxet5s7t44vh8rt9mg", typing_indicator=True)
     print(ack.typing_indicator)
 
 
-async def _ex_279() -> None:
+async def _ex_280() -> None:
     media = client.whatsapp.messages.media(
         "wam_01kya19eknftrs2s6p82asmvnh", "waf_01kyb2m4xq7whs0d8n3prv6tez"
     )
     print(media.content_type, media.content_length)
 
 
-async def _ex_280() -> None:
+async def _ex_281() -> None:
     number = client.whatsapp.numbers.get("wan_01krdgeqcxet5s7t44vh8rt9mg")
     print(number.status, number.quality_rating, number.messaging_limit)
 
 
-async def _ex_281() -> None:
+async def _ex_282() -> None:
     for number in client.whatsapp.numbers.list(status=["connected"]):
         print(number.id, number.phone_number, number.status)
 
 
-async def _ex_282() -> None:
+async def _ex_283() -> None:
     for event in client.whatsapp.numbers.list_events("wan_01krdgeqcxet5s7t44vh8rt9mg"):
         print(event.created_at, event.type, event.summary)
 
 
-async def _ex_283() -> None:
+async def _ex_284() -> None:
     profile = client.whatsapp.numbers.profile.get("wan_01krdgeqcxet5s7t44vh8rt9mg")
     print(profile.display_name, profile.description)
 
 
-async def _ex_284() -> None:
+async def _ex_285() -> None:
     for event in client.whatsapp.reaction.list_events("wam_01krdgeqcxet5s7t44vh8rt9mg"):
         print(event.id, event.emoji, event.status)
 
 
-async def _ex_285() -> None:
+async def _ex_286() -> None:
     client.whatsapp.reaction.remove("wam_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_286() -> None:
+async def _ex_287() -> None:
     reaction = client.whatsapp.reaction.set("wam_01krdgeqcxet5s7t44vh8rt9mg", emoji="\U0001f44d")
     print(reaction.id, reaction.emoji)
 
 
-async def _ex_287() -> None:
+async def _ex_288() -> None:
     msg = client.whatsapp.send(
         to="+31612345678",
         template="bird_otp",
@@ -1885,67 +1891,67 @@ async def _ex_287() -> None:
     print(msg.id, msg.status)
 
 
-async def _ex_288() -> None:
+async def _ex_289() -> None:
     stats = client.whatsapp.stats.by_country(from_="2026-08-01", to="2026-08-31")
     for row in stats.data or []:
         print(row.country, row.delivery)
 
 
-async def _ex_289() -> None:
+async def _ex_290() -> None:
     stats = client.whatsapp.stats.by_error_code(from_="2026-08-01", to="2026-08-31")
     for row in stats.data or []:
         print(row.error_code, row.count)
 
 
-async def _ex_290() -> None:
+async def _ex_291() -> None:
     stats = client.whatsapp.stats.by_phone_number(from_="2026-08-01", to="2026-08-31")
     for row in stats.data or []:
         print(row.phone_number, row.delivery)
 
 
-async def _ex_291() -> None:
+async def _ex_292() -> None:
     stats = client.whatsapp.stats.by_tag(from_="2026-08-01", to="2026-08-31")
     for row in stats.data or []:
         print(row.tag, row.delivery)
 
 
-async def _ex_292() -> None:
+async def _ex_293() -> None:
     stats = client.whatsapp.stats.by_template(from_="2026-08-01", to="2026-08-31")
     for row in stats.data or []:
         print(row.template_id, row.delivery)
 
 
-async def _ex_293() -> None:
+async def _ex_294() -> None:
     stats = client.whatsapp.stats.by_template_category(from_="2026-08-01", to="2026-08-31")
     for row in stats.data or []:
         print(row.category, row.delivery)
 
 
-async def _ex_294() -> None:
+async def _ex_295() -> None:
     stats = client.whatsapp.stats.daily(from_="2026-08-01", to="2026-08-31")
     for point in stats.data or []:
         print(point.bucket, point.delivery)
 
 
-async def _ex_295() -> None:
+async def _ex_296() -> None:
     stats = client.whatsapp.stats.hourly(from_="2026-08-30T00:00:00Z", to="2026-08-31T00:00:00Z")
     for point in stats.data or []:
         print(point.bucket, point.delivery)
 
 
-async def _ex_296() -> None:
+async def _ex_297() -> None:
     stats = client.whatsapp.stats.inbound.by_phone_number(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.phone_number, row.received)
 
 
-async def _ex_297() -> None:
+async def _ex_298() -> None:
     stats = client.whatsapp.stats.inbound.daily(from_="2026-05-01", to="2026-05-31")
     for point in stats.data or []:
         print(point.bucket, point.received)
 
 
-async def _ex_298() -> None:
+async def _ex_299() -> None:
     stats = client.whatsapp.stats.inbound.hourly(
         from_="2026-05-30T00:00:00Z", to="2026-05-31T00:00:00Z"
     )
@@ -1953,19 +1959,19 @@ async def _ex_298() -> None:
         print(point.bucket, point.received)
 
 
-async def _ex_299() -> None:
+async def _ex_300() -> None:
     summary = client.whatsapp.stats.inbound.summary(from_="2026-05-01", to="2026-05-31")
     print(summary.received)
 
 
-async def _ex_300() -> None:
+async def _ex_301() -> None:
     summary = client.whatsapp.stats.summary(
         from_="2026-08-01", to="2026-08-31", timezone="Europe/Amsterdam"
     )
     print(summary.delivery, summary.latency)
 
 
-async def _ex_301() -> None:
+async def _ex_302() -> None:
     # Omit waba to block the address for the whole workspace, whichever account
     # sends. With it, your other accounts keep reaching them, and the same
     # address for two accounts is two records.
@@ -1976,41 +1982,41 @@ async def _ex_301() -> None:
     print(suppression.id, suppression.applies_to)
 
 
-async def _ex_302() -> None:
+async def _ex_303() -> None:
     # Resolves a record that has already ended, which the list leaves out.
     suppression = client.whatsapp.suppressions.get("was_01krdgeqcxet5s7t44vh8rt9mg")
     print(suppression.reason, suppression.ended_at or "still in force")
 
 
-async def _ex_303() -> None:
+async def _ex_304() -> None:
     # address is a prefix, so a partial value matches every address under it.
     suppressions = client.whatsapp.suppressions.list(address="+1555")
     for suppression in suppressions.data or []:
         print(suppression.address, suppression.waba or "every account")
 
 
-async def _ex_304() -> None:
+async def _ex_305() -> None:
     # Only a manual suppression can be ended; a recipient's own opt-out is
     # theirs to reverse. The record is kept and still reads back by id.
     client.whatsapp.suppressions.remove("was_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_305() -> None:
+async def _ex_306() -> None:
     tpl = client.whatsapp.templates.get("bird_otp")
     print(tpl.default_language, tpl.available_languages)
 
 
-async def _ex_306() -> None:
+async def _ex_307() -> None:
     for tpl in client.whatsapp.templates.list():
         print(tpl.slug, tpl.status)
 
 
-async def _ex_307() -> None:
+async def _ex_308() -> None:
     version = client.whatsapp.templates.versions.get("bird_otp", "wav_01ky4x8e4genzb7way45txfkm1")
     print(version.id, list(version.languages))
 
 
-async def _ex_308() -> None:
+async def _ex_309() -> None:
     language = client.whatsapp.templates.versions.languages.get(
         "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1", "nl-BE"
     )
@@ -2018,7 +2024,7 @@ async def _ex_308() -> None:
         print(component.type)
 
 
-async def _ex_309() -> None:
+async def _ex_310() -> None:
     languages = client.whatsapp.templates.versions.languages.list(
         "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1"
     )
@@ -2026,11 +2032,11 @@ async def _ex_309() -> None:
         print(language.language, language.status)
 
 
-async def _ex_310() -> None:
+async def _ex_311() -> None:
     for version in client.whatsapp.templates.versions.list("bird_otp"):
         print(version.id, version.version_number)
 
 
-async def _ex_311() -> None:
+async def _ex_312() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)
