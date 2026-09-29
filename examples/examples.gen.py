@@ -1495,21 +1495,6 @@ async def _ex_224() -> None:
 
 
 async def _ex_225() -> None:
-    caller_id = client.voice.caller_ids.get("caller-id")
-    print(caller_id.phone_number, caller_id.status, caller_id.verified_at)
-
-
-async def _ex_226() -> None:
-    for caller_id in client.voice.caller_ids.list():
-        print(caller_id.id, caller_id.phone_number, caller_id.status)
-
-
-async def _ex_227() -> None:
-    caller_id = client.voice.caller_ids.verify("CALLER_ID", code="123456")
-    print(caller_id.id, caller_id.status)
-
-
-async def _ex_228() -> None:
     call = client.voice.calls.create(
         from_="+12025550100",
         to="+12025550101",
@@ -1522,63 +1507,63 @@ async def _ex_228() -> None:
     print(call.id, call.initial_leg_id)
 
 
-async def _ex_229() -> None:
+async def _ex_226() -> None:
     destinations = client.voice.destinations.list()
     for destination in destinations.data:
         print(destination.country_code, destination.enabled, destination.status)
 
 
-async def _ex_230() -> None:
+async def _ex_227() -> None:
     destinations = client.voice.destinations.update(
         destinations=[{"country_code": "PT", "enabled": True}]
     )
     print(len(destinations.data))
 
 
-async def _ex_231() -> None:
+async def _ex_228() -> None:
     call = client.voice.legs.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
     # A call still ringing or connected carries no economics yet.
     print(call.status, call.duration_ms, call.cost)
 
 
-async def _ex_232() -> None:
+async def _ex_229() -> None:
     for leg in client.voice.legs.list():
         print(leg.id, leg.status)
 
 
-async def _ex_233() -> None:
+async def _ex_230() -> None:
     number = client.voice.numbers.get("number-id")
     print(number.phone_number, number.directions)
 
 
-async def _ex_234() -> None:
+async def _ex_231() -> None:
     for number in client.voice.numbers.list():
         print(number.id, number.phone_number, number.country_code)
 
 
-async def _ex_235() -> None:
+async def _ex_232() -> None:
     number = client.voice.numbers.update("number-id", name="Support line")
     print(number.id, number.name)
 
 
-async def _ex_236() -> None:
+async def _ex_233() -> None:
     credential = client.voice.session_credentials.create()
     # The password is returned once. Until expires_at it can place billed calls.
     print(credential.username, credential.realm, credential.expires_at)
 
 
-async def _ex_237() -> None:
+async def _ex_234() -> None:
     trunk = client.voice.trunks.create(
         name="Lisbon office", outbound_enabled=True, inbound_enabled=True
     )
     print(trunk.id, trunk.domain)
 
 
-async def _ex_238() -> None:
+async def _ex_235() -> None:
     client.voice.trunks.delete("trunk-id")
 
 
-async def _ex_239() -> None:
+async def _ex_236() -> None:
     gateway = client.voice.trunks.gateways.create(
         "TRUNK_ID",
         sip_uri="sip:pbx.example.com:5060",
@@ -1588,44 +1573,59 @@ async def _ex_239() -> None:
     print(gateway.id, gateway.priority)
 
 
-async def _ex_240() -> None:
+async def _ex_237() -> None:
     client.voice.trunks.gateways.delete("TRUNK_ID", "GATEWAY_ID")
 
 
-async def _ex_241() -> None:
+async def _ex_238() -> None:
     gateway = client.voice.trunks.gateways.get("TRUNK_ID", "GATEWAY_ID")
     print(gateway.id, gateway.priority)
 
 
-async def _ex_242() -> None:
+async def _ex_239() -> None:
     gateways = client.voice.trunks.gateways.list("TRUNK_ID")
     for gateway in gateways.data:
         print(gateway.id, gateway.priority)
 
 
-async def _ex_243() -> None:
+async def _ex_240() -> None:
     gateway = client.voice.trunks.gateways.update("TRUNK_ID", "GATEWAY_ID", priority=10)
     print(gateway.id, gateway.priority)
 
 
-async def _ex_244() -> None:
+async def _ex_241() -> None:
     trunk = client.voice.trunks.get("trunk-id")
     print(trunk.name, trunk.inbound_enabled, trunk.outbound_enabled)
 
 
-async def _ex_245() -> None:
+async def _ex_242() -> None:
     for trunk in client.voice.trunks.list():
         # A trunk with no allow list and no session credentials admits nothing.
         print(trunk.id, trunk.domain, trunk.inbound_enabled)
 
 
-async def _ex_246() -> None:
+async def _ex_243() -> None:
     trunk = client.voice.trunks.update(
         "spt_01krdgeqcxet5s7t44vh8rt9mg",
         # Each list replaces the previous one, so send what you want to end up with.
         ip_acls=[{"cidr": "203.0.113.0/24", "description": "Amsterdam PBX"}],
     )
     print(trunk.ip_acls)
+
+
+async def _ex_244() -> None:
+    verified_number = client.voice.verified_numbers.get("vvn_01krdgeqcxet5s7t44vh8rt9mg")
+    print(verified_number.phone_number, verified_number.status, verified_number.verified_at)
+
+
+async def _ex_245() -> None:
+    for verified_number in client.voice.verified_numbers.list():
+        print(verified_number.id, verified_number.phone_number, verified_number.status)
+
+
+async def _ex_246() -> None:
+    verified_number = client.voice.verified_numbers.verify("vvn_01krdgeqcxet5s7t44vh8rt9mg", code="123456")
+    print(verified_number.id, verified_number.status)
 
 
 async def _ex_247() -> None:

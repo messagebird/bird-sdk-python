@@ -159,7 +159,7 @@ from bird._generated import (
     VoiceTrunkGateway,
     VoiceTrunkGatewayList,
     VoiceNumber,
-    VoiceCallerID,
+    VoiceVerifiedNumber,
     VoiceDestinationList,
     VoiceSessionCredential,
     VoiceLegList,
@@ -279,9 +279,9 @@ from bird.resources.verify_verifications_gen import (
 )
 from bird.resources.voice_calls_gen import CreateVoiceCallSequenceRequest, VoiceCallsCreateParams
 from bird.resources.voice_legs_gen import VoiceLegsListParams
-from bird.resources.voice_caller_ids_gen import (
-    VoiceCallerIdsListParams,
-    VoiceCallerIdsVerifyParams,
+from bird.resources.voice_verified_numbers_gen import (
+    VoiceVerifiedNumbersListParams,
+    VoiceVerifiedNumbersVerifyParams,
 )
 from bird.resources.voice_destinations_gen import (
     DestinationSetting,
@@ -435,7 +435,7 @@ from bird._open_enums import (
     SMSSuppressionOrigin,
     SMSSuppressionReason,
     TemplateLanguageStatus,
-    VoiceCallerIDStatus,
+    VoiceVerifiedNumberStatus,
     VerificationAttemptFailureReason,
     VerificationChannel,
     VerificationTerminalReason,
@@ -897,8 +897,8 @@ __all__ = [
     "VoiceCallsCreateParams",
     "VoiceCall",
     "VoiceLegsListParams",
-    "VoiceCallerIdsListParams",
-    "VoiceCallerIdsVerifyParams",
+    "VoiceVerifiedNumbersListParams",
+    "VoiceVerifiedNumbersVerifyParams",
     "DestinationSetting",
     "VoiceDestinationsUpdateParams",
     "VoiceNumbersListParams",
@@ -914,7 +914,7 @@ __all__ = [
     "VoiceTrunkGateway",
     "VoiceTrunkGatewayList",
     "VoiceNumber",
-    "VoiceCallerID",
+    "VoiceVerifiedNumber",
     "VoiceDestinationList",
     "VoiceSessionCredential",
     "VoiceLegList",
@@ -947,7 +947,7 @@ __all__ = [
     "SMSSuppressionReason",
     "TemplateLanguageStatus",
     "TemplateStatus",
-    "VoiceCallerIDStatus",
+    "VoiceVerifiedNumberStatus",
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",

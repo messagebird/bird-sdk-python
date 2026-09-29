@@ -95,18 +95,18 @@ def voice_numbers_update() -> None:
     number = client.voice.numbers.update("number-id", name="Support line")
     print(number.id, number.name)
 
-def voice_caller_ids_list() -> None:
-    for caller_id in client.voice.caller_ids.list():
-        print(caller_id.id, caller_id.phone_number, caller_id.status)
+def voice_verified_numbers_list() -> None:
+    for verified_number in client.voice.verified_numbers.list():
+        print(verified_number.id, verified_number.phone_number, verified_number.status)
 
-def voice_caller_ids_get() -> None:
-    caller_id = client.voice.caller_ids.get("caller-id")
-    print(caller_id.phone_number, caller_id.status, caller_id.verified_at)
+def voice_verified_numbers_get() -> None:
+    verified_number = client.voice.verified_numbers.get("vvn_01krdgeqcxet5s7t44vh8rt9mg")
+    print(verified_number.phone_number, verified_number.status, verified_number.verified_at)
 
 
-def voice_caller_ids_verify() -> None:
-    caller_id = client.voice.caller_ids.verify("CALLER_ID", code="123456")
-    print(caller_id.id, caller_id.status)
+def voice_verified_numbers_verify() -> None:
+    verified_number = client.voice.verified_numbers.verify("vvn_01krdgeqcxet5s7t44vh8rt9mg", code="123456")
+    print(verified_number.id, verified_number.status)
 
 
 def voice_destinations_update() -> None:

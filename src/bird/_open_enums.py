@@ -456,14 +456,6 @@ class VerificationTerminalReason:
     UNDELIVERABLE: Final = "undeliverable"
 
 
-class VoiceCallerIDStatus:
-    """Values of VoiceCallerIDStatus known at this SDK version (open enum)."""
-
-    FAILED: Final = "failed"
-    PENDING: Final = "pending"
-    VERIFIED: Final = "verified"
-
-
 class VoicePartyEndpointType:
     """Values of VoicePartyEndpointType known at this SDK version (open enum)."""
 
@@ -473,6 +465,14 @@ class VoicePartyEndpointType:
     SIP: Final = "sip"
     VOICEMAIL: Final = "voicemail"
     WEBHOOK: Final = "webhook"
+
+
+class VoiceVerifiedNumberStatus:
+    """Values of VoiceVerifiedNumberStatus known at this SDK version (open enum)."""
+
+    FAILED: Final = "failed"
+    PENDING: Final = "pending"
+    VERIFIED: Final = "verified"
 
 
 class WhatsAppBusinessAccountMarketingMessagesStatus:
@@ -801,8 +801,8 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
-    "VoiceCallerIDStatus",
     "VoicePartyEndpointType",
+    "VoiceVerifiedNumberStatus",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
     "WhatsAppBusinessAccountReviewStatus",
     "WhatsAppBusinessAccountStatus",

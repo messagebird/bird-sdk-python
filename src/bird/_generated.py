@@ -19434,7 +19434,7 @@ class EventVoiceCallAnsweredData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     direction: Annotated[VoiceCallDirection, Field(
-        description="Whether the call originated from your PBX (outbound) or arrived from a remote party (inbound).",
+        description="Whether the call was placed from your side, by your PBX, the API, the browser or Bird dialing onward for you (outbound), or arrived from a remote party (inbound).",
     )]
     from_: Annotated[str, Field(
         alias="from",
@@ -19497,7 +19497,7 @@ class EventVoiceCallEndedData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     direction: Annotated[VoiceCallDirection, Field(
-        description="Whether the call originated from your PBX (outbound) or arrived from a remote party (inbound).",
+        description="Whether the call was placed from your side, by your PBX, the API, the browser or Bird dialing onward for you (outbound), or arrived from a remote party (inbound).",
     )]
     from_: Annotated[str, Field(
         alias="from",
@@ -19566,7 +19566,7 @@ class EventVoiceCallInitiatedData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     direction: Annotated[VoiceCallDirection, Field(
-        description="Whether the call originated from your PBX (outbound) or arrived from a remote party (inbound).",
+        description="Whether the call was placed from your side, by your PBX, the API, the browser or Bird dialing onward for you (outbound), or arrived from a remote party (inbound).",
     )]
     from_: Annotated[str, Field(
         alias="from",
@@ -20360,7 +20360,7 @@ class VoicePartyEndpoint(BaseModel):
 class VoiceParty(BaseModel):
     model_config = ConfigDict(extra="allow")
     endpoint: Annotated[Optional[VoicePartyEndpoint], Field(
-        description="What kind of participant sat on this side of a leg, and the coordinate that kind carries: a telephone endpoint off the platform, a SIP or WebRTC endpoint, Bird answering, or the platform placing a leg onward. It does not name a person.\n`null` on an observation this API could not read. The entry stays, because the session counted it when it deduplicated, and dropping it here would report fewer participants than were observed.",
+        description="What kind of participant sat on this side of a leg, and the coordinate that kind carries: a telephone endpoint off the platform, a SIP or WebRTC endpoint, Bird answering, or the platform placing a leg onward. It does not name a person.\n`null` on an observation this API could not read. The entry stays, because the call counted it when it deduplicated, and dropping it here would report fewer participants than were observed.",
     )] = None
     address: Annotated[Optional[str], Field(
         description="This side's own address, in E.164 or as a `sip:` URI. `null` when the observation carried none, which does not say whether one was withheld, missing, or nonexistent.",
@@ -20953,7 +20953,7 @@ class VoiceNumberProviderAllocation(BaseModel):
     )]
 
 
-class VoiceCallerIDStatus(str, Enum):
+class VoiceVerifiedNumberStatus(str, Enum):
     pending = "pending"
     verified = "verified"
     failed = "failed"
@@ -20964,8 +20964,8 @@ class VoiceNumberProviderVerifiedNumber(BaseModel):
     type: Annotated[Literal["verified_number"], Field(
         description="Where a number came from. `allocation` is a number we allocated to your workspace, and the only kind whose calls reach us. `verified_number` is a number from another carrier that you registered and proved you control, so it can be presented on a call you place.",
     )]
-    status: Annotated[Annotated[Union[VoiceCallerIDStatus, str], Field(union_mode="left_to_right")], Field(
-        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the caller ID again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
+    status: Annotated[Annotated[Union[VoiceVerifiedNumberStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Verification state of the verified number.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the verified number again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
     )]
     verified_at: Annotated[Optional[str], Field(
         description="When control of this number was last proven. Null until it is.",
@@ -21136,16 +21136,16 @@ class VoiceNumberUpdate(BaseModel):
     inbound_configuration: Optional[VoiceInboundConfigurationPut] = None
 
 
-class VoiceCallerIDID(RootModel[str]):
+class VoiceVerifiedNumberID(RootModel[str]):
     root: str
 
 
-class VoiceCallerID(BaseModel):
+class VoiceVerifiedNumber(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
-        examples=["vci_01krdgeqcxet5s7t44vh8rt9mg"],
+        examples=["vvn_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
-        pattern="^vci_[0-9a-hjkmnp-tv-z]{26}$",
+        pattern="^vvn_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21153,32 +21153,32 @@ class VoiceCallerID(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     phone_number: Annotated[str, Field(
-        description="The phone number in E.164 format registered as a caller ID.",
+        description="The phone number in E.164 format registered as an outbound caller ID.",
         examples=[+14155551234],
         min_length=1,
     )]
     name: Annotated[Optional[str], Field(
-        description="Your label for this caller ID, to tell several registered numbers apart. `null` when the caller ID has no label. It is yours to choose and appears nowhere on a call, so changing it never affects what the person you are calling sees. Set it with the caller ID update operation.",
+        description="Your label for this verified number, to tell several registered numbers apart. `null` when the verified number has no label. It is yours to choose and appears nowhere on a call, so changing it never affects what the person you are calling sees. Set it with the verified number update operation.",
         examples=["Support line"],
         max_length=100,
         min_length=1,
     )]
-    status: Annotated[Annotated[Union[VoiceCallerIDStatus, str], Field(union_mode="left_to_right")], Field(
-        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the caller ID again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
+    status: Annotated[Annotated[Union[VoiceVerifiedNumberStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Verification state of the verified number.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the verified number again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
     )]
     outbound_enabled: Annotated[bool, Field(
         description="Whether outbound caller ID activation has completed. A verified number can remain inactive until activation requirements are met. Outbound calls remain subject to routing and number ownership requirements.",
     )]
     verified_at: Annotated[Optional[str], Field(
-        description="When the caller ID was verified. `null` when its status is `pending` or `failed`.",
+        description="When the verified number was verified. `null` when its status is `pending` or `failed`.",
     )]
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
 
-class VoiceCallerIDList(BaseModel):
+class VoiceVerifiedNumberList(BaseModel):
     model_config = ConfigDict(extra="allow")
-    data: List[VoiceCallerID]
+    data: List[VoiceVerifiedNumber]
     next_cursor: Annotated[Optional[str], Field(
         description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
@@ -21193,7 +21193,7 @@ class VoiceCallerIDList(BaseModel):
     )]
 
 
-class VoiceCallerIDVerifyRequest(BaseModel):
+class VoiceVerifiedNumberVerifyRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     code: Annotated[Optional[str], Field(
         description="The 6-digit verification code read out by the verification call. Required until ownership is verified. Omit it when retrying activation of an already verified number.",
@@ -21491,7 +21491,7 @@ class VoiceCall(BaseModel):
         description="When the call's last leg ended. `null` while any leg is still in progress. Recordings and transcripts can still arrive after this instant, so it does not mean the call is finished being written.",
     )] = None
     live: Annotated[bool, Field(
-        description="Whether any leg in the call currently holds a lease. `false` covers the interval between a leg ending and its settlement being confirmed, and says nothing about whether transcription has finished.",
+        description="Whether any leg in the call is still held live. A leg stays live until its end is recorded or, when no end is observed, until its liveness window expires, so this can remain `true` briefly after a disconnect. `false` covers the interval between a leg ending and its settlement being confirmed, and says nothing about whether transcription has finished.",
     )]
     has_recording: Annotated[bool, Field(
         description="Whether the call ever produced a recording. It stays `true` for the life of the call, so it records that a recording was made rather than promising one can still be fetched.",
