@@ -56,7 +56,7 @@ def amb_conversations_get() -> None:
     print(result)
 
 def amb_conversations_update() -> None:
-    result = client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], read=False)
+    result = client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], inbox_status="resolved")
     print(result)
 
 def amb_conversations_list_messages() -> None:

@@ -365,17 +365,18 @@ class EmailStats(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailStatsQueryGroup]:
-        """Select email metrics over a date or instant window, optionally grouped by one dimension with complete time series per group. Events are selected and bucketed by when they occurred, including activity on messages sent earlier. Filters match recorded event context. Unsupported combinations and unavailable history return 422. Follow cursors by replaying the original body and changing its cursor fields; the response period has an exclusive end and must not replace the request end. Use a new idempotency key for each continuation page; reuse a key only to retry the same page.
+        """Query email analytics and stats for marketing and transactional delivery, bounces, opens, clicks, engagement rates, and latency percentiles. Use for comparisons, combined filters, ranked groups by template, campaign tag, recipient domain, or mailbox provider, and complete time series. If the tag name and requested values are supplied, call this tool directly with filters.tag; no tag lookup is needed. Use `email.stats.by_tag` only to discover unknown tags. Select grain=quarter_hour for 15-minute activity; omit group_by for a summary. Check group_by and filter compatibility before calling. Country, region, city, and device/client dimensions support engagement counts only: do not request delivered or open_rate for them. Explain an unsupported combination before offering a different report. Every selected metric must support every grouping and filter dimension. Campaigns may use tags or broadcasts; templates can span campaigns. Establish activity from period-scoped stats, not resource creation dates. Use category for recorded marketing/transactional classification and resolve template names to IDs. Event-time windows include engagement on earlier sends; they cannot select a send-date cohort or establish send batches. Compare periods independently with the same filters and metrics. Use `email.stats.summary` for a supported single-filter aggregate with built-in comparison. Use returned period metrics; distinct counts need not add up across buckets or groups. Read metric descriptions for rate denominators and eligible latency samples. Engagement cannot establish a human count; latency percentiles cannot establish maxima or exact threshold counts. Delivery describes mail-server acceptance. Inbox placement, reading time, revenue, and conversion attribution require other evidence; this limitation concerns email stats, not the whole platform. Unsupported combinations and unavailable history return 422; explain a limitation before changing the population or period. Follow cursors by replaying the original body and changing its cursor fields; the response period has an exclusive end and must not replace the request end. Use a new idempotency key for each continuation page; reuse a key only to retry the same page.
 
         ```python
-        for group in client.email.stats.query(
-            from_="2026-08-03",
-            to="2026-08-16",
+        stats = client.email.stats.query(
+            from_="2026-09-23",
+            to="2026-09-24",
             metrics=["delivered", "bounce_rate"],
             group_by="recipient_domain",
             grain="week",
             limit=25,
-        ):
+        )
+        for group in stats.data:
             print(group.dimensions, group.metrics, group.series)
         ```
         """
@@ -415,7 +416,7 @@ class EmailStats(Resource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsSummary:
-        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. The `from` and `to` values are both `YYYY-MM-DD` days or both RFC 3339 instants (hour grain). Add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use `email.stats.daily` or `email.stats.hourly`.
+        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. The `from` and `to` values are both `YYYY-MM-DD` days or both RFC 3339 instants (hour grain). Add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use `email.stats.daily` or `email.stats.hourly`. For multiple filters, selected metrics, or complete grouped series at 15-minute or calendar grains, use `email.stats.query`.
 
         ```python
         summary = client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
@@ -454,7 +455,7 @@ class EmailStats(Resource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use `email.stats.hourly`; for one aggregate row use `email.stats.summary`.
+        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use `email.stats.hourly`; for one aggregate row use `email.stats.summary`. For multiple filters, selected metrics, or complete grouped series at 15-minute or calendar grains, use `email.stats.query`.
 
         ```python
         stats = client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
@@ -493,7 +494,7 @@ class EmailStats(Resource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as `email.stats.daily`; for longer ranges use `email.stats.daily`, for one aggregate row use `email.stats.summary`.
+        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as `email.stats.daily`; for longer ranges use `email.stats.daily`, for one aggregate row use `email.stats.summary`. For multiple filters, selected metrics, or complete grouped series at 15-minute or calendar grains, use `email.stats.query`.
 
         ```python
         stats = client.email.stats.hourly(
@@ -537,7 +538,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsTagsResponse:
-        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row.
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row. Skip this lookup when the user already supplies the tag name and desired values; call `email.stats.query` directly with filters.tag. Omit name to discover tag names and values observed in the period; set name to restrict the population to that tag name. Follow cursors when discovery spans multiple pages. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` with the discovered tag name and values.
 
         ```python
         stats = client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
@@ -581,7 +582,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailTagStatsPoint]:
-        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row."""
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row. Skip this lookup when the user already supplies the tag name and desired values; call `email.stats.query` directly with filters.tag. Omit name to discover tag names and values observed in the period; set name to restrict the population to that tag name. Follow cursors when discovery spans multiple pages. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` with the discovered tag name and values."""
         query = {
             "name": name,
             "starting_after": starting_after,
@@ -1036,7 +1037,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByTemplateResponse:
-        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter.
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` grouped by template_id. A template may be shared by several campaigns; establish campaign membership separately when that is the question.
 
         ```python
         stats = client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
@@ -1077,7 +1078,7 @@ class EmailStats(Resource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailTemplateStatsPoint]:
-        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter."""
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` grouped by template_id. A template may be shared by several campaigns; establish campaign membership separately when that is the question."""
         query = {
             "starting_after": starting_after,
             "ending_before": ending_before,
@@ -1368,7 +1369,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity.
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period.
 
         ```python
         stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -1403,7 +1404,7 @@ class EmailStats(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailBroadcastStatsPoint]:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity."""
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period."""
         query = {
             "starting_after": starting_after,
             "ending_before": ending_before,
@@ -1434,17 +1435,18 @@ class AsyncEmailStats(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailStatsQueryGroup]:
-        """Select email metrics over a date or instant window, optionally grouped by one dimension with complete time series per group. Events are selected and bucketed by when they occurred, including activity on messages sent earlier. Filters match recorded event context. Unsupported combinations and unavailable history return 422. Follow cursors by replaying the original body and changing its cursor fields; the response period has an exclusive end and must not replace the request end. Use a new idempotency key for each continuation page; reuse a key only to retry the same page.
+        """Query email analytics and stats for marketing and transactional delivery, bounces, opens, clicks, engagement rates, and latency percentiles. Use for comparisons, combined filters, ranked groups by template, campaign tag, recipient domain, or mailbox provider, and complete time series. If the tag name and requested values are supplied, call this tool directly with filters.tag; no tag lookup is needed. Use `email.stats.by_tag` only to discover unknown tags. Select grain=quarter_hour for 15-minute activity; omit group_by for a summary. Check group_by and filter compatibility before calling. Country, region, city, and device/client dimensions support engagement counts only: do not request delivered or open_rate for them. Explain an unsupported combination before offering a different report. Every selected metric must support every grouping and filter dimension. Campaigns may use tags or broadcasts; templates can span campaigns. Establish activity from period-scoped stats, not resource creation dates. Use category for recorded marketing/transactional classification and resolve template names to IDs. Event-time windows include engagement on earlier sends; they cannot select a send-date cohort or establish send batches. Compare periods independently with the same filters and metrics. Use `email.stats.summary` for a supported single-filter aggregate with built-in comparison. Use returned period metrics; distinct counts need not add up across buckets or groups. Read metric descriptions for rate denominators and eligible latency samples. Engagement cannot establish a human count; latency percentiles cannot establish maxima or exact threshold counts. Delivery describes mail-server acceptance. Inbox placement, reading time, revenue, and conversion attribution require other evidence; this limitation concerns email stats, not the whole platform. Unsupported combinations and unavailable history return 422; explain a limitation before changing the population or period. Follow cursors by replaying the original body and changing its cursor fields; the response period has an exclusive end and must not replace the request end. Use a new idempotency key for each continuation page; reuse a key only to retry the same page.
 
         ```python
-        async for group in client.email.stats.query(
-            from_="2026-08-03",
-            to="2026-08-16",
+        stats = await client.email.stats.query(
+            from_="2026-09-23",
+            to="2026-09-24",
             metrics=["delivered", "bounce_rate"],
             group_by="recipient_domain",
             grain="week",
             limit=25,
-        ):
+        )
+        for group in stats.data:
             print(group.dimensions, group.metrics, group.series)
         ```
         """
@@ -1484,7 +1486,7 @@ class AsyncEmailStats(AsyncResource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsSummary:
-        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. The `from` and `to` values are both `YYYY-MM-DD` days or both RFC 3339 instants (hour grain). Add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use `email.stats.daily` or `email.stats.hourly`.
+        """Aggregate email KPIs for one period: sends, delivered, bounces, complaints, opens, clicks, their rates, and latency percentiles. The `from` and `to` values are both `YYYY-MM-DD` days or both RFC 3339 instants (hour grain). Add `compare=previous_period` for deltas versus the prior window. For a per-day or per-hour series use `email.stats.daily` or `email.stats.hourly`. For multiple filters, selected metrics, or complete grouped series at 15-minute or calendar grains, use `email.stats.query`.
 
         ```python
         summary = await client.email.stats.summary(from_="2026-05-01", to="2026-05-25")
@@ -1523,7 +1525,7 @@ class AsyncEmailStats(AsyncResource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use `email.stats.hourly`; for one aggregate row use `email.stats.summary`.
+        """Per-day email stats series (counts, rates, latency percentiles), gap-filled with zero rows, max 365 days. At most one filter of `category`, `sending_domain`, `tag`, `sending_ip`, `recipient_domain`, `template`. For hour resolution use `email.stats.hourly`; for one aggregate row use `email.stats.summary`. For multiple filters, selected metrics, or complete grouped series at 15-minute or calendar grains, use `email.stats.query`.
 
         ```python
         stats = await client.email.stats.daily(from_="2026-05-01", to="2026-05-25")
@@ -1562,7 +1564,7 @@ class AsyncEmailStats(AsyncResource):
         template: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsResponse:
-        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as `email.stats.daily`; for longer ranges use `email.stats.daily`, for one aggregate row use `email.stats.summary`.
+        """Per-hour email stats series, gap-filled with zero rows, max 720 hours (30 days). Takes the same single-dimension filters as `email.stats.daily`; for longer ranges use `email.stats.daily`, for one aggregate row use `email.stats.summary`. For multiple filters, selected metrics, or complete grouped series at 15-minute or calendar grains, use `email.stats.query`.
 
         ```python
         stats = await client.email.stats.hourly(
@@ -1606,7 +1608,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsTagsResponse:
-        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row.
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row. Skip this lookup when the user already supplies the tag name and desired values; call `email.stats.query` directly with filters.tag. Omit name to discover tag names and values observed in the period; set name to restrict the population to that tag name. Follow cursors when discovery spans multiple pages. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` with the discovered tag name and values.
 
         ```python
         stats = await client.email.stats.by_tag(from_="2026-05-01", to="2026-05-25", sort="delivered")
@@ -1650,7 +1652,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailTagStatsPoint]:
-        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row."""
+        """Email delivery and engagement stats grouped by tag, one row per `name:value` pair set at send time. Rows are ranked by `sort`, `processed` by default. Set `include_trend=true` to add a per-bucket rate series to each row. Skip this lookup when the user already supplies the tag name and desired values; call `email.stats.query` directly with filters.tag. Omit name to discover tag names and values observed in the period; set name to restrict the population to that tag name. Follow cursors when discovery spans multiple pages. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` with the discovered tag name and values."""
         query = {
             "name": name,
             "starting_after": starting_after,
@@ -2105,7 +2107,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByTemplateResponse:
-        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter.
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` grouped by template_id. A template may be shared by several campaigns; establish campaign membership separately when that is the question.
 
         ```python
         stats = await client.email.stats.by_template(from_="2026-05-01", to="2026-05-25")
@@ -2146,7 +2148,7 @@ class AsyncEmailStats(AsyncResource):
         trend_grain: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailTemplateStatsPoint]:
-        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter."""
+        """Email delivery and engagement stats grouped by the template used at send time, keyed by template id (`emt_…`); only templated sends appear. A single template's trend over time comes from `email.stats.daily` with its `template` filter. For combined filters, selected metrics, or 15-minute series, use `email.stats.query` grouped by template_id. A template may be shared by several campaigns; establish campaign membership separately when that is the question."""
         query = {
             "starting_after": starting_after,
             "ending_before": ending_before,
@@ -2437,7 +2439,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity.
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period.
 
         ```python
         stats = await client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -2472,7 +2474,7 @@ class AsyncEmailStats(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailBroadcastStatsPoint]:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity."""
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period."""
         query = {
             "starting_after": starting_after,
             "ending_before": ending_before,

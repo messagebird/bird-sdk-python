@@ -28,7 +28,7 @@ class EmailInboxInsightsBenchmarks(Resource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsIndustryBenchmark:
-        """Read the industry placement benchmark for a verified domain owned by the workspace. Compare its median with the separate placement report; the benchmark uses default weighting rather than the domain’s audience mix. No date window or previous-period comparison is accepted. A no_data status can mean the industry is unknown or has too few measured senders. API-key calls require Insights preview access for your organization.
+        """Read the industry placement benchmark for a verified owned domain. Its median is a percentage with default weighting, which can differ from the domain's audience mix. Compare with placement only while labeling both sources and windows. window_days and freshness describe the cohort's computed period; absent window_days means the period is unspecified. No date window or prior comparison is accepted. no_data can mean an unknown industry or too few measured senders. A gap is descriptive, not evidence of a particular cause. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.
@@ -60,7 +60,7 @@ class AsyncEmailInboxInsightsBenchmarks(AsyncResource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsIndustryBenchmark:
-        """Read the industry placement benchmark for a verified domain owned by the workspace. Compare its median with the separate placement report; the benchmark uses default weighting rather than the domain’s audience mix. No date window or previous-period comparison is accepted. A no_data status can mean the industry is unknown or has too few measured senders. API-key calls require Insights preview access for your organization.
+        """Read the industry placement benchmark for a verified owned domain. Its median is a percentage with default weighting, which can differ from the domain's audience mix. Compare with placement only while labeling both sources and windows. window_days and freshness describe the cohort's computed period; absent window_days means the period is unspecified. No date window or prior comparison is accepted. no_data can mean an unknown industry or too few measured senders. A gap is descriptive, not evidence of a particular cause. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.

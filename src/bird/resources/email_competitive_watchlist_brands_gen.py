@@ -96,7 +96,7 @@ class EmailCompetitiveWatchlistBrandsBase(Resource):
         range: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveBrandProfile:
-        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown. API-key calls require Insights preview access for your organization.
+        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown, plus ESP and estimated list size. The watchlist already supplies headline comparisons. Rates are fractions. Interpret nulls by field: unavailable rates, no observed last campaign, or no overlap returned by the panel. Panel read rate differs from open rate. Tracked domains can cover only part of a brand's program. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.
@@ -125,7 +125,7 @@ class EmailCompetitiveWatchlistBrandsBase(Resource):
         timezone: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveSendTimeGrid:
-        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe sending activity by weekday and hour. The returned timezone labels the grid; peak_send_window can be null when no sending was observed. API-key calls require Insights preview access for your organization.
+        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe observed sending activity, not arrival, reading or subscriber availability. The returned period and timezone label the grid; the panel caches it for a day, so it can lag other reports. sample_days counts days available for observation, not campaigns or independent recipients. peak_send_window can be null when no sending was observed. This describes a competitor's schedule, not a best time for your audience; timing hypotheses need your own controlled test and engagement evidence. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.
@@ -208,7 +208,7 @@ class AsyncEmailCompetitiveWatchlistBrandsBase(AsyncResource):
         range: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveBrandProfile:
-        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown. API-key calls require Insights preview access for your organization.
+        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown, plus ESP and estimated list size. The watchlist already supplies headline comparisons. Rates are fractions. Interpret nulls by field: unavailable rates, no observed last campaign, or no overlap returned by the panel. Panel read rate differs from open rate. Tracked domains can cover only part of a brand's program. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.
@@ -237,7 +237,7 @@ class AsyncEmailCompetitiveWatchlistBrandsBase(AsyncResource):
         timezone: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveSendTimeGrid:
-        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe sending activity by weekday and hour. The returned timezone labels the grid; peak_send_window can be null when no sending was observed. API-key calls require Insights preview access for your organization.
+        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe observed sending activity, not arrival, reading or subscriber availability. The returned period and timezone label the grid; the panel caches it for a day, so it can lag other reports. sample_days counts days available for observation, not campaigns or independent recipients. peak_send_window can be null when no sending was observed. This describes a competitor's schedule, not a best time for your audience; timing hypotheses need your own controlled test and engagement evidence. API-key calls require Insights preview access for your organization.
 
         ```python
         # Requires Insights preview access for the organization.

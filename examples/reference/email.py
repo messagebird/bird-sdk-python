@@ -463,12 +463,13 @@ def insights_email_inboxInsights_benchmarks_industry() -> None:
 
 
 def email_stats_query() -> None:
-    for group in client.email.stats.query(
-        from_="2026-08-03",
-        to="2026-08-16",
+    stats = client.email.stats.query(
+        from_="2026-09-23",
+        to="2026-09-24",
         metrics=["delivered", "bounce_rate"],
         group_by="recipient_domain",
         grain="week",
         limit=25,
-    ):
+    )
+    for group in stats.data:
         print(group.dimensions, group.metrics, group.series)

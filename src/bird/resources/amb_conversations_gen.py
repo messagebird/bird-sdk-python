@@ -22,8 +22,9 @@ class AmbConversationsUpdateParams(TypedDict, total=False):
     """Params for ``client.amb.conversations.update``. Every key is optional."""
 
     assigned_to: str | None
+    inbox_status: str
     labels: Sequence[str]
-    read: bool
+    read: str
 
 
 class AmbConversationsListMessagesParams(TypedDict, total=False):
@@ -46,11 +47,12 @@ class AmbConversationsTypingParams(_AmbConversationsTypingRequired, total=False)
 class AmbConversationsListParams(TypedDict, total=False):
     """Query params for ``client.amb.conversations.list``. Every key is optional."""
 
+    inbox_status: str
     business_account_id: str
     status: str
     queue: str
     assigned_to: str
-    label: str
+    label: Sequence[str]
     limit: int
     starting_after: str
     ending_before: str
@@ -63,7 +65,7 @@ class AmbConversations(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> AMBConversation:
-        """Reads a customer-initiated conversation in your workspace. Its opaque_user_id supplies the to field for replies; verify the business and open state before sending.
+        """Reads a customer-initiated conversation in your workspace. Its recipient.opaque_user_id supplies the to field for replies; verify the business and open state before sending.
 
         ```python
         result = client.amb.conversations.get('acv_01krdgeqcxet5s7t44vh8rt9mg')
@@ -82,20 +84,23 @@ class AmbConversations(Resource):
         conversation_id: str,
         *,
         assigned_to: str | None | Omit = omit,
+        inbox_status: str | None = None,
         labels: Sequence[str] | None = None,
-        read: bool | None = None,
+        read: str | None = None,
         options: RequestOptions | None = None,
     ) -> AMBConversation:
-        """Updates assignment, labels and read state on a workspace conversation. Omitted fields stay unchanged; null assigned_to unassigns, empty labels clears labels, and read false has no effect. This operation does not close or reopen a conversation.
+        """Updates assignment, labels, inbox status and shared workspace read state. Omitted fields stay unchanged; null assigned_to unassigns and empty labels clears labels. Pass read as a date-time to acknowledge received inbound messages through that timestamp. Resolving or reopening inbox work preserves the Apple channel state and sending restrictions.
 
         ```python
-        result = client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], read=False)
+        result = client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], inbox_status="resolved")
         print(result)
         ```
         """
         _body: dict[str, Any] = {}
         if not isinstance(assigned_to, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["assigned_to"] = assigned_to
+        if inbox_status is not None:
+            _body["inbox_status"] = inbox_status
         if labels is not None:
             _body["labels"] = labels
         if read is not None:
@@ -164,17 +169,18 @@ class AmbConversations(Resource):
     def list(
         self,
         *,
+        inbox_status: str | None = None,
         business_account_id: str | None = None,
         status: str | None = None,
         queue: str | None = None,
         assigned_to: str | None = None,
-        label: str | None = None,
+        label: Sequence[str] | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[AMBConversation]:
-        """Returns the conversations your business has with customers on Apple Messages for Business, newest first by last message. To page through older conversations, use `starting_after`. A closed conversation stays in this list; filter on `status` to separate them from open ones.
+        """Returns the conversations your business has with customers on Apple Messages for Business, newest first by last message. To page through older conversations, use `starting_after`. A closed conversation stays in this list; filter on `status` for the Apple channel state, or `inbox_status` for open and resolved inbox work.
 
         ```python
         result = client.amb.conversations.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
@@ -182,6 +188,7 @@ class AmbConversations(Resource):
         ```
         """
         query = {
+            "inbox_status": inbox_status,
             "business_account_id": business_account_id,
             "status": status,
             "queue": queue,
@@ -201,7 +208,7 @@ class AsyncAmbConversations(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> AMBConversation:
-        """Reads a customer-initiated conversation in your workspace. Its opaque_user_id supplies the to field for replies; verify the business and open state before sending.
+        """Reads a customer-initiated conversation in your workspace. Its recipient.opaque_user_id supplies the to field for replies; verify the business and open state before sending.
 
         ```python
         result = await client.amb.conversations.get('acv_01krdgeqcxet5s7t44vh8rt9mg')
@@ -220,20 +227,23 @@ class AsyncAmbConversations(AsyncResource):
         conversation_id: str,
         *,
         assigned_to: str | None | Omit = omit,
+        inbox_status: str | None = None,
         labels: Sequence[str] | None = None,
-        read: bool | None = None,
+        read: str | None = None,
         options: RequestOptions | None = None,
     ) -> AMBConversation:
-        """Updates assignment, labels and read state on a workspace conversation. Omitted fields stay unchanged; null assigned_to unassigns, empty labels clears labels, and read false has no effect. This operation does not close or reopen a conversation.
+        """Updates assignment, labels, inbox status and shared workspace read state. Omitted fields stay unchanged; null assigned_to unassigns and empty labels clears labels. Pass read as a date-time to acknowledge received inbound messages through that timestamp. Resolving or reopening inbox work preserves the Apple channel state and sending restrictions.
 
         ```python
-        result = await client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], read=False)
+        result = await client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], inbox_status="resolved")
         print(result)
         ```
         """
         _body: dict[str, Any] = {}
         if not isinstance(assigned_to, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["assigned_to"] = assigned_to
+        if inbox_status is not None:
+            _body["inbox_status"] = inbox_status
         if labels is not None:
             _body["labels"] = labels
         if read is not None:
@@ -302,17 +312,18 @@ class AsyncAmbConversations(AsyncResource):
     def list(
         self,
         *,
+        inbox_status: str | None = None,
         business_account_id: str | None = None,
         status: str | None = None,
         queue: str | None = None,
         assigned_to: str | None = None,
-        label: str | None = None,
+        label: Sequence[str] | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[AMBConversation]:
-        """Returns the conversations your business has with customers on Apple Messages for Business, newest first by last message. To page through older conversations, use `starting_after`. A closed conversation stays in this list; filter on `status` to separate them from open ones.
+        """Returns the conversations your business has with customers on Apple Messages for Business, newest first by last message. To page through older conversations, use `starting_after`. A closed conversation stays in this list; filter on `status` for the Apple channel state, or `inbox_status` for open and resolved inbox work.
 
         ```python
         result = await client.amb.conversations.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
@@ -320,6 +331,7 @@ class AsyncAmbConversations(AsyncResource):
         ```
         """
         query = {
+            "inbox_status": inbox_status,
             "business_account_id": business_account_id,
             "status": status,
             "queue": queue,

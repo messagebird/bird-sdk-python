@@ -6113,6 +6113,15 @@ class WhatsAppReactionEventList(BaseModel):
     )]
 
 
+class ConversationInboxStatus(str, Enum):
+    open = "open"
+    resolved = "resolved"
+
+
+class ConversationLabels(RootModel[List[str]]):
+    root: List[str]
+
+
 class WhatsAppGroupStatus(str, Enum):
     pending = "pending"
     active = "active"
@@ -7585,10 +7594,6 @@ class WhatsAppNumberStatus(str, Enum):
     preparing = "preparing"
     rate_limited = "rate_limited"
     restricted = "restricted"
-
-
-class WhatsAppBusinessAccountID(RootModel[str]):
-    root: str
 
 
 class WhatsAppNumberScope(str, Enum):
@@ -9388,7 +9393,7 @@ class AMBMessageSendRequest(BaseModel):
         min_length=1,
     )]
     to: Annotated[str, Field(
-        description="Apple’s opaque customer identifier for this business, available as the conversation’s opaque_user_id. The conversation must exist and be open.",
+        description="Apple’s opaque customer identifier for this business, available as the conversation’s recipient.opaque_user_id. The conversation must exist and its native status must be open.",
         examples=["opaque-customer-id"],
         min_length=1,
     )]
@@ -9458,6 +9463,56 @@ class AMBConversationStatus(str, Enum):
     closed = "closed"
 
 
+class AMBConversationRecipient(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    opaque_user_id: Annotated[Optional[str], Field(
+        description="Apple's opaque identifier for this customer with this business. Null when no identifier is recorded.",
+        min_length=1,
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Customer phone number, or null when unknown. An invitation's destination remains on the invitation's `to` field.",
+        min_length=1,
+    )]
+
+
+class AMBConversationRouting(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    group_id: Annotated[Optional[str], Field(
+        description="The business's routing group carried by Apple from the entry point. This identifies a routing destination within the business. Null when the opening message carried no group.",
+        min_length=1,
+    )]
+    intent_id: Annotated[Optional[str], Field(
+        description="Intent carried by Apple from the entry point, used with `group_id` to route the conversation. Null when none was supplied.",
+        min_length=1,
+    )]
+    entry_point: Annotated[Optional[str], Field(
+        description="Configured entry point matching the opening message's group and intent. Null when none matched.",
+        examples=["support"],
+        min_length=1,
+    )]
+    queue: Annotated[Optional[str], Field(
+        description="Workspace queue selected by routing. Null when the conversation is unrouted.",
+        examples=["support"],
+        min_length=1,
+    )]
+
+
+class AMBConversationLastMessage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[AMBMessageDirection, Field(
+        description="Whether a message was sent by the business or received from the customer:\n\n- `outbound`: A reply the business sent into the conversation.\n- `inbound`: A message the customer sent.",
+    )]
+    created_at: Annotated[str, Field(
+        description="The same `created_at` returned when reading the message. This reference and the conversation transcript use message creation order. Processing an older message again does not move the reference backwards.",
+        min_length=1,
+    )]
+
+
 class AMBConversationOrigin(str, Enum):
     entry_point = "entry_point"
     invitation = "invitation"
@@ -9470,6 +9525,18 @@ class AMBConversationClosedReason(str, Enum):
 
 class AMBConversation(BaseModel):
     model_config = ConfigDict(extra="allow")
+    inbox_status: Annotated[ConversationInboxStatus, Field(
+        description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
+    )]
+    recipient: Annotated[AMBConversationRecipient, Field(
+        description="The customer on the other side of this Apple Messages for Business conversation.",
+    )]
+    routing: Annotated[AMBConversationRouting, Field(
+        description="Routing context from the message that opened or most recently reopened the Apple channel conversation.",
+    )]
+    last_message: Annotated[Optional[AMBConversationLastMessage], Field(
+        description="Most recent message, or null when its identity has not been recorded.",
+    )]
     id: Annotated[str, Field(
         examples=["acv_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -9481,32 +9548,11 @@ class AMBConversation(BaseModel):
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     status: Annotated[AMBConversationStatus, Field(
-        description="Whether a conversation is open or closed. There is no close operation on this API: only the customer closes a conversation from their device, and any inbound message on a closed conversation reopens it.",
+        description="Apple's native conversation state, which determines whether replies can be sent. A customer close or an Apple 410 response closes it; a newer inbound message reopens it. This API has no native close operation. Use `inbox_status` to resolve workspace inbox work independently.",
     )]
     origin: Annotated[AMBConversationOrigin, Field(
         description="How the conversation started. `entry_point` means the customer opened it from one of your configured Apple Messages for Business entry points. `invitation` means the customer accepted an invitation and sent a message. This is set once when the conversation is created and never changes.",
     )]
-    opaque_user_id: Annotated[Optional[str], Field(
-        description="Apple's opaque identifier for the customer with this business. The customer must send a message before a conversation is created. Null when no identifier is recorded.",
-        min_length=1,
-    )]
-    phone_number: Annotated[Optional[str], Field(
-        description="Customer phone number, when recorded. Null when unknown. Read the invitation's `to` field for the number an invitation was sent to.",
-        min_length=1,
-    )]
-    group_id: Annotated[Optional[str], Field(
-        description="The `group` value carried by the inbound message that opened or most recently reopened the conversation. Your business chooses it when configuring an entry point with Apple, and Apple passes it through; used with `intent_id` to route the conversation. Null when that message carried none.",
-        min_length=1,
-    )]
-    intent_id: Annotated[Optional[str], Field(
-        description="The `intent` value carried by the inbound message that opened or most recently reopened the conversation. Your business chooses it when configuring an entry point with Apple, and Apple passes it through; used with `group_id` to route the conversation. Null when that message carried none.",
-        min_length=1,
-    )]
-    entry_point: Annotated[Optional[str], Field(
-        description="The entry point in your channel settings whose group and intent matched the inbound message that opened or most recently reopened the conversation. Null when no configured entry point matched.",
-        examples=["support"],
-        min_length=1,
-    )] = None
     device_capabilities: Annotated[List[str], Field(
         description="The capability tokens the customer's device advertised on its most recent message, replaced by each inbound rather than accumulated, so this describes the device in use now. An empty list means the device's capabilities are unknown. Implemented message types may still be sent, but device rendering support has not been confirmed. Authentication requires an explicitly advertised AUTH2 capability.",
     )]
@@ -9519,19 +9565,8 @@ class AMBConversation(BaseModel):
         min_length=1,
     )]
     unread_count: Annotated[int, Field(
-        description="Number of inbound messages since this conversation was last marked read. Incremented once per inbound message, reset to zero by marking the conversation read and by any outbound message your workspace sends.",
+        description="Number of inbound messages the workspace has not acknowledged. Shared across the workspace. Pass read with a date-time to acknowledge received inbound messages through that timestamp. Sending a reply does not change this count.",
         ge=0,
-    )]
-    message_count: Annotated[int, Field(
-        description="Number of messages in this conversation, both directions.",
-        ge=0,
-    )]
-    last_message_at: Annotated[str, Field(
-        description="When the most recent message in this conversation was sent or received.",
-        min_length=1,
-    )]
-    last_direction: Annotated[AMBMessageDirection, Field(
-        description="Whether a message was sent by the business or received from the customer:\n\n- `outbound`: A reply the business sent into the conversation.\n- `inbound`: A message the customer sent.",
     )]
     assigned_to: Annotated[Optional[str], Field(
         description="The user this conversation is assigned to, or null when unassigned. Assignment is not rechecked against workspace membership on read, so it can still name a user whose access was removed.",
@@ -9540,22 +9575,13 @@ class AMBConversation(BaseModel):
         pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     labels: Annotated[List[str], Field(
-        description="Operator-set tags on this conversation. Unlike email, there are no system placement labels: every value here is one an operator chose.",
-        max_length=20,
+        description="Workspace labels on this conversation. Labels do not change read state or inbox status.",
     )]
-    queue: Annotated[Optional[str], Field(
-        description="The console queue this conversation is routed to. Empty when no routing rule matched, which the console lists as unrouted.",
-        examples=["support"],
-    )] = None
     closed_at: Annotated[Optional[str], Field(
-        description="When this conversation was closed. Null while it is open.",
+        description="When the native Apple conversation was closed. Null while its native status is open; independent of inbox status.",
     )]
     closed_reason: Annotated[Optional[AMBConversationClosedReason], Field(
-        description="Why this conversation was closed. Null while it is open.",
-    )]
-    open_count: Annotated[int, Field(
-        description="Number of times this conversation has been opened, starting at 1 and incremented on each reopen. A closed conversation reopens on the next inbound message rather than creating a new conversation.",
-        ge=1,
+        description="Why the native Apple conversation was closed. Null while its native status is open; independent of inbox status.",
     )]
     created_at: Annotated[str, Field(
         description="When this conversation was created.",
@@ -9589,17 +9615,19 @@ class AMBConversationList(BaseModel):
 class AMBConversationUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     assigned_to: Annotated[Optional[str], Field(
-        description="User to assign this conversation to. Pass null to unassign it.",
-        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+        description="User to assign this conversation to. Pass a workspace member's user ID, `me` for the signed-in user, or null to unassign it. An API key cannot use `me` and receives a `422` response.",
+        examples=["me"],
+        pattern="^(me|usr_[0-9a-hjkmnp-tv-z]{26})$",
+    )] = None
+    inbox_status: Annotated[Optional[ConversationInboxStatus], Field(
+        description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
     )] = None
     labels: Annotated[Optional[List[str]], Field(
-        description="Replaces the full set of labels on this conversation. Pass an empty array to clear every label.",
+        description="Labels chosen by your workspace. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nEach label must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace. Duplicate labels are rejected. The names `all`, `archived`, `assigned`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `pinned`, `read`, `snoozed`, `spam`, `starred`, `trash`, and `unread` are reserved in every casing.",
         max_length=20,
     )] = None
-    read: Annotated[Optional[bool], Field(
-        description="Set to true to mark this conversation read, resetting `unread_count` to zero. There is no way to mark a conversation unread through this field; false has no effect.",
+    read: Annotated[Optional[str], Field(
+        description="Mark received inbound messages with created_at at or before this timestamp as read in the shared workspace inbox. Messages sharing the timestamp are included together. Later arrivals remain unread until another read update. This does not send a read receipt to the customer or change inbox status. Omit to leave read state unchanged.",
     )] = None
 
 
@@ -10334,6 +10362,10 @@ class AMBConversationStatsResponse(BaseModel):
     )]
 
 
+class WhatsAppBusinessAccountID(RootModel[str]):
+    root: str
+
+
 class WhatsAppBusinessAccountStatus(str, Enum):
     active = "active"
 
@@ -10909,7 +10941,7 @@ class EmailInboxInsightsPlacementSummary(BaseModel):
         examples=[21.4],
     )]
     delta_pts: Annotated[Optional[EmailInboxInsightsPlacementDeltaPts], Field(
-        description="How the domain-wide rates moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence means no comparable prior data, never zero change.",
+        description="How the domain-wide rates moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data. Without a requested comparison or comparable prior data they are absent, not zero change.",
     )] = None
     status: Annotated[EmailInboxInsightsSectionStatus, Field(
         description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
@@ -12343,28 +12375,28 @@ class EmailStatsQueryRequest(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="Inclusive start, as a calendar date or RFC 3339 instant. Use the same form for from and to. Instants round down to a local quarter-hour; use Z when timezone is supplied.",
-        examples=["2026-08-03"],
+        examples=["2026-09-23"],
         min_length=1,
         pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
     )]
     to: Annotated[str, Field(
         description="Inclusive end. Dates include the whole local day; instants round down to a local quarter-hour and include that quarter-hour. Dates allow up to 365 local days; instants allow up to 720 hours, subject to available history. Preserve this original bound when following cursors.",
-        examples=["2026-08-16"],
+        examples=["2026-09-24"],
         min_length=1,
         pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
     )]
     timezone: Annotated[Optional[str], Field(
         description="IANA timezone for dates and bucket boundaries. Defaults to UTC.",
-        examples=["Europe/Amsterdam"],
+        examples=["UTC"],
         min_length=1,
     )] = None
     metrics: Annotated[List[EmailStatsQueryMetric], Field(
-        description="Distinct metrics to return. Unselected metrics are absent.",
+        description="Distinct metrics to return. Unselected metrics are absent. delivered and unique engagement counts estimate distinct message recipients. opens, opens_non_prefetched, clicks, unsubscribes, and oob_bounces estimate deduplicated events. effective_delivered and all_bounces are derived counts. Counts need not add up across buckets or groups. unique_opens and unique_clicks count message recipients, not distinct people across messages. Use returned period metrics; do not reconstruct totals from buckets or average rates or percentiles.\n\ndelivered counts message recipients with a delivery event without subtracting later bounces. effective_delivered is max(delivered - oob_bounces, 0). open_rate uses unique_opens_non_prefetched divided by effective_delivered; click_rate uses unique_clicks divided by effective_delivered. bounce_rate uses min(bounced + oob_bounces, delivered + bounced) divided by (delivered + bounced). complaint_rate and unsubscribe_rate use complained and unsubscribes, respectively, divided by effective_delivered. Undefined rates are null. Engagement rates can exceed 1 across event-time windows.\n\nAn unknown prefetch flag is treated as false. confirmed_unique_opens is the union of message recipients with opens or clicks; confirmed_unique_opens_non_prefetched excludes prefetched opens from that union. Differences between estimated distinct counts cannot establish exact audience overlaps or explain missing opens. Neither confirmation nor prefetch exclusion establishes a count or range of real people who engaged.\n\nLatency percentiles describe eligible measured logical events, excluding missing latency values and including zero. A percentile is null when no eligible samples exist. delivered is not the latency sample count. Report percentile values without inferring the unmeasured population or the distribution between them. They do not establish maxima or exact threshold counts; multiplying delivered by percentile fractions or subtracting processing and delivery percentiles cannot determine slow-message counts or a stage's latency.",
         max_length=39,
         min_length=1,
     )]
     group_by: Annotated[Optional[EmailStatsQueryDimension], Field(
-        description="Recorded event context used to group results. Grouping by `tag` requires `filters.tag.name`.\nMissing values form a null group when the metric supports that dimension.\n\nEvery selected metric must support the grouping dimension and every filter dimension.\nUnsupported combinations return validation error `E04074`, even when the workspace has no events.\n\n- `sending_domain`, `category`, `template_id`, `tag`: all metrics.\n- `recipient_domain`, `ip_pool_id`, `broadcast_id`: all metrics except `sends_accepted`.\n- `mailbox_provider`, `mailbox_provider_region`: all metrics except `sends_accepted`, `accepted`, and `rejected`.\n- `sending_ip`: `delivered`, `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`,\n  `undetermined_bounced`, `deferred`, `oob_bounces`, `effective_delivered`, `all_bounces`, `delivery_rate`,\n  `bounce_rate`, `deferral_rate`, `oob_rate`, `total_p50_ms`, `total_p95_ms`, and `total_p99_ms`.\n- `country`, `region`, `city`, `agent_family`, `os_family`, `device_family`: `opens`, `opens_non_prefetched`,\n  `clicks`, `unique_opens`, `unique_opens_non_prefetched`, `unique_clicks`, `confirmed_unique_opens`,\n  and `confirmed_unique_opens_non_prefetched`.\n- `smtp_error_code`: `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`, and `undetermined_bounced`.\n- `feedback_type`: `complained`.",
+        description="Group by one recorded event dimension. Omit for a single ungrouped summary with optional series.\nGrouping by `tag` requires `filters.tag.name`.\nMissing values form a null group when the metric supports that dimension. A null value\nmeans the event lacks that attribution; it does not explain how the message was created\nor establish membership in another dimension such as a campaign.\n\nEvery selected metric must support the grouping dimension and every filter dimension.\nUnsupported combinations return validation error `E04074`, even when the workspace has no events.\n\n- `sending_domain`, `category`, `template_id`, `tag`: all metrics.\n- `recipient_domain`, `ip_pool_id`, `broadcast_id`: all metrics except `sends_accepted`.\n- `mailbox_provider`, `mailbox_provider_region`: all metrics except `sends_accepted`, `accepted`, and `rejected`.\n- `sending_ip`: `delivered`, `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`,\n  `undetermined_bounced`, `deferred`, `oob_bounces`, `effective_delivered`, `all_bounces`, `delivery_rate`,\n  `bounce_rate`, `deferral_rate`, `oob_rate`, `total_p50_ms`, `total_p95_ms`, and `total_p99_ms`.\n- `country`, `region`, `city`, `agent_family`, `os_family`, `device_family`: `opens`, `opens_non_prefetched`,\n  `clicks`, `unique_opens`, `unique_opens_non_prefetched`, `unique_clicks`, `confirmed_unique_opens`,\n  and `confirmed_unique_opens_non_prefetched`.\n- `smtp_error_code`: `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`, and `undetermined_bounced`.\n- `feedback_type`: `complained`.",
     )] = None
     grain: Annotated[Optional[EmailStatsQueryGrain], Field(
         description="Time buckets in the requested timezone. Weeks start on Monday; months start on the first day. Half days start at midnight and noon. Edge buckets count events inside the normalized period.",
@@ -12779,7 +12811,7 @@ class EmailStatsSummary(BaseModel):
         description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
     )]
     sends_accepted: Annotated[int, Field(
-        description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) and summed per bucket across the period. This field counts messages. `delivery.accepted` counts recipients, so the two values are not comparable (a single message to 500 recipients is 1 here and up to 500 there).",
+        description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) across the whole requested period. This field counts messages. `delivery.accepted` counts recipients, so the two values are not comparable (a single message to 500 recipients is 1 here and up to 500 there).",
         examples=[12410],
         ge=0,
     )]
@@ -14212,7 +14244,7 @@ class EmailCompetitiveWatchlistRow(BaseModel):
         examples=["DTC Apparel"],
     )]
     sending_domains: Annotated[List[str], Field(
-        description="The domains the brand's figures describe. Always one domain today: a brand is tracked by the single one the panel sees the most of its mail from, so a brand that splits its mail across several domains reports less than its full volume.",
+        description="The domains the brand's figures describe. Always one domain today: a brand is tracked by the single one the panel sees the most of its mail from, so a brand that splits its mail across several domains reports less than its full volume. On your own row this domain scopes panel measurements, while measured sends and cadence cover the workspace.",
         min_length=1,
     )]
     esp: Annotated[Optional[str], Field(
@@ -14247,7 +14279,7 @@ class EmailCompetitiveWatchlistRow(BaseModel):
         examples=[0.192],
     )]
     audience_overlap_rate: Annotated[Optional[float], Field(
-        description="Share of your own audience the panel also sees receiving this brand's mail. Null on your own row, and null for a competitor the panel measured no overlap with, which is an answer rather than a gap.",
+        description="Share of the panel-observed audience of your workspace's highest-volume sending domain that also receives this brand's mail. Null on your own row or when the panel returns no overlap for a competitor. An absent panel result does not establish that the audiences are disjoint.",
         examples=[0.24],
     )]
     last_campaign: Annotated[Optional[EmailCompetitiveCampaignSummary], Field(
@@ -14261,7 +14293,7 @@ class EmailCompetitiveWatchlistRow(BaseModel):
 class EmailCompetitiveWatchlist(BaseModel):
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
-        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+        description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
     )]
     summary: Annotated[EmailCompetitiveWatchlistSummary, Field(
         description="Where your sending sits against the brands you watch, over the same period as the\nrows.\n\nEvery figure here is derived from those rows rather than measured separately, so\nthe two always agree. As on a row, each is present and `null` when the rows cannot\nsupport it: the peer medians need at least one watched brand the panel reported\non, and the share figures need sending of your own to compare.",
@@ -14344,7 +14376,7 @@ class EmailCompetitiveCampaign(BaseModel):
         examples=[True],
     )]
     discount_percent: Annotated[Optional[float], Field(
-        description="The discount the subject line leads with, null when it names none. Read from the subject text, so it finds a stated offer and not one revealed inside the email.",
+        description="The first recognized percentage-discount offer in the subject, null when none is recognized. Does not detect dollar discounts, free shipping or offers revealed only inside the email.",
         examples=[40],
     )]
     inbox_rate: Annotated[Optional[float], Field(
@@ -14391,7 +14423,7 @@ class EmailCompetitiveNotableCampaign(BaseModel):
 class EmailCompetitiveNotableFeed(BaseModel):
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
-        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+        description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
     )]
     panel_status: Annotated[EmailCompetitivePanelStatus, Field(
         description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
@@ -14475,10 +14507,10 @@ class EmailCompetitiveProviderPlacement(BaseModel):
 class EmailCompetitiveBrandProfile(BaseModel):
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
-        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+        description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
     )]
     brand: Annotated[EmailCompetitiveWatchlistRow, Field(
-        description="One brand on the watchlist, with its figures for the requested period. Your own\nworkspace appears as a row too, so the table can be read as a single ranking.\n\nEvery metric is present on every row and is `null` when it is unavailable for\nthat brand, so a `0` is always a real measurement rather than a gap. Check\n`panel_status` for why a metric is null.\n\n`esp` and `list_size` are the exception. They are populated only when you read a\nsingle brand, and are always `null` on the watchlist whatever `panel_status`\nreports.",
+        description="One brand on the watchlist, with its figures for the requested period. Your own\nworkspace appears as a row too, so the table can be read as a single ranking.\n\nMetrics are present on every row. Interpret `null` using each field's\ndescription: it can mean unavailable, no observed campaign, or no overlap\nreturned by the panel. A `0` is a measurement rather than a gap.\n\nYour measured sends and cadence cover the workspace. Your panel rates and\noverlap describe only its highest-volume sending domain.\n\n`esp` and `list_size` are the exception. They are populated only when you read a\nsingle brand, and are always `null` on the watchlist whatever `panel_status`\nreports.",
     )]
     providers: Annotated[List[EmailCompetitiveProviderPlacement], Field(
         description="Placement per mailbox provider, in the order the panel returned them. Empty when the panel published no breakdown for the brand's domains.",
@@ -14488,7 +14520,7 @@ class EmailCompetitiveBrandProfile(BaseModel):
 class EmailCompetitiveCampaignFeed(BaseModel):
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
-        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+        description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
     )]
     panel_status: Annotated[EmailCompetitivePanelStatus, Field(
         description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
@@ -14498,7 +14530,7 @@ class EmailCompetitiveCampaignFeed(BaseModel):
         examples=[38],
     )]
     promo_rate: Annotated[Optional[float], Field(
-        description="Fraction of captured campaigns whose subject leads with a discount. Null when captured is zero. This sampled value is independent of the returned page.",
+        description="Fraction of captured campaigns whose subject contains a recognized percentage-discount offer. Dollar discounts and free-shipping offers do not count. Null when captured is zero. This sampled value is independent of the returned page.",
         examples=[0.64],
     )]
     truncated: Annotated[bool, Field(
@@ -14582,7 +14614,7 @@ class EmailCompetitiveSendTimePeak(BaseModel):
 class EmailCompetitiveSendTimeGrid(BaseModel):
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
-        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+        description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
     )]
     timezone: Annotated[str, Field(
         description="IANA timezone identifier, such as `America/New_York`, `Europe/Amsterdam`, or `UTC`.",
@@ -14622,7 +14654,7 @@ class EmailCompetitiveBrandMatch(BaseModel):
 class EmailCompetitiveBrandSearchResults(BaseModel):
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[EmailCompetitiveBrandMatch], Field(
-        description="Matching brands. Empty when nothing matched, which for an unusual brand name means the panel does not track it rather than that the search failed.",
+        description="Watchable matches returned for this query. A capped search or an unresolved sending domain can omit a brand; an empty result does not establish that the panel has never observed it.",
     )]
 
 
@@ -14673,7 +14705,7 @@ class EmailCompetitiveBrandSeries(BaseModel):
 class EmailCompetitiveVolumeSeries(BaseModel):
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
-        description="The period every figure in the response covers, echoed back from the request.\n\nFigures are fetched when the request is made, so they are current as of `to`.\nThe period always ends at the moment of the request rather than at a cached\nboundary, which is why two requests a minute apart can differ slightly.",
+        description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
     )]
     data: Annotated[List[EmailCompetitiveBrandSeries], Field(
         description="Your own line first, then the requested brands in the order they were asked for. Your line is present once your workspace has sent email. Every line carries the same days in the same order, so they can be plotted against one axis without aligning them first.",
@@ -15861,7 +15893,7 @@ class MailboxUpdate(BaseModel):
 class MailboxStatsSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
     sends_accepted: Annotated[int, Field(
-        description="Distinct email messages the mailbox sent that were accepted, counted at the message level and summed per bucket across the period.",
+        description="Distinct email messages the mailbox sent that were accepted, counted once at the message level across the period.",
         examples=[231],
         ge=0,
     )]
@@ -15869,7 +15901,7 @@ class MailboxStatsSummary(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     received: Annotated[int, Field(
-        description="Distinct emails the mailbox received, summed per bucket across the period.",
+        description="Distinct emails the mailbox received, counted once across the period.",
         examples=[519],
         ge=0,
     )]
@@ -15903,7 +15935,7 @@ class MailboxStatsResponse(BaseModel):
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
     )]
     summary: Annotated[MailboxStatsSummary, Field(
-        description="Single-row aggregate of the mailbox's email activity across the full requested period. Counts are sums of per-bucket counts across the window. Latency percentiles are computed across the whole period rather than summed per bucket. Rates are `null` when their denominator is zero.",
+        description="Single-row aggregate of the mailbox's email activity across the full requested period. Counts use each field's message, recipient, or event identity across the whole window. Repeat opens, clicks, and unsubscribes from the same recipient contribute as separate events; unique engagement fields count distinct recipients. Adding per-bucket distinct counts can overstate the summary. Latency percentiles are computed across the whole period. Rates are `null` when their denominator is zero.",
     )]
     data: Annotated[List[MailboxStatsPoint], Field(
         description="One row per bucket in the period, in chronological order. Buckets with no activity are included with zero counts.",
