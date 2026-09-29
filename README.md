@@ -251,3 +251,9 @@ client.post("/v1/some/new/endpoint", body={"key": "value"})
 ## Design
 
 The wire models are generated from the OpenAPI spec into `bird._generated`; this package is the hand-written idiomatic layer on top.
+
+## Apple Messages quickstart
+
+Use `client.amb.send` to reply to an open, customer-initiated conversation as a configured, connected business account. Set `BIRD_API_KEY` and `AMB_CONVERSATION_ID`, then run the [Apple Messages example](examples/quickstart-amb.py). The key needs `amb:read`, `amb:write` and `amb_management:read`.
+
+The example sends a real reply. Verify the recipient and content before running it. `accepted` means queued; `sent` means Apple gateway acceptance, not device delivery or a read receipt. Native payment, authentication and invitation requests are not part of this public channel release.

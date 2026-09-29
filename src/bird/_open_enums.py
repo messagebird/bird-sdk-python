@@ -11,6 +11,87 @@ from __future__ import annotations
 from typing import Final
 
 
+class AMBBusinessAccountReviewStatus:
+    """Values of AMBBusinessAccountReviewStatus known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    PENDING: Final = "pending"
+    REJECTED: Final = "rejected"
+
+
+class AMBFormKeyboardType:
+    """Values of AMBFormKeyboardType known at this SDK version (open enum)."""
+
+    ASCIICAPABLE: Final = "asciiCapable"
+    DECIMALPAD: Final = "decimalPad"
+    DEFAULT: Final = "default"
+    EMAILADDRESS: Final = "emailAddress"
+    NAMEPHONEPAD: Final = "namePhonePad"
+    NUMBERPAD: Final = "numberPad"
+    NUMBERSANDPUNCTUATION: Final = "numbersAndPunctuation"
+    PHONEPAD: Final = "phonePad"
+    URL: Final = "URL"
+    WEBSEARCH: Final = "webSearch"
+
+
+class AMBFormTextContentType:
+    """Values of AMBFormTextContentType known at this SDK version (open enum)."""
+
+    ADDRESSCITY: Final = "addressCity"
+    ADDRESSCITYANDSTATE: Final = "addressCityAndState"
+    ADDRESSSTATE: Final = "addressState"
+    COUNTRYNAME: Final = "countryName"
+    CREDITCARDNUMBER: Final = "creditCardNumber"
+    EMAILADDRESS: Final = "emailAddress"
+    FAMILYNAME: Final = "familyName"
+    FULLSTREETADDRESS: Final = "fullStreetAddress"
+    GIVENNAME: Final = "givenName"
+    JOBTITLE: Final = "jobTitle"
+    LOCATION: Final = "location"
+    MIDDLENAME: Final = "middleName"
+    NAME: Final = "name"
+    NAMEPREFIX: Final = "namePrefix"
+    NAMESUFFIX: Final = "nameSuffix"
+    NEWPASSWORD: Final = "newPassword"
+    NICKNAME: Final = "nickname"
+    ONETIMECODE: Final = "oneTimeCode"
+    ORGANIZATIONNAME: Final = "organizationName"
+    PASSWORD: Final = "password"
+    POSTALCODE: Final = "postalCode"
+    STREETADDRESSLINE1: Final = "streetAddressLine1"
+    STREETADDRESSLINE2: Final = "streetAddressLine2"
+    SUBLOCALITY: Final = "sublocality"
+    TELEPHONENUMBER: Final = "telephoneNumber"
+    URL: Final = "URL"
+    USERNAME: Final = "username"
+
+
+class AMBMessageEventType:
+    """Values of AMBMessageEventType known at this SDK version (open enum)."""
+
+    AMB_ACCEPTED: Final = "amb.accepted"
+    AMB_RECEIVED: Final = "amb.received"
+    AMB_REJECTED: Final = "amb.rejected"
+    AMB_SEND_FAILED: Final = "amb.send_failed"
+    AMB_SENT: Final = "amb.sent"
+
+
+class AMBSuppressionOrigin:
+    """Values of AMBSuppressionOrigin known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    CLOSE_SESSION: Final = "close_session"
+    GONE: Final = "gone"
+    USER: Final = "user"
+
+
+class AMBSuppressionReason:
+    """Values of AMBSuppressionReason known at this SDK version (open enum)."""
+
+    MANUAL: Final = "manual"
+    OPTED_OUT: Final = "opted_out"
+
+
 class DestinationRegion:
     """Values of DestinationRegion known at this SDK version (open enum)."""
 
@@ -257,6 +338,7 @@ class NumbersOrderStatus:
 class PreferenceChannel:
     """Values of PreferenceChannel known at this SDK version (open enum)."""
 
+    AMB: Final = "amb"
     EMAIL: Final = "email"
     SMS: Final = "sms"
     WHATSAPP: Final = "whatsapp"
@@ -679,6 +761,12 @@ class WhatsAppUsernameStatus:
 
 
 __all__ = [
+    "AMBBusinessAccountReviewStatus",
+    "AMBFormKeyboardType",
+    "AMBFormTextContentType",
+    "AMBMessageEventType",
+    "AMBSuppressionOrigin",
+    "AMBSuppressionReason",
     "DestinationRegion",
     "DestinationSuperRegion",
     "EmailClientFamily",

@@ -19,6 +19,9 @@ from bird.pagination import AsyncPage, SyncPage
 class VoiceNumbersListParams(TypedDict, total=False):
     """Query params for ``client.voice.numbers.list``. Every key is optional."""
 
+    search: str
+    provider: str
+    route: str
     sort: str
     order: str
     limit: int
@@ -37,6 +40,9 @@ class VoiceNumbers(Resource):
     def list(
         self,
         *,
+        search: str | None = None,
+        provider: str | None = None,
+        route: str | None = None,
         sort: str | None = None,
         order: str | None = None,
         limit: int | None = None,
@@ -52,6 +58,9 @@ class VoiceNumbers(Resource):
         ```
         """
         query = {
+            "search": search,
+            "provider": provider,
+            "route": route,
             "sort": sort,
             "order": order,
             "limit": limit,
@@ -114,6 +123,9 @@ class AsyncVoiceNumbers(AsyncResource):
     def list(
         self,
         *,
+        search: str | None = None,
+        provider: str | None = None,
+        route: str | None = None,
         sort: str | None = None,
         order: str | None = None,
         limit: int | None = None,
@@ -129,6 +141,9 @@ class AsyncVoiceNumbers(AsyncResource):
         ```
         """
         query = {
+            "search": search,
+            "provider": provider,
+            "route": route,
             "sort": sort,
             "order": order,
             "limit": limit,

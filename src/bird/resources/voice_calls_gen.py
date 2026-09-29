@@ -46,7 +46,7 @@ class VoiceCalls(Resource):
         sequence: CreateVoiceCallSequenceRequest,
         options: RequestOptions | None = None,
     ) -> VoiceCall:
-        """Places a real outbound call and starts the active published sequence after the recipient answers. Requires both voice management write and voice calling write permissions. Normal calling charges apply. Retain the acceptance IDs to inspect the run and initial leg.
+        """Proposes a real outbound call for browser confirmation. Requires voice_management:write and voice:write; normal calling charges apply. Supply a stable idempotency_key and reuse it with identical input for retries. The confirmation expires after 90 minutes. After the person places the call, a 202 response reserves call, leg and run IDs; it does not prove connection. Use `voice.legs.get` with `initial_leg_id` to inspect the leg outcome, and inspect the sequence run in the dashboard. Never use a new key merely because an earlier result is missing.
 
         ```python
         call = client.voice.calls.create(
@@ -89,7 +89,7 @@ class AsyncVoiceCalls(AsyncResource):
         sequence: CreateVoiceCallSequenceRequest,
         options: RequestOptions | None = None,
     ) -> VoiceCall:
-        """Places a real outbound call and starts the active published sequence after the recipient answers. Requires both voice management write and voice calling write permissions. Normal calling charges apply. Retain the acceptance IDs to inspect the run and initial leg.
+        """Proposes a real outbound call for browser confirmation. Requires voice_management:write and voice:write; normal calling charges apply. Supply a stable idempotency_key and reuse it with identical input for retries. The confirmation expires after 90 minutes. After the person places the call, a 202 response reserves call, leg and run IDs; it does not prove connection. Use `voice.legs.get` with `initial_leg_id` to inspect the leg outcome, and inspect the sequence run in the dashboard. Never use a new key merely because an earlier result is missing.
 
         ```python
         call = await client.voice.calls.create(

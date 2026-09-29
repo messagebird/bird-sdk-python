@@ -8,6 +8,10 @@ from pydantic import ConfigDict, Field, RootModel
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 
+class WorkspaceID(RootModel[str]):
+    root: str
+
+
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     param: Annotated[str, Field(
@@ -126,10 +130,6 @@ class UserID(RootModel[str]):
 
 
 class OrganizationID(RootModel[str]):
-    root: str
-
-
-class WorkspaceID(RootModel[str]):
     root: str
 
 
@@ -1852,6 +1852,7 @@ class PreferenceChannel(str, Enum):
     email = "email"
     sms = "sms"
     whatsapp = "whatsapp"
+    amb = "amb"
 
 
 class PreferenceStatus(str, Enum):
@@ -1883,13 +1884,13 @@ class Preference(BaseModel):
     )]
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
-        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
         examples=[+15550001234],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
-        description="The sender the statement is limited to, or null when it covers the whole channel. On SMS this is the originator the person replied to; on WhatsApp it identifies the business account that messaged them. Email preferences are always channel-wide, so it is always null there.",
+        description="The sender the statement is limited to, or null when it covers the whole channel. On SMS this is the originator the person replied to; on WhatsApp it identifies the business account that messaged them; on Apple Messages for Business it is the Apple business ID used for invitations. Email preferences are always channel-wide, so it is always null there.",
         examples=[+15557654321],
     )]
     topic_id: Annotated[Optional[str], Field(
@@ -1943,7 +1944,7 @@ class PreferenceList(BaseModel):
 class PreferenceCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     handle: Annotated[str, Field(
-        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
         examples=[+15550001234],
         max_length=320,
         min_length=1,
@@ -1955,10 +1956,10 @@ class PreferenceCreate(BaseModel):
         description="What the statement says: `granted` records consent to receive messages, `revoked` records an opt-out. There is no third state: a person who never stated anything simply has no preference on record.",
     )]
     coverage: Annotated[Optional[PreferenceCoverage], Field(
-        description="How much traffic the statement covers. Defaults to `non_transactional`, which keeps transactional messages such as receipts and verification codes flowing.",
+        description="How much traffic the statement covers. Defaults to `non_transactional`, which keeps transactional messages such as receipts and verification codes flowing. Apple Messages for Business phone invitations have no transactional exemption, so either value covers them.",
     )] = None
     sender_scope: Annotated[Optional[str], Field(
-        description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account. Not supported on email, where preferences are always channel-wide.",
+        description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account; on Apple Messages for Business it is the Apple business ID used for invitations. Not supported on email, where preferences are always channel-wide.",
         examples=[+15557654321],
         max_length=255,
         min_length=1,
@@ -3304,6 +3305,60 @@ class SMSKeywordRuleUpdate(BaseModel):
     )] = None
 
 
+class AttachmentID(RootModel[str]):
+    root: str
+
+
+class AttachmentStatus(str, Enum):
+    draft = "draft"
+    attached = "attached"
+
+
+class Attachment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+    id: Annotated[str, Field(
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    filename: Annotated[str, Field(
+        description="The uploaded file's name.",
+        min_length=1,
+    )]
+    content_type: Annotated[str, Field(
+        description="The file's content type, determined from its contents.",
+        min_length=1,
+    )]
+    size_bytes: Annotated[int, Field(description="The file's size in bytes.")]
+    description: Annotated[Optional[str], Field(
+        description="A short note describing what the file shows.",
+        max_length=255,
+    )] = None
+    status: Annotated[AttachmentStatus, Field(
+        description="Lifecycle of an attachment. `draft` is a file that has been uploaded but nothing\nhas been registered or submitted with it yet, and it is discarded at its\n`expires_at`. `attached` means at least one registration has cited it, so it is\nkept permanently and can no longer be deleted.",
+    )]
+    download_url: Annotated[str, Field(
+        description="Short-lived signed URL for downloading or previewing the attachment. Valid for 24 hours from when the resource was fetched; request a fresh resource to obtain a new URL after expiry. Do not cache beyond `download_url_expires_at`. Registration authorities (10DLC and toll-free carriers) retrieve evidence via a separate, longer-lived token; this URL is not that token.",
+        min_length=1,
+    )]
+    preview_url: Annotated[Optional[str], Field(
+        description="Optional signed URL for inline viewing on an isolated storage origin. Valid for one hour; fetch the attachment again to refresh it.",
+    )] = None
+    download_url_expires_at: Annotated[str, Field(
+        description="When `download_url` expires. Both fields are always present; the server returns an error rather than omitting them.",
+        min_length=1,
+    )]
+    expires_at: Annotated[Optional[str], Field(
+        description="When this attachment is discarded if nothing is registered or submitted with it. Null once its status is `attached`.",
+    )]
+
+
+class AssetID(RootModel[str]):
+    root: str
+
+
 class ComplianceSubmissionID(RootModel[str]):
     root: str
 
@@ -4450,6 +4505,7 @@ class VerificationCheckResult(BaseModel):
     model_config = ConfigDict(extra="allow")
     success: Annotated[bool, Field(
         description="Whether the submitted passcode verified this verification. `true` means the passcode was correct and the verification is now complete; `false` means it did not verify, and `reason` says why. A verification that has already reached a final state is no longer checkable and returns `404`.",
+        examples=[False],
     )]
     reason: Annotated[Optional[Annotated[Union[VerificationCheckResultReason, str], Field(union_mode="left_to_right")]], Field(
         description="Why the check did not succeed:\n\n- `incorrect_code`: The passcode was wrong and attempts remain.\n- `expired`: The validity window elapsed.\n- `attempts_exhausted`: Too many incorrect attempts were submitted.\n\n`null` when `success` is `true`. Treat unrecognized values as reasons added\nlater.",
@@ -4457,6 +4513,7 @@ class VerificationCheckResult(BaseModel):
     verification: Verification
     attempts_remaining: Annotated[Optional[int], Field(
         description="The number of check attempts left while the verification is still pending, or `null` once it has reached a final state.",
+        examples=[2],
         ge=0,
     )] = None
 
@@ -5122,6 +5179,33 @@ class WhatsAppReaction(BaseModel):
         alias="from",
         description="Who reacted. On a group message this is what tells one participant's reaction from another's. On a one-to-one message it is your business number on a reaction you placed and the contact on one they placed, which is why it is here rather than inferred from the message's `direction`.",
     )]
+
+
+class ActorType(str, Enum):
+    user = "user"
+    api_key = "api_key"
+    oauth_token = "oauth_token"
+    system = "system"
+    sso = "sso"
+    service_account = "service_account"
+    automation = "automation"
+
+
+class Actor(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Actor identifier.",
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+    )]
+    type: Annotated[Annotated[Union[ActorType, str], Field(union_mode="left_to_right")], Field(
+        description="New actor types may be added. Treat unrecognized values as future types, not errors.\n- `user`: a member's own session.\n- `api_key`: a workspace API key.\n- `oauth_token`: a token issued to a caller on a member's behalf.\n- `system`: an action we perform without a customer actor.\n- `sso`: an organization's SSO connection.\n- `service_account`: a workspace's connected Integration acting with no member behind it.\n- `automation`: an automation execution in your workspace.",
+        examples=["user"],
+        min_length=1,
+    )]
+    display_name: Annotated[Optional[str], Field(
+        description="The label the actor is shown under: typically a member's name or email address, or the API key's name. Null when it could not be resolved.",
+    )] = None
 
 
 class WhatsAppErrorCode(str, Enum):
@@ -7819,6 +7903,2435 @@ class WhatsAppNumberProfile(BaseModel):
         description="A link to the profile picture WhatsApp currently shows. WhatsApp signs this link and it expires within days, so load it when you display it and never store it. It is served with permissive cross-origin headers, so a browser can load it directly.",
         examples=["https://pps.whatsapp.net/v/t61.24694-24/643148303_1005107588793925.jpg"],
     )] = None
+
+
+class AMBBusinessID(RootModel[str]):
+    root: str
+
+
+class AMBBusinessAccountStatus(str, Enum):
+    pending = "pending"
+    active = "active"
+    suspended = "suspended"
+    disconnected = "disconnected"
+
+
+class AMBBusinessAccountReviewStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class AMBBusinessAccount(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    apple_business_id: Annotated[Optional[str], Field(
+        description="Apple business UUID, or null until supplied. Adding this identifier does not submit the account for review.",
+        examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
+    )]
+    name: Annotated[str, Field(
+        description="Customer-supplied account name used in Bird. Apple controls the name shown to customers in Messages.",
+        examples=["Acme Retail"],
+        min_length=1,
+    )]
+    status: Annotated[AMBBusinessAccountStatus, Field(
+        description="Pending accounts need setup or review. Active accounts have recorded approval. Suspended accounts retain their recorded suspension. Configured, connected accounts can exchange messages regardless of review status; Apple decides whether to accept outgoing requests. Disconnected accounts retain their identity and history but cannot exchange new messages until reconnected.",
+    )]
+    status_reason: Annotated[Optional[str], Field(
+        description="Reason for the current operational suspension, when recorded. Review feedback is retained on the submission.",
+        min_length=1,
+    )] = None
+    invitations_enabled: Annotated[bool, Field(
+        description="Whether Apple has granted invitation access. Sending also requires a configured, connected account and eligible recipient.",
+        examples=[False],
+    )]
+    created_at: Annotated[str, Field(
+        description="When the business record was created.",
+        examples=["2026-08-20T09:14:52Z"],
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When the business record was last changed.",
+        examples=["2026-08-25T16:42:01Z"],
+        min_length=1,
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="Next setup actions on create, update and single-account reads. Active accounts return an empty array. Lists omit this field.",
+    )] = None
+    account_review_status: Annotated[Optional[Annotated[Union[AMBBusinessAccountReviewStatus, str], Field(union_mode="left_to_right")]], Field(
+        description="Latest review outcome recorded by Bird staff.",
+    )] = None
+    finish_setup_url: Annotated[Optional[str], Field(
+        description="Bird dashboard URL for completing setup. Present only when customer action is available.",
+    )] = None
+
+
+class AMBBusinessAccountEventID(RootModel[str]):
+    root: str
+
+
+class AMBBusinessAccountEventType(str, Enum):
+    amb_business_account_created = "amb_business_account.created"
+    amb_business_account_status_changed = "amb_business_account.status_changed"
+    amb_business_account_submission_created = "amb_business_account.submission_created"
+    amb_business_account_review_changed = "amb_business_account.review_changed"
+    amb_business_account_invitation_access_changed = "amb_business_account.invitation_access_changed"
+    amb_business_account_suspension_changed = "amb_business_account.suspension_changed"
+
+
+class AMBBusinessAccountEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["abe_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abe_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    type: Annotated[Annotated[Union[AMBBusinessAccountEventType, str], Field(union_mode="left_to_right")], Field(
+        min_length=1,
+    )]
+    summary: Annotated[str, Field(min_length=1)]
+    metadata: Annotated[Dict[str, Any], Field(
+        description="Details of the change. source identifies whether a customer or Bird staff recorded it.",
+    )]
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class AMBBusinessAccountEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[AMBBusinessAccountEvent]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class AMBSuppressionID(RootModel[str]):
+    root: str
+
+
+class AMBSuppressionAddressType(str, Enum):
+    phone_number = "phone_number"
+    opaque_user_id = "opaque_user_id"
+
+
+class AMBSuppressionReason(str, Enum):
+    manual = "manual"
+    opted_out = "opted_out"
+
+
+class AMBSuppressionOrigin(str, Enum):
+    user = "user"
+    api_key = "api_key"
+    close_session = "close_session"
+    gone = "gone"
+
+
+class AMBMessageID(RootModel[str]):
+    root: str
+
+
+class AMBEventID(RootModel[str]):
+    root: str
+
+
+class AMBSuppressionAppliesTo(str, Enum):
+    all = "all"
+    invitations = "invitations"
+
+
+class AMBSuppressionEndedReason(str, Enum):
+    user = "user"
+    api_key = "api_key"
+    reinitiated = "reinitiated"
+
+
+class AMBSuppression(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["asp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asp_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[Optional[str], Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    address: Annotated[str, Field(
+        description="Canonical E.164 phone number, or the exact opaque identifier Apple supplied.",
+        examples=[+15551234567],
+        max_length=1024,
+        min_length=1,
+    )]
+    address_type: Annotated[AMBSuppressionAddressType, Field(
+        description="What kind of value `address` holds.\n\n- `phone_number` means `address` is the customer's phone number. Apple's CloseSession event carries a phone number rather than an opaque identifier, so a suppression opened by a close on a conversation identified by phone number takes this kind.\n- `opaque_user_id` means `address` is the opaque identifier Apple assigns to the customer's conversation with the business, stable across a close and a later re-initiation.",
+    )]
+    reason: Annotated[Annotated[Union[AMBSuppressionReason, str], Field(union_mode="left_to_right")], Field(
+        description="Why the handle is suppressed. `manual` means it was added directly through this API or the dashboard. `opted_out` covers every case where Apple or the customer signaled they should not be contacted: a close, a permanent delivery failure, a declined invitation, or a stop keyword. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+    )]
+    origin: Annotated[Annotated[Union[AMBSuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
+        description="Who created the episode. user and api_key identify manual blocks. close_session and gone are protected automatic conversation facts. Phone invitation opt-outs are recorded as preferences.",
+    )]
+    applies_to: Annotated[Annotated[Union[AMBSuppressionAppliesTo, str], Field(union_mode="left_to_right")], Field(
+        description="Paths blocked by this episode. Treat unknown values as blocking.",
+        min_length=1,
+    )]
+    source_message_id: Annotated[Optional[str], Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    source_event_id: Annotated[Optional[str], Field(
+        examples=["aev_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aev_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    source_end_message_id: Annotated[Optional[str], Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    effective_at: Annotated[str, Field(
+        description="When the blocking state took effect.",
+        min_length=1,
+    )]
+    created_at: Annotated[str, Field(
+        description="When Bird recorded this episode.",
+        min_length=1,
+    )]
+    ended_at: Annotated[Optional[str], Field(
+        description="When Bird recorded the end, or null while active.",
+    )]
+    ended_reason: Annotated[Optional[Annotated[Union[AMBSuppressionEndedReason, str], Field(union_mode="left_to_right")]], Field(
+        description="What ended the episode, or null while active. Customers can end only manual episodes.",
+    )]
+    ended_effective_at: Annotated[Optional[str], Field(
+        description="When the end took effect, or null while active.",
+    )]
+
+
+class AMBBusinessAccountList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBBusinessAccount], Field(
+        description="The business records your workspace holds.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class AMBBusinessAccountCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="The brand name shown for this business record inside Bird.",
+        examples=["Acme Retail"],
+        max_length=100,
+        min_length=1,
+    )]
+    apple_business_id: Annotated[Optional[str], Field(
+        description="The Business ID Apple issued for this brand, if you already have it. Supplying it identifies the draft. Submit the completed evidence requirements explicitly when the business is ready for review.",
+        examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
+        min_length=1,
+    )] = None
+
+
+class AMBBusinessAccountUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="The brand name shown for this business record inside Bird.",
+        examples=["Acme Retail"],
+        max_length=100,
+        min_length=1,
+    )] = None
+    apple_business_id: Annotated[Optional[str], Field(
+        description="The Business ID Apple issued for this brand. Accepted only while the account has not yet been submitted and is connected. Updating it does not submit the business.",
+        examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
+        min_length=1,
+    )] = None
+
+
+class AMBBusinessSubmissionID(RootModel[str]):
+    root: str
+
+
+class AMBBusinessAccountSubmissionStatus(str, Enum):
+    submitted = "submitted"
+    in_review = "in_review"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class AMBBusinessAccountSubmission(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["abs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abs_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    apple_business_id: Annotated[str, Field(
+        description="The Apple business UUID frozen when this attempt was submitted.",
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="The customer-supplied Bird account name frozen when this attempt was submitted.",
+        min_length=1,
+    )]
+    readiness_attachment: Attachment
+    use_cases_attachment: Attachment
+    video_attachment: Attachment
+    status: Annotated[AMBBusinessAccountSubmissionStatus, Field(
+        description="The review outcome of this attempt. Earlier attempts retain their outcome when a new attempt is submitted.",
+    )]
+    status_reason: Annotated[Optional[str], Field(min_length=1)]
+    created_at: Annotated[str, Field(min_length=1)]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="Read the parent business account for current eligibility and next actions. Present on create responses and each customer submission-list item; historical attempts do not establish current account state.",
+    )] = None
+    updated_at: Annotated[str, Field(min_length=1)]
+
+
+class AMBBusinessAccountSubmissionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[AMBBusinessAccountSubmission]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class AMBBusinessAccountSubmissionCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    readiness_attachment_id: Annotated[str, Field(
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    use_cases_attachment_id: Annotated[str, Field(
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    video_attachment_id: Annotated[str, Field(
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class AMBEntryPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Identifier for this entry point, chosen by you and unique within the business's entry points. A conversation opened through this entry point carries it as `entry_point`.",
+        examples=["website-footer"],
+        max_length=64,
+        min_length=1,
+    )]
+    group: Annotated[str, Field(
+        description="The group value Apple reports on a conversation opened through this entry point. Matched against the `group` the first inbound message carries.",
+        examples=["support"],
+        min_length=1,
+    )]
+    intent: Annotated[str, Field(
+        description="The intent value Apple reports on a conversation opened through this entry point. Matched against the `intent` the first inbound message carries, together with `group`.",
+        examples=["general-inquiry"],
+        min_length=1,
+    )]
+    body: Annotated[str, Field(
+        description="The message text pre-filled for the customer when they open a conversation through this entry point.",
+        examples=["Hi, I have a question about my order."],
+        max_length=1000,
+        min_length=1,
+    )]
+
+
+class AMBChannelSettings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    entry_points: Annotated[List[AMBEntryPoint], Field(
+        description="The entry points customers can use to open a conversation with this business, each matched against the group and intent an inbound message reports.",
+    )]
+    default_locale: Annotated[Optional[str], Field(
+        description="The locale used for this business when a conversation reports none of its own, in canonical BCP-47 form. Null until you set one or after you clear it. Bird converts a configured default to Apple's locale form when sending a message without a conversation locale.",
+        examples=["en-US"],
+        min_length=1,
+    )] = None
+    brand_name: Annotated[str, Field(
+        description="The brand name shown on the Bird-hosted landing page customers use to connect this business.",
+        examples=["Acme Retail"],
+        max_length=100,
+        min_length=1,
+    )]
+    logo_asset_id: Annotated[Optional[str], Field(
+        description="The business's logo, as an asset in your media library. Null until one is set, either from Apple's own redirect or from a later change here.",
+        examples=["ast_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ast_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class AMBChannelSettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    entry_points: Annotated[Optional[List[AMBEntryPoint]], Field(
+        description="The entry points customers can use to open a conversation with this business. Sending this replaces the entire set; there is no way to add or remove a single entry point without resending the rest.",
+    )] = None
+    default_locale: Annotated[Optional[str], Field(
+        description="The locale used for this business when a conversation reports none of its own, in BCP-47 form. Omit this field to keep the current default, or send null to clear it. Bird converts a configured default to Apple's locale form when sending a message without a conversation locale.",
+        examples=["en-US"],
+        min_length=1,
+    )] = None
+    brand_name: Annotated[Optional[str], Field(
+        description="The brand name shown on the Bird-hosted landing page customers use to connect this business.",
+        examples=["Acme Retail"],
+        max_length=100,
+        min_length=1,
+    )] = None
+    logo_asset_id: Annotated[Optional[str], Field(
+        description="The business's logo, as an asset in your media library. Send null to clear it.",
+        examples=["ast_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ast_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class AMBRoutingRuleID(RootModel[str]):
+    root: str
+
+
+class AMBRoutingRuleMatchKind(str, Enum):
+    intent = "intent"
+    group = "group"
+    both = "both"
+
+
+class AMBRoutingRule(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+    id: Annotated[str, Field(
+        examples=["arr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^arr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    match_kind: Annotated[AMBRoutingRuleMatchKind, Field(
+        description="What a routing rule matches against the entry point that started the conversation.\n\n- `intent` matches on the entry point's intent alone: `match_intent_id` is set and `match_group_id` is null.\n- `group` matches on the entry point's group alone: `match_group_id` is set and `match_intent_id` is null.\n- `both` matches only when the entry point carries the given intent and the given group together, so `match_intent_id` and `match_group_id` are both set. There are two match fields rather than one because `both` needs to carry an intent and a group at once.",
+    )]
+    match_intent_id: Annotated[Optional[str], Field(
+        description="The entry point intent this rule matches, as sent in Apple's `intentID`. Set when `match_kind` is `intent` or `both`, null when it is `group`.",
+        examples=["order_status"],
+        min_length=1,
+    )] = None
+    match_group_id: Annotated[Optional[str], Field(
+        description="The entry point group this rule matches, as sent in Apple's `groupID`. Set when `match_kind` is `group` or `both`, null when it is `intent`.",
+        examples=["support"],
+        min_length=1,
+    )] = None
+    queue: Annotated[str, Field(
+        description="The queue a matching conversation is filed into. A queue is a label your console filters by rather than a resource you create ahead of time, so any value routes.",
+        examples=["billing"],
+        min_length=1,
+    )]
+    precedence: Annotated[int, Field(
+        description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins; rules tied on precedence are evaluated by their `id`.",
+        examples=[10],
+    )]
+    is_default: Annotated[bool, Field(
+        description="Whether this rule catches a conversation that matches nothing else. A business has at most one. A conversation created or reopened while none exists routes to an empty queue, which the console lists as unrouted.",
+        examples=[False],
+    )]
+
+
+class AMBRoutingRuleList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBRoutingRule], Field(
+        description="The workspace's routing rules, optionally filtered by business, highest precedence first and ties broken by `id`. Rules are evaluated within their business in this order. The set is returned in full; this list is not paginated.",
+    )]
+
+
+class AMBQueue(RootModel[str]):
+    root: str
+
+
+class AMBRoutingRuleCreate1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    match_kind: Literal["intent"]
+    match_intent_id: Annotated[str, Field(min_length=1)]
+    match_group_id: Annotated[Optional[str], Field(
+        description="The entry point group to match, as sent in Apple's `groupID`. Required when `match_kind` is `group` or `both`, and rejected when it is `intent`.",
+        examples=["support"],
+        min_length=1,
+    )] = None
+    queue: Annotated[str, Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )]
+    precedence: Annotated[Optional[int], Field(
+        description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins. Omit it to default to 0.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to make this the rule that catches a conversation matching nothing else. A business can have only one; creating a second while one exists returns a `409`.",
+        examples=[False],
+    )] = None
+
+
+class AMBRoutingRuleCreate2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    match_kind: Literal["group"]
+    match_intent_id: Annotated[Optional[str], Field(
+        description="The entry point intent to match, as sent in Apple's `intentID`. Required when `match_kind` is `intent` or `both`, and rejected when it is `group`.",
+        examples=["order_status"],
+        min_length=1,
+    )] = None
+    match_group_id: Annotated[str, Field(min_length=1)]
+    queue: Annotated[str, Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )]
+    precedence: Annotated[Optional[int], Field(
+        description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins. Omit it to default to 0.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to make this the rule that catches a conversation matching nothing else. A business can have only one; creating a second while one exists returns a `409`.",
+        examples=[False],
+    )] = None
+
+
+class AMBRoutingRuleCreate3(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    match_kind: Literal["both"]
+    match_intent_id: Annotated[str, Field(min_length=1)]
+    match_group_id: Annotated[str, Field(min_length=1)]
+    queue: Annotated[str, Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )]
+    precedence: Annotated[Optional[int], Field(
+        description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins. Omit it to default to 0.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to make this the rule that catches a conversation matching nothing else. A business can have only one; creating a second while one exists returns a `409`.",
+        examples=[False],
+    )] = None
+
+
+class AMBRoutingRuleCreate(RootModel[AMBRoutingRuleCreate1 | AMBRoutingRuleCreate2 | AMBRoutingRuleCreate3]):
+    root: AMBRoutingRuleCreate1 | AMBRoutingRuleCreate2 | AMBRoutingRuleCreate3
+
+
+class AMBRoutingRuleUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    queue: Annotated[Optional[str], Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )] = None
+    precedence: Annotated[Optional[int], Field(
+        description="Change this rule's evaluation order among the business's other rules.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default. Setting it true while the business already has a different default rule returns a `409`.",
+        examples=[False],
+    )] = None
+
+
+class AMBConversationID(RootModel[str]):
+    root: str
+
+
+class AMBMessageDirection(str, Enum):
+    outbound = "outbound"
+    inbound = "inbound"
+
+
+class AMBMessageStatus(str, Enum):
+    accepted = "accepted"
+    sent = "sent"
+    send_failed = "send_failed"
+    rejected = "rejected"
+    received = "received"
+
+
+class AMBContentKind(str, Enum):
+    text = "text"
+    attachment = "attachment"
+    rich_link = "rich_link"
+    quick_reply = "quick_reply"
+    list_picker = "list_picker"
+    time_picker = "time_picker"
+    form = "form"
+    apple_pay = "apple_pay"
+    authenticate = "authenticate"
+    imessage_app = "imessage_app"
+    interactive = "interactive"
+
+
+class AMBMessageSource(str, Enum):
+    operator = "operator"
+    automation = "automation"
+    api = "api"
+
+
+class AMBNativeAttachment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    source_url: Annotated[Optional[str], Field(
+        description="HTTPS URL Bird downloads and uploads to Apple.",
+        min_length=1,
+        pattern="^https://",
+    )] = None
+    name: Annotated[Optional[str], Field(description="Display filename.")] = None
+    mime_type: Annotated[Optional[str], Field(
+        description="Media type of the attachment.",
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="Encrypted attachment URL returned by Apple.",
+        min_length=1,
+        pattern="^https://",
+    )] = None
+    owner: Annotated[Optional[str], Field(
+        description="Opaque owner value returned by Apple.",
+        min_length=1,
+    )] = None
+    signature_base64: Annotated[Optional[str], Field(
+        description="Attachment authorization signature returned by Apple.",
+        min_length=1,
+    )] = None
+    key: Annotated[Optional[str], Field(
+        description="Attachment decryption key returned by Apple.",
+        max_length=66,
+        min_length=66,
+        pattern="^00[0-9a-fA-F]{64}$",
+    )] = None
+    size: Annotated[Optional[int], Field(
+        description="Attachment size in bytes.",
+        ge=1,
+        le=99999999,
+    )] = None
+
+
+class AMBNativeTextContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["text"], Field(description="Apple message family.")]
+    body: Annotated[Optional[str], Field(
+        description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
+    )] = None
+    subject: Annotated[Optional[str], Field(
+        description="Subject displayed above the message body.",
+    )] = None
+    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
+        description="Ordered attachments. Each object supplies a source URL or an encrypted Apple reference.",
+    )] = None
+
+
+class AMBNativeRichLinkImage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    source_url: Annotated[str, Field(
+        description="HTTPS URL of a PNG preview image up to 200 kB. Bird fetches and encodes it when sending.",
+        min_length=1,
+        pattern="^https://",
+    )]
+    mime_type: Annotated[Optional[Literal["image/png"]], Field(
+        description="PNG media type required by Apple. Defaults to image/png.",
+    )] = None
+
+
+class AMBNativeRichLinkVideo(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    url: Annotated[str, Field(
+        description="HTTPS video URL fetched by Apple.",
+        min_length=1,
+        pattern="^https://",
+    )]
+    mime_type: Annotated[Optional[str], Field(
+        description="Media type of the video. Defaults to video/mp4; supply the actual type for other formats.",
+    )] = None
+
+
+class AMBNativeRichLinkAssets(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    image: AMBNativeRichLinkImage
+    video: Optional[AMBNativeRichLinkVideo] = None
+
+
+class AMBNativeRichLinkData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    url: Annotated[str, Field(
+        description="HTTPS URL opened by the preview.",
+        min_length=1,
+        pattern="^https://",
+    )]
+    title: Annotated[str, Field(description="Preview title.", min_length=1)]
+    assets: AMBNativeRichLinkAssets
+
+
+class AMBRichLinkReference(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[Optional[str], Field(
+        description="Title supplied by Apple for the preview.",
+        min_length=1,
+    )] = None
+    bid: Annotated[Optional[str], Field(
+        description="Messages extension identifier supplied by Apple, when present.",
+        min_length=1,
+    )] = None
+    data_ref_sig: Annotated[Optional[str], Field(
+        description="Signature binding the reference to the business, when supplied by Apple.",
+        min_length=1,
+    )] = None
+    url: Annotated[str, Field(
+        description="Location of the encrypted preview.",
+        min_length=1,
+        pattern="^https://",
+    )]
+    owner: Annotated[str, Field(
+        description="Owner identifier supplied by Apple.",
+        min_length=1,
+    )]
+    signature_base64: Annotated[str, Field(
+        description="Signature supplied by Apple.",
+        min_length=1,
+    )]
+    key: Annotated[Optional[str], Field(
+        description="Decryption key supplied by Apple.",
+        max_length=66,
+        min_length=66,
+        pattern="^00[0-9a-fA-F]{64}$",
+    )] = None
+    size: Annotated[int, Field(
+        description="Size of the encrypted preview in bytes.",
+        ge=1,
+    )]
+
+
+class AMBNativeRichLinkContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["rich_link"], Field(description="Apple message family.")]
+    body: Annotated[Optional[str], Field(
+        description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
+    )] = None
+    subject: Annotated[Optional[str], Field(
+        description="Subject displayed above the message body.",
+    )] = None
+    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
+        description="Ordered attachments. Each object supplies a source URL or an encrypted Apple reference.",
+    )] = None
+    rich_link_data: Optional[AMBNativeRichLinkData] = None
+    rich_link_data_ref: Annotated[Optional[AMBRichLinkReference], Field(
+        description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
+    )] = None
+
+
+class AMBMessageBubbleStyle(str, Enum):
+    icon = "icon"
+    small = "small"
+    large = "large"
+
+
+class AMBMessageBubble(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[str, Field(
+        description="Text shown on the message bubble.",
+        max_length=512,
+        min_length=1,
+    )]
+    subtitle: Annotated[Optional[str], Field(
+        description="Secondary text shown below the title.",
+        max_length=512,
+    )] = None
+    style: Annotated[Optional[AMBMessageBubbleStyle], Field(
+        description="Layout of an Apple interactive message bubble.",
+    )] = None
+    image_identifier: Annotated[Optional[str], Field(
+        description="Identifier of an image in interactive_data.data.images. Apple ignores it for custom iMessage apps.",
+        min_length=1,
+    )] = None
+    image_title: Annotated[Optional[str], Field(
+        description="Title shown over an attached image in a custom iMessage app bubble.",
+        max_length=512,
+    )] = None
+    image_subtitle: Annotated[Optional[str], Field(
+        description="Subtitle shown over an attached image in a custom iMessage app bubble.",
+        max_length=512,
+    )] = None
+    secondary_subtitle: Annotated[Optional[str], Field(
+        description="Right-aligned title in a custom iMessage app bubble.",
+        max_length=512,
+    )] = None
+    tertiary_subtitle: Annotated[Optional[str], Field(
+        description="Right-aligned subtitle in a custom iMessage app bubble.",
+        max_length=512,
+    )] = None
+
+
+class AMBNativeImage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(
+        description="Identifier referenced by a bubble, item, or event.",
+        min_length=1,
+    )]
+    source_url: Annotated[str, Field(
+        description="HTTPS URL of a PNG image up to 200 kB. Total interactive image data must not exceed 5 MB.",
+        min_length=1,
+        pattern="^https://",
+    )]
+    description: Annotated[Optional[str], Field(
+        description="Accessibility description read by VoiceOver.",
+    )] = None
+
+
+class AMBQuickReplyItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(
+        description="Opaque choice identifier returned in interactive_data.data.quick_reply.selected_identifier.",
+        min_length=1,
+    )]
+    title: Annotated[str, Field(description="Label shown on the button.", min_length=1)]
+
+
+class AMBNativeQuickReply(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    summary_text: Annotated[str, Field(
+        description="Text used for the device notification and shown in the transcript after the customer chooses an item. Send a separate text message to introduce the choices.",
+        min_length=1,
+    )]
+    items: Annotated[List[AMBQuickReplyItem], Field(
+        description="The buttons offered to the customer. Apple requires between two and five; outside that range the request is refused with a `422` `AMBQuickReplyItemsInvalid`. For more choices, send `list_picker` content instead.",
+        max_length=5,
+        min_length=2,
+    )]
+
+
+class AMBListPickerItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(
+        description="Opaque item identifier returned in interactive_data.data.list_picker.sections.",
+        min_length=1,
+    )]
+    title: Annotated[str, Field(description="Label shown on the row.", min_length=1)]
+    subtitle: Annotated[Optional[str], Field(
+        description="Secondary line shown under the title.",
+    )] = None
+    image_identifier: Annotated[Optional[str], Field(
+        description="Identifier of an image in interactive_data.data.images, shown next to this row. A key with no matching entry in `images` is refused with a `422` `AMBInteractiveImageInvalid`.",
+        min_length=1,
+    )] = None
+    order: Annotated[Optional[int], Field(
+        description="Position within the section, ascending. Defaults to the row's array position.",
+        ge=0,
+    )] = None
+
+
+class AMBListPickerSection(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[str, Field(
+        description="Heading shown above this section's rows.",
+        min_length=1,
+    )]
+    order: Annotated[Optional[int], Field(
+        description="Where this section sits relative to its siblings, ascending. Sections omitting it are laid out in list order, after any that specify one.",
+        ge=0,
+    )] = None
+    items: Annotated[List[AMBListPickerItem], Field(
+        description="The rows in this section.",
+        min_length=1,
+    )]
+    multiple_selection: Annotated[Optional[bool], Field(
+        description="Whether the customer can select more than one row in this section.",
+    )] = None
+
+
+class AMBNativeListPicker(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sections: Annotated[List[AMBListPickerSection], Field(
+        description="The menu's sections, each with its own heading and rows.",
+        min_length=1,
+    )]
+
+
+class AMBLocation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[Optional[str], Field(
+        description="Name shown for the appointment location.",
+    )] = None
+    latitude: Annotated[Optional[float], Field(
+        description="Latitude in degrees. Set together with `longitude`.",
+        ge=-90,
+        le=90,
+    )] = None
+    longitude: Annotated[Optional[float], Field(
+        description="Longitude in degrees. Set together with `latitude`.",
+        ge=-180,
+        le=180,
+    )] = None
+    radius: Annotated[Optional[float], Field(
+        description="Location radius in meters. Apple ignores it without coordinates.",
+        ge=0,
+    )] = None
+
+
+class AMBTimeSlot(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(
+        description="Opaque slot identifier. Apple may instead return only a localized label in interactive_data.reply_message.title.",
+        min_length=1,
+    )]
+    start_at: Annotated[str, Field(
+        description="When this slot begins. Seconds and fractional seconds must be zero, for example `2026-09-02T14:30:00Z`; otherwise sending returns `422` with error code `E01001`. The timestamp is converted to UTC for Apple while preserving the instant.",
+        min_length=1,
+    )]
+    duration_seconds: Annotated[int, Field(
+        description="Duration in seconds. Zero indicates no duration.",
+        ge=0,
+    )]
+
+
+class AMBNativeEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[Optional[str], Field(
+        description="Your identifier for the event. Defaults to the message identifier.",
+        min_length=1,
+    )] = None
+    location: Optional[AMBLocation] = None
+    timezone_offset: Annotated[Optional[int], Field(
+        description="Minutes from GMT at the event location. Omit to use the customer's time zone.",
+    )] = None
+    timeslots: Annotated[List[AMBTimeSlot], Field(
+        description="Appointment times with RFC 3339 timestamps and duration in seconds.",
+        min_length=1,
+    )]
+    image_identifier: Annotated[Optional[str], Field(
+        description="Identifier of the event image in interactive_data.data.images.",
+        min_length=1,
+    )] = None
+    title: Annotated[Optional[str], Field(description="Event title.")] = None
+
+
+class AMBFormSplash(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    header: Optional[str] = None
+    splash_text: Optional[str] = None
+    button_title: Annotated[str, Field(min_length=1)]
+    image_identifier: Annotated[Optional[str], Field(min_length=1)] = None
+
+
+class AMBFormSelectItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(min_length=1)]
+    title: Annotated[str, Field(min_length=0)]
+    value: Annotated[str, Field(min_length=0)]
+    image_identifier: Annotated[Optional[str], Field(min_length=1)] = None
+    next_page_identifier: Annotated[Optional[str], Field(max_length=19, min_length=1)] = None
+
+
+class AMBFormSelectPage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    page_identifier: Annotated[str, Field(
+        description="Unique identifier for this page.",
+        max_length=19,
+        min_length=1,
+    )]
+    type: Annotated[Literal["select"], Field(min_length=1)]
+    title: Optional[str] = None
+    subtitle: Annotated[str, Field(
+        description="Question shown on this page.",
+        min_length=0,
+    )]
+    next_page_identifier: Annotated[Optional[str], Field(
+        description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
+        max_length=19,
+        min_length=1,
+    )] = None
+    submit_form: Annotated[Optional[bool], Field(
+        description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
+    )] = None
+    multiple_selection: Optional[bool] = None
+    items: Annotated[List[AMBFormSelectItem], Field(min_length=1)]
+
+
+class AMBFormPickerItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(min_length=1)]
+    title: Annotated[str, Field(min_length=0)]
+    value: Annotated[str, Field(min_length=0)]
+
+
+class AMBFormPickerPage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    page_identifier: Annotated[str, Field(
+        description="Unique identifier for this page.",
+        max_length=19,
+        min_length=1,
+    )]
+    type: Annotated[Literal["picker"], Field(min_length=1)]
+    title: Optional[str] = None
+    subtitle: Annotated[str, Field(
+        description="Question shown on this page.",
+        min_length=0,
+    )]
+    next_page_identifier: Annotated[Optional[str], Field(
+        description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
+        max_length=19,
+        min_length=1,
+    )] = None
+    submit_form: Annotated[Optional[bool], Field(
+        description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
+    )] = None
+    picker_title: Annotated[Optional[str], Field(
+        description="Text beside the picker field. Omit to center the field without a label.",
+    )] = None
+    selected_item_index: Annotated[Optional[int], Field(
+        description="Zero-based index into `items`. Defaults to `0`. Must be less than the number of items; otherwise sending returns `422` `AMBFormPagesInvalid`.",
+        ge=0,
+    )] = None
+    items: Annotated[List[AMBFormPickerItem], Field(min_length=1)]
+
+
+class AMBFormDatePickerOptions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    date_format: Annotated[Optional[str], Field(
+        description="Format used to read the date values in these options. Defaults to `MM/dd/yyyy`.",
+        min_length=1,
+    )] = None
+    start_date: Annotated[Optional[str], Field(
+        description="Date initially shown by the picker, written in `date_format`. Defaults to the current date.",
+        min_length=1,
+    )] = None
+    maximum_date: Annotated[Optional[str], Field(
+        description="Latest date the picker shows, written in `date_format`. Defaults to the current date.",
+        min_length=1,
+    )] = None
+    minimum_date: Annotated[Optional[str], Field(
+        description="Earliest date the picker shows, written in `date_format`.",
+        min_length=1,
+    )] = None
+    label_text: Annotated[Optional[str], Field(
+        description="Label beside the date field. Defaults to `Date`.",
+    )] = None
+
+
+class AMBFormDatePickerPage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    page_identifier: Annotated[str, Field(
+        description="Unique identifier for this page.",
+        max_length=19,
+        min_length=1,
+    )]
+    type: Annotated[Literal["date_picker"], Field(min_length=1)]
+    title: Optional[str] = None
+    subtitle: Annotated[str, Field(
+        description="Question shown on this page.",
+        min_length=0,
+    )]
+    next_page_identifier: Annotated[Optional[str], Field(
+        description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
+        max_length=19,
+        min_length=1,
+    )] = None
+    submit_form: Annotated[Optional[bool], Field(
+        description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
+    )] = None
+    hint_text: Optional[str] = None
+    options: Annotated[Optional[AMBFormDatePickerOptions], Field(
+        description="Apple defaults to UTC when interpreting these dates.",
+    )] = None
+
+
+class AMBFormInputType(str, Enum):
+    singleline = "singleline"
+    multiline = "multiline"
+
+
+class AMBFormKeyboardType(str, Enum):
+    default = "default"
+    asciiCapable = "asciiCapable"
+    numbersAndPunctuation = "numbersAndPunctuation"
+    URL = "URL"
+    numberPad = "numberPad"
+    phonePad = "phonePad"
+    namePhonePad = "namePhonePad"
+    emailAddress = "emailAddress"
+    decimalPad = "decimalPad"
+    webSearch = "webSearch"
+
+
+class AMBFormTextContentType(str, Enum):
+    name = "name"
+    namePrefix = "namePrefix"
+    givenName = "givenName"
+    middleName = "middleName"
+    familyName = "familyName"
+    nameSuffix = "nameSuffix"
+    nickname = "nickname"
+    jobTitle = "jobTitle"
+    organizationName = "organizationName"
+    location = "location"
+    fullStreetAddress = "fullStreetAddress"
+    streetAddressLine1 = "streetAddressLine1"
+    streetAddressLine2 = "streetAddressLine2"
+    addressCity = "addressCity"
+    addressState = "addressState"
+    addressCityAndState = "addressCityAndState"
+    sublocality = "sublocality"
+    countryName = "countryName"
+    postalCode = "postalCode"
+    telephoneNumber = "telephoneNumber"
+    emailAddress = "emailAddress"
+    URL = "URL"
+    creditCardNumber = "creditCardNumber"
+    username = "username"
+    password = "password"
+    newPassword = "newPassword"
+    oneTimeCode = "oneTimeCode"
+
+
+class AMBFormInputOptions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    regex: Annotated[Optional[str], Field(
+        description="Pattern Apple uses to validate the input. Use JSON string escaping for backslashes.",
+        min_length=1,
+    )] = None
+    placeholder: Annotated[Optional[str], Field(
+        description="Shown when the field is empty. Defaults to `Required` when `required` is true, otherwise `Optional`.",
+    )] = None
+    required: Annotated[Optional[bool], Field(
+        description="Disables the next-page button until the customer enters a value.",
+    )] = None
+    input_type: Optional[AMBFormInputType] = None
+    label_text: Annotated[Optional[str], Field(
+        description="Label for `singleline` input only. Omit for no label.",
+    )] = None
+    prefix_text: Annotated[Optional[str], Field(
+        description="Text beside `singleline` input only, such as a currency symbol. Omit for no prefix.",
+    )] = None
+    maximum_character_count: Annotated[Optional[int], Field(
+        description="Defaults to 30 for `singleline` input and 300 for `multiline` input.",
+        ge=1,
+    )] = None
+    keyboard_type: Annotated[Optional[Annotated[Union[AMBFormKeyboardType, str], Field(union_mode="left_to_right")]], Field(
+        description="Apple UIKit value, passed through without changing its spelling.",
+    )] = None
+    text_content_type: Annotated[Optional[Annotated[Union[AMBFormTextContentType, str], Field(union_mode="left_to_right")]], Field(
+        description="Apple UIKit value, passed through without changing its spelling.",
+    )] = None
+
+
+class AMBFormInputPage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    page_identifier: Annotated[str, Field(
+        description="Unique identifier for this page.",
+        max_length=19,
+        min_length=1,
+    )]
+    type: Annotated[Literal["input"], Field(min_length=1)]
+    title: Optional[str] = None
+    subtitle: Annotated[str, Field(
+        description="Question shown on this page.",
+        min_length=0,
+    )]
+    next_page_identifier: Annotated[Optional[str], Field(
+        description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
+        max_length=19,
+        min_length=1,
+    )] = None
+    submit_form: Annotated[Optional[bool], Field(
+        description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
+    )] = None
+    hint_text: Optional[str] = None
+    options: Optional[AMBFormInputOptions] = None
+
+
+class AMBFormPage(RootModel[AMBFormSelectPage | AMBFormPickerPage | AMBFormDatePickerPage | AMBFormInputPage]):
+    root: AMBFormSelectPage | AMBFormPickerPage | AMBFormDatePickerPage | AMBFormInputPage
+
+
+class AMBNativeFormData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    start_page_identifier: Annotated[str, Field(
+        description="Identifier of the first page to show.",
+        max_length=19,
+        min_length=1,
+    )]
+    private: Annotated[Optional[bool], Field(
+        description="Whether Apple marks the submitted response as private.",
+    )] = None
+    show_summary: Annotated[Optional[bool], Field(
+        description="Whether Apple shows a summary before the customer submits.",
+    )] = None
+    splash: Optional[AMBFormSplash] = None
+    pages: Annotated[List[AMBFormPage], Field(
+        description="Form pages referenced by the start page and navigation identifiers.",
+        min_length=1,
+    )]
+
+
+class AMBNativeDynamic(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: AMBNativeFormData
+
+
+class AMBAuthenticationID(RootModel[str]):
+    root: str
+
+
+class AMBNativeAuthentication(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    authentication_id: Annotated[str, Field(
+        examples=["amauth_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amauth_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class AMBPaymentID(RootModel[str]):
+    root: str
+
+
+class AMBNativePayment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    payment_id: Annotated[str, Field(
+        examples=["apay_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^apay_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class AMBNativeInteractivePayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    request_identifier: Annotated[Optional[str], Field(
+        description="Correlation identifier for this interaction. Bird generates one when omitted.",
+        pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+    )] = None
+    images: Annotated[Optional[List[AMBNativeImage]], Field(
+        description="Images referenced by identifier.",
+    )] = None
+    quick_reply: Optional[AMBNativeQuickReply] = None
+    list_picker: Optional[AMBNativeListPicker] = None
+    event: Optional[AMBNativeEvent] = None
+    dynamic: Annotated[Optional[AMBNativeDynamic], Field(
+        description="Form content. Bird supplies Apple’s messageForms template and protocol version.",
+    )] = None
+    authenticate: Annotated[Optional[AMBNativeAuthentication], Field(
+        description="Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials.",
+    )] = None
+    payment: Annotated[Optional[AMBNativePayment], Field(
+        description="Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials.",
+    )] = None
+
+
+class AMBNativeInteractiveData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    app_id: Annotated[Optional[str], Field(
+        description="App Store identifier of the iMessage app.",
+        min_length=1,
+    )] = None
+    app_name: Annotated[Optional[str], Field(
+        description="Name of the iMessage app.",
+        min_length=1,
+    )] = None
+    bid: Annotated[Optional[str], Field(
+        description="Identifier of the iMessage extension, in Apple's `com.apple.messages.MSMessageExtensionBalloonPlugin:team-id:extension-id` format.",
+        min_length=1,
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="Opaque URL string that Messages passes to the iMessage app.",
+        examples=["?order=1234&view=detail"],
+        min_length=1,
+    )] = None
+    use_live_layout: Annotated[Optional[bool], Field(
+        description="Whether Messages renders the received and reply bubbles using Live Layout.",
+    )] = None
+    session_identifier: Annotated[Optional[str], Field(
+        description="Session UUID to preserve across interactions. Apple creates one when omitted.",
+        pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+    )] = None
+    received_message: Optional[AMBMessageBubble] = None
+    reply_message: Optional[AMBMessageBubble] = None
+    app_icon_source_url: Annotated[Optional[str], Field(
+        description="Publicly accessible HTTPS URL of the app's PNG icon. The icon must be smaller than 15 kB. We fetch and include it in the request to Apple.",
+        min_length=1,
+        pattern="^https://",
+    )] = None
+    data: Annotated[Optional[AMBNativeInteractivePayload], Field(
+        description="Exactly one built-in interaction. Protocol versions are managed by Bird.",
+    )] = None
+
+
+class AMBNativeInteractiveContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["interactive"], Field(description="Apple message family.")]
+    body: Annotated[Optional[str], Field(
+        description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
+    )] = None
+    subject: Annotated[Optional[str], Field(
+        description="Subject displayed above the message body.",
+    )] = None
+    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
+        description="Ordered attachments. Each object supplies a source URL or an encrypted Apple reference.",
+    )] = None
+    interactive_data: Annotated[Optional[AMBNativeInteractiveData], Field(
+        description="A built-in interaction or custom iMessage app. Custom apps require the app metadata and both message bubbles.",
+    )] = None
+    interactive_data_ref: Annotated[Optional[AMBRichLinkReference], Field(
+        description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
+    )] = None
+
+
+class AMBMessageContent(RootModel[AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent]):
+    root: AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent
+
+
+class AMBStatsErrorCode(RootModel[str]):
+    root: str
+
+
+class AMBError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[str, Field(
+        description="Machine-readable reason a send failed, in one of two namespaces: `bird:` for a reason Bird's own pipeline assigned (for example `bird:business_not_registered`), or `apple:` followed by the HTTP status Apple's API returned for the send attempt (for example `apple:404`). This is an open, growing set in both namespaces; accept unrecognized values.",
+        examples=["bird:business_not_registered"],
+        min_length=1,
+        pattern="^(bird:[a-z0-9_]+|apple:\\d{3})$",
+    )]
+    description: Annotated[str, Field(
+        description="The failure in words. Free-form, so branch on `code` and show this to a human.",
+        examples=["Apple refused the message with HTTP status 404."],
+        min_length=1,
+    )]
+    occurred_at: Annotated[str, Field(
+        description="When the failure occurred.",
+        min_length=1,
+    )]
+
+
+class AMBMessage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    conversation_id: Annotated[str, Field(
+        examples=["acv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^acv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    from_: Annotated[Optional[str], Field(
+        alias="from",
+        description="Apple business identifier on outbound messages, or the customer's opaque Apple identifier on inbound messages. Omitted when that address is unavailable on a historical record.",
+        min_length=1,
+    )] = None
+    to: Annotated[Optional[str], Field(
+        description="Customer's opaque Apple identifier on outbound messages, or the Apple business identifier on inbound messages. Omitted when that address is unavailable on a historical record.",
+        min_length=1,
+    )] = None
+    direction: Annotated[AMBMessageDirection, Field(
+        description="Whether a message was sent by the business or received from the customer:\n\n- `outbound`: A reply the business sent into the conversation.\n- `inbound`: A message the customer sent.",
+    )]
+    status: Annotated[AMBMessageStatus, Field(
+        description="Send status:\n\n- `accepted`: Accepted and queued for delivery to Apple.\n- `sent`: Handed to Apple. There is no delivery or read receipt on this\n  channel, so `sent` is the furthest an outbound message's status\n  advances.\n- `send_failed`: Sending stopped because of a business or conversation\n  restriction, a recipient opt-out, an Apple refusal, or exhausted attempts.\n  An earlier attempt may have reached Apple if its response or the local\n  record of success was lost. See `last_error` for why sending stopped.\n- `rejected`: Refused by Bird before any send attempt and never charged:\n  the destination has no price, the wallet could not fund the send, or the\n  content cannot be sent yet. See `last_error`.\n- `received`: Received as an inbound message.",
+    )]
+    kind: Annotated[AMBContentKind, Field(
+        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    source: Annotated[Optional[AMBMessageSource], Field(
+        description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
+    )] = None
+    content: Annotated[Any, Field(
+        description="Native message content. Outgoing interactions contain requests; incoming interactions contain replies.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    locale: Annotated[Optional[str], Field(
+        description="Locale for this message, preserved in Apple’s format, for example en_US. Outbound messages use the request override, then the conversation locale, then the business default. Inbound messages preserve the locale in Apple’s callback. Null when unknown.",
+        examples=["en_US"],
+        min_length=1,
+    )] = None
+    category: Annotated[Optional[str], Field(
+        description="The category this message was sent with, for reporting only. It does not affect sending or suppression policy, or select an Apple department or purpose. Defaults to an empty string when a send names no category. Absent on an inbound message, which has no category to report.",
+        examples=["order_update"],
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Arbitrary JSON object for per-message context. Maximum 2 KB serialized. Top-level keys beginning with `__bird` are reserved. Returned in the send response, message reads and customer message webhooks.",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Structured `{name, value}` filter labels applied to this message. Absent on an inbound message.",
+    )] = None
+    cost: Annotated[Optional[MessageCost], Field(
+        description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )]
+    last_error: Annotated[Optional[AMBError], Field(
+        description="Failure detail for a message or invitation that could not be sent or was rejected.",
+    )] = None
+    created_at: Annotated[str, Field(
+        description="The moment this message was accepted (outbound) or received (inbound). This is the timestamp the outbound statistics families bucket and attribute on; there is no separate `accepted_at` field.",
+        min_length=1,
+    )]
+    sent_at: Annotated[Optional[str], Field(
+        description="When the selected sending outcome occurred. Null unless the current status is `sent` and the message is outbound. For older messages without a retained sending event, the stored record time is used.",
+    )] = None
+    data_ref: Annotated[Optional[AMBRichLinkReference], Field(
+        description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
+    )] = None
+    group: Annotated[Optional[str], Field(
+        description="Apple department identifier carried by this message. Omitted when absent from the message or unavailable on a historical record.",
+        min_length=1,
+    )] = None
+    intent: Annotated[Optional[str], Field(
+        description="Apple purpose identifier carried by this message. Omitted when absent from the message or unavailable on a historical record.",
+        min_length=1,
+    )] = None
+
+
+class AMBMessageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBMessage], Field(
+        description="Page of Apple Messages for Business messages, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class AMBMessageSendRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Apple business identifier of the brand sending the message. Read it from the business’s apple_business_id. The customer must have opened the conversation with this business.",
+        examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="Apple’s opaque customer identifier for this business, available as the conversation’s opaque_user_id. The conversation must exist and be open.",
+        examples=["opaque-customer-id"],
+        min_length=1,
+    )]
+    source: Annotated[Optional[AMBMessageSource], Field(
+        description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
+    )] = None
+    content: Annotated[AMBMessageContent, Field(
+        description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
+    )]
+    category: Annotated[Optional[str], Field(
+        description="Free-form reporting label; it does not change sending or suppression policy, for example `order_update`. Omit it to send with the default empty category.",
+        examples=["order_update"],
+        max_length=64,
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Arbitrary JSON object for per-message context. Maximum 2 KB serialized. Top-level keys beginning with `__bird` are reserved. Returned in the send response, message reads and customer message webhooks.",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Structured `{name, value}` labels for filtering. Maximum 20 tags per send.",
+        max_length=20,
+    )] = None
+    group: Annotated[Optional[str], Field(
+        description="Department identifier for this message.",
+    )] = None
+    intent: Annotated[Optional[str], Field(description="Purpose of this conversation.")] = None
+    locale: Annotated[Optional[str], Field(
+        description="Apple locale identifier, for example en_US. Defaults to the conversation locale.",
+    )] = None
+
+
+class AMBMessageEventType(str, Enum):
+    amb_accepted = "amb.accepted"
+    amb_sent = "amb.sent"
+    amb_send_failed = "amb.send_failed"
+    amb_rejected = "amb.rejected"
+    amb_received = "amb.received"
+
+
+class AMBMessageEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["aev_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aev_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    type: Annotated[Annotated[Union[AMBMessageEventType, str], Field(union_mode="left_to_right")], Field(
+        description="Message timeline event type:\n\n- `amb.accepted`: The API accepted the request.\n- `amb.sent`: The message was handed to Apple.\n- `amb.send_failed`: Apple refused the message, or its send attempts were exhausted.\n- `amb.rejected`: Bird refused the message before any send attempt.\n- `amb.received`: An inbound message arrived from the customer.\n\nThis is an open enum. Accept unrecognized values.",
+    )]
+    occurred_at: Annotated[str, Field(
+        description="When this event occurred.",
+        min_length=1,
+    )]
+    error: Annotated[Optional[AMBError], Field(
+        description="Failure detail for a message or invitation that could not be sent or was rejected.",
+    )] = None
+
+
+class AMBMessageEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBMessageEvent], Field(
+        description="The message's events, oldest first. Not paginated: a message's timeline is bounded and returned in full.",
+    )]
+
+
+class AMBConversationStatus(str, Enum):
+    open = "open"
+    closed = "closed"
+
+
+class AMBConversationOrigin(str, Enum):
+    entry_point = "entry_point"
+    invitation = "invitation"
+
+
+class AMBConversationClosedReason(str, Enum):
+    user_close = "user_close"
+    gone = "gone"
+
+
+class AMBConversation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["acv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^acv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[AMBConversationStatus, Field(
+        description="Whether a conversation is open or closed. There is no close operation on this API: only the customer closes a conversation from their device, and any inbound message on a closed conversation reopens it.",
+    )]
+    origin: Annotated[AMBConversationOrigin, Field(
+        description="How the conversation started. `entry_point` means the customer opened it from one of your configured Apple Messages for Business entry points. `invitation` means the customer accepted an invitation and sent a message. This is set once when the conversation is created and never changes.",
+    )]
+    opaque_user_id: Annotated[Optional[str], Field(
+        description="Apple's opaque identifier for the customer with this business. The customer must send a message before a conversation is created. Null when no identifier is recorded.",
+        min_length=1,
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Customer phone number, when recorded. Null when unknown. Read the invitation's `to` field for the number an invitation was sent to.",
+        min_length=1,
+    )]
+    group_id: Annotated[Optional[str], Field(
+        description="The `group` value carried by the inbound message that opened or most recently reopened the conversation. Your business chooses it when configuring an entry point with Apple, and Apple passes it through; used with `intent_id` to route the conversation. Null when that message carried none.",
+        min_length=1,
+    )]
+    intent_id: Annotated[Optional[str], Field(
+        description="The `intent` value carried by the inbound message that opened or most recently reopened the conversation. Your business chooses it when configuring an entry point with Apple, and Apple passes it through; used with `group_id` to route the conversation. Null when that message carried none.",
+        min_length=1,
+    )]
+    entry_point: Annotated[Optional[str], Field(
+        description="The entry point in your channel settings whose group and intent matched the inbound message that opened or most recently reopened the conversation. Null when no configured entry point matched.",
+        examples=["support"],
+        min_length=1,
+    )] = None
+    device_capabilities: Annotated[List[str], Field(
+        description="The capability tokens the customer's device advertised on its most recent message, replaced by each inbound rather than accumulated, so this describes the device in use now. An empty list means the device's capabilities are unknown. Implemented message types may still be sent, but device rendering support has not been confirmed. Authentication requires an explicitly advertised AUTH2 capability.",
+    )]
+    supported_content_kinds: Annotated[List[AMBContentKind], Field(
+        description="Implemented baseline types plus interactive types confirmed by `device_capabilities`. An empty capability list yields text, attachments and rich links; it does not establish support for other types. Unadvertised quick replies, list pickers, time pickers and forms are refused when capabilities are known. Custom apps and opaque interactive references are not included because their device support cannot be inferred from these tokens. Unsupported roadmap types cannot be sent.",
+    )]
+    locale: Annotated[str, Field(
+        description="The customer's locale from the most recent inbound message, or your business's default locale before any inbound arrives. Preserved in Apple's locale format, for example `en_US@rg=nlzzzz`.",
+        examples=["en-US"],
+        min_length=1,
+    )]
+    unread_count: Annotated[int, Field(
+        description="Number of inbound messages since this conversation was last marked read. Incremented once per inbound message, reset to zero by marking the conversation read and by any outbound message your workspace sends.",
+        ge=0,
+    )]
+    message_count: Annotated[int, Field(
+        description="Number of messages in this conversation, both directions.",
+        ge=0,
+    )]
+    last_message_at: Annotated[str, Field(
+        description="When the most recent message in this conversation was sent or received.",
+        min_length=1,
+    )]
+    last_direction: Annotated[AMBMessageDirection, Field(
+        description="Whether a message was sent by the business or received from the customer:\n\n- `outbound`: A reply the business sent into the conversation.\n- `inbound`: A message the customer sent.",
+    )]
+    assigned_to: Annotated[Optional[str], Field(
+        description="The user this conversation is assigned to, or null when unassigned. Assignment is not rechecked against workspace membership on read, so it can still name a user whose access was removed.",
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    labels: Annotated[List[str], Field(
+        description="Operator-set tags on this conversation. Unlike email, there are no system placement labels: every value here is one an operator chose.",
+        max_length=20,
+    )]
+    queue: Annotated[Optional[str], Field(
+        description="The console queue this conversation is routed to. Empty when no routing rule matched, which the console lists as unrouted.",
+        examples=["support"],
+    )] = None
+    closed_at: Annotated[Optional[str], Field(
+        description="When this conversation was closed. Null while it is open.",
+    )]
+    closed_reason: Annotated[Optional[AMBConversationClosedReason], Field(
+        description="Why this conversation was closed. Null while it is open.",
+    )]
+    open_count: Annotated[int, Field(
+        description="Number of times this conversation has been opened, starting at 1 and incremented on each reopen. A closed conversation reopens on the next inbound message rather than creating a new conversation.",
+        ge=1,
+    )]
+    created_at: Annotated[str, Field(
+        description="When this conversation was created.",
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When this conversation last changed.",
+        min_length=1,
+    )]
+
+
+class AMBConversationList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBConversation], Field(
+        description="Page of conversations, newest first by last message.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class AMBConversationUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    assigned_to: Annotated[Optional[str], Field(
+        description="User to assign this conversation to. Pass null to unassign it.",
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    labels: Annotated[Optional[List[str]], Field(
+        description="Replaces the full set of labels on this conversation. Pass an empty array to clear every label.",
+        max_length=20,
+    )] = None
+    read: Annotated[Optional[bool], Field(
+        description="Set to true to mark this conversation read, resetting `unread_count` to zero. There is no way to mark a conversation unread through this field; false has no effect.",
+    )] = None
+
+
+class AMBConversationTypingEvent(str, Enum):
+    typing_start = "typing_start"
+    typing_end = "typing_end"
+
+
+class AMBConversationTypingRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    event: Annotated[AMBConversationTypingEvent, Field(
+        description="The typing signal to send. `typing_start` tells the customer's device that an operator is composing a reply. `typing_end` tells it composition stopped without a message following. Apple expects at most one `typing_start` before the reply it precedes; sending it again before that reply is not meaningful and may be dropped. `typing_end`'s behavior against a live conversation is unproven: the legacy platform's implementation was disabled after it caused issues, so treat it as best-effort.",
+    )]
+
+
+class AMBSuppressionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBSuppression], Field(
+        description="Active suppression episodes for the workspace, most recently effective first. Episodes that have ended are left out; fetch one by ID to read it.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class AMBSuppressionCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[Optional[str], Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    address: Annotated[str, Field(
+        description="The phone number or opaque identifier to suppress. For a phone number, supply canonical E.164 with a leading plus sign.",
+        examples=[+15551234567],
+        max_length=1024,
+        min_length=1,
+    )]
+    address_type: Annotated[AMBSuppressionAddressType, Field(
+        description="What kind of value `address` holds.\n\n- `phone_number` means `address` is the customer's phone number. Apple's CloseSession event carries a phone number rather than an opaque identifier, so a suppression opened by a close on a conversation identified by phone number takes this kind.\n- `opaque_user_id` means `address` is the opaque identifier Apple assigns to the customer's conversation with the business, stable across a close and a later re-initiation.",
+    )]
+
+
+class AMBStatsSummaryPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary. Historical starts are preserved; the maximum request length does not impose a historical cutoff.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class AMBStatsAttribution(str, Enum):
+    accepted_time = "accepted_time"
+    event_time = "event_time"
+
+
+class AMBOutboundStatsCounts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks. This is the denominator for `sent_rate` and `send_failure_rate`.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off to Apple.",
+        examples=[4790],
+        ge=0,
+    )]
+    send_failed: Annotated[int, Field(
+        description="Distinct accepted messages that Apple refused or that exhausted their send attempts. See `last_error.code` on the message for the reason; a refused charge is not a send failure, it is `rejected`.",
+        examples=[30],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages refused before any send attempt, because the destination has no price, the wallet could not fund the send, or the content cannot be sent yet. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `send_failure_rate`, which covers send failures only.",
+        examples=[4],
+        ge=0,
+    )]
+    sent_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages Apple acknowledged, computed as `sent / accepted`. Null when no messages were accepted in scope. This stands where other channels report a delivery rate.",
+        examples=[0.9938],
+        ge=0,
+        le=1,
+    )]
+    send_failure_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that failed to send, computed as `send_failed / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.0062],
+        ge=0,
+        le=1,
+    )]
+
+
+class AMBStatsQuantiles(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    p50_ms: Annotated[Optional[int], Field(
+        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[610],
+        ge=0,
+    )]
+    p95_ms: Annotated[Optional[int], Field(
+        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[2140],
+        ge=0,
+    )]
+    p99_ms: Annotated[Optional[int], Field(
+        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[5380],
+        ge=0,
+    )]
+
+
+class AMBStatsLatency(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    processing: Annotated[AMBStatsQuantiles, Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )]
+
+
+class AMBStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    accepted_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in accepted messages (`counts.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+        examples=[0.508],
+    )]
+    sent_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in sent messages (`counts.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.501],
+    )]
+    send_failed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in send failures (`counts.send_failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.12],
+    )]
+    rejected_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in rejected messages (`counts.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0],
+    )]
+
+
+class AMBStatsComparison(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    delta: Annotated[AMBStatsComparisonDelta, Field(
+        description="Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero.",
+    )]
+
+
+class AMBStatsSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    comparison: Annotated[Optional[AMBStatsComparison], Field(
+        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
+    )] = None
+
+
+class AMBStatsSeriesPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window. A calendar day (YYYY-MM-DD) on the day grain, an RFC 3339 instant on the hour grain. Historical starts are preserved; the maximum request length does not impose a historical cutoff.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window. A calendar day (YYYY-MM-DD) on the day grain, an RFC 3339 instant on the hour grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    grain: Annotated[StatsGrain, Field(
+        description="The bucket grain of the series, either `day` or `hour`.",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class AMBStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+
+
+class AMBStatsResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSeriesPeriod, Field(
+        description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBStatsPoint], Field(
+        description="One row per day or hour in chronological order. Buckets with no activity contain zero counts.",
+    )]
+
+
+class AMBBusinessAccountStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByBusinessResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBBusinessAccountStatsPoint], Field(
+        description="Business rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct businesses with activity in the period, regardless of `limit`.",
+        examples=[1],
+        ge=0,
+    )]
+
+
+class AMBMessageKindStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    message_kind: Annotated[AMBContentKind, Field(
+        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByMessageKindResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBMessageKindStatsPoint], Field(
+        description="Content-kind rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct content kinds with activity in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class AMBIntentStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    intent: Annotated[str, Field(
+        description="The intent these messages were routed under, as configured in the business's entry points. Intents are workspace-defined and have no fixed vocabulary.",
+        examples=["order_support"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByIntentResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBIntentStatsPoint], Field(
+        description="Intent rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct intents with activity in the period, regardless of `limit`.",
+        examples=[5],
+        ge=0,
+    )]
+
+
+class AMBGroupStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    group: Annotated[str, Field(
+        description="The group these messages were routed under, as configured in the business's entry points. Groups are workspace-defined and have no fixed vocabulary.",
+        examples=["sales"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByGroupResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBGroupStatsPoint], Field(
+        description="Group rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct groups with activity in the period, regardless of `limit`.",
+        examples=[3],
+        ge=0,
+    )]
+
+
+class AMBCategoryStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[str, Field(
+        description="The category these messages were sent with. Defaults to an empty string when a send names no category.",
+        examples=["order_update"],
+        min_length=0,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByCategoryResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBCategoryStatsPoint], Field(
+        description="Category rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct categories with activity in the period, regardless of `limit`.",
+        examples=[6],
+        ge=0,
+    )]
+
+
+class AMBTagStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    tag: Annotated[str, Field(
+        description="The tag these messages carry, as a bare name or a `name:value` pair. A message with several tags is counted once under each, so rows do not sum to the period total.",
+        examples=["campaign:spring_launch"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByTagResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBTagStatsPoint], Field(
+        description="Tag rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct tags with activity in the period, regardless of `limit`.",
+        examples=[9],
+        ge=0,
+    )]
+
+
+class AMBErrorCodeStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    error_code: Annotated[str, Field(
+        description="Machine-readable reason a send failed, in one of two namespaces: `bird:` for a reason Bird's own pipeline assigned (for example `bird:business_not_registered`), or `apple:` followed by the HTTP status Apple's API returned for the send attempt (for example `apple:404`). This is an open, growing set in both namespaces; accept unrecognized values.",
+        examples=["bird:business_not_registered"],
+        min_length=1,
+        pattern="^(bird:[a-z0-9_]+|apple:\\d{3})$",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByErrorCodeResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBErrorCodeStatsPoint], Field(
+        description="Error-code rows ranked by `send_failed + rejected` descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct error codes with activity in the period, regardless of `limit`.",
+        examples=[2],
+        ge=0,
+    )]
+
+
+class AMBInboundStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    received_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
+        examples=[0.058],
+    )]
+
+
+class AMBInboundStatsComparison(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the preceding period.",
+        examples=[3980],
+        ge=0,
+    )]
+    delta: Annotated[AMBInboundStatsComparisonDelta, Field(
+        description="The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none.",
+    )]
+
+
+class AMBInboundStatsSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the period, counted by the time each message occurred. Computed across the whole window rather than summed from the daily or hourly series, so it can sit slightly below the sum of those rows.",
+        examples=[4210],
+        ge=0,
+    )]
+    comparison: Annotated[Optional[AMBInboundStatsComparison], Field(
+        description="The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
+    )] = None
+
+
+class AMBInboundStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in this bucket.",
+        examples=[182],
+        ge=0,
+    )]
+
+
+class AMBInboundStatsResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSeriesPeriod, Field(
+        description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBInboundStatsPoint], Field(
+        description="One row per bucket (day or hour, matching the request) in the period, in chronological order. Buckets with no activity are included with a count of zero, so the series charts continuously without client-side gap handling.",
+    )]
+
+
+class AMBInboundBusinessStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received by this business in the period.",
+        examples=[640],
+        ge=0,
+    )]
+
+
+class AMBInboundStatsByBusinessResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBInboundBusinessStatsPoint], Field(
+        description="Business rows ranked by received-message volume descending, capped at the requested `limit`. A business with no received messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct businesses with received messages in the period, regardless of `limit`.",
+        examples=[1],
+        ge=0,
+    )]
+
+
+class AMBInboundIntentStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    intent: Annotated[str, Field(
+        description="The intent these messages arrived under, as configured in the business's entry points. Intents are workspace-defined and have no fixed vocabulary.",
+        examples=["order_support"],
+        min_length=1,
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received under this intent in the period.",
+        examples=[305],
+        ge=0,
+    )]
+
+
+class AMBInboundStatsByIntentResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBInboundIntentStatsPoint], Field(
+        description="Intent rows ranked by received-message volume descending, capped at the requested `limit`. An intent with no received messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct intents with received messages in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class AMBConversationStatsCounts(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    started: Annotated[int, Field(
+        description="Count of conversation-started events in scope.",
+        examples=[210],
+        ge=0,
+    )]
+    reopened: Annotated[int, Field(
+        description="Count of conversation-reopened events in scope.",
+        examples=[34],
+        ge=0,
+    )]
+    closed: Annotated[int, Field(
+        description="Count of conversation-closed events in scope.",
+        examples=[198],
+        ge=0,
+    )]
+    conversations: Annotated[int, Field(
+        description="Distinct conversations with at least one lifecycle event in scope.",
+        examples=[205],
+        ge=0,
+    )]
+
+
+class AMBConversationStatsComparisonDelta(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    started_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in conversation starts (`counts.started`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.22],
+    )]
+    reopened_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in conversation reopens (`counts.reopened`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.05],
+    )]
+    closed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in conversation closes (`counts.closed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.19],
+    )]
+    conversations_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in distinct conversations touched (`counts.conversations`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.21],
+    )]
+
+
+class AMBConversationStatsComparison(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    counts: Annotated[AMBConversationStatsCounts, Field(
+        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
+    )]
+    delta: Annotated[AMBConversationStatsComparisonDelta, Field(
+        description="Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero.",
+    )]
+
+
+class AMBConversationStatsSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    counts: Annotated[AMBConversationStatsCounts, Field(
+        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
+    )]
+    comparison: Annotated[Optional[AMBConversationStatsComparison], Field(
+        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
+    )] = None
+
+
+class AMBConversationStatsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBConversationStatsCounts, Field(
+        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
+    )]
+
+
+class AMBConversationStatsResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSeriesPeriod, Field(
+        description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBConversationStatsPoint], Field(
+        description="One row per day or hour in chronological order. Buckets with no activity contain zero counts.",
+    )]
 
 
 class WhatsAppBusinessAccountStatus(str, Enum):
@@ -11234,7 +13747,7 @@ class DNSRecord(BaseModel):
         min_length=1,
     )]
     purpose: Annotated[DNSRecordPurpose, Field(
-        description="What this record is for.\n\n- `dkim`: signs outbound mail and proves domain ownership.\n- `return_path`: identifies the return-path (bounce) CNAME for sending.\n- `tracking`: identifies the optional branded open/click tracking CNAME.\n- `inbound_mx`: identifies the MX record routing mail to us for receiving.\n  Always present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own: see `DomainUpdate.inbound`. It is\n  `optional` until receiving is enabled, and publishing it before then\n  is destructive: on a domain at the zone apex it replaces the MX\n  records that carry the domain's existing mail.\n- `dmarc`: identifies the advisory DMARC policy record.",
+        description="What this record is for.\n\n- `dkim`: signs outbound mail and proves domain ownership.\n- `return_path`: identifies the return-path (bounce) CNAME for sending.\n- `tracking`: identifies the optional branded open/click tracking CNAME.\n- `inbound_mx`: identifies the MX record routing mail to us for receiving.\n  Always present wherever inbound is available, as a regional reference,\n  regardless of whether receiving is enabled; publishing it does not\n  enable receiving on its own: see `DomainUpdate.inbound`. It is\n  `optional` until receiving is enabled, and publishing it before then\n  is destructive: on a domain at the zone apex it replaces the MX\n  records that carry the domain's existing mail.\n- `dmarc`: identifies the DMARC policy record required for sending.",
         min_length=1,
     )]
     state: Annotated[DNSRecordState, Field(
@@ -12733,33 +15246,6 @@ class EmailTemplateVersionStatus(str, Enum):
     archived = "archived"
 
 
-class ActorType(str, Enum):
-    user = "user"
-    api_key = "api_key"
-    oauth_token = "oauth_token"
-    system = "system"
-    sso = "sso"
-    service_account = "service_account"
-    automation = "automation"
-
-
-class Actor(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    id: Annotated[str, Field(
-        description="Actor identifier.",
-        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-    )]
-    type: Annotated[Annotated[Union[ActorType, str], Field(union_mode="left_to_right")], Field(
-        description="New actor types may be added. Treat unrecognized values as future types, not errors.\n- `user`: a member's own session.\n- `api_key`: a workspace API key.\n- `oauth_token`: a token issued to a caller on a member's behalf.\n- `system`: an action we perform without a customer actor.\n- `sso`: an organization's SSO connection.\n- `service_account`: a workspace's connected Integration acting with no member behind it.\n- `automation`: an automation execution in your workspace.",
-        examples=["user"],
-        min_length=1,
-    )]
-    display_name: Annotated[Optional[str], Field(
-        description="The label the actor is shown under: typically a member's name or email address, or the API key's name. Null when it could not be resolved.",
-    )] = None
-
-
 class EmailTemplateVersionSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
@@ -12976,10 +15462,10 @@ class EmailTemplateLanguage(BaseModel):
 class EmailTemplateLanguageUpsert(BaseModel):
     model_config = ConfigDict(extra="allow")
     subject: Annotated[str, Field(
-        description="The email subject line for this language.",
+        description="The email subject line. It may be empty in a draft but is required to publish.",
         examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
         max_length=998,
-        min_length=1,
+        min_length=0,
     )]
     preview_text: Annotated[Optional[str], Field(
         description="The line an inbox shows after the subject in the message list. Leave it out and the inbox shows the opening words of the body instead.",
@@ -13053,10 +15539,9 @@ class EmailTemplateLanguageSaved(BaseModel):
 class EmailTemplateLanguageUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
-        description="A new email subject line for this language.",
+        description="The email subject line. It may be empty in a draft but is required to publish.",
         examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
         max_length=998,
-        min_length=1,
     )] = None
     preview_text: Annotated[Optional[str], Field(
         description="A new line for the inbox to show after the subject in the message list. Send null to clear it, and the inbox shows the opening words of the body instead.",
@@ -13941,6 +16426,15 @@ class WebhookEndpointStatus(str, Enum):
 
 
 class WebhookEventType(str, Enum):
+    amb_accepted = "amb.accepted"
+    amb_conversation_closed = "amb.conversation_closed"
+    amb_conversation_reopened = "amb.conversation_reopened"
+    amb_conversation_started = "amb.conversation_started"
+    amb_received = "amb.received"
+    amb_rejected = "amb.rejected"
+    amb_send_failed = "amb.send_failed"
+    amb_sent = "amb.sent"
+    amb_suppression_created = "amb_suppression.created"
     domain_failed = "domain.failed"
     domain_verified = "domain.verified"
     email_accepted = "email.accepted"
@@ -14141,6 +16635,225 @@ class WebhookTestRequest(BaseModel):
         description="Event type to simulate. Any type from the event catalog is accepted, whether or not the endpoint subscribes to it; an unknown type returns a `422`. When omitted, the endpoint's first subscribed event type is used.",
         examples=["email.delivered"],
     )] = None
+
+
+class EventAMBMessageData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    message: AMBMessage
+
+
+class EventAMBAccepted(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.accepted"], Field(
+        description="Always `amb.accepted` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBMessageData, Field(
+        description="The workspace and message snapshot at the time of the lifecycle event.",
+    )]
+
+
+class EventAMBConversationData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    conversation_id: Annotated[str, Field(
+        examples=["acv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^acv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    open_count: Annotated[int, Field(
+        description="Number of times the conversation has opened, starting at 1 and increasing on each reopen. Together with the conversation ID and event type, this identifies the lifecycle occurrence across retries.",
+        ge=1,
+    )]
+    origin: Annotated[Optional[str], Field(
+        description="Source of the lifecycle change, when recorded.",
+        min_length=1,
+    )] = None
+    group_id: Annotated[Optional[str], Field(
+        description="Apple entry-point group recorded for this occurrence, when present.",
+        min_length=1,
+    )] = None
+    intent_id: Annotated[Optional[str], Field(
+        description="Apple entry-point intent recorded for this occurrence, when present.",
+        min_length=1,
+    )] = None
+    queue: Annotated[Optional[str], Field(
+        description="Routing queue recorded for this occurrence, when present.",
+        min_length=1,
+    )] = None
+
+
+class EventAMBConversationClosed(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.conversation_closed"], Field(
+        description="Always `amb.conversation_closed` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBConversationData, Field(
+        description="Conversation identity and routing context when a lifecycle event occurred.",
+    )]
+
+
+class EventAMBConversationReopened(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.conversation_reopened"], Field(
+        description="Always `amb.conversation_reopened` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBConversationData, Field(
+        description="Conversation identity and routing context when a lifecycle event occurred.",
+    )]
+
+
+class EventAMBConversationStarted(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.conversation_started"], Field(
+        description="Always `amb.conversation_started` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBConversationData, Field(
+        description="Conversation identity and routing context when a lifecycle event occurred.",
+    )]
+
+
+class EventAMBReceived(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.received"], Field(
+        description="Always `amb.received` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBMessageData, Field(
+        description="The workspace and message snapshot at the time of the lifecycle event.",
+    )]
+
+
+class EventAMBRejected(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.rejected"], Field(
+        description="Always `amb.rejected` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBMessageData, Field(
+        description="The workspace and message snapshot at the time of the lifecycle event.",
+    )]
+
+
+class EventAMBSendFailed(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.send_failed"], Field(
+        description="Always `amb.send_failed` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBMessageData, Field(
+        description="The workspace and message snapshot at the time of the lifecycle event.",
+    )]
+
+
+class EventAMBSent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.sent"], Field(
+        description="Always `amb.sent` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When this lifecycle event occurred, independent of webhook delivery time.",
+        examples=["2026-09-25T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBMessageData, Field(
+        description="The workspace and message snapshot at the time of the lifecycle event.",
+    )]
+
+
+class EventAMBSuppressionCreatedData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    suppression_id: Annotated[str, Field(
+        examples=["asp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asp_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[Optional[str], Field(
+        description="The business account this suppression covers, or null when it covers the workspace.",
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    address: Annotated[str, Field(
+        description="The canonical phone number or exact opaque Apple identifier that was suppressed.",
+        examples=[+15551234567],
+        max_length=1024,
+        min_length=1,
+    )]
+    address_type: Annotated[AMBSuppressionAddressType, Field(
+        description="What kind of value `address` holds.\n\n- `phone_number` means `address` is the customer's phone number. Apple's CloseSession event carries a phone number rather than an opaque identifier, so a suppression opened by a close on a conversation identified by phone number takes this kind.\n- `opaque_user_id` means `address` is the opaque identifier Apple assigns to the customer's conversation with the business, stable across a close and a later re-initiation.",
+    )]
+    reason: Annotated[Annotated[Union[AMBSuppressionReason, str], Field(union_mode="left_to_right")], Field(
+        description="Why the handle is suppressed. `manual` means it was added directly through this API or the dashboard. `opted_out` covers every case where Apple or the customer signaled they should not be contacted: a close, a permanent delivery failure, a declined invitation, or a stop keyword. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+    )]
+    origin: Annotated[Annotated[Union[AMBSuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
+        description="Who created the episode. user and api_key identify manual blocks. close_session and gone are protected automatic conversation facts. Phone invitation opt-outs are recorded as preferences.",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class EventAMBSuppressionCreated(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb_suppression.created"], Field(
+        description="Always `amb_suppression.created` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When the suppression episode took effect.",
+        examples=["2026-09-28T12:00:00Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBSuppressionCreatedData, Field(
+        description="Payload of the amb_suppression.created event.",
+    )]
 
 
 class EventDomainFailedData(BaseModel):
@@ -15482,13 +18195,13 @@ class EventPreferenceDeletedData(BaseModel):
     )]
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
-        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
         examples=[+15550001234],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
-        description="The sender the statement is limited to, or null when it covers the whole channel. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
+        description="The sender the statement is limited to, or null when it covers the whole channel. On Apple Messages for Business, this is the Apple business ID used to send invitations. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
         examples=[+15557654321],
     )]
     topic_id: Annotated[Optional[str], Field(
@@ -15533,13 +18246,13 @@ class EventPreferenceGrantedData(BaseModel):
     )]
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
-        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
         examples=[+15550001234],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
-        description="The sender the statement is limited to, or null when it covers the whole channel. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
+        description="The sender the statement is limited to, or null when it covers the whole channel. On Apple Messages for Business, this is the Apple business ID used to send invitations. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
         examples=[+15557654321],
     )]
     topic_id: Annotated[Optional[str], Field(
@@ -15584,13 +18297,13 @@ class EventPreferenceRevokedData(BaseModel):
     )]
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
-        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS and WhatsApp.",
+        description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
         examples=[+15550001234],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
-        description="The sender the statement is limited to, or null when it covers the whole channel. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
+        description="The sender the statement is limited to, or null when it covers the whole channel. On Apple Messages for Business, this is the Apple business ID used to send invitations. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
         examples=[+15557654321],
     )]
     topic_id: Annotated[Optional[str], Field(
@@ -17475,8 +20188,8 @@ class WebhookTestResponseStatus(str, Enum):
     failed = "failed"
 
 
-class WebhookEvent(RootModel[EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
-    root: EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
+class WebhookEvent(RootModel[EventAMBAccepted | EventAMBConversationClosed | EventAMBConversationReopened | EventAMBConversationStarted | EventAMBReceived | EventAMBRejected | EventAMBSendFailed | EventAMBSent | EventAMBSuppressionCreated | EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
+    root: EventAMBAccepted | EventAMBConversationClosed | EventAMBConversationReopened | EventAMBConversationStarted | EventAMBReceived | EventAMBRejected | EventAMBSendFailed | EventAMBSent | EventAMBSuppressionCreated | EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
 
 
 class WebhookTestResponse(BaseModel):
@@ -18197,6 +20910,18 @@ class VoiceTrunkGatewayUpdate(BaseModel):
     )] = None
 
 
+class VoiceNumberProviderType(str, Enum):
+    allocation = "allocation"
+    verified_number = "verified_number"
+
+
+class VoiceCallRouteType(str, Enum):
+    reject = "reject"
+    trunk = "trunk"
+    forward = "forward"
+    sequence = "sequence"
+
+
 class VoiceNumberID(RootModel[str]):
     root: str
 
@@ -18226,7 +20951,7 @@ class VoiceNumberProviderVerifiedNumber(BaseModel):
         description="Where a number came from. `allocation` is a number we allocated to your workspace, and the only kind whose calls reach us. `verified_number` is a number from another carrier that you registered and proved you control, so it can be presented on a call you place.",
     )]
     status: Annotated[Annotated[Union[VoiceCallerIDStatus, str], Field(union_mode="left_to_right")], Field(
-        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace completed the verification call, so the number can\n  be presented as the outbound caller ID.\n- `failed`: terminal because the verification challenge expired or the attempt\n  limit was exhausted. Use the dashboard to remove and register the caller ID\n  again to retry.",
+        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the caller ID again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
     )]
     verified_at: Annotated[Optional[str], Field(
         description="When control of this number was last proven. Null until it is.",
@@ -18425,7 +21150,10 @@ class VoiceCallerID(BaseModel):
         min_length=1,
     )]
     status: Annotated[Annotated[Union[VoiceCallerIDStatus, str], Field(union_mode="left_to_right")], Field(
-        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace completed the verification call, so the number can\n  be presented as the outbound caller ID.\n- `failed`: terminal because the verification challenge expired or the attempt\n  limit was exhausted. Use the dashboard to remove and register the caller ID\n  again to retry.",
+        description="Verification state of the caller ID.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the caller ID again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
+    )]
+    outbound_enabled: Annotated[bool, Field(
+        description="Whether outbound caller ID activation has completed. A verified number can remain inactive until activation requirements are met. Outbound calls remain subject to routing and number ownership requirements.",
     )]
     verified_at: Annotated[Optional[str], Field(
         description="When the caller ID was verified. `null` when its status is `pending` or `failed`.",
@@ -18453,13 +21181,13 @@ class VoiceCallerIDList(BaseModel):
 
 class VoiceCallerIDVerifyRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
-    code: Annotated[str, Field(
-        description="The 6-digit verification code read out by the verification call.",
+    code: Annotated[Optional[str], Field(
+        description="The 6-digit verification code read out by the verification call. Required until ownership is verified. Omit it when retrying activation of an already verified number.",
         examples=[123456],
         max_length=6,
         min_length=6,
         pattern="^\\d{6}$",
-    )]
+    )] = None
 
 
 class VoiceLegRejectionReason(str, Enum):

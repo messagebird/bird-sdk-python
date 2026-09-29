@@ -14,6 +14,15 @@ from typing import Final
 class WebhookEventType:
     """Webhook event types known at this SDK version (open enum)."""
 
+    AMB_ACCEPTED: Final = "amb.accepted"
+    AMB_CONVERSATION_CLOSED: Final = "amb.conversation_closed"
+    AMB_CONVERSATION_REOPENED: Final = "amb.conversation_reopened"
+    AMB_CONVERSATION_STARTED: Final = "amb.conversation_started"
+    AMB_RECEIVED: Final = "amb.received"
+    AMB_REJECTED: Final = "amb.rejected"
+    AMB_SEND_FAILED: Final = "amb.send_failed"
+    AMB_SENT: Final = "amb.sent"
+    AMB_SUPPRESSION_CREATED: Final = "amb_suppression.created"
     DOMAIN_FAILED: Final = "domain.failed"
     DOMAIN_VERIFIED: Final = "domain.verified"
     EMAIL_ACCEPTED: Final = "email.accepted"
