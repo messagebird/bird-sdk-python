@@ -14923,6 +14923,9 @@ class EmailTemplateCreate(BaseModel):
 
 class EmailTemplate(BaseModel):
     model_config = ConfigDict(extra="allow")
+    editor_url: Annotated[Optional[str], Field(
+        description="Optional link to open the saved draft in the browser editor, in its default language. Absent for built-in templates.",
+    )] = None
     id: Annotated[str, Field(
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -15245,6 +15248,9 @@ class EmailCompatibilityFinding(BaseModel):
 
 class EmailTemplatePreview(BaseModel):
     model_config = ConfigDict(extra="allow")
+    editor_url: Annotated[Optional[str], Field(
+        description="Optional link to open the saved draft in the browser editor, in the language this preview rendered. Absent for built-in templates, published-version previews, and previews of unsaved `content`.",
+    )] = None
     subject: Annotated[Optional[str], Field(
         description="The rendered subject line. Null when the template has no subject.",
     )]
