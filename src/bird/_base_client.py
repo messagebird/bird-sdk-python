@@ -20,16 +20,28 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from bird._caller import detect_caller
-from bird._constants import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, INITIAL_RETRY_DELAY, MAX_RETRY_DELAY
-from bird._exceptions import BirdError, APIConnectionError, APITimeoutError, MissingAPIKeyError, from_response, parse_retry_after
+from bird._caller import detect_caller_info, client_enrichment_disabled, _normalize_model
+from bird._constants import (
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_TIMEOUT,
+    INITIAL_RETRY_DELAY,
+    MAX_RETRY_DELAY,
+)
+from bird._exceptions import (
+    BirdError,
+    APIConnectionError,
+    APITimeoutError,
+    MissingAPIKeyError,
+    from_response,
+    parse_retry_after,
+)
 from bird._types import omit, Omit
 from bird._version import __version__
 
 USER_AGENT = f"bird-sdk-python/{__version__} ({platform.python_implementation().lower()}/{platform.python_version()})"
 
 # Bird-* client-identity headers: the API attributes the SDK
-# surface from these, not the User-Agent. Telemetry labels only; computed once.
+# surface from these, not the User-Agent. Telemetry labels only.
 # Keys use the canonical wire casing (matching the Go/TS SDKs).
 _CLIENT_HEADERS = {
     "Bird-Surface": "sdk-python",
@@ -38,17 +50,23 @@ _CLIENT_HEADERS = {
     "Bird-Os": platform.system().lower(),
     "Bird-Arch": platform.machine().lower(),
 }
-# Bird-Caller (the driving agent harness) — omitted when no agent env is present.
-_caller = detect_caller()
-if _caller:
-    _CLIENT_HEADERS["Bird-Caller"] = _caller
 
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # SDK-owned headers a caller's extra_headers must never override. Derived from
 # _CLIENT_HEADERS so the two can't drift; matched case-insensitively.
-_RESERVED_HEADERS = {"authorization", "user-agent", "x-bird-api-version", "idempotency-key"} | {
-    key.lower() for key in _CLIENT_HEADERS
+_ENRICHMENT_HEADERS = {
+    "bird-caller",
+    "bird-caller-source",
+    "bird-caller-execution",
+    "bird-model",
+    "bird-model-source",
+    "bird-enrichment",
 }
+_RESERVED_HEADERS = (
+    {"authorization", "user-agent", "x-bird-api-version", "idempotency-key"}
+    | _ENRICHMENT_HEADERS
+    | {key.lower() for key in _CLIENT_HEADERS}
+)
 
 # Bound to the concrete client so `with`/`async with` preserve the subclass type
 # (e.g. `with Bird(...) as c` keeps `c` typed as Bird, not SyncAPIClient).
@@ -65,7 +83,9 @@ def _validate_request_path(base_url: str, path: str) -> None:
     single leading slash and assert the resolved origin equals the base-URL origin.
     """
     if not path.startswith("/") or path.startswith("//"):
-        raise ValueError(f"request path must be an absolute path starting with a single '/': got {path!r}")
+        raise ValueError(
+            f"request path must be an absolute path starting with a single '/': got {path!r}"
+        )
     base = urlsplit(base_url)
     full = urlsplit(base_url + path)
     if (full.scheme, full.netloc) != (base.scheme, base.netloc):
@@ -94,19 +114,52 @@ class BaseClient:
         self.api_key = api_key
         self.api_version = api_version
         self.max_retries = max_retries
-        self.timeout: httpx.Timeout | float | None = DEFAULT_TIMEOUT if isinstance(timeout, Omit) else timeout
+        self.timeout: httpx.Timeout | float | None = (
+            DEFAULT_TIMEOUT if isinstance(timeout, Omit) else timeout
+        )
         self._default_headers = dict(default_headers or {})
         self._default_query = dict(default_query or {})
 
-    def _headers(self, extra_headers: Mapping[str, str] | None, idempotency_key: str | None) -> dict[str, str]:
+    def _headers(
+        self, extra_headers: Mapping[str, str] | None, idempotency_key: str | None
+    ) -> dict[str, str]:
         headers: dict[str, str] = {"Accept": "application/json"}
-        headers.update(self._default_headers)
+        headers.update(
+            {
+                key: value
+                for key, value in self._default_headers.items()
+                if key.lower() not in _RESERVED_HEADERS
+            }
+        )
         for key, value in (extra_headers or {}).items():
             if key.lower() not in _RESERVED_HEADERS:
                 headers[key] = value
         headers["Authorization"] = f"Bearer {self.api_key}"
         headers["User-Agent"] = USER_AGENT
         headers.update(_CLIENT_HEADERS)
+        supplied = {key.lower(): value for key, value in self._default_headers.items()}
+        supplied.update({key.lower(): value for key, value in (extra_headers or {}).items()})
+        headers = {
+            key: value for key, value in headers.items() if key.lower() not in _ENRICHMENT_HEADERS
+        }
+        if client_enrichment_disabled() or any(
+            key.lower() == "bird-enrichment" and value == "0"
+            for source in (self._default_headers, extra_headers or {})
+            for key, value in source.items()
+        ):
+            headers["Bird-Enrichment"] = "0"
+        else:
+            info = detect_caller_info()
+            if info["name"]:
+                headers["Bird-Caller"] = info["name"]
+                headers["Bird-Caller-Source"] = info["source"]
+                headers["Bird-Caller-Execution"] = info["execution"]
+            model, model_source = info["model"], info["model_source"]
+            if "bird-model" in supplied:
+                model, model_source = _normalize_model(supplied["bird-model"]), "declared"
+            if model:
+                headers["Bird-Model"] = model
+                headers["Bird-Model-Source"] = model_source
         if self.api_version:
             headers["X-Bird-API-Version"] = self.api_version
         if idempotency_key:
@@ -167,7 +220,6 @@ class BaseClient:
             return given
         return str(uuid.uuid4()) if method.upper() in _MUTATING_METHODS else None
 
-
     def credential_headers(
         self, schemes: Sequence[str] | None, options: Mapping[str, Any] | None = None
     ) -> dict[str, str]:
@@ -223,9 +275,15 @@ class SyncAPIClient(BaseClient):
         where the contract is a redirect the caller must take itself, because the
         target is pre-authorized and must not receive this client's credentials."""
         request = self._build_request(
-            self._client, method, path,
-            body=body, extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body,
-            timeout=timeout, idempotency_key=self._idempotency_key(method, idempotency_key),
+            self._client,
+            method,
+            path,
+            body=body,
+            extra_headers=extra_headers,
+            extra_query=extra_query,
+            extra_body=extra_body,
+            timeout=timeout,
+            idempotency_key=self._idempotency_key(method, idempotency_key),
         )
         retries_left = self.max_retries if max_retries is None else max_retries
         attempt = 0
@@ -287,9 +345,15 @@ class AsyncAPIClient(BaseClient):
         where the contract is a redirect the caller must take itself, because the
         target is pre-authorized and must not receive this client's credentials."""
         request = self._build_request(
-            self._client, method, path,
-            body=body, extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body,
-            timeout=timeout, idempotency_key=self._idempotency_key(method, idempotency_key),
+            self._client,
+            method,
+            path,
+            body=body,
+            extra_headers=extra_headers,
+            extra_query=extra_query,
+            extra_body=extra_body,
+            timeout=timeout,
+            idempotency_key=self._idempotency_key(method, idempotency_key),
         )
         retries_left = self.max_retries if max_retries is None else max_retries
         attempt = 0

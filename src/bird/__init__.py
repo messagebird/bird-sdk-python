@@ -212,6 +212,7 @@ from bird.resources.broadcasts_gen import (
     BroadcastsListRecipientsParams,
 )
 from bird.resources.contacts_gen import (
+    ContactBatchEntry,
     ContactBatchParams,
     ContactCreateParams,
     ContactListParams,
@@ -677,6 +678,7 @@ __all__ = [
     "ContactUpdateParams",
     "ContactListParams",
     "ContactBatchParams",
+    "ContactBatchEntry",
     "Contact",
     "ContactList",
     "ContactUpsertResult",

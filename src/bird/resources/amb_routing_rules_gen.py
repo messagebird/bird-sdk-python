@@ -119,7 +119,7 @@ class AmbRoutingRules(Resource):
         business_account_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRuleList:
-        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. A rule only runs when a conversation is created or reopened, matching it to a queue based on the group and intent its entry point carried. It never runs again while the conversation stays open, so a queue an operator moves a conversation to is not overwritten by the next message the customer sends.
+        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. Rules automatically run when a conversation is created or reopened, matching the group and intent from its entry point to a queue. Messages within an open conversation retain its queue. Rule changes affect only conversations that start or reopen afterwards.
 
         ```python
         result = client.amb.routing_rules.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg')
@@ -250,7 +250,7 @@ class AsyncAmbRoutingRules(AsyncResource):
         business_account_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRuleList:
-        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. A rule only runs when a conversation is created or reopened, matching it to a queue based on the group and intent its entry point carried. It never runs again while the conversation stays open, so a queue an operator moves a conversation to is not overwritten by the next message the customer sends.
+        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. Rules automatically run when a conversation is created or reopened, matching the group and intent from its entry point to a queue. Messages within an open conversation retain its queue. Rule changes affect only conversations that start or reopen afterwards.
 
         ```python
         result = await client.amb.routing_rules.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg')

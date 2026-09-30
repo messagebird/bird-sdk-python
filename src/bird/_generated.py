@@ -125,6 +125,11 @@ class Error(BaseModel):
     error: ErrorBody
 
 
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
 class UserID(RootModel[str]):
     root: str
 
@@ -135,11 +140,6 @@ class OrganizationID(RootModel[str]):
 
 class Timezone(RootModel[str]):
     root: str
-
-
-class SortOrder(str, Enum):
-    asc = "asc"
-    desc = "desc"
 
 
 class CurrencyCode(RootModel[str]):
@@ -1676,6 +1676,28 @@ class ContactCreateRequest(BaseModel):
     )] = None
 
 
+class ContactBatchEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    email: Annotated[Optional[str], Field(
+        description="Email address, up to 254 characters. Trimmed and lowercased before matching. Invalid addresses fail this contact.",
+    )] = None
+    phone_number: Annotated[Optional[str], Field(
+        description="Phone number with a country code, up to 32 characters. Spaces and punctuation are accepted. An empty string is treated as omitted.",
+    )] = None
+    first_name: Annotated[Optional[str], Field(
+        description="First name, up to 100 characters.",
+    )] = None
+    last_name: Annotated[Optional[str], Field(
+        description="Last name, up to 100 characters.",
+    )] = None
+    external_id: Annotated[Optional[str], Field(
+        description="Your identifier for the contact, up to 254 characters. Unique within the workspace when set.",
+    )] = None
+    data: Annotated[Optional[Dict[str, Any]], Field(
+        description="Custom contact property values. Keys must be registered and active; values must match their declared type. Strings can contain up to 500 characters and the serialized map is limited to 2 KB. Invalid values fail this contact. Null values remove keys when updating and are ignored when creating.",
+    )] = None
+
+
 class ContactMatchKey(str, Enum):
     email = "email"
     phone_number = "phone_number"
@@ -1689,7 +1711,7 @@ class ContactUpsertRequestDataMode(str, Enum):
 
 class ContactUpsertRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
-    contacts: Annotated[List[ContactCreateRequest], Field(
+    contacts: Annotated[List[ContactBatchEntry], Field(
         description="Contacts to create or update, matched automatically against every identifier an entry supplies. Existing contacts are updated with the fields each entry supplies; omitted fields keep their stored values, so an entry can set fields but never clear them. Unmatched entries create contacts.",
         max_length=1000,
         min_length=1,
@@ -9790,6 +9812,10 @@ class AMBStatsComparisonDelta(BaseModel):
 
 class AMBStatsComparison(BaseModel):
     model_config = ConfigDict(extra="allow")
+    monthly_active_contacts: Annotated[Optional[int], Field(
+        description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
+        ge=0,
+    )] = None
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
     )]
@@ -9809,6 +9835,10 @@ class AMBStatsComparison(BaseModel):
 
 class AMBStatsSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
+    monthly_active_contacts: Annotated[Optional[int], Field(
+        description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
+        ge=0,
+    )] = None
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
     )]
@@ -9825,7 +9855,7 @@ class AMBStatsSummary(BaseModel):
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     comparison: Annotated[Optional[AMBStatsComparison], Field(
-        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
+        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change.",
     )] = None
 
 
@@ -14526,7 +14556,7 @@ class EmailCompetitiveCampaignFeed(BaseModel):
         description="Whether panel figures are available for a row, and when they are not, why.\n\n`ok` means the panel reported figures for the requested period. `not_in_panel`\nmeans the panel does not track the sending domain at all, which is common for\nsmaller and newer senders. `no_data` means the panel tracks the domain but\nobserved no mail from it in the period. `unavailable` means the figures could\nnot be retrieved this time and the same request may well succeed on a retry.",
     )]
     captured: Annotated[int, Field(
-        description="Number of eligible campaigns in the first 300 newest panel rows for each tracked domain. This sampled value is independent of the returned page.",
+        description="Number of eligible campaigns in the first 100 newest panel rows for each tracked domain. This sampled value is independent of the returned page.",
         examples=[38],
     )]
     promo_rate: Annotated[Optional[float], Field(

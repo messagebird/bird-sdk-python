@@ -19,6 +19,15 @@ from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
+class ContactBatchEntry(TypedDict, total=False):
+    email: str
+    phone_number: str
+    first_name: str
+    last_name: str
+    external_id: str
+    data: Mapping[str, Any]
+
+
 class ContactListParams(TypedDict, total=False):
     """Query params for ``client.contacts.list``. Every key is optional."""
 
@@ -56,7 +65,7 @@ class ContactUpdateParams(TypedDict, total=False):
 
 
 class _ContactBatchRequired(TypedDict):
-    contacts: Sequence[ContactCreateParams]
+    contacts: Sequence[ContactBatchEntry]
 
 
 class ContactBatchParams(_ContactBatchRequired, total=False):
@@ -217,7 +226,7 @@ class ContactsBase(Resource):
     def batch(
         self,
         *,
-        contacts: Sequence[ContactCreateParams],
+        contacts: Sequence[ContactBatchEntry],
         audience_ids: Sequence[str] | None = None,
         match_on: str | None = None,
         data_mode: str | None = None,
@@ -399,7 +408,7 @@ class AsyncContactsBase(AsyncResource):
     async def batch(
         self,
         *,
-        contacts: Sequence[ContactCreateParams],
+        contacts: Sequence[ContactBatchEntry],
         audience_ids: Sequence[str] | None = None,
         match_on: str | None = None,
         data_mode: str | None = None,

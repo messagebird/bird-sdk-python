@@ -50,6 +50,8 @@ class AmbConversationsListParams(TypedDict, total=False):
     inbox_status: str
     business_account_id: str
     status: str
+    intent_id: str
+    group_id: str
     queue: str
     assigned_to: str
     label: Sequence[str]
@@ -172,6 +174,8 @@ class AmbConversations(Resource):
         inbox_status: str | None = None,
         business_account_id: str | None = None,
         status: str | None = None,
+        intent_id: str | None = None,
+        group_id: str | None = None,
         queue: str | None = None,
         assigned_to: str | None = None,
         label: Sequence[str] | None = None,
@@ -191,6 +195,8 @@ class AmbConversations(Resource):
             "inbox_status": inbox_status,
             "business_account_id": business_account_id,
             "status": status,
+            "intent_id": intent_id,
+            "group_id": group_id,
             "queue": queue,
             "assigned_to": assigned_to,
             "label": label,
@@ -315,6 +321,8 @@ class AsyncAmbConversations(AsyncResource):
         inbox_status: str | None = None,
         business_account_id: str | None = None,
         status: str | None = None,
+        intent_id: str | None = None,
+        group_id: str | None = None,
         queue: str | None = None,
         assigned_to: str | None = None,
         label: Sequence[str] | None = None,
@@ -334,6 +342,8 @@ class AsyncAmbConversations(AsyncResource):
             "inbox_status": inbox_status,
             "business_account_id": business_account_id,
             "status": status,
+            "intent_id": intent_id,
+            "group_id": group_id,
             "queue": queue,
             "assigned_to": assigned_to,
             "label": label,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -7,6 +9,7 @@ import pytest
 import respx
 
 from bird._base_client import USER_AGENT, AsyncAPIClient, SyncAPIClient
+from bird._caller import detect_caller_info
 from bird._exceptions import (
     APIConnectionError,
     APIError,
@@ -79,8 +82,14 @@ def test_non_retryable_422_raises_parsed_validation_error() -> None:
     respx.post(f"{BASE}/v1/email/messages").mock(
         return_value=httpx.Response(
             422,
-            json={"error": {"type": "validation_error", "code": "E1", "message": "bad",
-                            "details": [{"param": "to", "message": "x"}]}},
+            json={
+                "error": {
+                    "type": "validation_error",
+                    "code": "E1",
+                    "message": "bad",
+                    "details": [{"param": "to", "message": "x"}],
+                }
+            },
         )
     )
     with pytest.raises(ValidationError) as exc:
@@ -92,7 +101,10 @@ def test_non_retryable_422_raises_parsed_validation_error() -> None:
 @respx.mock
 def test_429_with_retry_after_is_retried() -> None:
     route = respx.get(f"{BASE}/v1/x").mock(
-        side_effect=[httpx.Response(429, headers={"Retry-After": "0"}), httpx.Response(200, json={})]
+        side_effect=[
+            httpx.Response(429, headers={"Retry-After": "0"}),
+            httpx.Response(200, json={}),
+        ]
     )
     client().request("GET", "/v1/x")
     assert route.call_count == 2
@@ -109,7 +121,9 @@ def test_exhausted_retries_raises_final_error() -> None:
 @respx.mock
 def test_terminal_429_raises_rate_limit_error_with_retry_after() -> None:
     respx.get(f"{BASE}/v1/x").mock(
-        return_value=httpx.Response(429, headers={"Retry-After": "30"}, json={"error": {"type": "rate_limit_error"}})
+        return_value=httpx.Response(
+            429, headers={"Retry-After": "30"}, json={"error": {"type": "rate_limit_error"}}
+        )
     )
     with pytest.raises(RateLimitError) as exc:
         client(max_retries=0).request("GET", "/v1/x")
@@ -120,8 +134,13 @@ def test_terminal_429_raises_rate_limit_error_with_retry_after() -> None:
 @respx.mock
 @pytest.mark.parametrize(
     ("status", "expected_type"),
-    [(401, "auth_error"), (403, "permission_error"), (404, "not_found_error"),
-     (409, "conflict_error"), (402, "billing_error")],
+    [
+        (401, "auth_error"),
+        (403, "permission_error"),
+        (404, "not_found_error"),
+        (409, "conflict_error"),
+        (402, "billing_error"),
+    ],
 )
 def test_status_maps_to_error_type(status: int, expected_type: str) -> None:
     respx.get(f"{BASE}/v1/x").mock(return_value=httpx.Response(status))
@@ -177,12 +196,16 @@ def test_transport_errors_are_caught_by_except_api_error() -> None:
 def test_exception_hierarchy_shape() -> None:
     from bird._exceptions import WebhookVerificationError
 
-    assert issubclass(APIStatusError, APIError)  # status errors carry the HTTP status under APIError
+    assert issubclass(
+        APIStatusError, APIError
+    )  # status errors carry the HTTP status under APIError
     assert issubclass(RateLimitError, APIStatusError)
     assert issubclass(ValidationError, APIStatusError)
     assert issubclass(APITimeoutError, APIConnectionError)
     assert issubclass(APIConnectionError, APIError)  # transport failures are APIError too
-    assert not issubclass(WebhookVerificationError, APIError)  # happens after a 200; not a request failure
+    assert not issubclass(
+        WebhookVerificationError, APIError
+    )  # happens after a 200; not a request failure
 
 
 @respx.mock
@@ -196,12 +219,40 @@ def test_retries_transport_error_then_succeeds() -> None:
 
 
 @respx.mock
-def test_caller_cannot_override_reserved_headers() -> None:
+def test_caller_cannot_override_reserved_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in ("DO_NOT_TRACK", "BIRD_TELEMETRY", "BIRD_CLIENT_ENRICHMENT"):
+        monkeypatch.setenv(key, "")
     route = respx.get(f"{BASE}/v1/x").mock(return_value=httpx.Response(200, json={}))
-    client().request("GET", "/v1/x", extra_headers={"Authorization": "Bearer HACK", "X-Custom": "ok"})
+    client(
+        default_headers={
+            "bird-caller-source": "spoofed",
+            "bird-caller-execution": "spoofed",
+        }
+    ).request("GET", "/v1/x", extra_headers={"Authorization": "Bearer HACK", "X-Custom": "ok"})
     sent = route.calls.last.request
     assert sent.headers["authorization"] == "Bearer bk_eu1_secret"
     assert sent.headers["x-custom"] == "ok"
+    info = detect_caller_info()
+    assert sent.headers.get("bird-caller-source") == (info["source"] if info["name"] else None)
+    assert sent.headers.get("bird-caller-execution") == (
+        info["execution"] if info["name"] else None
+    )
+
+    fixtures = json.loads((Path(__file__).parent / "caller-detection-cases.json").read_text())
+    env_keys = {"DO_NOT_TRACK", "BIRD_TELEMETRY", "BIRD_CLIENT_ENRICHMENT"} | {
+        key for case in fixtures["cases"] for key in case["env"]
+    }
+    for case in fixtures["enrichment_cases"]:
+        with monkeypatch.context() as patch:
+            for key in env_keys:
+                patch.setenv(key, "")
+            for key, value in case["env"].items():
+                patch.setenv(key, value)
+            client().request("GET", "/v1/x", extra_headers=case["headers"])
+            sent = route.calls.last.request
+            for key, want in case["want"].items():
+                assert sent.headers.get(key, "") == want, case["name"]
+            assert not any("private-" in value for value in sent.headers.values())
 
 
 @respx.mock
