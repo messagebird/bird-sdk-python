@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
     VoiceVerifiedNumber,
+    VoiceVerifiedNumberCreate,
+    VoiceVerifiedNumberUpdate,
     VoiceVerifiedNumberVerifyRequest,
 )
-from bird._models import to_wire
+from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
@@ -29,6 +31,22 @@ class VoiceVerifiedNumbersVerifyParams(TypedDict, total=False):
     """Params for ``client.voice.verified_numbers.verify``. Every key is optional."""
 
     code: str
+
+
+class _VoiceVerifiedNumbersCreateRequired(TypedDict):
+    phone_number: str
+
+
+class VoiceVerifiedNumbersCreateParams(_VoiceVerifiedNumbersCreateRequired, total=False):
+    """Params for ``client.voice.verified_numbers.create``. ``phone_number`` is required."""
+
+    name: str
+
+
+class VoiceVerifiedNumbersUpdateParams(TypedDict, total=False):
+    """Params for ``client.voice.verified_numbers.update``. Every key is optional."""
+
+    name: str | None
 
 
 class VoiceVerifiedNumbers(Resource):
@@ -85,7 +103,7 @@ class VoiceVerifiedNumbers(Resource):
         code: str | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceVerifiedNumber:
-        """Complete a number ownership verification challenge started in the dashboard. Recovery may place another verification call and requires registration eligibility. Submit the code while ownership proof is pending. If proof was saved but outbound activation returned 412 or 503, resolve the issue and resubmit an empty object to reuse the proof. For expired or exhausted challenges, use Get a new code in the dashboard and list verified numbers to obtain the replacement ID.
+        """Complete the ownership verification challenge that `voice.verified_numbers.create` started. Recovery may place another verification call and requires registration eligibility. Submit the code while ownership proof is pending. If proof was saved but outbound activation returned 412 or 503, resolve the issue and resubmit an empty object to reuse the proof. For an expired or exhausted challenge, delete the verified number and create it again, then submit the code against the ID that create returns.
 
         ```python
         verified_number = client.voice.verified_numbers.verify("vvn_01krdgeqcxet5s7t44vh8rt9mg", code="123456")
@@ -105,6 +123,76 @@ class VoiceVerifiedNumbers(Resource):
             VoiceVerifiedNumber,
             options,
         )
+
+    def create(
+        self,
+        *,
+        phone_number: str,
+        name: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> VoiceVerifiedNumber:
+        """Register a phone number as an outbound caller ID for the workspace. This places a verification call to the number that reads out a code, so register only a number the user controls. Returns the verified number in the "pending" state; submit the code with `voice.verified_numbers.verify`. A 412 means the organization's identity verification is incomplete, which is completed in the dashboard, or that an eligibility review or denial needs support. A 503 means the eligibility assessment is still pending; retry later.
+
+        ```python
+        # This places a verification call to the number that reads out a code.
+        verified_number = client.voice.verified_numbers.create(phone_number="+14155551234", name="Support line")
+        print(verified_number.id, verified_number.status)
+        ```
+        """
+        body = to_wire(
+            VoiceVerifiedNumberCreate,
+            {
+                "phone_number": phone_number,
+                "name": name,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/voice/verified-numbers",
+            body,
+            VoiceVerifiedNumber,
+            options,
+        )
+
+    def update(
+        self,
+        verified_number_id: str,
+        *,
+        name: str | None | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> VoiceVerifiedNumber:
+        """Set or clear the label on a verified number; send `name` as null to clear it. The number and its verification state are unchanged, and the label never appears on a call.
+
+        ```python
+        verified_number = client.voice.verified_numbers.update("vvn_01krdgeqcxet5s7t44vh8rt9mg", name="Sales line")
+        print(verified_number.name)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["name"] = name
+        body = to_wire_exclude_unset(VoiceVerifiedNumberUpdate, _body)
+        return self._write(
+            "PATCH",
+            f"/v1/voice/verified-numbers/{quote(verified_number_id, safe='')}",
+            body,
+            VoiceVerifiedNumber,
+            options,
+        )
+
+    def delete(
+        self,
+        verified_number_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Permanently delete a verified number by ID. After deletion the number can no longer be presented as the outbound caller ID and must be re-registered and verified to use it again. Deleting a pending registration and creating it again is how an expired or exhausted verification challenge is replaced.
+
+        ```python
+        client.voice.verified_numbers.delete("vvn_01krdgeqcxet5s7t44vh8rt9mg")
+        ```
+        """
+        self._delete(f"/v1/voice/verified-numbers/{quote(verified_number_id, safe='')}", options)
 
 
 class AsyncVoiceVerifiedNumbers(AsyncResource):
@@ -161,7 +249,7 @@ class AsyncVoiceVerifiedNumbers(AsyncResource):
         code: str | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceVerifiedNumber:
-        """Complete a number ownership verification challenge started in the dashboard. Recovery may place another verification call and requires registration eligibility. Submit the code while ownership proof is pending. If proof was saved but outbound activation returned 412 or 503, resolve the issue and resubmit an empty object to reuse the proof. For expired or exhausted challenges, use Get a new code in the dashboard and list verified numbers to obtain the replacement ID.
+        """Complete the ownership verification challenge that `voice.verified_numbers.create` started. Recovery may place another verification call and requires registration eligibility. Submit the code while ownership proof is pending. If proof was saved but outbound activation returned 412 or 503, resolve the issue and resubmit an empty object to reuse the proof. For an expired or exhausted challenge, delete the verified number and create it again, then submit the code against the ID that create returns.
 
         ```python
         verified_number = await client.voice.verified_numbers.verify("vvn_01krdgeqcxet5s7t44vh8rt9mg", code="123456")
@@ -181,3 +269,73 @@ class AsyncVoiceVerifiedNumbers(AsyncResource):
             VoiceVerifiedNumber,
             options,
         )
+
+    async def create(
+        self,
+        *,
+        phone_number: str,
+        name: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> VoiceVerifiedNumber:
+        """Register a phone number as an outbound caller ID for the workspace. This places a verification call to the number that reads out a code, so register only a number the user controls. Returns the verified number in the "pending" state; submit the code with `voice.verified_numbers.verify`. A 412 means the organization's identity verification is incomplete, which is completed in the dashboard, or that an eligibility review or denial needs support. A 503 means the eligibility assessment is still pending; retry later.
+
+        ```python
+        # This places a verification call to the number that reads out a code.
+        verified_number = await client.voice.verified_numbers.create(phone_number="+14155551234", name="Support line")
+        print(verified_number.id, verified_number.status)
+        ```
+        """
+        body = to_wire(
+            VoiceVerifiedNumberCreate,
+            {
+                "phone_number": phone_number,
+                "name": name,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/voice/verified-numbers",
+            body,
+            VoiceVerifiedNumber,
+            options,
+        )
+
+    async def update(
+        self,
+        verified_number_id: str,
+        *,
+        name: str | None | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> VoiceVerifiedNumber:
+        """Set or clear the label on a verified number; send `name` as null to clear it. The number and its verification state are unchanged, and the label never appears on a call.
+
+        ```python
+        verified_number = await client.voice.verified_numbers.update("vvn_01krdgeqcxet5s7t44vh8rt9mg", name="Sales line")
+        print(verified_number.name)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["name"] = name
+        body = to_wire_exclude_unset(VoiceVerifiedNumberUpdate, _body)
+        return await self._write(
+            "PATCH",
+            f"/v1/voice/verified-numbers/{quote(verified_number_id, safe='')}",
+            body,
+            VoiceVerifiedNumber,
+            options,
+        )
+
+    async def delete(
+        self,
+        verified_number_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Permanently delete a verified number by ID. After deletion the number can no longer be presented as the outbound caller ID and must be re-registered and verified to use it again. Deleting a pending registration and creating it again is how an expired or exhausted verification challenge is replaced.
+
+        ```python
+        await client.voice.verified_numbers.delete("vvn_01krdgeqcxet5s7t44vh8rt9mg")
+        ```
+        """
+        await self._delete(f"/v1/voice/verified-numbers/{quote(verified_number_id, safe='')}", options)

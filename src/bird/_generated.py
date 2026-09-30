@@ -21003,7 +21003,7 @@ class VoiceNumberProviderVerifiedNumber(BaseModel):
         description="Where a number came from. `allocation` is a number we allocated to your workspace, and the only kind whose calls reach us. `verified_number` is a number from another carrier that you registered and proved you control, so it can be presented on a call you place.",
     )]
     status: Annotated[Annotated[Union[VoiceVerifiedNumberStatus, str], Field(union_mode="left_to_right")], Field(
-        description="Verification state of the verified number.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the verified number again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
+        description="Verification state of the verified number.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Delete the verified number and register it again to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
     )]
     verified_at: Annotated[Optional[str], Field(
         description="When control of this number was last proven. Null until it is.",
@@ -21202,7 +21202,7 @@ class VoiceVerifiedNumber(BaseModel):
         min_length=1,
     )]
     status: Annotated[Annotated[Union[VoiceVerifiedNumberStatus, str], Field(union_mode="left_to_right")], Field(
-        description="Verification state of the verified number.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Remove and register the verified number again in the dashboard to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
+        description="Verification state of the verified number.\n\n- `pending`: the number is registered but ownership has not yet been proven.\n- `verified`: the workspace proved ownership of the number. Check the\n  resource's activation or direction fields for outbound availability.\n- `failed`: terminal because the verification challenge expired or the attempt limit was exhausted.\n  Delete the verified number and register it again to retry.\n\nOpen enum: additional states may be added over time, so treat an unrecognized\nvalue as a future state rather than an error.",
     )]
     outbound_enabled: Annotated[bool, Field(
         description="Whether outbound caller ID activation has completed. A verified number can remain inactive until activation requirements are met. Outbound calls remain subject to routing and number ownership requirements.",
@@ -21229,6 +21229,31 @@ class VoiceVerifiedNumberList(BaseModel):
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
+
+
+class VoiceVerifiedNumberCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    phone_number: Annotated[str, Field(
+        description="The phone number to register as an outbound caller ID, in E.164 format (a leading `+` followed by the country code and national number). Must be unique within the workspace. Creating the verified number starts verification: a verification call is placed to this number.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    name: Annotated[Optional[str], Field(
+        description="Your label for this verified number, to tell several registered numbers apart. Omit it to register the number without one and add it later. It is yours to choose and appears nowhere on a call, so it never affects what the person you are calling sees.",
+        examples=["Support line"],
+        max_length=100,
+        min_length=1,
+    )] = None
+
+
+class VoiceVerifiedNumberUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="Your new label for this verified number. Send `null` to clear it and go back to identifying the verified number by its number alone. It is yours to choose and appears nowhere on a call, so renaming never affects what the person you are calling sees, and it leaves the number and its verification untouched.",
+        examples=["Support line"],
+        max_length=100,
+        min_length=1,
+    )] = None
 
 
 class VoiceVerifiedNumberVerifyRequest(BaseModel):

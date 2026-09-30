@@ -280,7 +280,9 @@ from bird.resources.verify_verifications_gen import (
 from bird.resources.voice_calls_gen import CreateVoiceCallSequenceRequest, VoiceCallsCreateParams
 from bird.resources.voice_legs_gen import VoiceLegsListParams
 from bird.resources.voice_verified_numbers_gen import (
+    VoiceVerifiedNumbersCreateParams,
     VoiceVerifiedNumbersListParams,
+    VoiceVerifiedNumbersUpdateParams,
     VoiceVerifiedNumbersVerifyParams,
 )
 from bird.resources.voice_destinations_gen import (
@@ -897,7 +899,9 @@ __all__ = [
     "VoiceCallsCreateParams",
     "VoiceCall",
     "VoiceLegsListParams",
+    "VoiceVerifiedNumbersCreateParams",
     "VoiceVerifiedNumbersListParams",
+    "VoiceVerifiedNumbersUpdateParams",
     "VoiceVerifiedNumbersVerifyParams",
     "DestinationSetting",
     "VoiceDestinationsUpdateParams",

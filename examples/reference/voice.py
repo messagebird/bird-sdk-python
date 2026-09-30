@@ -109,6 +109,21 @@ def voice_verified_numbers_verify() -> None:
     print(verified_number.id, verified_number.status)
 
 
+def voice_verified_numbers_create() -> None:
+    # This places a verification call to the number that reads out a code.
+    verified_number = client.voice.verified_numbers.create(phone_number="+14155551234", name="Support line")
+    print(verified_number.id, verified_number.status)
+
+
+def voice_verified_numbers_update() -> None:
+    verified_number = client.voice.verified_numbers.update("vvn_01krdgeqcxet5s7t44vh8rt9mg", name="Sales line")
+    print(verified_number.name)
+
+
+def voice_verified_numbers_delete() -> None:
+    client.voice.verified_numbers.delete("vvn_01krdgeqcxet5s7t44vh8rt9mg")
+
+
 def voice_destinations_update() -> None:
     destinations = client.voice.destinations.update(
         destinations=[{"country_code": "PT", "enabled": True}]

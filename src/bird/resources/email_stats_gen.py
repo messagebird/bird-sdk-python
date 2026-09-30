@@ -342,6 +342,7 @@ class EmailStatsByBroadcastParams(TypedDict, total=False):
     ending_before: str
     from_: str
     to: str
+    timezone: str
     category: str
     sort: str
     limit: int
@@ -1364,12 +1365,13 @@ class EmailStats(Resource):
         ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
+        timezone: str | None = None,
         category: str | None = None,
         sort: str | None = None,
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period.
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Aggregate statistics remain available after message activity details expire. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period.
 
         ```python
         stats = client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -1384,6 +1386,7 @@ class EmailStats(Resource):
                 "ending_before": ending_before,
                 "from": from_,
                 "to": to,
+                "timezone": timezone,
                 "category": category,
                 "sort": sort,
                 "limit": limit,
@@ -1399,17 +1402,19 @@ class EmailStats(Resource):
         ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
+        timezone: str | None = None,
         category: str | None = None,
         sort: str | None = None,
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailBroadcastStatsPoint]:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period."""
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Aggregate statistics remain available after message activity details expire. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period."""
         query = {
             "starting_after": starting_after,
             "ending_before": ending_before,
             "from": from_,
             "to": to,
+            "timezone": timezone,
             "category": category,
             "sort": sort,
             "limit": limit,
@@ -2434,12 +2439,13 @@ class AsyncEmailStats(AsyncResource):
         ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
+        timezone: str | None = None,
         category: str | None = None,
         sort: str | None = None,
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailStatsByBroadcastResponse:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period.
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Aggregate statistics remain available after message activity details expire. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period.
 
         ```python
         stats = await client.email.stats.by_broadcast(from_="2026-05-01", to="2026-05-25")
@@ -2454,6 +2460,7 @@ class AsyncEmailStats(AsyncResource):
                 "ending_before": ending_before,
                 "from": from_,
                 "to": to,
+                "timezone": timezone,
                 "category": category,
                 "sort": sort,
                 "limit": limit,
@@ -2469,17 +2476,19 @@ class AsyncEmailStats(AsyncResource):
         ending_before: str | None = None,
         from_: str | None = None,
         to: str | None = None,
+        timezone: str | None = None,
         category: str | None = None,
         sort: str | None = None,
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailBroadcastStatsPoint]:
-        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Reflects roughly the last 30 days of activity. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period."""
+        """Email delivery and engagement stats grouped by broadcast. Only broadcast sends appear. Aggregate statistics remain available after message activity details expire. For campaigns identified by send-time tags, discover them with `email.stats.by_tag` and use `email.stats.query` for filtered reports or complete per-group series; both tools additionally require emails:read. Broadcast IDs and campaign tag values identify different populations. Use activity in the requested period to identify active broadcasts; creation-date filters on a broadcast list cannot establish whether older broadcasts had activity in that period."""
         query = {
             "starting_after": starting_after,
             "ending_before": ending_before,
             "from": from_,
             "to": to,
+            "timezone": timezone,
             "category": category,
             "sort": sort,
             "limit": limit,
