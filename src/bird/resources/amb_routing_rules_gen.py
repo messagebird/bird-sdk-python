@@ -119,7 +119,7 @@ class AmbRoutingRules(Resource):
         business_account_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRuleList:
-        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. Rules automatically run when a conversation is created or reopened, matching the group and intent from its entry point to a queue. Messages within an open conversation retain its queue. Rule changes affect only conversations that start or reopen afterwards.
+        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. Rules run when a conversation is created, when a closed conversation reopens, and when a customer writes to a resolved conversation, matching its group and intent to a queue. A message without a group or intent routes on the conversation's stored values. Later messages while the conversation is open in the inbox retain its queue.
 
         ```python
         result = client.amb.routing_rules.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg')
@@ -250,7 +250,7 @@ class AsyncAmbRoutingRules(AsyncResource):
         business_account_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRuleList:
-        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. Rules automatically run when a conversation is created or reopened, matching the group and intent from its entry point to a queue. Messages within an open conversation retain its queue. Rule changes affect only conversations that start or reopen afterwards.
+        """Returns the workspace's Apple Messages for Business routing rules, highest precedence first. Rules run when a conversation is created, when a closed conversation reopens, and when a customer writes to a resolved conversation, matching its group and intent to a queue. A message without a group or intent routes on the conversation's stored values. Later messages while the conversation is open in the inbox retain its queue.
 
         ```python
         result = await client.amb.routing_rules.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg')
