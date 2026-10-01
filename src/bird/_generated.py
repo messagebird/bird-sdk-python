@@ -7782,6 +7782,123 @@ class NumbersDedicatedAllocationID(RootModel[str]):
     root: str
 
 
+class WhatsAppAgentNotificationStatus(str, Enum):
+    accepted = "accepted"
+    success = "success"
+    skipped = "skipped"
+    failed = "failed"
+
+
+class WhatsAppAgentNotificationID(RootModel[str]):
+    root: str
+
+
+class WhatsAppAgentNotificationError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    description: Annotated[str, Field(
+        description="WhatsApp's own explanation, passed through: what it said when it refused the notification, or its failure summary once it had worked on it. Show it to the person who sent the notification; never match on its text. Carries Bird's own words instead when the failure was Bird's verdict, such as no outcome arriving within a day.",
+        examples=["Event payload exceeds the maximum size."],
+        min_length=1,
+    )]
+    meta_error_code: Annotated[Optional[str], Field(
+        description="WhatsApp's most specific code when it refused the notification outright: its error subcode where it sent one, otherwise its top-level code. Treat it as an opaque string. Null when WhatsApp took the notification and reported the failure later, which carries no code, and when the failure was Bird's own verdict.",
+        examples=[100],
+    )]
+
+
+class WhatsAppAgentNotification(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the notification.",
+        examples=["waan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^waan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="The contact the notification was about: the phone number or business-scoped user ID you addressed it to, in the same shape a message's `to` uses.",
+    )]
+    name: Annotated[str, Field(
+        description="Your own name for what happened, as you sent it.",
+        examples=["order_shipped"],
+        max_length=256,
+        min_length=1,
+    )]
+    description: Annotated[str, Field(
+        description="What happened, as you sent it.",
+        examples=["Order 88213 left the warehouse and arrives on Thursday."],
+        max_length=1024,
+        min_length=1,
+    )]
+    payload: Annotated[str, Field(
+        description="The data you attached, as you sent it.",
+        examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\"}"],
+        max_length=4096,
+        min_length=1,
+    )]
+    status: Annotated[WhatsAppAgentNotificationStatus, Field(
+        description="Where the notification stands. `accepted` from the moment Bird takes it, then one of the three final states once WhatsApp has answered.",
+    )]
+    skipped_reason: Annotated[Optional[str], Field(
+        description="WhatsApp's own account of why the agent chose to say nothing, passed through. Present only when `status` is `skipped`. Show it to the person who sent the notification; never match on its text.",
+        examples=["The contact's conversation is currently held by the business."],
+        min_length=1,
+    )] = None
+    error: Annotated[Optional[WhatsAppAgentNotificationError], Field(
+        description="Why the notification failed. Present only when `status` is `failed`.",
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When Bird accepted the notification.",
+        examples=["2026-10-02T08:00:00Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppAgentNotificationList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppAgentNotification], Field(
+        description="A page of the notifications sent to the agent.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppAgentNotificationCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    to: Annotated[str, Field(
+        description="The contact the notification is about: a phone number in E.164 format (for example `+14155551234`), or the contact's business-scoped user ID (for example `US.13491208655302741918`), the same forms a message's `to` accepts. A phone number is normalized before the call reaches WhatsApp, so spacing does not matter. WhatsApp documents a phone number for this call; a business-scoped user ID is passed through as given.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Your own name for what happened, such as `payment_received` or `order_shipped`. The agent reads it as the kind of thing that happened, so keep one name per kind. WhatsApp calls this the event type.",
+        examples=["order_shipped"],
+        max_length=256,
+        min_length=1,
+    )]
+    description: Annotated[str, Field(
+        description="What happened, in a sentence the agent can tell the contact.",
+        examples=["Order 88213 left the warehouse and arrives on Thursday."],
+        max_length=1024,
+        min_length=1,
+    )]
+    payload: Annotated[str, Field(
+        description="Details the agent may draw on when it writes to the contact, as one JSON string. WhatsApp passes it to the agent unchanged and does not read it itself.",
+        examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\",\"eta\":\"2026-10-02\"}"],
+        max_length=4096,
+        min_length=1,
+    )]
+
+
 class WhatsAppNumberEventID(RootModel[str]):
     root: str
 
@@ -20738,6 +20855,267 @@ class VoiceParty(BaseModel):
     )] = None
 
 
+class VoiceSessionCredential(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    username: Annotated[str, Field(
+        description="SIP digest username. Always `bird`. The credential identifies the workspace through `realm`. The username does not identify the workspace.",
+        examples=["bird"],
+        max_length=64,
+        min_length=1,
+    )]
+    password: Annotated[str, Field(
+        description="SIP digest password, returned once. Treat it as a bearer secret: until it expires it can place calls billed to this workspace.",
+        examples=["8Kx2mQ7pR4tYvB9nL3sW6dF1gH5jC0aZ"],
+        max_length=128,
+        min_length=1,
+    )]
+    realm: Annotated[str, Field(
+        description="SIP digest realm to authenticate against. Workspace-scoped, so a credential minted for one workspace cannot authenticate against another.",
+        examples=["01ARZ3NDEKTSV4RRFFQ69G5FAV.sip.bird.com"],
+        max_length=253,
+        min_length=1,
+    )]
+    expires_at: Annotated[str, Field(
+        description="When the credential stops authenticating, five minutes after creation. Existing calls may continue; use a fresh credential for later authentication.",
+        examples=["2026-07-30T12:05:00Z"],
+        min_length=1,
+    )]
+    handshake_token: Annotated[Optional[str], Field(
+        description="Short-lived token required when upgrading the WebSocket connection. The token authorizes the connection only; each call still authenticates with `password`.",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODU0NDMwMzV9.fp1xWxROEmgCafwiJ-ZHbZg9cIdYC-wLGcH-5gIVbco"],
+        max_length=4096,
+        min_length=1,
+    )] = None
+
+
+class VoiceLegRejectionReason(str, Enum):
+    source_not_allowed = "source_not_allowed"
+    caller_id_not_verified = "caller_id_not_verified"
+    routing_not_configured = "routing_not_configured"
+    no_route_found = "no_route_found"
+    destination_blocked = "destination_blocked"
+    destination_not_enabled = "destination_not_enabled"
+    insufficient_balance = "insufficient_balance"
+    daily_spend_exceeded = "daily_spend_exceeded"
+    concurrent_calls_exceeded = "concurrent_calls_exceeded"
+    calls_per_second_exceeded = "calls_per_second_exceeded"
+    call_not_permitted = "call_not_permitted"
+    number_ownership_not_verified = "number_ownership_not_verified"
+
+
+class VoiceLegInboundRouteReject(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["reject"], Field(
+        description="The number turned the leg away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
+    )]
+
+
+class VoiceLegInboundRouteTrunk(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["trunk"], Field(
+        description="The leg was delivered to one of your SIP trunks.",
+    )]
+    trunk_id: Annotated[str, Field(
+        description="The SIP trunk the leg was delivered to. Recorded as it was at the time, so it may name a trunk you have since changed or deleted.",
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceLegInboundRouteForward(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["forward"], Field(
+        description="The leg was forwarded to another of your numbers.",
+    )]
+    forward_to: Annotated[str, Field(
+        description="The number the leg was forwarded to, in E.164 format. Recorded as it was at the time, so it may name a number you have since stopped verifying.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    forward_as: Annotated[VoiceInboundForwardAs, Field(
+        description="Which of the leg's two numbers the forwarded leg presented as its caller. The value that went on the wire, not the one the number is set to now.",
+    )]
+
+
+class VoiceSequenceID(RootModel[str]):
+    root: str
+
+
+class VoiceSequenceNodeID(RootModel[str]):
+    root: str
+
+
+class VoiceLegInboundRouteSequence(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["sequence"], Field(
+        description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.",
+    )]
+    sequence_id: Annotated[str, Field(
+        description="The sequence that handled the leg. Recorded as it was at the time, so it may name a sequence you have since changed or deleted.",
+        examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    entry_node_id: Annotated[str, Field(
+        description="The entry the leg started from in the publication that handled it. Recorded as it was at the time, so it may name an entry the sequence no longer has.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+
+
+class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence]):
+    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence
+
+
+class VoiceMediaQuality(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mos: Annotated[float, Field(
+        description="Mean opinion score, the single number for how the call sounded, from 1 (unintelligible) to 5 (as good as being in the same room). Anything at or above 4.0 is what most people would call a clear line, and below 3.5 is where callers start asking each other to repeat themselves. The three other fields are the impairments that move it.",
+        examples=[4.32],
+        ge=1,
+        le=5,
+    )]
+    jitter_ms: Annotated[int, Field(
+        description="Variation in the arrival time of the audio packets, in milliseconds. Audio arriving unevenly is heard as choppiness even when no packets are lost at all.",
+        examples=[12],
+        ge=0,
+    )]
+    packet_loss_pct: Annotated[float, Field(
+        description="Percentage of audio packets that never arrived. Heard as brief gaps or clipped words, and the impairment that degrades a call fastest.",
+        examples=[1.5],
+        ge=0,
+    )]
+    round_trip_time_ms: Annotated[int, Field(
+        description="Round-trip time between the two ends, in milliseconds. It does not distort the audio. Above roughly 300 ms, the two parties start talking over each other.",
+        examples=[42],
+        ge=0,
+    )]
+
+
+class VoiceLegCost(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    amount: Annotated[str, Field(
+        description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
+        examples=[0.013000],
+        min_length=1,
+    )]
+    currency_code: Annotated[str, Field(
+        description="ISO 4217 three-letter currency code.",
+        examples=["EUR"],
+        max_length=3,
+        min_length=3,
+        pattern="^[A-Z]{3}$",
+    )]
+    outbound_amount: Annotated[Optional[str], Field(
+        description="What we charged to carry the leg to the destination network, as a decimal string. `null` until this component is priced.",
+        examples=[0.013000],
+    )]
+    inbound_amount: Annotated[Optional[str], Field(
+        description="What we charged to receive the leg from the originating network, as a decimal string. Only a leg that arrived at your number can carry it. `null` until this component is priced.",
+        examples=["null"],
+    )]
+    call_handling_amount: Annotated[Optional[str], Field(
+        description="What we charged for handling the call itself, as a decimal string. A call is charged for handling once, however many legs it has, so only one leg's record carries it. `null` until this component is priced.",
+        examples=["null"],
+    )]
+    recording_amount: Annotated[Optional[str], Field(
+        description="What we charged to record the leg, as a decimal string, billed per second over the same billable time as the rest of the leg. `null` until this component is priced.",
+        examples=["null"],
+    )]
+    transcription_amount: Annotated[Optional[str], Field(
+        description="What we charged to transcribe the leg's audio, as a decimal string, billed per second of recorded audio rather than for the length of the leg. A transcript is produced after the leg ends, so this can appear after the rest of the cost. `null` until this component is priced.",
+        examples=["null"],
+    )]
+
+
+class VoiceLeg(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    call_id: Annotated[Optional[str], Field(
+        description="Call identifier shared across all legs of a multi-party or transferred call. Use this to correlate related leg records. `null` when call correlation is not available for the leg.",
+        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: VoiceCallDirection
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Calling party number in E.164 format.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="Called party number in E.164 format.",
+        examples=[+16505559876],
+        min_length=1,
+    )]
+    actor: Annotated[Optional[Actor], Field(
+        description="Who placed the leg: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the leg was admitted only by its source IP address, or when no actor was recorded.",
+    )] = None
+    sip_trunk_id: Annotated[Optional[str], Field(
+        description="Identifier of the SIP trunk that originated this leg. `null` when no trunk is associated.",
+        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    status: VoiceCallStatus
+    sip_response_code: Annotated[Optional[int], Field(
+        description="Final SIP response code received from the carrier. `null` when no SIP response was received, for example on timeout or DNS failure.",
+        examples=[200],
+        ge=100,
+    )] = None
+    rejection_reason: Annotated[Optional[VoiceLegRejectionReason], Field(
+        description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
+    )] = None
+    route: Annotated[Optional[VoiceLegInboundRoute], Field(
+        description="Which answer your number gave an incoming leg. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can receive. Recorded when the leg was handled, so changing the number's setup afterwards does not change what its past legs say. Absent on outbound legs, and on legs recorded before this field existed.",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Your own `{name, value}` labels for this leg, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise legs by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a leg is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the leg still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the leg carried none, and on legs recorded before this field existed.",
+        max_length=5,
+    )] = None
+    started_at: Annotated[str, Field(
+        description="When the leg was initiated.",
+        min_length=1,
+    )]
+    answered_at: Annotated[Optional[str], Field(
+        description="When the leg was answered (`200` OK received). `null` for unanswered legs.",
+    )] = None
+    ended_at: Annotated[Optional[str], Field(
+        description="When the leg ended (BYE or final non-2xx response). `null` for legs that ended abnormally without a recorded end event.",
+    )] = None
+    duration_ms: Annotated[Optional[int], Field(
+        description="Total leg duration in milliseconds, measured from the first INVITE to the BYE or final response. `null` while the leg is still in progress and has no final duration yet.",
+        examples=[65000],
+        ge=0,
+    )] = None
+    pdd_ms: Annotated[Optional[int], Field(
+        description="Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the leg `not going through`. Absent when the leg never rang, either because it failed first or because the carrier answered it immediately.",
+        examples=[850],
+        ge=0,
+    )] = None
+    billable_ms: Annotated[Optional[int], Field(
+        description="Billable duration in milliseconds, measured from answer to leg end. Zero for unanswered legs, and `null` while the leg is still in progress.",
+        examples=[60000],
+        ge=0,
+    )] = None
+    media_quality: Optional[VoiceMediaQuality] = None
+    cost: Annotated[Optional[VoiceLegCost], Field(
+        description="What was charged for a leg, split into the components that make it up.",
+    )] = None
+
+
 class NumberType(str, Enum):
     mobile = "mobile"
     local = "local"
@@ -20798,6 +21176,16 @@ class NumberStatus(str, Enum):
 
 class Number(BaseModel):
     model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="The name you gave this number in your workspace. Null when no name is set.",
+        max_length=100,
+        min_length=1,
+    )]
+    reference: Annotated[Optional[str], Field(
+        description="Your own reference for this number in your workspace. Null when no reference is set.",
+        max_length=100,
+        min_length=1,
+    )]
     id: Annotated[str, Field(
         description="Identifier of this allocated number. Pass it as `number_id` to read this number, or to release it when kind is dedicated.",
         examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20972,6 +21360,28 @@ class NumbersOrderCreate(BaseModel):
         examples=[+18005550100],
         min_length=1,
     )]
+    reference: Annotated[Optional[str], Field(
+        description="Your own reference to set on the number when this purchase completes. Leading and trailing whitespace is removed. A pending order keeps the reference until the number is allocated.",
+        examples=["STORE-042"],
+        max_length=100,
+        min_length=1,
+    )] = None
+
+
+class NumberUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="A name for this number in your workspace, such as Support line. Send null to clear it, or omit it to keep the current name.",
+        examples=["Support line"],
+        max_length=100,
+        min_length=1,
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="Your own reference for this number, such as an identifier from your records. References need not be unique. Send null to clear it, or omit it to keep the current reference.",
+        examples=["STORE-042"],
+        max_length=100,
+        min_length=1,
+    )] = None
 
 
 class AutomationPortKey(RootModel[str]):
@@ -21154,39 +21564,6 @@ class VoiceTrunkUpdate(BaseModel):
     session_credentials_enabled: Annotated[Optional[bool], Field(
         description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Off by default; turning it on does not change what the allow lists admit, and turning it off stops those connections at the next call setup without re-issuing anything. Omit the field to leave it unchanged.",
         examples=[True],
-    )] = None
-
-
-class VoiceSessionCredential(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    username: Annotated[str, Field(
-        description="SIP digest username. Always `bird`. The credential identifies the workspace through `realm`. The username does not identify the workspace.",
-        examples=["bird"],
-        max_length=64,
-        min_length=1,
-    )]
-    password: Annotated[str, Field(
-        description="SIP digest password, returned once. Treat it as a bearer secret: until it expires it can place calls billed to this workspace.",
-        examples=["8Kx2mQ7pR4tYvB9nL3sW6dF1gH5jC0aZ"],
-        max_length=128,
-        min_length=1,
-    )]
-    realm: Annotated[str, Field(
-        description="SIP digest realm to authenticate against. Workspace-scoped, so a credential minted for one workspace cannot authenticate against another.",
-        examples=["01ARZ3NDEKTSV4RRFFQ69G5FAV.sip.bird.com"],
-        max_length=253,
-        min_length=1,
-    )]
-    expires_at: Annotated[str, Field(
-        description="When the credential stops authenticating, five minutes after creation. Existing calls may continue; use a fresh credential for later authentication.",
-        examples=["2026-07-30T12:05:00Z"],
-        min_length=1,
-    )]
-    handshake_token: Annotated[Optional[str], Field(
-        description="Short-lived token required when upgrading the WebSocket connection. The token authorizes the connection only; each call still authenticates with `password`.",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODU0NDMwMzV9.fp1xWxROEmgCafwiJ-ZHbZg9cIdYC-wLGcH-5gIVbco"],
-        max_length=4096,
-        min_length=1,
     )] = None
 
 
@@ -21388,14 +21765,6 @@ class VoiceCallRouteForward(BaseModel):
     )]
 
 
-class VoiceSequenceID(RootModel[str]):
-    root: str
-
-
-class VoiceSequenceNodeID(RootModel[str]):
-    root: str
-
-
 class VoiceCallRouteSequence(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sequence"], Field(
@@ -21594,226 +21963,6 @@ class VoiceVerifiedNumberVerifyRequest(BaseModel):
         max_length=6,
         min_length=6,
         pattern="^\\d{6}$",
-    )] = None
-
-
-class VoiceLegRejectionReason(str, Enum):
-    source_not_allowed = "source_not_allowed"
-    caller_id_not_verified = "caller_id_not_verified"
-    routing_not_configured = "routing_not_configured"
-    no_route_found = "no_route_found"
-    destination_blocked = "destination_blocked"
-    destination_not_enabled = "destination_not_enabled"
-    insufficient_balance = "insufficient_balance"
-    daily_spend_exceeded = "daily_spend_exceeded"
-    concurrent_calls_exceeded = "concurrent_calls_exceeded"
-    calls_per_second_exceeded = "calls_per_second_exceeded"
-    call_not_permitted = "call_not_permitted"
-    number_ownership_not_verified = "number_ownership_not_verified"
-
-
-class VoiceLegInboundRouteReject(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["reject"], Field(
-        description="The number turned the leg away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
-    )]
-
-
-class VoiceLegInboundRouteTrunk(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["trunk"], Field(
-        description="The leg was delivered to one of your SIP trunks.",
-    )]
-    trunk_id: Annotated[str, Field(
-        description="The SIP trunk the leg was delivered to. Recorded as it was at the time, so it may name a trunk you have since changed or deleted.",
-        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-
-
-class VoiceLegInboundRouteForward(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["forward"], Field(
-        description="The leg was forwarded to another of your numbers.",
-    )]
-    forward_to: Annotated[str, Field(
-        description="The number the leg was forwarded to, in E.164 format. Recorded as it was at the time, so it may name a number you have since stopped verifying.",
-        examples=[+14155551234],
-        min_length=1,
-    )]
-    forward_as: Annotated[VoiceInboundForwardAs, Field(
-        description="Which of the leg's two numbers the forwarded leg presented as its caller. The value that went on the wire, not the one the number is set to now.",
-    )]
-
-
-class VoiceLegInboundRouteSequence(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["sequence"], Field(
-        description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.",
-    )]
-    sequence_id: Annotated[str, Field(
-        description="The sequence that handled the leg. Recorded as it was at the time, so it may name a sequence you have since changed or deleted.",
-        examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    entry_node_id: Annotated[str, Field(
-        description="The entry the leg started from in the publication that handled it. Recorded as it was at the time, so it may name an entry the sequence no longer has.",
-        max_length=64,
-        min_length=1,
-        pattern="^[a-z][a-z0-9_]{0,63}$",
-    )]
-
-
-class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence]):
-    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence
-
-
-class VoiceMediaQuality(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    mos: Annotated[float, Field(
-        description="Mean opinion score, the single number for how the call sounded, from 1 (unintelligible) to 5 (as good as being in the same room). Anything at or above 4.0 is what most people would call a clear line, and below 3.5 is where callers start asking each other to repeat themselves. The three other fields are the impairments that move it.",
-        examples=[4.32],
-        ge=1,
-        le=5,
-    )]
-    jitter_ms: Annotated[int, Field(
-        description="Variation in the arrival time of the audio packets, in milliseconds. Audio arriving unevenly is heard as choppiness even when no packets are lost at all.",
-        examples=[12],
-        ge=0,
-    )]
-    packet_loss_pct: Annotated[float, Field(
-        description="Percentage of audio packets that never arrived. Heard as brief gaps or clipped words, and the impairment that degrades a call fastest.",
-        examples=[1.5],
-        ge=0,
-    )]
-    round_trip_time_ms: Annotated[int, Field(
-        description="Round-trip time between the two ends, in milliseconds. It does not distort the audio. Above roughly 300 ms, the two parties start talking over each other.",
-        examples=[42],
-        ge=0,
-    )]
-
-
-class VoiceLegCost(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    amount: Annotated[str, Field(
-        description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
-        examples=[0.013000],
-        min_length=1,
-    )]
-    currency_code: Annotated[str, Field(
-        description="ISO 4217 three-letter currency code.",
-        examples=["EUR"],
-        max_length=3,
-        min_length=3,
-        pattern="^[A-Z]{3}$",
-    )]
-    outbound_amount: Annotated[Optional[str], Field(
-        description="What we charged to carry the leg to the destination network, as a decimal string. `null` until this component is priced.",
-        examples=[0.013000],
-    )]
-    inbound_amount: Annotated[Optional[str], Field(
-        description="What we charged to receive the leg from the originating network, as a decimal string. Only a leg that arrived at your number can carry it. `null` until this component is priced.",
-        examples=["null"],
-    )]
-    call_handling_amount: Annotated[Optional[str], Field(
-        description="What we charged for handling the call itself, as a decimal string. A call is charged for handling once, however many legs it has, so only one leg's record carries it. `null` until this component is priced.",
-        examples=["null"],
-    )]
-    recording_amount: Annotated[Optional[str], Field(
-        description="What we charged to record the leg, as a decimal string, billed per second over the same billable time as the rest of the leg. `null` until this component is priced.",
-        examples=["null"],
-    )]
-    transcription_amount: Annotated[Optional[str], Field(
-        description="What we charged to transcribe the leg's audio, as a decimal string, billed per second of recorded audio rather than for the length of the leg. A transcript is produced after the leg ends, so this can appear after the rest of the cost. `null` until this component is priced.",
-        examples=["null"],
-    )]
-
-
-class VoiceLeg(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    id: Annotated[str, Field(
-        examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    call_id: Annotated[Optional[str], Field(
-        description="Call identifier shared across all legs of a multi-party or transferred call. Use this to correlate related leg records. `null` when call correlation is not available for the leg.",
-        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: VoiceCallDirection
-    from_: Annotated[str, Field(
-        alias="from",
-        description="Calling party number in E.164 format.",
-        examples=[+14155551234],
-        min_length=1,
-    )]
-    to: Annotated[str, Field(
-        description="Called party number in E.164 format.",
-        examples=[+16505559876],
-        min_length=1,
-    )]
-    actor: Annotated[Optional[Actor], Field(
-        description="Who placed the leg: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the leg was admitted only by its source IP address, or when no actor was recorded.",
-    )] = None
-    sip_trunk_id: Annotated[Optional[str], Field(
-        description="Identifier of the SIP trunk that originated this leg. `null` when no trunk is associated.",
-        examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-    status: VoiceCallStatus
-    sip_response_code: Annotated[Optional[int], Field(
-        description="Final SIP response code received from the carrier. `null` when no SIP response was received, for example on timeout or DNS failure.",
-        examples=[200],
-        ge=100,
-    )] = None
-    rejection_reason: Annotated[Optional[VoiceLegRejectionReason], Field(
-        description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
-    )] = None
-    route: Annotated[Optional[VoiceLegInboundRoute], Field(
-        description="Which answer your number gave an incoming leg. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can receive. Recorded when the leg was handled, so changing the number's setup afterwards does not change what its past legs say. Absent on outbound legs, and on legs recorded before this field existed.",
-    )] = None
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Your own `{name, value}` labels for this leg, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise legs by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a leg is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the leg still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the leg carried none, and on legs recorded before this field existed.",
-        max_length=5,
-    )] = None
-    started_at: Annotated[str, Field(
-        description="When the leg was initiated.",
-        min_length=1,
-    )]
-    answered_at: Annotated[Optional[str], Field(
-        description="When the leg was answered (`200` OK received). `null` for unanswered legs.",
-    )] = None
-    ended_at: Annotated[Optional[str], Field(
-        description="When the leg ended (BYE or final non-2xx response). `null` for legs that ended abnormally without a recorded end event.",
-    )] = None
-    duration_ms: Annotated[Optional[int], Field(
-        description="Total leg duration in milliseconds, measured from the first INVITE to the BYE or final response. `null` while the leg is still in progress and has no final duration yet.",
-        examples=[65000],
-        ge=0,
-    )] = None
-    pdd_ms: Annotated[Optional[int], Field(
-        description="Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the leg `not going through`. Absent when the leg never rang, either because it failed first or because the carrier answered it immediately.",
-        examples=[850],
-        ge=0,
-    )] = None
-    billable_ms: Annotated[Optional[int], Field(
-        description="Billable duration in milliseconds, measured from answer to leg end. Zero for unanswered legs, and `null` while the leg is still in progress.",
-        examples=[60000],
-        ge=0,
-    )] = None
-    media_quality: Optional[VoiceMediaQuality] = None
-    cost: Annotated[Optional[VoiceLegCost], Field(
-        description="What was charged for a leg, split into the components that make it up.",
     )] = None
 
 

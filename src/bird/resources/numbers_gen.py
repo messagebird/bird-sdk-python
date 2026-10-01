@@ -3,20 +3,24 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TypedDict
+from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
     Number,
+    NumberUpdate,
 )
+from bird._models import to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
 class NumbersListParams(TypedDict, total=False):
     """Query params for ``client.numbers.list``. Every key is optional."""
 
+    search: str
+    reference: str
     number: str
     country_code: str
     number_type: str
@@ -27,10 +31,19 @@ class NumbersListParams(TypedDict, total=False):
     ending_before: str
 
 
+class NumbersUpdateParams(TypedDict, total=False):
+    """Params for ``client.numbers.update``. Every key is optional."""
+
+    name: str | None
+    reference: str | None
+
+
 class NumbersBase(Resource):
     def list(
         self,
         *,
+        search: str | None = None,
+        reference: str | None = None,
         number: str | None = None,
         country_code: str | None = None,
         number_type: str | None = None,
@@ -50,6 +63,8 @@ class NumbersBase(Resource):
         ```
         """
         query = {
+            "search": search,
+            "reference": reference,
             "number": number,
             "country_code": country_code,
             "number_type": number_type,
@@ -82,6 +97,37 @@ class NumbersBase(Resource):
             options,
         )
 
+    def update(
+        self,
+        number_id: str,
+        *,
+        name: str | None | Omit = omit,
+        reference: str | None | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> Number:
+        """Set the name or your own reference on an allocated number. Omit a field to preserve it, or send null to clear it. Applies to dedicated and shared numbers.
+
+        ```python
+        allocated = client.numbers.update(
+            "nda_01krdgeqcxet5s7t44vh8rt9mg", name="Support line", reference="STORE-042"
+        )
+        print(allocated.name, allocated.reference)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["name"] = name
+        if not isinstance(reference, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["reference"] = reference
+        body = to_wire_exclude_unset(NumberUpdate, _body)
+        return self._write(
+            "PATCH",
+            f"/v1/numbers/{quote(number_id, safe='')}",
+            body,
+            Number,
+            options,
+        )
+
     def release(
         self,
         number_id: str,
@@ -103,6 +149,8 @@ class AsyncNumbersBase(AsyncResource):
     def list(
         self,
         *,
+        search: str | None = None,
+        reference: str | None = None,
         number: str | None = None,
         country_code: str | None = None,
         number_type: str | None = None,
@@ -122,6 +170,8 @@ class AsyncNumbersBase(AsyncResource):
         ```
         """
         query = {
+            "search": search,
+            "reference": reference,
             "number": number,
             "country_code": country_code,
             "number_type": number_type,
@@ -150,6 +200,37 @@ class AsyncNumbersBase(AsyncResource):
         return await self._get(
             f"/v1/numbers/{quote(number_id, safe='')}",
             {},
+            Number,
+            options,
+        )
+
+    async def update(
+        self,
+        number_id: str,
+        *,
+        name: str | None | Omit = omit,
+        reference: str | None | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> Number:
+        """Set the name or your own reference on an allocated number. Omit a field to preserve it, or send null to clear it. Applies to dedicated and shared numbers.
+
+        ```python
+        allocated = await client.numbers.update(
+            "nda_01krdgeqcxet5s7t44vh8rt9mg", name="Support line", reference="STORE-042"
+        )
+        print(allocated.name, allocated.reference)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["name"] = name
+        if not isinstance(reference, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["reference"] = reference
+        body = to_wire_exclude_unset(NumberUpdate, _body)
+        return await self._write(
+            "PATCH",
+            f"/v1/numbers/{quote(number_id, safe='')}",
+            body,
             Number,
             options,
         )

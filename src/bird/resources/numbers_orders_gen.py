@@ -22,6 +22,8 @@ class _NumbersOrdersCreateRequired(TypedDict):
 class NumbersOrdersCreateParams(_NumbersOrdersCreateRequired, total=False):
     """Params for ``client.numbers.orders.create``. ``number`` is required."""
 
+    reference: str
+
 
 class NumbersOrdersListParams(TypedDict, total=False):
     """Query params for ``client.numbers.orders.list``. Every key is optional."""
@@ -37,6 +39,7 @@ class NumbersOrders(Resource):
         self,
         *,
         number: str,
+        reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
         """Buys a number and starts its monthly charge. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
@@ -55,6 +58,7 @@ class NumbersOrders(Resource):
             NumbersOrderCreate,
             {
                 "number": number,
+                "reference": reference,
             },
         )
         return self._write(
@@ -117,6 +121,7 @@ class AsyncNumbersOrders(AsyncResource):
         self,
         *,
         number: str,
+        reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
         """Buys a number and starts its monthly charge. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
@@ -135,6 +140,7 @@ class AsyncNumbersOrders(AsyncResource):
             NumbersOrderCreate,
             {
                 "number": number,
+                "reference": reference,
             },
         )
         return await self._write(

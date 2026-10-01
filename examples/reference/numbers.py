@@ -62,3 +62,10 @@ def numbers_release() -> None:
     # Releasing stops the monthly charge and the number stops working for you.
     # Only a dedicated number can be released; a shared one answers E14002.
     client.numbers.release("nda_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+def numbers_update() -> None:
+    allocated = client.numbers.update(
+        "nda_01krdgeqcxet5s7t44vh8rt9mg", name="Support line", reference="STORE-042"
+    )
+    print(allocated.name, allocated.reference)

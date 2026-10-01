@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.83.0
+
+- Add names and customer references to allocated numbers, with updates and search. Set an optional reference when buying a number, including orders that complete later.
+
 ## 0.82.0
 
 - Add missing Apple Messages for Business inbound message model types.

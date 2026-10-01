@@ -339,3 +339,32 @@ def whatsapp_suppressions_remove() -> None:
     # Only a manual suppression can be ended; a recipient's own opt-out is
     # theirs to reverse. The record is kept and still reads back by id.
     client.whatsapp.suppressions.remove("was_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+def whatsapp_agents_notifications_create() -> None:
+    # The agent decides whether and how to tell the contact. The answer reads
+    # accepted; read it back to see whether the agent acted on it.
+    notification = client.whatsapp.agents.notifications.create(
+        "wan_01krdgeqcxet5s7t44vh8rt9mg",
+        to="+14155551234",
+        name="order_shipped",
+        description="Order 88213 left the warehouse and arrives on Thursday.",
+        payload='{"order_id":"88213","carrier":"ACME Courier"}',
+    )
+    print(notification.id, notification.status)
+
+
+def whatsapp_agents_notifications_list() -> None:
+    notifications = client.whatsapp.agents.notifications.list("wan_01krdgeqcxet5s7t44vh8rt9mg", status="skipped")
+    for notification in notifications.data or []:
+        print(notification.name, notification.skipped_reason)
+
+
+def whatsapp_agents_notifications_get() -> None:
+    # A notification still on its way to WhatsApp is not readable yet, so a read
+    # straight after create can raise a not-found error.
+    notification = client.whatsapp.agents.notifications.get(
+        "wan_01krdgeqcxet5s7t44vh8rt9mg",
+        "waan_01krdgeqcxet5s7t44vh8rt9m7",
+    )
+    print(notification.status, notification.skipped_reason or notification.error)
