@@ -69,7 +69,7 @@ class EmailTemplatesVersionsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateVersion:
-        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and the `variables` that content expects at send time."""
+        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`."""
         return self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},
@@ -163,7 +163,7 @@ class AsyncEmailTemplatesVersionsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateVersion:
-        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and the `variables` that content expects at send time."""
+        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`."""
         return await self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},

@@ -43,9 +43,32 @@ def to_wire(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> dic
     """Validate request fields through the generated model, then emit wire JSON.
 
     ``by_alias`` maps ``from_`` to the wire field ``from``; ``exclude_none`` drops
-    unset fields so the server applies its defaults.
+    unset fields so the server applies its defaults. A required field holding
+    ``None`` is nullable by schema and is still sent as null.
     """
-    return _validate(model_cls, data).model_dump(by_alias=True, exclude_none=True, mode="json")
+    model = _validate(model_cls, data)
+    wire = model.model_dump(by_alias=True, exclude_none=True, mode="json")
+    _restore_required_nulls(model, wire)
+    return wire
+
+
+def _restore_required_nulls(value: Any, wire: Any) -> None:
+    if isinstance(value, pydantic.BaseModel) and isinstance(wire, dict):
+        for name, field in type(value).model_fields.items():
+            key = field.serialization_alias or field.alias or name
+            item = getattr(value, name)
+            if item is None:
+                if field.is_required():
+                    wire[key] = None
+            elif key in wire:
+                _restore_required_nulls(item, wire[key])
+    elif isinstance(value, (list, tuple)) and isinstance(wire, list):
+        for item, out in zip(value, wire):
+            _restore_required_nulls(item, out)
+    elif isinstance(value, dict) and isinstance(wire, dict):
+        for key, item in value.items():
+            if key in wire:
+                _restore_required_nulls(item, wire[key])
 
 
 def to_wire_exclude_unset(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> dict[str, Any]:

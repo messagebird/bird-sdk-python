@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.82.0
+
+- Add missing Apple Messages for Business inbound message model types.
+- `client.amb.routing_rules.update` accepts `business_account_id`, `match_kind`, `match_intent_id` and `match_group_id`, so a rule can move to another business or replace what it matches.
+- **Breaking:** a template variable definition now carries `system`, and an email template's `variables` lists the slots Bird fills in for each recipient as well as the parameters a send supplies. Code that sends a value for every entry of an email template's `variables` needs to send only the entries where `system` is false; naming a `system` entry in a send is rejected. SMS and WhatsApp templates omit `system`, which reads as false.
+- Creating a voice call accepts `sequence.definition` in place of `sequence.id`, running a sequence definition once without saving it, in the SDKs, `bird voice calls create` and the `voice_calls_create` MCP tool. The accepted call's `sequence.id` is `null` for such a call, so code reading it must handle a missing ID.
+- Python also exposes the referenced open-map node model while retaining map annotations on definition fields.
+- Preserve the keep-existing-match variant when updating Apple Messages for Business routing rules.
+- A required field inside a nested request value that you set to `None` is now sent as `null` instead of being dropped, so requests such as a sequence preview sample with an unobserved party are accepted.
+
 ## 0.81.1
 
 - `client.amb.routing_rules.list` documentation now states that routing rules run again when a customer writes to a resolved Apple Messages for Business conversation.

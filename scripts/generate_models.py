@@ -7,9 +7,6 @@ checked against — tools/beak:sdk-python-parity runs it into a temp tree and
 compares the two by model surface (scripts/model_diff.py). Editing it changes
 what the port is measured against, nothing that ships.
 
-Two things this script does by hand, everything else being native generator
-behavior whose per-flag rationale lives at the call site in ``main``:
-
 1. **Scoping.** datamodel-code-generator has no operation filter, so the spec is
    narrowed to the curated SDK surface (the same operations the TS and Go SDKs
    expose): keep the email operations, walk every ``$ref`` they reach — plus the
@@ -20,6 +17,11 @@ behavior whose per-flag rationale lives at the call site in ``main``:
    ``prefer_enum_member`` fixes the resulting union's mode. Both are documented in
    AGENTS.md § "Open enums are retyped, and must stay open"; both are load-bearing
    for forward compatibility, and ``tests/test_open_enums.py`` pins them.
+
+3. **Presence constraints.** Field-presence alternatives stay API validation rules.
+   Expanding them into separate models duplicates discriminator values, so the
+   oracle retains the common wire fields and leaves those cross-field constraints
+   to the API, as the shipped wire models do.
 
 Run by the parity check, not by hand. ``make generate`` now runs beak.
 """
@@ -163,6 +165,37 @@ def open_enum_unions(spec: dict) -> list[str]:
     return sorted(open_enums)
 
 
+def normalize_presence_unions(spec: dict) -> None:
+    # DCG expands field-presence alternatives into duplicate discriminator values.
+    # They constrain payload validity, not the wire model's fields or field types.
+    for schema in spec.get("components", {}).get("schemas", {}).values():
+        properties = schema.get("properties", {})
+        if schema.get("type") != "object" or not properties:
+            continue
+        for keyword in ("anyOf", "oneOf"):
+            arms = schema.get(keyword, [])
+            if arms and all(_presence_constraint(arm, properties) for arm in arms):
+                del schema[keyword]
+
+
+def _presence_constraint(arm: dict, properties: dict) -> bool:
+    if not isinstance(arm, dict) or not arm:
+        return False
+    if set(arm) - {"required", "properties", "not", "anyOf", "oneOf", "allOf"}:
+        return False
+    if not set(arm.get("required", [])) <= properties.keys():
+        return False
+    for name, constraints in arm.get("properties", {}).items():
+        if name not in properties or not isinstance(constraints, dict):
+            return False
+        if set(constraints) - {"minItems", "maxItems", "minLength", "maxLength"}:
+            return False
+    for keyword in ("anyOf", "oneOf", "allOf"):
+        if keyword in arm and (not arm[keyword] or not all(_presence_constraint(child, properties) for child in arm[keyword])):
+            return False
+    return "not" not in arm or _presence_constraint(arm["not"], properties)
+
+
 def inline_refs(spec: dict, target: str) -> None:
     """Replace every `$ref` to ``target`` with a deep copy of its definition,
     carrying sibling keys (description, …) over the copy's own."""
@@ -244,6 +277,7 @@ def main() -> None:
     # collapsed to, and WebhookEvent stays unreferenced and therefore emitted.
     inline_refs(spec, "#/components/schemas/WebhookEvent")
 
+    normalize_presence_unions(spec)
     open_enums = open_enum_unions(spec)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

@@ -19,6 +19,10 @@ from bird._types import Omit, RequestOptions, omit
 class AmbRoutingRulesUpdateParams(TypedDict, total=False):
     """Params for ``client.amb.routing_rules.update``. Every key is optional."""
 
+    business_account_id: str
+    match_kind: str
+    match_intent_id: str
+    match_group_id: str
     queue: str
     precedence: int
     is_default: bool
@@ -70,12 +74,16 @@ class AmbRoutingRules(Resource):
         self,
         routing_rule_id: str,
         *,
+        business_account_id: str | None = None,
+        match_kind: str | None = None,
+        match_intent_id: str | None = None,
+        match_group_id: str | None = None,
         queue: str | None = None,
         precedence: int | None = None,
         is_default: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRule:
-        """Changes a routing rule's queue, precedence, or default status. What it matches is fixed once created; to change that, delete this rule and create another. Setting `is_default` to true while the business already has a different default rule returns a `409`.
+        """Changes a routing rule's business, match, queue, precedence, or default status. The match changes as a unit: send `match_kind` with the intent and group ids it requires, as on create. Returns a `409` when the update would leave this rule as the default of a business that already has a different default rule.
 
         ```python
         result = client.amb.routing_rules.update('arr_01krdgeqcxet5s7t44vh8rt9mg', queue='sales', precedence=0, is_default=False)
@@ -85,6 +93,10 @@ class AmbRoutingRules(Resource):
         body = to_wire(
             AMBRoutingRuleUpdate,
             {
+                "business_account_id": business_account_id,
+                "match_kind": match_kind,
+                "match_intent_id": match_intent_id,
+                "match_group_id": match_group_id,
                 "queue": queue,
                 "precedence": precedence,
                 "is_default": is_default,
@@ -201,12 +213,16 @@ class AsyncAmbRoutingRules(AsyncResource):
         self,
         routing_rule_id: str,
         *,
+        business_account_id: str | None = None,
+        match_kind: str | None = None,
+        match_intent_id: str | None = None,
+        match_group_id: str | None = None,
         queue: str | None = None,
         precedence: int | None = None,
         is_default: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRule:
-        """Changes a routing rule's queue, precedence, or default status. What it matches is fixed once created; to change that, delete this rule and create another. Setting `is_default` to true while the business already has a different default rule returns a `409`.
+        """Changes a routing rule's business, match, queue, precedence, or default status. The match changes as a unit: send `match_kind` with the intent and group ids it requires, as on create. Returns a `409` when the update would leave this rule as the default of a business that already has a different default rule.
 
         ```python
         result = await client.amb.routing_rules.update('arr_01krdgeqcxet5s7t44vh8rt9mg', queue='sales', precedence=0, is_default=False)
@@ -216,6 +232,10 @@ class AsyncAmbRoutingRules(AsyncResource):
         body = to_wire(
             AMBRoutingRuleUpdate,
             {
+                "business_account_id": business_account_id,
+                "match_kind": match_kind,
+                "match_intent_id": match_intent_id,
+                "match_group_id": match_group_id,
                 "queue": queue,
                 "precedence": precedence,
                 "is_default": is_default,

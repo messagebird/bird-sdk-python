@@ -8,10 +8,6 @@ from pydantic import ConfigDict, Field, RootModel
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 
-class WorkspaceID(RootModel[str]):
-    root: str
-
-
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     param: Annotated[str, Field(
@@ -125,6 +121,14 @@ class Error(BaseModel):
     error: ErrorBody
 
 
+class APIKeyID(RootModel[str]):
+    root: str
+
+
+class WorkspaceID(RootModel[str]):
+    root: str
+
+
 class SortOrder(str, Enum):
     asc = "asc"
     desc = "desc"
@@ -192,10 +196,6 @@ class Workspace(BaseModel):
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
-
-
-class APIKeyID(RootModel[str]):
-    root: str
 
 
 class RealtimeEventName(RootModel[str]):
@@ -678,7 +678,7 @@ class EmailTemplateSend(BaseModel):
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Values for the template's variables, keyed by the variable name. A variable name is a single word.\n\nEvery variable in the template's `variables` list needs a value. A send\nthat omits one is rejected. Languages can use different variables, and a\nvalue unused by the selected language is ignored.\n\nThe API supplies values under the reserved `bird` key, so a send that sets\nit is rejected. `parameters` is capped at 16 KB once serialized.",
+        description="Values for caller parameters, keyed by name. A parameter name is a single word.\n\nCaller parameters have `system` set to false or absent in the template's\n`variables` list. Supply each required caller parameter used by the\nresolved send language; omitting one returns `422`. A version's list\ncovers all its languages, and values unused by the resolved language are\nignored.\n\nThe `bird` namespace is reserved for values filled by Bird, so a send that\nsets it is rejected. `parameters` is capped at 16 KB once serialized.",
     )] = None
 
 
@@ -2857,7 +2857,7 @@ class TemplateVariableType(str, Enum):
 class TemplateVariable(BaseModel):
     model_config = ConfigDict(extra="allow")
     key: Annotated[str, Field(
-        description="The key this slot is filled by. On email and SMS it is the key you set in the send's `parameters` object. On WhatsApp it is the `name` you repeat on the matching parameter inside `components`, or, for a template whose placeholders are positional, the position itself as `1`, `2` and so on.",
+        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` you repeat on the matching parameter inside `components`, or, for a template whose placeholders are positional, the position itself as `1`, `2` and so on.",
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
@@ -2865,14 +2865,17 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     required: Annotated[bool, Field(
-        description="Whether the send must supply this variable. Omitting a required value returns `422` on email, SMS, and WhatsApp sends.",
+        description="Whether the send must supply this variable. Omitting a required value returns `422` on email, SMS, and WhatsApp sends. Always false when `system` is true, because you do not supply that slot's value.",
     )]
     constraint: Annotated[str, Field(
-        description="A plain-language description of what values this variable accepts.",
+        description="A plain-language description of what values this variable accepts. When `system` is true it names where Bird takes the value from instead, because there is no value for you to send.",
         min_length=1,
     )]
     sensitive: Annotated[Optional[bool], Field(
         description="Whether this slot's value is redacted from stored message content. A placeholder replaces the sensitive value in message history; transport queues can still carry the text needed for delivery.",
+    )] = None
+    system: Annotated[Optional[bool], Field(
+        description="Whether the value comes from Bird rather than from the send. Absent means false. Only email templates have system slots, identified by the reserved `bird` key or a dotted path beneath it; every SMS and WhatsApp slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
     )] = None
 
 
@@ -8515,8 +8518,26 @@ class AMBRoutingRuleCreate(RootModel[AMBRoutingRuleCreate1 | AMBRoutingRuleCreat
     root: AMBRoutingRuleCreate1 | AMBRoutingRuleCreate2 | AMBRoutingRuleCreate3
 
 
-class AMBRoutingRuleUpdate(BaseModel):
+class AMBRoutingRuleUpdate1(BaseModel):
     model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[Optional[str], Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    match_kind: Annotated[Optional[AMBRoutingRuleMatchKind], Field(
+        description="What a routing rule matches against the entry point that started the conversation.\n\n- `intent` matches on the entry point's intent alone: `match_intent_id` is set and `match_group_id` is null.\n- `group` matches on the entry point's group alone: `match_group_id` is set and `match_intent_id` is null.\n- `both` matches only when the entry point carries the given intent and the given group together, so `match_intent_id` and `match_group_id` are both set. There are two match fields rather than one because `both` needs to carry an intent and a group at once.",
+    )] = None
+    match_intent_id: Annotated[Optional[str], Field(
+        description="The entry point intent to match, as sent in Apple's `intentID`. Requires `match_kind`: required when it is `intent` or `both`, and rejected when it is `group`.",
+        examples=["order_status"],
+        min_length=1,
+    )] = None
+    match_group_id: Annotated[Optional[str], Field(
+        description="The entry point group to match, as sent in Apple's `groupID`. Requires `match_kind`: required when it is `group` or `both`, and rejected when it is `intent`.",
+        examples=["support"],
+        min_length=1,
+    )] = None
     queue: Annotated[Optional[str], Field(
         description="Queue label used for routing and filtering conversations.",
         max_length=64,
@@ -8527,9 +8548,96 @@ class AMBRoutingRuleUpdate(BaseModel):
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
-        description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default. Setting it true while the business already has a different default rule returns a `409`.",
+        description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
         examples=[False],
     )] = None
+
+
+class AMBRoutingRuleUpdate2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[Optional[str], Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    match_kind: Literal["intent"]
+    match_intent_id: Annotated[str, Field(min_length=1)]
+    match_group_id: Annotated[Optional[str], Field(
+        description="The entry point group to match, as sent in Apple's `groupID`. Requires `match_kind`: required when it is `group` or `both`, and rejected when it is `intent`.",
+        examples=["support"],
+        min_length=1,
+    )] = None
+    queue: Annotated[Optional[str], Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )] = None
+    precedence: Annotated[Optional[int], Field(
+        description="Change this rule's evaluation order among the business's other rules.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
+        examples=[False],
+    )] = None
+
+
+class AMBRoutingRuleUpdate3(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[Optional[str], Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    match_kind: Literal["group"]
+    match_intent_id: Annotated[Optional[str], Field(
+        description="The entry point intent to match, as sent in Apple's `intentID`. Requires `match_kind`: required when it is `intent` or `both`, and rejected when it is `group`.",
+        examples=["order_status"],
+        min_length=1,
+    )] = None
+    match_group_id: Annotated[str, Field(min_length=1)]
+    queue: Annotated[Optional[str], Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )] = None
+    precedence: Annotated[Optional[int], Field(
+        description="Change this rule's evaluation order among the business's other rules.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
+        examples=[False],
+    )] = None
+
+
+class AMBRoutingRuleUpdate4(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    business_account_id: Annotated[Optional[str], Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    match_kind: Literal["both"]
+    match_intent_id: Annotated[str, Field(min_length=1)]
+    match_group_id: Annotated[str, Field(min_length=1)]
+    queue: Annotated[Optional[str], Field(
+        description="Queue label used for routing and filtering conversations.",
+        max_length=64,
+        min_length=1,
+    )] = None
+    precedence: Annotated[Optional[int], Field(
+        description="Change this rule's evaluation order among the business's other rules.",
+        examples=[10],
+    )] = None
+    is_default: Annotated[Optional[bool], Field(
+        description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
+        examples=[False],
+    )] = None
+
+
+class AMBRoutingRuleUpdate(RootModel[AMBRoutingRuleUpdate1 | AMBRoutingRuleUpdate2 | AMBRoutingRuleUpdate3 | AMBRoutingRuleUpdate4]):
+    root: AMBRoutingRuleUpdate1 | AMBRoutingRuleUpdate2 | AMBRoutingRuleUpdate3 | AMBRoutingRuleUpdate4
 
 
 class AMBConversationID(RootModel[str]):
@@ -9275,6 +9383,194 @@ class AMBNativeInteractiveContent(BaseModel):
 
 class AMBMessageContent(RootModel[AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent]):
     root: AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent
+
+
+class AMBNativeInboundQuickReply(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    selected_identifier: Annotated[str, Field(
+        description="Identifier selected by the customer.",
+        min_length=1,
+    )]
+    selected_index: Annotated[Optional[int], Field(
+        description="Index reported by Apple.",
+        ge=0,
+    )] = None
+    items: Annotated[Optional[List[AMBQuickReplyItem]], Field(
+        description="Items returned by the customer device.",
+    )] = None
+
+
+class AMBNativeInboundListPickerSection(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    title: Annotated[Optional[str], Field(
+        description="Heading shown above this section's rows.",
+        min_length=1,
+    )] = None
+    order: Annotated[Optional[int], Field(
+        description="Where this section sits relative to its siblings, ascending. Sections omitting it are laid out in list order, after any that specify one.",
+        ge=0,
+    )] = None
+    items: Annotated[List[AMBListPickerItem], Field(
+        description="The rows in this section.",
+        min_length=1,
+    )]
+    multiple_selection: Annotated[Optional[bool], Field(
+        description="Whether the customer can select more than one row in this section.",
+    )] = None
+
+
+class AMBNativeInboundListPicker(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sections: Annotated[List[AMBNativeInboundListPickerSection], Field(
+        description="Sections and selected rows returned by Apple.",
+    )]
+
+
+class AMBNativeInboundEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[Optional[str], Field(
+        description="Event identifier returned by Apple, when provided.",
+        min_length=1,
+    )] = None
+    location: Optional[AMBLocation] = None
+    timezone_offset: Annotated[Optional[int], Field(
+        description="Minutes from GMT at the event location. Omit to use the customer's time zone.",
+    )] = None
+    timeslots: Annotated[Optional[List[AMBTimeSlot]], Field(
+        description="Time slots returned by Apple. May be empty when the device supplies only a selected label.",
+    )] = None
+    image_identifier: Annotated[Optional[str], Field(
+        description="Identifier of the event image in interactive_data.data.images.",
+        min_length=1,
+    )] = None
+    title: Annotated[Optional[str], Field(description="Event title.")] = None
+
+
+class AMBFormPageType(str, Enum):
+    select = "select"
+    picker = "picker"
+    date_picker = "date_picker"
+    input = "input"
+
+
+class AMBInboundFormItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(min_length=1)]
+    type: AMBFormPageType
+    title: Annotated[str, Field(
+        description="Display value Apple returned, including any input prefix. May be empty for an optional input.",
+        min_length=0,
+    )]
+    value: Annotated[str, Field(
+        description="Machine value Apple returned for the selection or input. May be empty for an optional input.",
+        min_length=0,
+    )]
+
+
+class AMBInboundFormSelection(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    page_identifier: Annotated[str, Field(min_length=1)]
+    title: Annotated[str, Field(
+        description="Page title returned by Apple. Empty when the page has no title.",
+        min_length=0,
+    )]
+    subtitle: Annotated[str, Field(min_length=1)]
+    items: List[AMBInboundFormItem]
+
+
+class AMBNativeInboundFormData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    private: Annotated[Optional[bool], Field(
+        description="Whether the sender asked the MSP to treat this form response as private.",
+    )] = None
+    selections: List[AMBInboundFormSelection]
+
+
+class AMBNativeInboundDynamic(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: AMBNativeInboundFormData
+
+
+class AMBNativeInboundPayment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    state: Annotated[Optional[str], Field(
+        description="Payment state reported by Apple. This does not confirm that a payment settled.",
+    )] = None
+
+
+class AMBNativeInboundAuthentication(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[Optional[str], Field(
+        description="Authentication status reported by Apple. This does not establish an authenticated Bird session.",
+    )] = None
+
+
+class AMBNativeInboundImage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    identifier: Annotated[str, Field(
+        description="Identifier used by the received message.",
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="Accessibility description supplied by Apple.",
+    )] = None
+    download_url: Annotated[str, Field(
+        description="Relative Bird API URL for downloading the image with the same authentication and workspace as the message.",
+        min_length=1,
+    )]
+
+
+class AMBNativeInboundPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    request_identifier: Annotated[Optional[str], Field(
+        description="Correlation identifier reported by Apple.",
+    )] = None
+    quick_reply: Optional[AMBNativeInboundQuickReply] = None
+    list_picker: Optional[AMBNativeInboundListPicker] = None
+    event: Optional[AMBNativeInboundEvent] = None
+    dynamic: Optional[AMBNativeInboundDynamic] = None
+    payment: Optional[AMBNativeInboundPayment] = None
+    authenticate: Optional[AMBNativeInboundAuthentication] = None
+    images: Annotated[Optional[List[AMBNativeInboundImage]], Field(
+        description="Images returned by Apple, with authenticated download URLs.",
+    )] = None
+
+
+class AMBNativeInboundInteractiveData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    app_id: Annotated[Optional[str], Field(description="Custom app identifier.")] = None
+    app_name: Annotated[Optional[str], Field(description="Custom app name.")] = None
+    bid: Annotated[Optional[str], Field(description="Apple extension identifier.")] = None
+    url: Annotated[Optional[str], Field(description="Opaque custom app response URL.")] = None
+    use_live_layout: Annotated[Optional[bool], Field(
+        description="Whether the app uses live layout.",
+    )] = None
+    session_identifier: Annotated[Optional[str], Field(
+        description="Apple interaction session identifier.",
+    )] = None
+    reply_message: Optional[AMBMessageBubble] = None
+    received_message: Optional[AMBMessageBubble] = None
+    data: Optional[AMBNativeInboundPayload] = None
+    app_icon_url: Annotated[Optional[str], Field(
+        description="Relative Bird API URL for downloading the custom app icon with the same authentication and workspace as the message.",
+    )] = None
+
+
+class AMBNativeInboundInteractiveContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["interactive"], Field(description="Apple message family.")]
+    body: Annotated[Optional[str], Field(description="Message body supplied by Apple.")] = None
+    subject: Annotated[Optional[str], Field(
+        description="Message subject supplied by Apple.",
+    )] = None
+    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
+        description="Ordered attachments supplied by Apple.",
+    )] = None
+    interactive_data: AMBNativeInboundInteractiveData
+
+
+class AMBInboundContent(RootModel[AMBNativeTextContent | AMBNativeInboundInteractiveContent]):
+    root: AMBNativeTextContent | AMBNativeInboundInteractiveContent
 
 
 class AMBStatsErrorCode(RootModel[str]):
@@ -15050,6 +15346,29 @@ class EmailTemplate(BaseModel):
     )]
 
 
+class EmailTemplatePreviewContent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject: Annotated[Optional[str], Field(
+        description="The subject line, including any template expressions.",
+        examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
+        max_length=998,
+    )] = None
+    preview_text: Annotated[Optional[str], Field(
+        description="Inbox preview text. Preview and publication fold it into the top of the HTML as a hidden preheader. Input analysis includes its references.",
+        examples=["{{ bird.contact.first_name }}, your order is on its way"],
+        max_length=255,
+    )] = None
+    html: Annotated[Optional[str], Field(
+        description="The HTML body, including any template expressions.",
+        examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
+        max_length=524288,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The plain-text body. When omitted, a plain-text alternative is derived from the HTML for preview, input analysis, and publication.",
+        max_length=524288,
+    )] = None
+
+
 class EmailTemplateDraftRevision(RootModel[int]):
     root: int
 
@@ -15091,29 +15410,6 @@ class EmailTemplateDuplicate(BaseModel):
         max_length=63,
         min_length=1,
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
-    )] = None
-
-
-class EmailTemplatePreviewContent(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    subject: Annotated[Optional[str], Field(
-        description="The subject line to render.",
-        examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
-        max_length=998,
-    )] = None
-    preview_text: Annotated[Optional[str], Field(
-        description="The preview text to render. It is folded into the top of the HTML the same way publishing folds it, so the rendered body carries the hidden preheader a recipient's inbox would read.",
-        examples=["{{ bird.contact.first_name }}, your order is on its way"],
-        max_length=255,
-    )] = None
-    html: Annotated[Optional[str], Field(
-        description="The HTML body to render.",
-        examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
-        max_length=524288,
-    )] = None
-    text: Annotated[Optional[str], Field(
-        description="The plain-text body to render. Omit it and a plain-text alternative is derived from the HTML, the same way it is derived when you publish.",
-        max_length=524288,
     )] = None
 
 
@@ -15297,7 +15593,7 @@ class EmailTemplatePreview(BaseModel):
         min_length=2,
     )]
     variables: Annotated[List[TemplateVariable], Field(
-        description="The variables you can fill in with `parameters`. This list covers only the\nlanguage named by `language`. A version read combines the variables from\nevery language the version holds. Preview each language separately to see\nits own variables.\n\nVariables under the reserved `bird.` namespace are not listed here. We\nsupply those values, but you can nest sample values under `bird` in\n`parameters` to preview them.",
+        description="Every input definition this content uses, in one list: the parameters you fill in\nwith `parameters`, and the values Bird fills in for each recipient. Read `system`\nto tell them apart. This list covers only the language named by `language`. A\nversion read combines the inputs from every language the version holds. Preview\neach language separately to see its own. You can nest sample values under `bird`\nin preview `parameters`; sends reject that reserved namespace.",
     )]
     compatibility_severity: Annotated[EmailCompatibilityReportSeverity, Field(
         description="The worst severity across every finding the response was computed from, which\nis the authoritative reading: a response that caps how many findings it lists\nstill accounts here for the ones it left out. Each response's `compatibility`\nsays which content it covered.\n\n- `problem`: at least one finding is a `problem`.\n- `warning`: every finding is a `warning`.\n- `none`: there are no findings.",
@@ -15335,7 +15631,7 @@ class EmailTemplateVersionSummary(BaseModel):
     )]
     revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
     variables: Annotated[List[TemplateVariable], Field(
-        description="Every variable this version's content uses. You supply a value for each of them when you send.\n\nThe list combines all the languages, because languages do not have to use the same variables: if the English body uses `discount_code` and the French body uses `shipping_date`, both appear here. Send a value for every variable in the list rather than only the ones you expect the language you are sending to use. A language that does not use a variable ignores the value you sent for it, and a variable the sent language does use but you left out is rejected with a `422` naming it.\n\nVariables under the reserved `bird.` namespace are not listed here. We fill those in ourselves from the recipient's contact record.",
+        description="Input definitions this version uses, including caller parameters and reserved Bird inputs. An entry with `system` false is yours to send in `template.parameters`. An entry with `system` true names a reserved Bird key; supported paths receive Bird values. A draft can also report unsupported reserved paths, including bare `bird`, whose `constraint` explains that no Bird value fills them. Correct these paths before publishing. Naming a reserved Bird key in a send is rejected with a `422`.\n\nThe list combines all the languages, because languages do not have to use the same inputs: if the English body uses `discount_code` and the French body uses `shipping_date`, both appear here. A send requires values only for the caller parameters referenced by its resolved language. Preview each language to see its inputs. Extra parameters are ignored; omitting a caller parameter referenced by the resolved language returns a `422` naming it.",
     )]
     default_language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -15439,7 +15735,7 @@ class EmailTemplateVersion(BaseModel):
     )]
     revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
     variables: Annotated[List[TemplateVariable], Field(
-        description="Every variable this version's content uses. You supply a value for each of them when you send.\n\nThe list combines all the languages, because languages do not have to use the same variables: if the English body uses `discount_code` and the French body uses `shipping_date`, both appear here. Send a value for every variable in the list rather than only the ones you expect the language you are sending to use. A language that does not use a variable ignores the value you sent for it, and a variable the sent language does use but you left out is rejected with a `422` naming it.\n\nVariables under the reserved `bird.` namespace are not listed here. We fill those in ourselves from the recipient's contact record.",
+        description="Input definitions this version uses, including caller parameters and reserved Bird inputs. An entry with `system` false is yours to send in `template.parameters`. An entry with `system` true names a reserved Bird key; supported paths receive Bird values. A draft can also report unsupported reserved paths, including bare `bird`, whose `constraint` explains that no Bird value fills them. Correct these paths before publishing. Naming a reserved Bird key in a send is rejected with a `422`.\n\nThe list combines all the languages, because languages do not have to use the same inputs: if the English body uses `discount_code` and the French body uses `shipping_date`, both appear here. A send requires values only for the caller parameters referenced by its resolved language. Preview each language to see its inputs. Extra parameters are ignored; omitting a caller parameter referenced by the resolved language returns a `422` naming it.",
     )]
     languages: Annotated[Dict[str, EmailTemplateLanguageContent], Field(
         description="The content this version holds, keyed by language tag in BCP-47 form such as `en` or `pt-BR`. Publishing freezes every language together, so a version shows exactly what it would send in each of them. On a published version this is the send content.",
@@ -20678,6 +20974,10 @@ class NumbersOrderCreate(BaseModel):
     )]
 
 
+class AutomationPortKey(RootModel[str]):
+    root: str
+
+
 class SIPTrunkACLID(RootModel[str]):
     root: str
 
@@ -21534,6 +21834,126 @@ class VoiceLegList(BaseModel):
     )]
 
 
+class VoiceSequenceDefinitionNode(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    pass
+
+
+class VoiceSequencePortSample(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    node_id: Annotated[str, Field(
+        description="Stable identifier for a node within one sequence definition.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    port: Annotated[str, Field(
+        description="Stable named input or output declared by a node-type version.",
+        examples=["success"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    output: Annotated[Dict[str, Any], Field(
+        description="Original hypothetical output matching the resolved port schema, limited to 128 KiB. A webhook sample must also fit its 16 KiB native outcome envelope; business ports use the configured object schema and failure uses a fixed technical error code. Gather digits and reason must match collection constraints and the selected port. Private gather results are checked before removal from returned steps.",
+    )]
+
+
+class VoiceSequenceCompletionSample(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    node_id: Annotated[str, Field(
+        description="Stable identifier for a node within one sequence definition.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    completion: Annotated[Literal["completed"], Field(
+        description="Hypothetical completion of a managed builtin transfer. No media effects run during preview.",
+        max_length=9,
+        min_length=9,
+    )]
+
+
+class VoiceSequencePreviewSample(RootModel[VoiceSequencePortSample | VoiceSequenceCompletionSample]):
+    root: VoiceSequencePortSample | VoiceSequenceCompletionSample
+
+
+class VoiceSequenceSavedExecutionEndpoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[str, Field(max_length=128, min_length=1)]
+
+
+class VoiceSequenceSavedExecutionParty(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    endpoint: VoiceSequenceSavedExecutionEndpoint
+    address: Annotated[Optional[str], Field(max_length=128, min_length=1)] = None
+
+
+class VoiceSequenceSavedExecutionCallSample(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(max_length=128, min_length=1)]
+    session_id: Annotated[str, Field(max_length=128, min_length=1)]
+    orig: Annotated[Optional[VoiceSequenceSavedExecutionParty], Field(
+        description="Saved hypothetical party, or null for an absent observation. Strings may be stale; explicit preview and evaluation validate endpoint types and telephone addresses.",
+    )]
+    dest: Annotated[Optional[VoiceSequenceSavedExecutionParty], Field(
+        description="Saved hypothetical party, or null for an absent observation. Strings may be stale; explicit preview and evaluation validate endpoint types and telephone addresses.",
+    )]
+
+
+class VoiceSequenceSavedExecutionSample(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(max_length=128, min_length=1)]
+    started_at: Annotated[str, Field(max_length=128, min_length=1)]
+    call: Annotated[VoiceSequenceSavedExecutionCallSample, Field(
+        description="Saved hypothetical root call identities. Strings may be stale; explicit preview and evaluation require valid typed identifiers.",
+    )]
+
+
+class VoiceSequenceSavedPreview(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    trigger_node_id: Annotated[str, Field(
+        description="Stable identifier for a node within one sequence definition.",
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    trigger_data: Dict[str, Any]
+    node_samples: Annotated[Optional[List[VoiceSequencePreviewSample]], Field(
+        max_length=50,
+    )] = None
+    execution_sample: Annotated[Optional[VoiceSequenceSavedExecutionSample], Field(
+        description="Saved hypothetical values, which may be stale or incomplete in meaning. Each string is nonempty and limited to 128 bytes. Explicit preview and evaluation require valid typed identifiers and a timestamp.",
+    )] = None
+
+
+class VoiceSequencePresentation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    preview: Annotated[Optional[VoiceSequenceSavedPreview], Field(
+        description="Saved authoring scenario. Values are checked against node contracts only when explicitly submitted to preview or evaluation.",
+    )] = None
+
+
+class VoiceSequenceDefinition(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    schema_version: Annotated[Literal[1], Field(
+        description="Version of the voice graph definition envelope.",
+        examples=[1],
+    )]
+    expression_environment: Annotated[Literal["bird.cel.v1"], Field(
+        description="Expression language used by explicitly marked values in a voice sequence definition.",
+    )]
+    nodes: Annotated[List[Dict[str, Any]], Field(
+        description="Nodes keyed by stable IDs. Incomplete node objects may be saved in a draft. Array order has no execution meaning.",
+    )]
+    settings: Annotated[Optional[Dict[str, Any]], Field(
+        description="Sequence policies being authored. Omission leaves the definition without explicit settings.",
+    )] = None
+    presentation: Annotated[Optional[VoiceSequencePresentation], Field(
+        description="Optional editor layout, labels and saved authoring samples. These fields do not drive execution. Their bytes still count toward definition and execution size limits.",
+    )] = None
+
+
 class VoiceSequencePhoneNumber(RootModel[str]):
     root: str
 
@@ -21544,7 +21964,8 @@ class VoiceSequenceRunID(RootModel[str]):
 
 class VoiceCallSequence(BaseModel):
     model_config = ConfigDict(extra="allow")
-    id: Annotated[str, Field(
+    id: Annotated[Optional[str], Field(
+        description="Voice sequence selected for this call. Null for a call that ran an inline definition.",
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
@@ -21600,11 +22021,14 @@ class VoiceCall(BaseModel):
 
 class CreateVoiceCallSequenceRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
-    id: Annotated[str, Field(
+    id: Annotated[Optional[str], Field(
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
+    )] = None
+    definition: Annotated[Optional[VoiceSequenceDefinition], Field(
+        description="Complete sequence definition to run once after the recipient answers. It must pass the same checks as publishing a sequence, is frozen when the call is accepted, and creates no saved sequence.",
+    )] = None
     entry_node_id: Annotated[str, Field(
         description="Stable identifier for a node within one sequence definition.",
         max_length=64,
@@ -21636,7 +22060,9 @@ class CreateVoiceCallRequest(BaseModel):
         ge=5,
         le=120,
     )] = None
-    sequence: CreateVoiceCallSequenceRequest
+    sequence: Annotated[CreateVoiceCallSequenceRequest, Field(
+        description="Supply exactly one of `id`, to run a saved sequence's active publication, or `definition`, to run a sequence once without saving it.",
+    )]
 
 
 class VoiceDestinationStatus(str, Enum):
