@@ -2274,6 +2274,7 @@ class SMSErrorCode(str, Enum):
     invalid_destination = "invalid_destination"
     unreachable = "unreachable"
     blocked_by_carrier = "blocked_by_carrier"
+    blocked_by_fraud_protection = "blocked_by_fraud_protection"
     blocked_by_recipient = "blocked_by_recipient"
     landline_unreachable = "landline_unreachable"
     content_rejected = "content_rejected"
@@ -2287,10 +2288,10 @@ class SMSErrorCode(str, Enum):
 class SMSError(BaseModel):
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason:\n\n- `invalid_destination`: The number is unassigned, ported out, or malformed.\n- `unreachable`: The handset is off or outside coverage.\n- `blocked_by_carrier`: The carrier filtered the message.\n- `blocked_by_recipient`: The recipient device blocked the sender.\n- `landline_unreachable`: The destination is a landline that does not accept SMS.\n- `content_rejected`: The carrier rejected the content.\n- `sender_unregistered`: The sender is not registered for the destination.\n- `recipient_opted_out`: The recipient is on a suppression list.\n- `provider_unavailable`: The provider remained unavailable after retries.\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `unknown`: The failure could not be classified.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Standardized failure reason:\n\n- `invalid_destination`: The number is unassigned, ported out, or malformed.\n- `unreachable`: The handset is off or outside coverage.\n- `blocked_by_carrier`: The carrier filtered the message.\n- `blocked_by_fraud_protection`: Bird fraud protection blocked suspected SMS pumping.\n- `blocked_by_recipient`: The recipient device blocked the sender.\n- `landline_unreachable`: The destination is a landline that does not accept SMS.\n- `content_rejected`: The carrier rejected the content.\n- `sender_unregistered`: The sender is not registered for the destination.\n- `recipient_opted_out`: The recipient is on a suppression list.\n- `provider_unavailable`: The provider remained unavailable after retries.\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `unknown`: The failure could not be classified.\n\nThis is an open enum. Accept unrecognized values.",
     )]
     description: Annotated[str, Field(
-        description="The failure in words, from whatever refused the message: the carrier's own reason text on a delivery receipt, or ours on a message stopped before a carrier saw it. Free-form, so branch on `code` and show this to a human.",
+        description="The failure in words: the provider's reason text, or Bird's explanation for a fraud protection block or a message refused before submission. Free-form, so branch on `code` and show this to a human.",
         examples=["Carrier filtered as spam"],
         min_length=1,
     )]
@@ -9913,21 +9914,52 @@ class AMBConversationRecipient(BaseModel):
 class AMBConversationRouting(BaseModel):
     model_config = ConfigDict(extra="allow")
     group_id: Annotated[Optional[str], Field(
-        description="The business's routing group carried by Apple from the entry point. This identifies a routing destination within the business. Null when the opening message carried no group.",
+        description="The business's routing group carried by Apple from the entry point. This identifies a routing destination within the business. Null when the message that set the current routing carried no group.",
         min_length=1,
     )]
     intent_id: Annotated[Optional[str], Field(
-        description="Intent carried by Apple from the entry point, used with `group_id` to route the conversation. Null when none was supplied.",
+        description="Intent carried by Apple from the entry point, used with `group_id` to route the conversation. Null when the message that set the current routing carried none.",
         min_length=1,
     )]
     entry_point: Annotated[Optional[str], Field(
-        description="Configured entry point matching the opening message's group and intent. Null when none matched.",
+        description="Configured entry point matching the current group and intent. Null when none matched.",
         examples=["support"],
         min_length=1,
     )]
     queue: Annotated[Optional[str], Field(
-        description="Workspace queue selected by routing. Null when the conversation is unrouted.",
+        description="Workspace queue selected by routing or set by a teammate. Null when the conversation is unrouted.",
         examples=["support"],
+        min_length=1,
+    )]
+
+
+class AMBConversationRoutingChange(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    group_id: Annotated[Optional[str], Field(
+        description="Group carried by the message. Null when the message carried only an intent.",
+        min_length=1,
+    )]
+    intent_id: Annotated[Optional[str], Field(
+        description="Intent carried by the message. Null when the message carried only a group.",
+        min_length=1,
+    )]
+    entry_point: Annotated[Optional[str], Field(
+        description="Configured entry point matching the message's group and intent. Null when none matched.",
+        examples=["billing"],
+        min_length=1,
+    )]
+    queue: Annotated[Optional[str], Field(
+        description="Queue routing rules selected for the message's group and intent when it arrived. Null when no rule matched.",
+        examples=["billing"],
+        min_length=1,
+    )]
+    message_id: Annotated[str, Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    received_at: Annotated[str, Field(
+        description="When that message was received.",
         min_length=1,
     )]
 
@@ -9967,7 +9999,10 @@ class AMBConversation(BaseModel):
         description="The customer on the other side of this Apple Messages for Business conversation.",
     )]
     routing: Annotated[AMBConversationRouting, Field(
-        description="Routing context from the message that opened or most recently reopened the Apple channel conversation.",
+        description="Routing context the conversation is filed under. Routing rules set it when the conversation opens or reopens, or when the customer writes after it was resolved. A teammate can move the queue or apply a pending `routing_change`.",
+    )]
+    routing_change: Annotated[Optional[AMBConversationRoutingChange], Field(
+        description="Routing from a later customer message that differs from `routing`, waiting for a teammate to apply or dismiss it. Null when there is none. Only recorded while the inbox status is open; resolving the conversation or moving its queue clears it.",
     )]
     last_message: Annotated[Optional[AMBConversationLastMessage], Field(
         description="Most recent message, or null when its identity has not been recorded.",
@@ -10047,6 +10082,23 @@ class AMBConversationList(BaseModel):
     )]
 
 
+class AMBConversationRoutingChangeAction(str, Enum):
+    apply = "apply"
+    dismiss = "dismiss"
+
+
+class AMBConversationRoutingChangeDecision(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    action: Annotated[AMBConversationRoutingChangeAction, Field(
+        description="`apply` adopts the pending change's group, intent, entry point and queue. `dismiss` discards it and leaves group, intent and entry point unchanged.",
+    )]
+    message_id: Annotated[str, Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
 class AMBConversationUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     assigned_to: Annotated[Optional[str], Field(
@@ -10063,6 +10115,15 @@ class AMBConversationUpdate(BaseModel):
     )] = None
     read: Annotated[Optional[str], Field(
         description="Mark received inbound messages with created_at at or before this timestamp as read in the shared workspace inbox. Messages sharing the timestamp are included together. Later arrivals remain unread until another read update. This does not send a read receipt to the customer or change inbox status. Omit to leave read state unchanged.",
+    )] = None
+    queue: Annotated[Optional[str], Field(
+        description="Queue to move the conversation to, or null to leave it unrouted. Routing rules do not run, and the conversation keeps its group and intent. Moving the queue clears any pending `routing_change`, and cannot be combined with an `apply` decision.",
+        examples=["billing"],
+        max_length=64,
+        min_length=1,
+    )] = None
+    routing_change: Annotated[Optional[AMBConversationRoutingChangeDecision], Field(
+        description="Settles the conversation's pending `routing_change`. `message_id` names the change you reviewed: the request fails with `409` when the pending change has a different message ID, because a newer customer message replaced it or a teammate already settled it. Either action clears `routing_change`.",
     )] = None
 
 
@@ -16900,6 +16961,52 @@ class WebhookEndpointID(RootModel[str]):
     root: str
 
 
+class WebhookRawDestination(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["webhook"], Field(min_length=1)]
+
+
+class ConnectorID(RootModel[str]):
+    root: str
+
+
+class ConnectorActionID(RootModel[str]):
+    root: str
+
+
+class WebhookConnectorBinding(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    connector_id: Annotated[str, Field(
+        description="Stable identifier of a connector, such as `claude_managed_agents`.",
+        examples=["claude_managed_agents"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    action: Annotated[str, Field(
+        description="Action of the connector that each delivery runs.",
+        examples=["trigger_run"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    connection_name: Annotated[str, Field(
+        description="Label of the credentials the endpoint delivers with.",
+        examples=["Support triage agent"],
+        min_length=1,
+    )]
+
+
+class WebhookConnectorDestination(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["connector"], Field(min_length=1)]
+    connector: WebhookConnectorBinding
+
+
+class WebhookDestination(RootModel[WebhookRawDestination | WebhookConnectorDestination]):
+    root: WebhookRawDestination | WebhookConnectorDestination
+
+
 class WebhookEndpointStatus(str, Enum):
     active = "active"
     degraded = "degraded"
@@ -16998,6 +17105,9 @@ class WebhookEndpoint(BaseModel):
         description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then\n  [Replay failed deliveries](/docs/api/reference/create-webhook-replay) to\n  recover the deliveries that failed before the pause. Events that arrived\n  while it was paused were never attempted, so a replay does not reach them.",
         min_length=1,
     )]
+    destination: Annotated[Optional[WebhookDestination], Field(
+        description="How each delivery to the endpoint is built.",
+    )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
@@ -17023,14 +17133,52 @@ class WebhookEndpointList(BaseModel):
     )] = None
 
 
+class WebhookConnectorID(RootModel[str]):
+    root: str
+
+
+class WebhookConnectorSetup(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    connector_id: Annotated[str, Field(
+        description="The connector to deliver through. Each connector, its fields and the setup to do on its\nplatform first:\n\n- `claude_managed_agents`: Claude Managed Agents. Send each message you receive to your Claude managed agent.\n  - `agent_id` (`config`, required): Returned when you create the agent. Sessions use its latest version.\n  - `environment_id` (`config`, required): Returned when you create the environment.\n  - `api_key` (secret, in `credentials`, required): From the Claude workspace your agent runs in.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, set up your agent in Claude. In the Claude Console, create the agent, its environment and an API key in the same workspace, then come back here with their IDs and the key. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 2: Create an API key. In the Claude workspace your agent runs in. See https://platform.claude.com/settings/keys.\n  - Setup 3: Copy the agent and environment IDs. Each create returns its ID. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n- `grok_bot`: Grok Bot. Send each message you receive to a Grok Bot routine.\n  - `webhook_url` (`config`, required): The routine's webhook URL.\n  - `sender_key` (secret, in `credentials`, required): The routine's sender key. Bird sends it only as the Bearer token.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, ask Grok Bot to create a routine. Ask Grok Bot to create a routine with a webhook trigger, then paste the webhook URL and sender key it gives you below. See https://cursor.com/docs/cloud-agent/automations#webhook-triggers.",
+        examples=["claude_managed_agents"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )]
+    action: Annotated[Optional[str], Field(
+        description="Action of the connector that each delivery runs. Omit when the connector has one action. An action the connector does not have, or `events` the action does not accept, returns a `422`.",
+        examples=["trigger_run"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )] = None
+    credentials: Annotated[Dict[str, str], Field(
+        description="Values for the connector's secret fields, keyed by field `name`. Every required secret field must be present, after merging with the stored values on an update, and a key the connector does not declare as secret returns a `422`. No response includes these values.",
+    )]
+    config: Annotated[Optional[Dict[str, str]], Field(
+        description="Values for the connector's nonsecret fields, keyed by field `name`, such as the URL the endpoint's requests go to. A URL must be HTTPS, on one of the connector's `allowed_origins`, and under its `path_prefix` when it has one. It cannot include user info, a fragment, an IP address as its host, dot segments, or encoded slashes.",
+    )] = None
+
+
+class WebhookConnectorDestinationCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["connector"], Field(min_length=1)]
+    connector: WebhookConnectorSetup
+
+
+class WebhookDestinationCreate(RootModel[WebhookRawDestination | WebhookConnectorDestinationCreate]):
+    root: WebhookRawDestination | WebhookConnectorDestinationCreate
+
+
 class WebhookEndpointCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
-    url: Annotated[str, Field(
-        description="HTTPS URL to deliver events to, at most 2048 characters. The host must be publicly reachable: URLs on private, loopback, or link-local addresses are rejected with a `422`.",
+    url: Annotated[Optional[str], Field(
+        description="HTTPS URL to deliver events to, at most 2048 characters. The host must be publicly reachable: URLs on private, loopback, or link-local addresses are rejected with a `422`. Required unless `destination` is a connector, whose URL comes from the connector and its `config`; a URL given with one must equal it.",
         examples=["https://example.com/webhook"],
         max_length=2048,
         min_length=1,
-    )]
+    )] = None
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
         description="Event types to subscribe to; the endpoint receives only matching events. Types outside the event catalog return a `422`, and an endpoint holds at most 100 entries.",
         min_length=1,
@@ -17039,6 +17187,9 @@ class WebhookEndpointCreate(BaseModel):
         description="Human-readable label for this endpoint, up to 256 characters.",
         examples=["Production webhook endpoint"],
         max_length=256,
+    )] = None
+    destination: Annotated[Optional[WebhookDestinationCreate], Field(
+        description="How each delivery is built. Omit to post the signed event to `url` unchanged, the same as `{\"type\": \"webhook\"}`.",
     )] = None
 
 
@@ -17066,6 +17217,9 @@ class WebhookEndpointCreated(BaseModel):
         description="Delivery state of the endpoint.\n\n- `active`: The initial state; events are being delivered normally.\n- `degraded`: Recent deliveries are failing. We keep delivering and retrying,\n  and the endpoint returns to `active` automatically once deliveries succeed\n  again.\n- `paused`: All delivery is stopped, either because an update set `status` to\n  `paused` or automatically after sustained delivery failures. A paused endpoint\n  never resumes on its own: re-enable it with\n  [Update a webhook endpoint](/docs/api/reference/update-webhook), then\n  [Replay failed deliveries](/docs/api/reference/create-webhook-replay) to\n  recover the deliveries that failed before the pause. Events that arrived\n  while it was paused were never attempted, so a replay does not reach them.",
         min_length=1,
     )]
+    destination: Annotated[Optional[WebhookDestination], Field(
+        description="How each delivery to the endpoint is built.",
+    )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
     secret: Annotated[str, Field(
@@ -17083,7 +17237,7 @@ class WebhookEndpointUpdateStatus(str, Enum):
 class WebhookEndpointUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[Optional[str], Field(
-        description="Replacement delivery URL. Same rules as at creation: HTTPS, at most 2048 characters, and the host must be publicly reachable (private, loopback, and link-local addresses return a `422`). Omit to keep the current URL.",
+        description="Replacement delivery URL. Same rules as at creation: HTTPS, at most 2048 characters, and the host must be publicly reachable (private, loopback, and link-local addresses return a `422`). Omit to keep the current URL. A connector endpoint's URL comes from its connector and cannot be replaced: any value returns a `422`.",
         examples=["https://example.com/webhook"],
         max_length=2048,
     )] = None
@@ -17095,6 +17249,9 @@ class WebhookEndpointUpdate(BaseModel):
     events: Annotated[Optional[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]]], Field(
         description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`.",
         min_length=1,
+    )] = None
+    credentials: Annotated[Optional[Dict[str, str]], Field(
+        description="New values for a `connector` destination's secret fields, merged over the stored ones: a key given replaces that field and an omitted key keeps its value. The merged set is checked as at creation, and the next delivery, retries included, uses it. On an endpoint without a `connector` destination this returns a `422`. Omit to keep the current credentials.",
     )] = None
     status: Annotated[Optional[WebhookEndpointUpdateStatus], Field(
         description="`paused` stops all deliveries; `active` re-enables a paused endpoint. Omit to leave the status unchanged. Events that fire while paused are not delivered and a replay cannot recover them, because they were never attempted; after re-enabling, [Replay failed deliveries](/docs/api/reference/create-webhook-replay) reaches only the deliveries that failed before the pause. A `degraded` endpoint cannot be reset through this field: it returns to `active` automatically once deliveries succeed again.",
@@ -20751,6 +20908,11 @@ class WebhookAttempt(BaseModel):
         examples=["https://example.com/webhooks"],
         min_length=1,
     )]
+    failure_reason: Annotated[Optional[str], Field(
+        description="Why the attempt failed before any request was sent, for example a connector body that could not be rendered or an endpoint whose connection changed after the event was queued. Absent for an attempt that reached the network.",
+        examples=["The endpoint's connection changed after this delivery was queued."],
+        min_length=1,
+    )] = None
     response_status_code: Annotated[Optional[int], Field(
         description="HTTP status returned by the receiver. Null when no response was received (timeout, connection error, DNS failure).",
         examples=[200],

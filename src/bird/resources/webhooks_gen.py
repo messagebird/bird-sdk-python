@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
     WebhookAttemptList,
     WebhookEndpoint,
-    WebhookEndpointCreate,
-    WebhookEndpointCreated,
     WebhookEndpointUpdate,
     WebhookReplayRequest,
     WebhookRotateSecretResponse,
@@ -32,17 +30,7 @@ class WebhooksListParams(TypedDict, total=False):
     starting_after: str
     ending_before: str
     include_total: bool
-
-
-class _WebhooksCreateRequired(TypedDict):
     url: str
-    events: Sequence[str]
-
-
-class WebhooksCreateParams(_WebhooksCreateRequired, total=False):
-    """Params for ``client.webhooks.create``. ``url`` and ``events`` are required."""
-
-    description: str
 
 
 class WebhooksTestParams(TypedDict, total=False):
@@ -72,6 +60,7 @@ class WebhooksUpdateParams(TypedDict, total=False):
     url: str
     description: str
     events: Sequence[str]
+    credentials: Mapping[str, str]
     status: str
 
 
@@ -85,6 +74,7 @@ class WebhooksBase(Resource):
         starting_after: str | None = None,
         ending_before: str | None = None,
         include_total: bool | None = None,
+        url: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WebhookEndpoint]:
         """List the workspace's webhook endpoints (URL, subscribed events, status) as a cursor page.
@@ -101,6 +91,7 @@ class WebhooksBase(Resource):
             "starting_after": starting_after,
             "ending_before": ending_before,
             "include_total": include_total,
+            "url": url,
         }
         return SyncPage(self._client, "/v1/webhooks", query, WebhookEndpoint, options)
 
@@ -124,41 +115,6 @@ class WebhooksBase(Resource):
             options,
         )
 
-    def create(
-        self,
-        *,
-        url: str,
-        events: Sequence[str],
-        description: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> WebhookEndpointCreated:
-        """Register an HTTPS endpoint to receive this workspace's events, subscribed to the event types in `events` and active immediately. The response is the only place the signing secret appears, and it can never be read back afterward, only rotated.
-
-        ```python
-        created = client.webhooks.create(
-            url="https://acme.com/hooks/bird",
-            events=["email.delivered", "email.bounced"],
-            description="Delivery pipeline",
-        )
-        print(created.id, created.secret)
-        ```
-        """
-        body = to_wire(
-            WebhookEndpointCreate,
-            {
-                "url": url,
-                "events": events,
-                "description": description,
-            },
-        )
-        return self._write(
-            "POST",
-            "/v1/webhooks",
-            body,
-            WebhookEndpointCreated,
-            options,
-        )
-
     def test(
         self,
         webhook_id: str,
@@ -166,7 +122,7 @@ class WebhooksBase(Resource):
         event_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookTestResponse:
-        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds, the body is a minimal stub carrying only the event type, and a test reaches even a paused endpoint without being recorded in the delivery attempts.
+        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds, the body is a minimal stub carrying only the event type, and a test reaches even a paused endpoint without being recorded in the delivery attempts. For a connector endpoint, the test goes through the same request builder as a live delivery, with the stub as the event. A status outside 2xx is the receiver's own answer: report it and the response body to the user, who can see why their receiver refused it. An unreachable result means Bird got no response: it could not connect, or the receiver did not answer within 10 seconds.
 
         ```python
         result = client.webhooks.test(
@@ -290,6 +246,7 @@ class WebhooksBase(Resource):
         url: str | None = None,
         description: str | None = None,
         events: Sequence[str] | None = None,
+        credentials: Mapping[str, str] | None = None,
         status: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpoint:
@@ -309,6 +266,7 @@ class WebhooksBase(Resource):
                 "url": url,
                 "description": description,
                 "events": events,
+                "credentials": credentials,
                 "status": status,
             },
         )
@@ -331,6 +289,7 @@ class AsyncWebhooksBase(AsyncResource):
         starting_after: str | None = None,
         ending_before: str | None = None,
         include_total: bool | None = None,
+        url: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WebhookEndpoint]:
         """List the workspace's webhook endpoints (URL, subscribed events, status) as a cursor page.
@@ -347,6 +306,7 @@ class AsyncWebhooksBase(AsyncResource):
             "starting_after": starting_after,
             "ending_before": ending_before,
             "include_total": include_total,
+            "url": url,
         }
         return AsyncPage(self._client, "/v1/webhooks", query, WebhookEndpoint, options)
 
@@ -370,41 +330,6 @@ class AsyncWebhooksBase(AsyncResource):
             options,
         )
 
-    async def create(
-        self,
-        *,
-        url: str,
-        events: Sequence[str],
-        description: str | None = None,
-        options: RequestOptions | None = None,
-    ) -> WebhookEndpointCreated:
-        """Register an HTTPS endpoint to receive this workspace's events, subscribed to the event types in `events` and active immediately. The response is the only place the signing secret appears, and it can never be read back afterward, only rotated.
-
-        ```python
-        created = await client.webhooks.create(
-            url="https://acme.com/hooks/bird",
-            events=["email.delivered", "email.bounced"],
-            description="Delivery pipeline",
-        )
-        print(created.id, created.secret)
-        ```
-        """
-        body = to_wire(
-            WebhookEndpointCreate,
-            {
-                "url": url,
-                "events": events,
-                "description": description,
-            },
-        )
-        return await self._write(
-            "POST",
-            "/v1/webhooks",
-            body,
-            WebhookEndpointCreated,
-            options,
-        )
-
     async def test(
         self,
         webhook_id: str,
@@ -412,7 +337,7 @@ class AsyncWebhooksBase(AsyncResource):
         event_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookTestResponse:
-        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds, the body is a minimal stub carrying only the event type, and a test reaches even a paused endpoint without being recorded in the delivery attempts.
+        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds, the body is a minimal stub carrying only the event type, and a test reaches even a paused endpoint without being recorded in the delivery attempts. For a connector endpoint, the test goes through the same request builder as a live delivery, with the stub as the event. A status outside 2xx is the receiver's own answer: report it and the response body to the user, who can see why their receiver refused it. An unreachable result means Bird got no response: it could not connect, or the receiver did not answer within 10 seconds.
 
         ```python
         result = await client.webhooks.test(
@@ -536,6 +461,7 @@ class AsyncWebhooksBase(AsyncResource):
         url: str | None = None,
         description: str | None = None,
         events: Sequence[str] | None = None,
+        credentials: Mapping[str, str] | None = None,
         status: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpoint:
@@ -555,6 +481,7 @@ class AsyncWebhooksBase(AsyncResource):
                 "url": url,
                 "description": description,
                 "events": events,
+                "credentials": credentials,
                 "status": status,
             },
         )

@@ -18,6 +18,15 @@ from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
+class _AMBConversationRoutingChangeDecisionRequired(TypedDict):
+    action: str
+    message_id: str
+
+
+class AMBConversationRoutingChangeDecision(_AMBConversationRoutingChangeDecisionRequired, total=False):
+    pass
+
+
 class AmbConversationsUpdateParams(TypedDict, total=False):
     """Params for ``client.amb.conversations.update``. Every key is optional."""
 
@@ -25,6 +34,8 @@ class AmbConversationsUpdateParams(TypedDict, total=False):
     inbox_status: str
     labels: Sequence[str]
     read: str
+    queue: str | None
+    routing_change: AMBConversationRoutingChangeDecision
 
 
 class AmbConversationsListMessagesParams(TypedDict, total=False):
@@ -89,9 +100,11 @@ class AmbConversations(Resource):
         inbox_status: str | None = None,
         labels: Sequence[str] | None = None,
         read: str | None = None,
+        queue: str | None | Omit = omit,
+        routing_change: AMBConversationRoutingChangeDecision | None = None,
         options: RequestOptions | None = None,
     ) -> AMBConversation:
-        """Updates assignment, labels, inbox status and shared workspace read state. Omitted fields stay unchanged; null assigned_to unassigns and empty labels clears labels. Pass read as a date-time to acknowledge received inbound messages through that timestamp. Resolving or reopening inbox work preserves the Apple channel state and sending restrictions.
+        """Updates assignment, labels, inbox status, queue and shared workspace read state, or settles a pending routing_change. Omitted fields stay unchanged; null assigned_to unassigns, empty labels clears labels and null queue leaves the conversation unrouted. Pass read as a date-time to acknowledge received inbound messages through that timestamp. Settle a pending change with routing_change {action, message_id}, copying message_id from the conversation's routing_change: apply adopts the newer group, intent and queue, dismiss keeps the current routing, and a 409 means the change was replaced or settled first. Resolving or reopening inbox work preserves the Apple channel state and sending restrictions.
 
         ```python
         result = client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], inbox_status="resolved")
@@ -107,6 +120,10 @@ class AmbConversations(Resource):
             _body["labels"] = labels
         if read is not None:
             _body["read"] = read
+        if not isinstance(queue, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["queue"] = queue
+        if routing_change is not None:
+            _body["routing_change"] = routing_change
         body = to_wire_exclude_unset(AMBConversationUpdate, _body)
         return self._write(
             "PATCH",
@@ -236,9 +253,11 @@ class AsyncAmbConversations(AsyncResource):
         inbox_status: str | None = None,
         labels: Sequence[str] | None = None,
         read: str | None = None,
+        queue: str | None | Omit = omit,
+        routing_change: AMBConversationRoutingChangeDecision | None = None,
         options: RequestOptions | None = None,
     ) -> AMBConversation:
-        """Updates assignment, labels, inbox status and shared workspace read state. Omitted fields stay unchanged; null assigned_to unassigns and empty labels clears labels. Pass read as a date-time to acknowledge received inbound messages through that timestamp. Resolving or reopening inbox work preserves the Apple channel state and sending restrictions.
+        """Updates assignment, labels, inbox status, queue and shared workspace read state, or settles a pending routing_change. Omitted fields stay unchanged; null assigned_to unassigns, empty labels clears labels and null queue leaves the conversation unrouted. Pass read as a date-time to acknowledge received inbound messages through that timestamp. Settle a pending change with routing_change {action, message_id}, copying message_id from the conversation's routing_change: apply adopts the newer group, intent and queue, dismiss keeps the current routing, and a 409 means the change was replaced or settled first. Resolving or reopening inbox work preserves the Apple channel state and sending restrictions.
 
         ```python
         result = await client.amb.conversations.update('acv_01krdgeqcxet5s7t44vh8rt9mg', assigned_to=None, labels=[], inbox_status="resolved")
@@ -254,6 +273,10 @@ class AsyncAmbConversations(AsyncResource):
             _body["labels"] = labels
         if read is not None:
             _body["read"] = read
+        if not isinstance(queue, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["queue"] = queue
+        if routing_change is not None:
+            _body["routing_change"] = routing_change
         body = to_wire_exclude_unset(AMBConversationUpdate, _body)
         return await self._write(
             "PATCH",

@@ -1,6 +1,8 @@
 """The webhooks resource: ``client.webhooks.unwrap`` verifies a signed event and
 returns the typed, discriminated value. ``unwrap`` is synchronous on both clients
-— it is pure crypto, no I/O and no transport coupling."""
+— it is pure crypto, no I/O and no transport coupling. ``create`` is hand-written
+because its ``destination``, a union of the raw event and a connector, is a field
+the facade generator drops."""
 
 from __future__ import annotations
 
@@ -9,18 +11,45 @@ import hashlib
 import hmac
 import json
 import time
-from typing import Any, Mapping, cast
+from typing import Any, Mapping, Sequence, TypedDict, cast
 
 import pydantic
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._event_types import WebhookEventType
 from bird._exceptions import WebhookVerificationError, _header
-from bird._generated import WebhookEvent
-from bird._models import BaseModel
+from bird._generated import WebhookEndpointCreate, WebhookEndpointCreated, WebhookEvent
+from bird._models import BaseModel, to_wire
+from bird._types import RequestOptions
 from bird.resources.webhooks_gen import AsyncWebhooksBase, WebhooksBase
 
 _DEFAULT_TOLERANCE = 300  # seconds
+_PATH = "/v1/webhooks"
+
+
+class _WebhooksCreateRequired(TypedDict):
+    events: Sequence[str]
+
+
+class WebhooksCreateParams(_WebhooksCreateRequired, total=False):
+    """Params for ``client.webhooks.create``. ``url`` is required unless
+    ``destination`` is a connector, whose URL Bird builds."""
+
+    url: str
+    description: str
+    destination: Mapping[str, Any]
+
+
+def _create_body(
+    url: str | None,
+    events: Sequence[str],
+    description: str | None,
+    destination: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return to_wire(
+        WebhookEndpointCreate,
+        {"url": url, "events": events, "description": description, "destination": destination},
+    )
 
 # Event types this SDK version recognizes, sourced from the generated open-enum
 # constants. A type outside this set is a future event, not a malformed one.
@@ -115,6 +144,41 @@ class Webhooks(WebhooksBase):
         super().__init__(client)
         self._secret = secret
 
+    def create(
+        self,
+        *,
+        events: Sequence[str],
+        url: str | None = None,
+        description: str | None = None,
+        destination: Mapping[str, Any] | None = None,
+        options: RequestOptions | None = None,
+    ) -> WebhookEndpointCreated:
+        """Register an endpoint to receive this workspace's events, subscribed to
+        ``events`` and active immediately. For a connector, pass ``destination``
+        and omit ``url``: Bird builds it. The response is the only place the
+        signing secret appears; it can never be read back, only rotated.
+
+        ```python
+        import os
+
+        claude_api_key = os.environ["ANTHROPIC_API_KEY"]  # your Claude API key, not your Bird key
+        created = client.webhooks.create(
+            events=["sms.received"],
+            destination={
+                "type": "connector",
+                "connector": {
+                    "connector_id": "claude_managed_agents",
+                    "config": {"agent_id": "agent_123", "environment_id": "env_123"},
+                    "credentials": {"api_key": claude_api_key},
+                },
+            },
+        )
+        print(created.id, created.secret)
+        ```
+        """
+        body = _create_body(url, events, description, destination)
+        return self._write("POST", _PATH, body, WebhookEndpointCreated, options)
+
     def unwrap(self, payload: str | bytes, headers: Mapping[str, str], *, secret: str | None = None, tolerance: int = _DEFAULT_TOLERANCE) -> WebhookEvent:
         """Verify a signed webhook and return the typed event (``.root`` is the
         specific event). Pass the *raw* request body, unparsed. Raises
@@ -138,6 +202,19 @@ class AsyncWebhooks(AsyncWebhooksBase):
     def __init__(self, client: AsyncAPIClient, secret: str | None = None) -> None:
         super().__init__(client)
         self._secret = secret
+
+    async def create(
+        self,
+        *,
+        events: Sequence[str],
+        url: str | None = None,
+        description: str | None = None,
+        destination: Mapping[str, Any] | None = None,
+        options: RequestOptions | None = None,
+    ) -> WebhookEndpointCreated:
+        """Async mirror of `Webhooks.create`."""
+        body = _create_body(url, events, description, destination)
+        return await self._write("POST", _PATH, body, WebhookEndpointCreated, options)
 
     def unwrap(self, payload: str | bytes, headers: Mapping[str, str], *, secret: str | None = None, tolerance: int = _DEFAULT_TOLERANCE) -> WebhookEvent:
         """Verify a signed webhook and return the typed event (``.root`` is the

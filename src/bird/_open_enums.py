@@ -360,6 +360,7 @@ class SMSErrorCode:
     """Values of SMSErrorCode known at this SDK version (open enum)."""
 
     BLOCKED_BY_CARRIER: Final = "blocked_by_carrier"
+    BLOCKED_BY_FRAUD_PROTECTION: Final = "blocked_by_fraud_protection"
     BLOCKED_BY_RECIPIENT: Final = "blocked_by_recipient"
     CONTENT_REJECTED: Final = "content_rejected"
     INSUFFICIENT_BALANCE: Final = "insufficient_balance"

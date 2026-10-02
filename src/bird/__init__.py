@@ -33,6 +33,7 @@ from bird._types import (
     SmsSendParams,
     WhatsappSendParams,
 )
+from bird.resources.webhooks import WebhooksCreateParams
 from bird.resources.whatsapp_messages import WhatsappMedia
 from bird.resources.whatsapp_business_accounts_gen import (
     WhatsappBusinessAccountsListParams,
@@ -717,6 +718,7 @@ __all__ = [
     "BroadcastsListEventsParams",
     "BroadcastsListRecipientsParams",
     "BroadcastCreateParams",
+    "WebhooksCreateParams",
     "BroadcastUpdateParams",
     "BroadcastSendParams",
     "EmailBroadcast",
