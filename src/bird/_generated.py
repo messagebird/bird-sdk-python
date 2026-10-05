@@ -902,6 +902,7 @@ class EmailRecipient(BaseModel):
     )]
     recipient: Annotated[str, Field(
         description="Recipient email address.",
+        examples=["delivered@messagebird.dev"],
         min_length=5,
     )]
     name: Annotated[Optional[str], Field(
@@ -945,9 +946,11 @@ class EmailRecipient(BaseModel):
     )] = None
     open_count: Annotated[int, Field(
         description="Number of open events for this recipient.",
+        examples=[0],
     )]
     click_count: Annotated[int, Field(
         description="Number of click events for this recipient.",
+        examples=[0],
     )]
 
 
@@ -1021,6 +1024,7 @@ class EmailEvent(BaseModel):
     )]
     occurred_at: Annotated[str, Field(
         description="When this event occurred.",
+        examples=["2026-07-01T12:00:03Z"],
         min_length=1,
     )]
     recipient_id: Annotated[str, Field(
@@ -1584,6 +1588,7 @@ class AudienceRef(BaseModel):
     )]
     name: Annotated[str, Field(
         description="The audience's display name.",
+        examples=["Newsletter subscribers"],
         max_length=100,
         min_length=1,
     )]
@@ -1598,10 +1603,12 @@ class Contact(BaseModel):
     )]
     email: Annotated[Optional[str], Field(
         description="The contact's email address, in its stored form, trimmed and lowercased before uniqueness is checked. Unique within the workspace. `null` when the contact has no email address.",
+        examples=["alice@acme.com"],
         max_length=254,
     )]
     phone_number: Annotated[Optional[str], Field(
         description="The contact's phone number in normalized international form: a leading `+` and four to 15 digits. We normalize formatting but do not verify the number against numbering-plan metadata. The number is unique within the workspace. Because carriers recycle disconnected numbers, use `external_id` as the durable key for your own records. `null` when the contact has no phone number.",
+        examples=[+31612345678],
         max_length=16,
         min_length=5,
     )]
@@ -1733,12 +1740,15 @@ class ContactUpsertEntry(BaseModel):
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
         description="Email address this entry carried, trimmed and lowercased. `null` when the entry carried none.",
+        examples=["alice@acme.com"],
     )]
     phone_number: Annotated[Optional[str], Field(
         description="Phone number this entry carried, in its normalized international form. `null` when the entry carried none. A row rejected for an invalid phone echoes the value as sent, trimmed, since no normalized form exists.",
+        examples=["null"],
     )]
     external_id: Annotated[Optional[str], Field(
         description="Your own identifier for this entry, when the entry supplied one.",
+        examples=["null"],
     )]
 
 
@@ -1834,6 +1844,7 @@ class Audience(BaseModel):
     )]
     name: Annotated[str, Field(
         description="Display name for the audience.",
+        examples=["Newsletter subscribers"],
         max_length=100,
         min_length=1,
     )]
@@ -2037,6 +2048,7 @@ class ContactProperty(BaseModel):
     )]
     key: Annotated[str, Field(
         description="The property key, used as the key in contact data and as the attribute in the `bird.contact.<key>` broadcast template variable. Lowercase letters, digits, and underscores, starting with a letter. Cannot be changed after creation.",
+        examples=["plan"],
         max_length=50,
         min_length=1,
         pattern="^[a-z][a-z0-9_]*$",
@@ -2133,6 +2145,7 @@ class AudienceMember(BaseModel):
     contact: Contact
     joined_at: Annotated[str, Field(
         description="When this contact joined the audience. Members are listed in join order, most recent first.",
+        examples=["2026-05-21T10:30:00Z"],
         min_length=1,
     )]
     audiences: Annotated[Optional[List[AudienceRef]], Field(
@@ -2227,6 +2240,7 @@ class SMSSegments(BaseModel):
     model_config = ConfigDict(extra="allow")
     count: Annotated[int, Field(
         description="Number of segments the body is split into. Each segment is a billable unit.",
+        examples=[1],
         ge=1,
     )]
     encoding: Annotated[SMSSegmentsEncoding, Field(
@@ -2235,6 +2249,7 @@ class SMSSegments(BaseModel):
     )]
     characters: Annotated[int, Field(
         description="Character count of the body, counted in Unicode code points under either encoding. This is not the segment measure: a `GSM_7BIT` extended-table character counts once here but costs two septets, and a `UCS2` emoji outside the Basic Multilingual Plane counts once here but costs two of the segment's 70 code units.",
+        examples=[41],
         ge=0,
     )]
 
@@ -2400,6 +2415,7 @@ class SMSMessage(BaseModel):
     )] = None
     created_at: Annotated[str, Field(
         description="When the message was accepted (outbound) or received (inbound).",
+        examples=["2026-05-21T12:00:00Z"],
         min_length=1,
     )]
     sent_at: Annotated[Optional[str], Field(
@@ -2552,6 +2568,7 @@ class SMSBatchSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
     accepted_count: Annotated[int, Field(
         description="Number of messages accepted in the batch. Acceptance is all-or-nothing, so this equals the number of messages submitted.",
+        examples=[2],
         ge=0,
     )]
 
@@ -2591,6 +2608,7 @@ class SMSEvent(BaseModel):
     )]
     occurred_at: Annotated[str, Field(
         description="When this event occurred.",
+        examples=["2026-05-21T12:00:04Z"],
         min_length=1,
     )]
     carrier: Annotated[Optional[str], Field(
@@ -16961,6 +16979,16 @@ class WebhookEndpointID(RootModel[str]):
     root: str
 
 
+class WebhookFilter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mailbox_id: Annotated[str, Field(
+        description="Mailbox to receive events for. Must belong to this workspace; a mailbox outside it returns `422`.",
+        examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
 class WebhookRawDestination(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["webhook"], Field(min_length=1)]
@@ -17098,6 +17126,10 @@ class WebhookEndpoint(BaseModel):
         examples=["Production webhook endpoint"],
         min_length=1,
     )] = None
+    filter: Annotated[Optional[WebhookFilter], Field(
+        description="Mailbox scope configured through filter, or null.",
+        examples=["null"],
+    )]
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
         description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).",
     )]
@@ -17179,6 +17211,9 @@ class WebhookEndpointCreate(BaseModel):
         max_length=2048,
         min_length=1,
     )] = None
+    filter: Annotated[Optional[WebhookFilter], Field(
+        description="Exact match on `mailbox_id`, for `email_mailbox.*` events only; the mailbox must belong to this workspace. Cannot be combined with Realtime app scope. Omit on create for all resources; on update omit to keep, send `null` to clear.",
+    )] = None
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
         description="Event types to subscribe to; the endpoint receives only matching events. Types outside the event catalog return a `422`, and an endpoint holds at most 100 entries.",
         min_length=1,
@@ -17210,6 +17245,10 @@ class WebhookEndpointCreated(BaseModel):
         examples=["Production webhook endpoint"],
         min_length=1,
     )] = None
+    filter: Annotated[Optional[WebhookFilter], Field(
+        description="Mailbox scope configured through filter, or null.",
+        examples=["null"],
+    )]
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
         description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).",
     )]
@@ -17245,6 +17284,9 @@ class WebhookEndpointUpdate(BaseModel):
         description="Human-readable label for this endpoint, up to 256 characters.",
         examples=["Updated webhook endpoint"],
         max_length=256,
+    )] = None
+    filter: Annotated[Optional[WebhookFilter], Field(
+        description="Replace the mailbox scope. Omit to keep it, or send null to include all resources. Scoped endpoints accept only email_mailbox events.",
     )] = None
     events: Annotated[Optional[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]]], Field(
         description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`.",
@@ -21231,6 +21273,11 @@ class VoiceLeg(BaseModel):
         min_length=1,
         pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    sip_call_id: Annotated[Optional[str], Field(
+        description="The SIP `Call-ID` of this leg's signalling. We relay it unchanged, so it matches what the carrier and your own equipment logged for the same leg: the carrier's value on an incoming leg, and your system's value on a leg you place through a SIP trunk. Use it to match this leg against a carrier's records or your PBX logs. Legs recorded before this field existed carry it only if they were answered.",
+        examples=["3f9a1c8e7b2d4a5f@sip.example.net"],
+        min_length=1,
+    )] = None
     status: VoiceCallStatus
     sip_response_code: Annotated[Optional[int], Field(
         description="Final SIP response code received from the carrier. `null` when no SIP response was received, for example on timeout or DNS failure.",
@@ -21407,6 +21454,12 @@ class NumberList(BaseModel):
     )]
 
 
+class AvailableNumberOwnershipAddressScope(str, Enum):
+    anywhere = "anywhere"
+    country = "country"
+    number_area = "number_area"
+
+
 class AvailableNumber(BaseModel):
     model_config = ConfigDict(extra="allow")
     number: Annotated[str, Field(
@@ -21429,6 +21482,9 @@ class AvailableNumber(BaseModel):
     ownership_registration_required: Annotated[bool, Field(
         description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any setup fee is charged during purchase. Monthly billing starts at assignment even while approval is pending; assignment may follow completion of a pending supplier order.",
     )]
+    ownership_address_scope: Annotated[Optional[Annotated[Union[AvailableNumberOwnershipAddressScope, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the carrier requires the business address on this number's ownership registration\nto be. Present only when the carrier itself registers the number before it carries\ntraffic and states a rule; omitted otherwise. An address that does not meet the rule\nis refused after purchase, and only an address that meets it can fix the registration.\n\n- `anywhere`: any business address.\n- `country`: a business address in the number's country.\n- `number_area`: a business address inside the number's own area code, for example in\n  Amsterdam for an Amsterdam (020) number.",
+    )] = None
 
 
 class AvailableNumberList(BaseModel):
@@ -22310,6 +22366,7 @@ class VoiceCall(BaseModel):
     )]
     started_at: Annotated[Optional[str], Field(
         description="When the initial leg started. `null` in the acceptance snapshot returned by call creation.",
+        examples=["2026-05-21T12:00:00Z"],
         min_length=1,
     )]
     ended_at: Annotated[Optional[str], Field(
@@ -22317,12 +22374,15 @@ class VoiceCall(BaseModel):
     )] = None
     live: Annotated[bool, Field(
         description="Whether any leg in the call is still held live. A leg stays live until its end is recorded or, when no end is observed, until its liveness window expires, so this can remain `true` briefly after a disconnect. `false` covers the interval between a leg ending and its settlement being confirmed, and says nothing about whether transcription has finished.",
+        examples=[False],
     )]
     has_recording: Annotated[bool, Field(
         description="Whether the call ever produced a recording. It stays `true` for the life of the call, so it records that a recording was made rather than promising one can still be fetched.",
+        examples=[False],
     )]
     has_transcript: Annotated[bool, Field(
         description="Whether the call ever produced a transcript. A failed transcription attempt does not set it, and a later failure does not clear it.",
+        examples=[False],
     )]
     parties: Annotated[List[VoiceParty], Field(
         description="The distinct participant observations the call's legs recorded, for display beside the call. The length is not a count of people and not a reconstruction of the leg graph.",

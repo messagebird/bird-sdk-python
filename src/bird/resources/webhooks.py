@@ -38,6 +38,7 @@ class WebhooksCreateParams(_WebhooksCreateRequired, total=False):
     url: str
     description: str
     destination: Mapping[str, Any]
+    filter: Mapping[str, Any]
 
 
 def _create_body(
@@ -45,10 +46,11 @@ def _create_body(
     events: Sequence[str],
     description: str | None,
     destination: Mapping[str, Any] | None,
+    filter: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return to_wire(
         WebhookEndpointCreate,
-        {"url": url, "events": events, "description": description, "destination": destination},
+        {"url": url, "events": events, "description": description, "destination": destination, "filter": filter},
     )
 
 # Event types this SDK version recognizes, sourced from the generated open-enum
@@ -151,12 +153,16 @@ class Webhooks(WebhooksBase):
         url: str | None = None,
         description: str | None = None,
         destination: Mapping[str, Any] | None = None,
+        filter: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpointCreated:
         """Register an endpoint to receive this workspace's events, subscribed to
         ``events`` and active immediately. For a connector, pass ``destination``
         and omit ``url``: Bird builds it. The response is the only place the
         signing secret appears; it can never be read back, only rotated.
+        Set ``filter.mailbox_id`` to a workspace mailbox ID to receive only its
+        traffic. With that filter, ``events`` must contain only
+        ``email_mailbox.*`` event types; other types return ``422``.
 
         ```python
         import os
@@ -176,7 +182,7 @@ class Webhooks(WebhooksBase):
         print(created.id, created.secret)
         ```
         """
-        body = _create_body(url, events, description, destination)
+        body = _create_body(url, events, description, destination, filter)
         return self._write("POST", _PATH, body, WebhookEndpointCreated, options)
 
     def unwrap(self, payload: str | bytes, headers: Mapping[str, str], *, secret: str | None = None, tolerance: int = _DEFAULT_TOLERANCE) -> WebhookEvent:
@@ -210,10 +216,11 @@ class AsyncWebhooks(AsyncWebhooksBase):
         url: str | None = None,
         description: str | None = None,
         destination: Mapping[str, Any] | None = None,
+        filter: Mapping[str, Any] | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpointCreated:
         """Async mirror of `Webhooks.create`."""
-        body = _create_body(url, events, description, destination)
+        body = _create_body(url, events, description, destination, filter)
         return await self._write("POST", _PATH, body, WebhookEndpointCreated, options)
 
     def unwrap(self, payload: str | bytes, headers: Mapping[str, str], *, secret: str | None = None, tolerance: int = _DEFAULT_TOLERANCE) -> WebhookEvent:

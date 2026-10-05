@@ -11,6 +11,8 @@ BASE = "https://eu1.platform.bird.com"
 
 def test_region_inferred_from_key_prefix() -> None:
     assert Bird(api_key="bk_eu1_secret").base_url == BASE
+    assert Bird(api_key="bm_eu1_secret").base_url == BASE
+    assert AsyncBird(api_key="bm_us1_secret").base_url == "https://us1.platform.bird.com"
 
 
 def test_explicit_region_overrides_inference() -> None:
@@ -36,10 +38,11 @@ def test_missing_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
         Bird()
 
 
-def test_unresolvable_region_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("api_key", ["plainkey_without_region_prefix", "bk_eu1_", "bm_eu1_"])
+def test_unresolvable_region_raises(monkeypatch: pytest.MonkeyPatch, api_key: str) -> None:
     monkeypatch.delenv("BIRD_BASE_URL", raising=False)
     with pytest.raises(BirdError):
-        Bird(api_key="plainkey_without_region_prefix")
+        Bird(api_key=api_key)
 
 
 @respx.mock

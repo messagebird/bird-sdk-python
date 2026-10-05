@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TypedDict
+from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
@@ -15,10 +15,18 @@ from bird._generated import (
     WebhookTestRequest,
     WebhookTestResponse,
 )
-from bird._models import to_wire
+from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
+
+
+class _WebhookFilterRequired(TypedDict):
+    mailbox_id: str
+
+
+class WebhookFilter(_WebhookFilterRequired, total=False):
+    pass
 
 
 class WebhooksListParams(TypedDict, total=False):
@@ -59,6 +67,7 @@ class WebhooksUpdateParams(TypedDict, total=False):
 
     url: str
     description: str
+    filter: WebhookFilter | None
     events: Sequence[str]
     credentials: Mapping[str, str]
     status: str
@@ -245,6 +254,7 @@ class WebhooksBase(Resource):
         *,
         url: str | None = None,
         description: str | None = None,
+        filter: WebhookFilter | None | Omit = omit,
         events: Sequence[str] | None = None,
         credentials: Mapping[str, str] | None = None,
         status: str | None = None,
@@ -260,16 +270,20 @@ class WebhooksBase(Resource):
         print(endpoint.events)
         ```
         """
-        body = to_wire(
-            WebhookEndpointUpdate,
-            {
-                "url": url,
-                "description": description,
-                "events": events,
-                "credentials": credentials,
-                "status": status,
-            },
-        )
+        _body: dict[str, Any] = {}
+        if url is not None:
+            _body["url"] = url
+        if description is not None:
+            _body["description"] = description
+        if not isinstance(filter, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["filter"] = filter
+        if events is not None:
+            _body["events"] = events
+        if credentials is not None:
+            _body["credentials"] = credentials
+        if status is not None:
+            _body["status"] = status
+        body = to_wire_exclude_unset(WebhookEndpointUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/webhooks/{quote(webhook_id, safe='')}",
@@ -460,6 +474,7 @@ class AsyncWebhooksBase(AsyncResource):
         *,
         url: str | None = None,
         description: str | None = None,
+        filter: WebhookFilter | None | Omit = omit,
         events: Sequence[str] | None = None,
         credentials: Mapping[str, str] | None = None,
         status: str | None = None,
@@ -475,16 +490,20 @@ class AsyncWebhooksBase(AsyncResource):
         print(endpoint.events)
         ```
         """
-        body = to_wire(
-            WebhookEndpointUpdate,
-            {
-                "url": url,
-                "description": description,
-                "events": events,
-                "credentials": credentials,
-                "status": status,
-            },
-        )
+        _body: dict[str, Any] = {}
+        if url is not None:
+            _body["url"] = url
+        if description is not None:
+            _body["description"] = description
+        if not isinstance(filter, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["filter"] = filter
+        if events is not None:
+            _body["events"] = events
+        if credentials is not None:
+            _body["credentials"] = credentials
+        if status is not None:
+            _body["status"] = status
+        body = to_wire_exclude_unset(WebhookEndpointUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/webhooks/{quote(webhook_id, safe='')}",

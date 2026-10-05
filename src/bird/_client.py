@@ -2,7 +2,7 @@
 
 Both resolve configuration the same way — the API key from the ``api_key``
 argument or ``BIRD_API_KEY``; the base URL from ``base_url``, ``BIRD_BASE_URL``,
-or the region (explicit ``region`` or inferred from the ``bk_{region}_…`` key
+or the region (explicit ``region`` or inferred from the ``bk_{region}_…`` or ``bm_{region}_…`` key
 prefix). They add the escape-hatch verb methods over the request
 lifecycle in ``_base_client``; resource namespaces attach on top.
 """
@@ -42,7 +42,7 @@ from bird.resources.voice import AsyncVoice, Voice
 from bird.resources.webhooks import AsyncWebhooks, Webhooks
 from bird.resources.whatsapp import AsyncWhatsapp, Whatsapp
 
-_REGION_PREFIX = re.compile(r"^bk_([a-z]{2}[0-9]+)_")
+_REGION_PREFIX = re.compile(r"^(?:bk|bm)_([a-z]{2}[0-9]+)_.+")
 
 
 def _infer_region(api_key: str) -> str | None:
@@ -63,7 +63,7 @@ def _resolve(api_key: str | None, base_url: str | None, region: str | None) -> t
         elif api_key:
             raise BirdError(
                 "could not determine region: pass region= or base_url=, "
-                "or use a bk_{region}_{token} API key"
+                "or use a bk_{region}_{token} or bm_{region}_{token} API key"
             )
     return api_key, base_url
 
