@@ -8108,7 +8108,7 @@ class AMBBusinessAccount(BaseModel):
         description="Pending accounts need setup or review. Active accounts have recorded approval. Suspended accounts retain their recorded suspension. Configured, connected accounts can exchange messages regardless of review status; Apple decides whether to accept outgoing requests. Disconnected accounts retain their identity and history but cannot exchange new messages until reconnected.",
     )]
     status_reason: Annotated[Optional[str], Field(
-        description="Reason for the current operational suspension, when recorded. Review feedback is retained on the submission.",
+        description="Reason for the current operational suspension, when recorded. Review feedback is retained on the submission. May contain basic Markdown, such as emphasis and lists.",
         min_length=1,
     )] = None
     invitations_enabled: Annotated[bool, Field(
@@ -8382,7 +8382,10 @@ class AMBBusinessAccountSubmission(BaseModel):
     status: Annotated[AMBBusinessAccountSubmissionStatus, Field(
         description="The review outcome of this attempt. Earlier attempts retain their outcome when a new attempt is submitted.",
     )]
-    status_reason: Annotated[Optional[str], Field(min_length=1)]
+    status_reason: Annotated[Optional[str], Field(
+        description="Review feedback on this attempt, such as the reason Apple rejected it. May contain basic Markdown, such as emphasis and lists.",
+        min_length=1,
+    )]
     created_at: Annotated[str, Field(min_length=1)]
     next: Annotated[Optional[List[NextAction]], Field(
         description="Read the parent business account for current eligibility and next actions. Present on create responses and each customer submission-list item; historical attempts do not establish current account state.",
@@ -8502,6 +8505,10 @@ class AMBChannelSettingsUpdate(BaseModel):
         min_length=1,
         pattern="^ast_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+
+
+class AMBPaymentID(RootModel[str]):
+    root: str
 
 
 class AMBRoutingRuleID(RootModel[str]):
@@ -9421,10 +9428,6 @@ class AMBNativeAuthentication(BaseModel):
         min_length=1,
         pattern="^amauth_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-
-
-class AMBPaymentID(RootModel[str]):
-    root: str
 
 
 class AMBNativePayment(BaseModel):
