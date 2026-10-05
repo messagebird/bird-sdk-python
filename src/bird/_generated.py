@@ -16317,6 +16317,9 @@ class Mailbox(BaseModel):
     deleted_at: Annotated[Optional[str], Field(
         description="When the mailbox was deleted, or `null` if active. Deletion stops receiving; restore is available for 30 days unless permanent erasure has started.",
     )] = None
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this mailbox. The response that creates it suggests subscribing to the mail it receives; other reads of one mailbox return an empty list, and lists omit it.",
+    )] = None
 
 
 class MailboxList(BaseModel):
@@ -17266,6 +17269,9 @@ class WebhookEndpointCreated(BaseModel):
         examples=["whsec_base64encodedvalue"],
         min_length=1,
     )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this endpoint. Empty: deliveries start as the events happen, with nothing left to set up.",
+    )] = None
 
 
 class WebhookEndpointUpdateStatus(str, Enum):
