@@ -134,7 +134,7 @@ class NumbersBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Gives a dedicated number back and stops its monthly charge. Irreversible: the number leaves the workspace and the channels built on it stop sending. A shared number cannot be released.
+        """Gives a dedicated number back now and stops its monthly charge, forfeiting the rest of the period already paid for. Irreversible: the number leaves the workspace and the channels built on it stop sending. A shared number cannot be released. To keep the number until the paid period ends, use `numbers.cancel` instead.
 
         ```python
         # Releasing stops the monthly charge and the number stops working for you.
@@ -142,7 +142,28 @@ class NumbersBase(Resource):
         client.numbers.release("nda_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        self._delete(f"/v1/numbers/{quote(number_id, safe='')}", options)
+        self._action_none(
+            "POST",
+            f"/v1/numbers/{quote(number_id, safe='')}/release",
+            options,
+        )
+
+    def cancel(
+        self,
+        number_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> Number:
+        """Stops a dedicated number renewing and keeps it allocated until the end of the period already paid for, when it is released. Cannot be undone; read `releases_at` for when it goes. Asking again returns the same schedule. A number with no subscription behind it is released now. Refused while a renewal payment is overdue. To give the number up now, use `numbers.release` instead.
+
+        ```python
+        # A billed number stays yours until its paid period ends, then is released;
+        # releases_at says when. One with no subscription is released now.
+        allocated = client.numbers.cancel("nda_01krdgeqcxet5s7t44vh8rt9mg")
+        print(allocated.releases_at)
+        ```
+        """
+        return self._delete_model(f"/v1/numbers/{quote(number_id, safe='')}", Number, options)
 
 
 class AsyncNumbersBase(AsyncResource):
@@ -241,7 +262,7 @@ class AsyncNumbersBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Gives a dedicated number back and stops its monthly charge. Irreversible: the number leaves the workspace and the channels built on it stop sending. A shared number cannot be released.
+        """Gives a dedicated number back now and stops its monthly charge, forfeiting the rest of the period already paid for. Irreversible: the number leaves the workspace and the channels built on it stop sending. A shared number cannot be released. To keep the number until the paid period ends, use `numbers.cancel` instead.
 
         ```python
         # Releasing stops the monthly charge and the number stops working for you.
@@ -249,4 +270,25 @@ class AsyncNumbersBase(AsyncResource):
         await client.numbers.release("nda_01krdgeqcxet5s7t44vh8rt9mg")
         ```
         """
-        await self._delete(f"/v1/numbers/{quote(number_id, safe='')}", options)
+        await self._action_none(
+            "POST",
+            f"/v1/numbers/{quote(number_id, safe='')}/release",
+            options,
+        )
+
+    async def cancel(
+        self,
+        number_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> Number:
+        """Stops a dedicated number renewing and keeps it allocated until the end of the period already paid for, when it is released. Cannot be undone; read `releases_at` for when it goes. Asking again returns the same schedule. A number with no subscription behind it is released now. Refused while a renewal payment is overdue. To give the number up now, use `numbers.release` instead.
+
+        ```python
+        # A billed number stays yours until its paid period ends, then is released;
+        # releases_at says when. One with no subscription is released now.
+        allocated = await client.numbers.cancel("nda_01krdgeqcxet5s7t44vh8rt9mg")
+        print(allocated.releases_at)
+        ```
+        """
+        return await self._delete_model(f"/v1/numbers/{quote(number_id, safe='')}", Number, options)

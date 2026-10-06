@@ -64,6 +64,13 @@ def numbers_release() -> None:
     client.numbers.release("nda_01krdgeqcxet5s7t44vh8rt9mg")
 
 
+def numbers_cancel() -> None:
+    # A billed number stays yours until its paid period ends, then is released;
+    # releases_at says when. One with no subscription is released now.
+    allocated = client.numbers.cancel("nda_01krdgeqcxet5s7t44vh8rt9mg")
+    print(allocated.releases_at)
+
+
 def numbers_update() -> None:
     allocated = client.numbers.update(
         "nda_01krdgeqcxet5s7t44vh8rt9mg", name="Support line", reference="STORE-042"

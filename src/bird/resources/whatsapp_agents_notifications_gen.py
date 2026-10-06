@@ -19,6 +19,7 @@ class WhatsappAgentsNotificationsListParams(TypedDict, total=False):
     """Query params for ``client.whatsapp.agents.notifications.list``. Every key is optional."""
 
     status: str
+    from_: str
     to: str
     limit: int
     starting_after: str
@@ -26,6 +27,7 @@ class WhatsappAgentsNotificationsListParams(TypedDict, total=False):
 
 
 class _WhatsappAgentsNotificationsCreateRequired(TypedDict):
+    from_: str
     to: str
     name: str
     description: str
@@ -33,55 +35,56 @@ class _WhatsappAgentsNotificationsCreateRequired(TypedDict):
 
 
 class WhatsappAgentsNotificationsCreateParams(_WhatsappAgentsNotificationsCreateRequired, total=False):
-    """Params for ``client.whatsapp.agents.notifications.create``. ``to``, ``name``, ``description``, and ``payload`` are required."""
+    """Params for ``client.whatsapp.agents.notifications.create``. ``from_``, ``to``, ``name``, ``description``, and ``payload`` are required."""
 
 
 class WhatsappAgentsNotifications(Resource):
     def list(
         self,
-        number_id: str,
         *,
         status: str | None = None,
+        from_: str | None = None,
         to: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppAgentNotification]:
-        """List the notifications sent to the agent on this WhatsApp number, newest first, each with what came of it, as a cursor page.
+        """List the notifications sent to the agents on your WhatsApp numbers, newest first, each with what came of it, as a cursor page. Filter by `from` for one number's agent.
 
         ```python
-        notifications = client.whatsapp.agents.notifications.list("wan_01krdgeqcxet5s7t44vh8rt9mg", status="skipped")
+        notifications = client.whatsapp.agents.notifications.list(from_="+13124495648", status="skipped")
         for notification in notifications.data or []:
             print(notification.name, notification.skipped_reason)
         ```
         """
         query = {
             "status": status,
+            "from": from_,
             "to": to,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return SyncPage(self._client, f"/v1/whatsapp/numbers/{quote(number_id, safe='')}/agent/notifications", query, WhatsAppAgentNotification, options)
+        return SyncPage(self._client, "/v1/whatsapp/agents/notifications", query, WhatsAppAgentNotification, options)
 
     def create(
         self,
-        number_id: str,
         *,
+        from_: str,
         to: str,
         name: str,
         description: str,
         payload: str,
         options: RequestOptions | None = None,
     ) -> WhatsAppAgentNotification:
-        """Tell the agent on this WhatsApp number that something happened in your systems for one contact, such as a payment landing or an order shipping, so it can write to them about it. The notification is handed to WhatsApp in the background; read it back with `whatsapp.agents.notifications.get` to see whether the agent acted on it.
+        """Tell the agent on the `from` business number that something happened in your systems for one contact, such as a payment landing or an order shipping, so it can write to them about it. The notification is handed to WhatsApp in the background; read it back with `whatsapp.agents.notifications.get` to see whether the agent acted on it.
 
         ```python
         # The agent decides whether and how to tell the contact. The answer reads
         # accepted; read it back to see whether the agent acted on it.
         notification = client.whatsapp.agents.notifications.create(
-            "wan_01krdgeqcxet5s7t44vh8rt9mg",
+            from_="+13124495648",
             to="+14155551234",
             name="order_shipped",
             description="Order 88213 left the warehouse and arrives on Thursday.",
@@ -93,6 +96,7 @@ class WhatsappAgentsNotifications(Resource):
         body = to_wire(
             WhatsAppAgentNotificationCreate,
             {
+                "from": from_,
                 "to": to,
                 "name": name,
                 "description": description,
@@ -101,7 +105,7 @@ class WhatsappAgentsNotifications(Resource):
         )
         return self._write(
             "POST",
-            f"/v1/whatsapp/numbers/{quote(number_id, safe='')}/agent/notifications",
+            "/v1/whatsapp/agents/notifications",
             body,
             WhatsAppAgentNotification,
             options,
@@ -109,25 +113,21 @@ class WhatsappAgentsNotifications(Resource):
 
     def get(
         self,
-        number_id: str,
         notification_id: str,
         *,
         options: RequestOptions | None = None,
     ) -> WhatsAppAgentNotification:
-        """Read one notification sent to the agent on this WhatsApp number, with what came of it.
+        """Read one notification sent to one of your agents, with what came of it.
 
         ```python
         # A notification still on its way to WhatsApp is not readable yet, so a read
         # straight after create can raise a not-found error.
-        notification = client.whatsapp.agents.notifications.get(
-            "wan_01krdgeqcxet5s7t44vh8rt9mg",
-            "waan_01krdgeqcxet5s7t44vh8rt9m7",
-        )
+        notification = client.whatsapp.agents.notifications.get("waan_01krdgeqcxet5s7t44vh8rt9m7")
         print(notification.status, notification.skipped_reason or notification.error)
         ```
         """
         return self._get(
-            f"/v1/whatsapp/numbers/{quote(number_id, safe='')}/agent/notifications/{quote(notification_id, safe='')}",
+            f"/v1/whatsapp/agents/notifications/{quote(notification_id, safe='')}",
             {},
             WhatsAppAgentNotification,
             options,
@@ -137,49 +137,50 @@ class WhatsappAgentsNotifications(Resource):
 class AsyncWhatsappAgentsNotifications(AsyncResource):
     def list(
         self,
-        number_id: str,
         *,
         status: str | None = None,
+        from_: str | None = None,
         to: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppAgentNotification]:
-        """List the notifications sent to the agent on this WhatsApp number, newest first, each with what came of it, as a cursor page.
+        """List the notifications sent to the agents on your WhatsApp numbers, newest first, each with what came of it, as a cursor page. Filter by `from` for one number's agent.
 
         ```python
-        notifications = await client.whatsapp.agents.notifications.list("wan_01krdgeqcxet5s7t44vh8rt9mg", status="skipped")
+        notifications = await client.whatsapp.agents.notifications.list(from_="+13124495648", status="skipped")
         for notification in notifications.data or []:
             print(notification.name, notification.skipped_reason)
         ```
         """
         query = {
             "status": status,
+            "from": from_,
             "to": to,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
         }
-        return AsyncPage(self._client, f"/v1/whatsapp/numbers/{quote(number_id, safe='')}/agent/notifications", query, WhatsAppAgentNotification, options)
+        return AsyncPage(self._client, "/v1/whatsapp/agents/notifications", query, WhatsAppAgentNotification, options)
 
     async def create(
         self,
-        number_id: str,
         *,
+        from_: str,
         to: str,
         name: str,
         description: str,
         payload: str,
         options: RequestOptions | None = None,
     ) -> WhatsAppAgentNotification:
-        """Tell the agent on this WhatsApp number that something happened in your systems for one contact, such as a payment landing or an order shipping, so it can write to them about it. The notification is handed to WhatsApp in the background; read it back with `whatsapp.agents.notifications.get` to see whether the agent acted on it.
+        """Tell the agent on the `from` business number that something happened in your systems for one contact, such as a payment landing or an order shipping, so it can write to them about it. The notification is handed to WhatsApp in the background; read it back with `whatsapp.agents.notifications.get` to see whether the agent acted on it.
 
         ```python
         # The agent decides whether and how to tell the contact. The answer reads
         # accepted; read it back to see whether the agent acted on it.
         notification = await client.whatsapp.agents.notifications.create(
-            "wan_01krdgeqcxet5s7t44vh8rt9mg",
+            from_="+13124495648",
             to="+14155551234",
             name="order_shipped",
             description="Order 88213 left the warehouse and arrives on Thursday.",
@@ -191,6 +192,7 @@ class AsyncWhatsappAgentsNotifications(AsyncResource):
         body = to_wire(
             WhatsAppAgentNotificationCreate,
             {
+                "from": from_,
                 "to": to,
                 "name": name,
                 "description": description,
@@ -199,7 +201,7 @@ class AsyncWhatsappAgentsNotifications(AsyncResource):
         )
         return await self._write(
             "POST",
-            f"/v1/whatsapp/numbers/{quote(number_id, safe='')}/agent/notifications",
+            "/v1/whatsapp/agents/notifications",
             body,
             WhatsAppAgentNotification,
             options,
@@ -207,25 +209,21 @@ class AsyncWhatsappAgentsNotifications(AsyncResource):
 
     async def get(
         self,
-        number_id: str,
         notification_id: str,
         *,
         options: RequestOptions | None = None,
     ) -> WhatsAppAgentNotification:
-        """Read one notification sent to the agent on this WhatsApp number, with what came of it.
+        """Read one notification sent to one of your agents, with what came of it.
 
         ```python
         # A notification still on its way to WhatsApp is not readable yet, so a read
         # straight after create can raise a not-found error.
-        notification = await client.whatsapp.agents.notifications.get(
-            "wan_01krdgeqcxet5s7t44vh8rt9mg",
-            "waan_01krdgeqcxet5s7t44vh8rt9m7",
-        )
+        notification = await client.whatsapp.agents.notifications.get("waan_01krdgeqcxet5s7t44vh8rt9m7")
         print(notification.status, notification.skipped_reason or notification.error)
         ```
         """
         return await self._get(
-            f"/v1/whatsapp/numbers/{quote(number_id, safe='')}/agent/notifications/{quote(notification_id, safe='')}",
+            f"/v1/whatsapp/agents/notifications/{quote(notification_id, safe='')}",
             {},
             WhatsAppAgentNotification,
             options,

@@ -292,6 +292,29 @@ class EmailTemplateTheme:
     STUDIO: Final = "studio"
 
 
+class EsimActionName:
+    """Values of EsimActionName known at this SDK version (open enum)."""
+
+    ASSIGN: Final = "assign"
+    INSTALL: Final = "install"
+    RELEASE: Final = "release"
+    RESUME: Final = "resume"
+    SUSPEND: Final = "suspend"
+    TOP_UP: Final = "top_up"
+
+
+class EsimActionUnavailableReason:
+    """Values of EsimActionUnavailableReason known at this SDK version (open enum)."""
+
+    ESIM_STATE: Final = "esim_state"
+    IDENTIFICATION_REQUIRED: Final = "identification_required"
+    NETWORK_UNCONFIRMED: Final = "network_unconfirmed"
+    NETWORK_UNSUPPORTED: Final = "network_unsupported"
+    OPERATION_IN_PROGRESS: Final = "operation_in_progress"
+    PACKAGE_LIMIT_REACHED: Final = "package_limit_reached"
+    PERMISSION_DENIED: Final = "permission_denied"
+
+
 class LookupFlag:
     """Values of LookupFlag known at this SDK version (open enum)."""
 
@@ -785,6 +808,8 @@ __all__ = [
     "EmailLookupResult",
     "EmailTemplateSource",
     "EmailTemplateTheme",
+    "EsimActionName",
+    "EsimActionUnavailableReason",
     "LookupFlag",
     "LookupPropertyStatus",
     "NumberCapability",

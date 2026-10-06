@@ -97,7 +97,7 @@ class VoiceNumbers(Resource):
         inbound_configuration: VoiceInboundConfigurationPut | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceNumber:
-        """Change what happens to calls arriving for one number, or the workspace's own label for it. Set the route to `reject` to stop it answering, to `trunk` with a trunk_id to deliver to one of your SIP trunks, or to `forward` with a forward_to and a forward_as to place a call to one of your verified caller IDs. The route replaces whatever was set before, because a number has exactly one answer at a time, and `forward_as` must be stated on every forward. Only a number whose calls arrive at Bird can carry a route.
+        """Change what happens to calls arriving for one number, or the workspace's own label for it. Set the route to null to follow the workspace default inbound route from `voice.settings.get`, to `reject` to stop it answering, to `trunk` with a trunk_id to deliver to one of your SIP trunks, or to `forward` with a forward_to and a forward_as to place a call to one of your verified caller IDs. The route replaces whatever was set before, because a number has exactly one answer at a time, and `forward_as` must be stated on every forward. Only a number whose calls arrive at Bird can carry a route.
 
         ```python
         number = client.voice.numbers.update("number-id", name="Support line")
@@ -180,7 +180,7 @@ class AsyncVoiceNumbers(AsyncResource):
         inbound_configuration: VoiceInboundConfigurationPut | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceNumber:
-        """Change what happens to calls arriving for one number, or the workspace's own label for it. Set the route to `reject` to stop it answering, to `trunk` with a trunk_id to deliver to one of your SIP trunks, or to `forward` with a forward_to and a forward_as to place a call to one of your verified caller IDs. The route replaces whatever was set before, because a number has exactly one answer at a time, and `forward_as` must be stated on every forward. Only a number whose calls arrive at Bird can carry a route.
+        """Change what happens to calls arriving for one number, or the workspace's own label for it. Set the route to null to follow the workspace default inbound route from `voice.settings.get`, to `reject` to stop it answering, to `trunk` with a trunk_id to deliver to one of your SIP trunks, or to `forward` with a forward_to and a forward_as to place a call to one of your verified caller IDs. The route replaces whatever was set before, because a number has exactly one answer at a time, and `forward_as` must be stated on every forward. Only a number whose calls arrive at Bird can carry a route.
 
         ```python
         number = await client.voice.numbers.update("number-id", name="Support line")

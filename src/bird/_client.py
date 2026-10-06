@@ -32,6 +32,7 @@ from bird.resources.preferences import AsyncPreferences, Preferences
 from bird.resources.workspace_gen import AsyncWorkspaceResource, WorkspaceResource
 from bird.resources.realtime import AsyncRealtime, Realtime
 from bird.resources.amb import AsyncAmb, Amb
+from bird.resources.esim import AsyncEsim, Esim
 from bird.resources.sms import AsyncSms, Sms
 from bird.resources.sms_keyword_rules_gen import AsyncSmsKeywordRules, SmsKeywordRules
 from bird.resources.sms_suppressions_gen import AsyncSmsSuppressions, SmsSuppressions
@@ -180,6 +181,7 @@ class Bird(SyncAPIClient):
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
         self.amb = Amb(self)
+        self.esim = Esim(self)
         self.sms = Sms(self)
         self.sms_templates = SmsTemplates(self)
         self.sms_suppressions = SmsSuppressions(self)
@@ -315,6 +317,7 @@ class AsyncBird(AsyncAPIClient):
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
         self.amb = AsyncAmb(self)
+        self.esim = AsyncEsim(self)
         self.sms = AsyncSms(self)
         self.sms_templates = AsyncSmsTemplates(self)
         self.sms_suppressions = AsyncSmsSuppressions(self)

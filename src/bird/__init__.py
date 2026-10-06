@@ -164,6 +164,10 @@ from bird._generated import (
     VoiceDestinationList,
     VoiceSessionCredential,
     VoiceLegList,
+    VoiceCallRouteTrunk,
+    VoiceCallRouteWritable,
+    VoiceSettingsInboundConfigurationPut,
+    VoiceSettings,
     WebhookEvent,
     WhatsAppEvent,
     WhatsAppEventList,
@@ -281,6 +285,7 @@ from bird.resources.verify_verifications_gen import (
 )
 from bird.resources.voice_calls_gen import CreateVoiceCallSequenceRequest, VoiceCallsCreateParams
 from bird.resources.voice_legs_gen import VoiceLegsListParams
+from bird.resources.voice_settings_gen import VoiceSettingsUpdateParams
 from bird.resources.voice_verified_numbers_gen import (
     VoiceVerifiedNumbersCreateParams,
     VoiceVerifiedNumbersListParams,
@@ -400,7 +405,69 @@ from bird._generated import (
 )
 from bird.resources.amb import AmbSendParams
 
+from bird.resources.esim_assignment_gen import (
+    EsimAssignmentCreateParams,
+)
+from bird.resources.esim_credentials_gen import (
+    EsimCredentialsDeliverParams,
+)
+from bird.resources.esim_gen import (
+    EsimListParams,
+    EsimUpdateParams,
+    EsimReleaseParams,
+)
+from bird.resources.esim_offers_gen import (
+    EsimOffersListParams,
+)
+from bird.resources.esim_orders_gen import (
+    EsimOrdersCreateParams,
+    EsimOrdersListParams,
+)
+from bird.resources.esim_packages_gen import (
+    EsimPackagesDeleteParams,
+)
+from bird.resources.esim_recurring_subscriptions_gen import (
+    EsimRecurringSubscriptionsCreateParams,
+    EsimRecurringSubscriptionsListParams,
+    EsimRecurringSubscriptionsPeriodsParams,
+)
+from bird.resources.esim_settings_gen import (
+    EsimSettingsUpdateParams,
+)
+from bird.resources.esim_subscribers_gen import (
+    EsimSubscribersCreateParams,
+    EsimSubscribersListParams,
+)
+from bird.resources.esim_zones_gen import (
+    EsimZonesListParams,
+)
+from bird._generated import (
+    Esim,
+    EsimAssignment,
+    EsimCheckoutOptions,
+    EsimCompatibleOfferList,
+    EsimCredentials,
+    EsimCredentialsDelivery,
+    EsimDeliveryList,
+    EsimInstallLink,
+    EsimOffer,
+    EsimOfferRequirements,
+    EsimOfferSummary,
+    EsimOrder,
+    EsimPackage,
+    EsimPackageList,
+    EsimRecurringOffer,
+    EsimRecurringPeriod,
+    EsimRecurringSubscription,
+    EsimSettings,
+    EsimSubscriber,
+    EsimSummary,
+    EsimZone,
+)
+
 from bird._open_enums import (
+    EsimActionName,
+    EsimActionUnavailableReason,
     AMBBusinessAccountReviewStatus,
     AMBMessageEventType,
     AMBFormKeyboardType,
@@ -616,6 +683,45 @@ __all__ = [
     "AmbSuppressionsListParams",
 
     "AmbSendParams",
+    "Esim",
+    "EsimAssignment",
+    "EsimAssignmentCreateParams",
+    "EsimCheckoutOptions",
+    "EsimCompatibleOfferList",
+    "EsimCredentials",
+    "EsimCredentialsDeliverParams",
+    "EsimCredentialsDelivery",
+    "EsimDeliveryList",
+    "EsimInstallLink",
+    "EsimListParams",
+    "EsimOffer",
+    "EsimOfferRequirements",
+    "EsimOfferSummary",
+    "EsimOffersListParams",
+    "EsimOrder",
+    "EsimOrdersCreateParams",
+    "EsimOrdersListParams",
+    "EsimPackage",
+    "EsimPackageList",
+    "EsimPackagesDeleteParams",
+    "EsimRecurringOffer",
+    "EsimRecurringPeriod",
+    "EsimRecurringSubscription",
+    "EsimRecurringSubscriptionsCreateParams",
+    "EsimRecurringSubscriptionsListParams",
+    "EsimRecurringSubscriptionsPeriodsParams",
+    "EsimReleaseParams",
+    "EsimSettings",
+    "EsimSettingsUpdateParams",
+    "EsimSubscriber",
+    "EsimSubscribersCreateParams",
+    "EsimSubscribersListParams",
+    "EsimSummary",
+    "EsimUpdateParams",
+    "EsimZone",
+    "EsimZonesListParams",
+    "EsimActionName",
+    "EsimActionUnavailableReason",
     "AMBBusinessAccountReviewStatus",
     "AMBMessageEventType",
     "AMBFormKeyboardType",
@@ -911,6 +1017,11 @@ __all__ = [
     "VoiceDestinationsUpdateParams",
     "VoiceNumbersListParams",
     "VoiceNumbersUpdateParams",
+    "VoiceCallRouteTrunk",
+    "VoiceCallRouteWritable",
+    "VoiceSettingsInboundConfigurationPut",
+    "VoiceSettings",
+    "VoiceSettingsUpdateParams",
     "VoiceTrunkIPACLCreate",
     "VoiceTrunksListParams",
     "VoiceTrunksCreateParams",

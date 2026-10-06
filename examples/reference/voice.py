@@ -95,6 +95,22 @@ def voice_numbers_update() -> None:
     number = client.voice.numbers.update("number-id", name="Support line")
     print(number.id, number.name)
 
+def voice_settings_get() -> None:
+    settings = client.voice.settings.get()
+    print(settings.inbound_configuration.route.root.type)
+
+def voice_settings_update() -> None:
+    from bird import VoiceCallRouteTrunk, VoiceCallRouteWritable, VoiceSettingsInboundConfigurationPut
+
+    settings = client.voice.settings.update(
+        inbound_configuration=VoiceSettingsInboundConfigurationPut(
+            route=VoiceCallRouteWritable(
+                VoiceCallRouteTrunk(type="trunk", trunk_id="spt_01krdgeqcxet5s7t44vh8rt9mg")
+            ),
+        ),
+    )
+    print(settings.inbound_configuration.route.root.type)
+
 def voice_verified_numbers_list() -> None:
     for verified_number in client.voice.verified_numbers.list():
         print(verified_number.id, verified_number.phone_number, verified_number.status)

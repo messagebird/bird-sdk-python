@@ -23,6 +23,7 @@ class EmailListParams(TypedDict, total=False):
     ending_before: str
     created_after: str
     created_before: str
+    broadcast_id: str
     status: str
     tag: Sequence[str]
     category: str
@@ -66,6 +67,7 @@ class EmailBase(Resource):
         ending_before: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
+        broadcast_id: str | None = None,
         status: str | None = None,
         tag: Sequence[str] | None = None,
         category: str | None = None,
@@ -86,6 +88,7 @@ class EmailBase(Resource):
             "ending_before": ending_before,
             "created_after": created_after,
             "created_before": created_before,
+            "broadcast_id": broadcast_id,
             "status": status,
             "tag": tag,
             "category": category,
@@ -168,6 +171,7 @@ class AsyncEmailBase(AsyncResource):
         ending_before: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
+        broadcast_id: str | None = None,
         status: str | None = None,
         tag: Sequence[str] | None = None,
         category: str | None = None,
@@ -188,6 +192,7 @@ class AsyncEmailBase(AsyncResource):
             "ending_before": ending_before,
             "created_after": created_after,
             "created_before": created_before,
+            "broadcast_id": broadcast_id,
             "status": status,
             "tag": tag,
             "category": category,

@@ -345,7 +345,7 @@ def whatsapp_agents_notifications_create() -> None:
     # The agent decides whether and how to tell the contact. The answer reads
     # accepted; read it back to see whether the agent acted on it.
     notification = client.whatsapp.agents.notifications.create(
-        "wan_01krdgeqcxet5s7t44vh8rt9mg",
+        from_="+13124495648",
         to="+14155551234",
         name="order_shipped",
         description="Order 88213 left the warehouse and arrives on Thursday.",
@@ -355,7 +355,7 @@ def whatsapp_agents_notifications_create() -> None:
 
 
 def whatsapp_agents_notifications_list() -> None:
-    notifications = client.whatsapp.agents.notifications.list("wan_01krdgeqcxet5s7t44vh8rt9mg", status="skipped")
+    notifications = client.whatsapp.agents.notifications.list(from_="+13124495648", status="skipped")
     for notification in notifications.data or []:
         print(notification.name, notification.skipped_reason)
 
@@ -363,8 +363,5 @@ def whatsapp_agents_notifications_list() -> None:
 def whatsapp_agents_notifications_get() -> None:
     # A notification still on its way to WhatsApp is not readable yet, so a read
     # straight after create can raise a not-found error.
-    notification = client.whatsapp.agents.notifications.get(
-        "wan_01krdgeqcxet5s7t44vh8rt9mg",
-        "waan_01krdgeqcxet5s7t44vh8rt9m7",
-    )
+    notification = client.whatsapp.agents.notifications.get("waan_01krdgeqcxet5s7t44vh8rt9m7")
     print(notification.status, notification.skipped_reason or notification.error)

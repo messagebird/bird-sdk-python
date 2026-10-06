@@ -378,6 +378,10 @@ class RealtimeMemberPublish(BaseModel):
     )] = None
 
 
+class EmailBroadcastID(RootModel[str]):
+    root: str
+
+
 class EmailMessageStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
@@ -425,10 +429,6 @@ class EmailTemplateID(RootModel[str]):
 
 
 class EmailTemplateVersionID(RootModel[str]):
-    root: str
-
-
-class EmailBroadcastID(RootModel[str]):
     root: str
 
 
@@ -1105,6 +1105,22 @@ class EmailEventList(BaseModel):
     )]
 
 
+class Money(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    amount: Annotated[str, Field(
+        description="Decimal amount as a string, in major currency units.",
+        examples=[0.00995],
+        min_length=1,
+    )]
+    currency_code: Annotated[str, Field(
+        description="ISO 4217 three-letter currency code.",
+        examples=["EUR"],
+        max_length=3,
+        min_length=3,
+        pattern="^[A-Z]{3}$",
+    )]
+
+
 class EmailBroadcastStatus(str, Enum):
     draft = "draft"
     scheduled = "scheduled"
@@ -1163,6 +1179,10 @@ class EmailBroadcast(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    display_label: Annotated[Optional[str], Field(
+        description="Label for selecting this broadcast on list and single-broadcast reads. With `email_management` read access, uses the retained subject from the template version resolved when execution starts, then its non-generated name. Draft and scheduled broadcasts use the name. Omitted when no authoritative label is available; clients can show a localized Untitled broadcast fallback. Without that access, uses the canonical broadcast ID. Absent from mutation responses.",
+        examples=["Weekly news"],
+    )] = None
     from_: Annotated[Optional[EmailAddress], Field(
         alias="from",
         description="An email address with an optional display name.",
@@ -7640,6 +7660,137 @@ class WhatsAppNumberStatus(str, Enum):
     restricted = "restricted"
 
 
+class WhatsAppAgentNotificationStatus(str, Enum):
+    accepted = "accepted"
+    success = "success"
+    skipped = "skipped"
+    failed = "failed"
+
+
+class WhatsAppAgentNotificationID(RootModel[str]):
+    root: str
+
+
+class WhatsAppAgentNotificationError(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    description: Annotated[str, Field(
+        description="WhatsApp's own explanation, passed through: what it said when it refused the notification, or its failure summary once it had worked on it. Show it to the person who sent the notification; never match on its text. Carries Bird's own words instead when the failure was Bird's verdict, such as no outcome arriving within a day.",
+        examples=["Event payload exceeds the maximum size."],
+        min_length=1,
+    )]
+    meta_error_code: Annotated[Optional[str], Field(
+        description="WhatsApp's most specific code when it refused the notification outright: its error subcode where it sent one, otherwise its top-level code. Treat it as an opaque string. Null when WhatsApp took the notification and reported the failure later, which carries no code, and when the failure was Bird's own verdict.",
+        examples=[100],
+    )]
+
+
+class WhatsAppAgentNotification(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the notification.",
+        examples=["waan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^waan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    from_: Annotated[str, Field(
+        alias="from",
+        description="The business number whose agent the notification was sent to, in E.164 format.",
+        examples=[+13124495648],
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="The contact the notification was about, as you addressed it: a phone number in E.164 format, or a business-scoped user ID.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Your own name for what happened, as you sent it.",
+        examples=["order_shipped"],
+        max_length=256,
+        min_length=1,
+    )]
+    description: Annotated[str, Field(
+        description="What happened, as you sent it.",
+        examples=["Order 88213 left the warehouse and arrives on Thursday."],
+        max_length=1024,
+        min_length=1,
+    )]
+    payload: Annotated[str, Field(
+        description="The data you attached, as you sent it.",
+        examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\"}"],
+        max_length=4096,
+        min_length=1,
+    )]
+    status: Annotated[WhatsAppAgentNotificationStatus, Field(
+        description="Where the notification stands. `accepted` from the moment Bird takes it, then one of the three final states once WhatsApp has answered.",
+    )]
+    skipped_reason: Annotated[Optional[str], Field(
+        description="WhatsApp's own account of why the agent chose to say nothing, passed through. Present only when `status` is `skipped`. Show it to the person who sent the notification; never match on its text.",
+        examples=["The contact's conversation is currently held by the business."],
+        min_length=1,
+    )] = None
+    error: Annotated[Optional[WhatsAppAgentNotificationError], Field(
+        description="Why the notification failed. Present only when `status` is `failed`.",
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When Bird accepted the notification.",
+        examples=["2026-10-02T08:00:00Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppAgentNotificationList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppAgentNotification], Field(
+        description="A page of the notifications sent to the agent.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppAgentNotificationCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="The business phone number whose agent should act on the notification, in E.164 format (for example `+13124495648`), the same form a message's `from` takes. It must be a number this workspace has connected and that runs an agent.",
+        examples=[+13124495648],
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="The contact the notification is about: a phone number in E.164 format (for example `+14155551234`), or the contact's business-scoped user ID (for example `US.13491208655302741918`), the same forms a message's `to` accepts. A phone number is normalized before the call reaches WhatsApp, so spacing does not matter. WhatsApp documents a phone number for this call; a business-scoped user ID is passed through as given.",
+        examples=[+14155551234],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Your own name for what happened, such as `payment_received` or `order_shipped`. The agent reads it as the kind of thing that happened, so keep one name per kind. WhatsApp calls this the event type.",
+        examples=["order_shipped"],
+        max_length=256,
+        min_length=1,
+    )]
+    description: Annotated[str, Field(
+        description="What happened, in a sentence the agent can tell the contact.",
+        examples=["Order 88213 left the warehouse and arrives on Thursday."],
+        max_length=1024,
+        min_length=1,
+    )]
+    payload: Annotated[str, Field(
+        description="Details the agent may draw on when it writes to the contact, as one JSON string. WhatsApp passes it to the agent unchanged and does not read it itself.",
+        examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\",\"eta\":\"2026-10-02\"}"],
+        max_length=4096,
+        min_length=1,
+    )]
+
+
 class WhatsAppNumberScope(str, Enum):
     system = "system"
     workspace = "workspace"
@@ -7799,123 +7950,6 @@ class WhatsAppNumberList(BaseModel):
 
 class NumbersDedicatedAllocationID(RootModel[str]):
     root: str
-
-
-class WhatsAppAgentNotificationStatus(str, Enum):
-    accepted = "accepted"
-    success = "success"
-    skipped = "skipped"
-    failed = "failed"
-
-
-class WhatsAppAgentNotificationID(RootModel[str]):
-    root: str
-
-
-class WhatsAppAgentNotificationError(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    description: Annotated[str, Field(
-        description="WhatsApp's own explanation, passed through: what it said when it refused the notification, or its failure summary once it had worked on it. Show it to the person who sent the notification; never match on its text. Carries Bird's own words instead when the failure was Bird's verdict, such as no outcome arriving within a day.",
-        examples=["Event payload exceeds the maximum size."],
-        min_length=1,
-    )]
-    meta_error_code: Annotated[Optional[str], Field(
-        description="WhatsApp's most specific code when it refused the notification outright: its error subcode where it sent one, otherwise its top-level code. Treat it as an opaque string. Null when WhatsApp took the notification and reported the failure later, which carries no code, and when the failure was Bird's own verdict.",
-        examples=[100],
-    )]
-
-
-class WhatsAppAgentNotification(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    id: Annotated[str, Field(
-        description="Unique identifier for the notification.",
-        examples=["waan_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^waan_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="The contact the notification was about: the phone number or business-scoped user ID you addressed it to, in the same shape a message's `to` uses.",
-    )]
-    name: Annotated[str, Field(
-        description="Your own name for what happened, as you sent it.",
-        examples=["order_shipped"],
-        max_length=256,
-        min_length=1,
-    )]
-    description: Annotated[str, Field(
-        description="What happened, as you sent it.",
-        examples=["Order 88213 left the warehouse and arrives on Thursday."],
-        max_length=1024,
-        min_length=1,
-    )]
-    payload: Annotated[str, Field(
-        description="The data you attached, as you sent it.",
-        examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\"}"],
-        max_length=4096,
-        min_length=1,
-    )]
-    status: Annotated[WhatsAppAgentNotificationStatus, Field(
-        description="Where the notification stands. `accepted` from the moment Bird takes it, then one of the three final states once WhatsApp has answered.",
-    )]
-    skipped_reason: Annotated[Optional[str], Field(
-        description="WhatsApp's own account of why the agent chose to say nothing, passed through. Present only when `status` is `skipped`. Show it to the person who sent the notification; never match on its text.",
-        examples=["The contact's conversation is currently held by the business."],
-        min_length=1,
-    )] = None
-    error: Annotated[Optional[WhatsAppAgentNotificationError], Field(
-        description="Why the notification failed. Present only when `status` is `failed`.",
-    )] = None
-    created_at: Annotated[str, Field(
-        description="When Bird accepted the notification.",
-        examples=["2026-10-02T08:00:00Z"],
-        min_length=1,
-    )]
-
-
-class WhatsAppAgentNotificationList(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    data: Annotated[List[WhatsAppAgentNotification], Field(
-        description="A page of the notifications sent to the agent.",
-    )]
-    next_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
-    )]
-    prev_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
-    )]
-    refresh_cursor: Annotated[Optional[str], Field(
-        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
-    )]
-
-
-class WhatsAppAgentNotificationCreate(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    to: Annotated[str, Field(
-        description="The contact the notification is about: a phone number in E.164 format (for example `+14155551234`), or the contact's business-scoped user ID (for example `US.13491208655302741918`), the same forms a message's `to` accepts. A phone number is normalized before the call reaches WhatsApp, so spacing does not matter. WhatsApp documents a phone number for this call; a business-scoped user ID is passed through as given.",
-        examples=[+14155551234],
-        min_length=1,
-    )]
-    name: Annotated[str, Field(
-        description="Your own name for what happened, such as `payment_received` or `order_shipped`. The agent reads it as the kind of thing that happened, so keep one name per kind. WhatsApp calls this the event type.",
-        examples=["order_shipped"],
-        max_length=256,
-        min_length=1,
-    )]
-    description: Annotated[str, Field(
-        description="What happened, in a sentence the agent can tell the contact.",
-        examples=["Order 88213 left the warehouse and arrives on Thursday."],
-        max_length=1024,
-        min_length=1,
-    )]
-    payload: Annotated[str, Field(
-        description="Details the agent may draw on when it writes to the contact, as one JSON string. WhatsApp passes it to the agent unchanged and does not read it itself.",
-        examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\",\"eta\":\"2026-10-02\"}"],
-        max_length=4096,
-        min_length=1,
-    )]
 
 
 class WhatsAppNumberEventID(RootModel[str]):
@@ -18870,6 +18904,43 @@ class EventEmailSuppressionCreated(BaseModel):
     )]
 
 
+class EsimID(RootModel[str]):
+    root: str
+
+
+class EsimDeliveryChannel(str, Enum):
+    email = "email"
+    sms = "sms"
+
+
+class EsimDeliveryID(RootModel[str]):
+    root: str
+
+
+class EsimPackageID(RootModel[str]):
+    root: str
+
+
+class EsimOrderID(RootModel[str]):
+    root: str
+
+
+class EsimOfferID(RootModel[str]):
+    root: str
+
+
+class EsimRecurringSubscriptionID(RootModel[str]):
+    root: str
+
+
+class EsimRecurringStopReason(str, Enum):
+    canceled = "canceled"
+    funding_unavailable = "funding_unavailable"
+    price_changed = "price_changed"
+    delivery_failed = "delivery_failed"
+    delivery_unresolved = "delivery_unresolved"
+
+
 class EventPreferenceDeletedData(BaseModel):
     model_config = ConfigDict(extra="allow")
     preference_id: Annotated[str, Field(
@@ -21119,7 +21190,7 @@ class VoiceLegRejectionReason(str, Enum):
 class VoiceLegInboundRouteReject(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["reject"], Field(
-        description="The number turned the leg away. This is where every number starts, so it covers a number nobody has configured as well as one set to reject.",
+        description="The number turned the leg away, either because its own route is reject or because it has none and the workspace default inbound route is reject.",
     )]
 
 
@@ -21334,6 +21405,14 @@ class VoiceLeg(BaseModel):
     )] = None
 
 
+class WalletTransactionID(RootModel[str]):
+    root: str
+
+
+class BillingProductSlug(RootModel[str]):
+    root: str
+
+
 class NumberType(str, Enum):
     mobile = "mobile"
     local = "local"
@@ -21437,6 +21516,9 @@ class Number(BaseModel):
     allocated_at: Annotated[str, Field(
         description="When this number was allocated to your workspace.",
         min_length=1,
+    )]
+    releases_at: Annotated[Optional[str], Field(
+        description="When a scheduled release of this number takes effect, at the end of its current billing period. The number stays allocated, with its current `status`, until then. `null` when no release is scheduled.",
     )]
     released_at: Annotated[Optional[str], Field(
         description="When this number was released. `null` while it is still allocated to your workspace.",
@@ -21961,14 +22043,14 @@ class VoiceNumberDirections(BaseModel):
 class VoiceCallRouteReject(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["reject"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
 
 
 class VoiceCallRouteTrunk(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["trunk"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     trunk_id: Annotated[str, Field(
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21980,7 +22062,7 @@ class VoiceCallRouteTrunk(BaseModel):
 class VoiceCallRouteForward(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["forward"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     forward_to: Annotated[str, Field(
         description="The number calls are forwarded to, in E.164 format. It has to be one of your verified caller IDs. That is checked when you set it and again on every call it forwards, so a caller ID you later remove stops forwarding rather than carrying on.",
@@ -21995,7 +22077,7 @@ class VoiceCallRouteForward(BaseModel):
 class VoiceCallRouteSequence(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sequence"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call. This is where every number starts.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     sequence_id: Annotated[str, Field(
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22017,7 +22099,7 @@ class VoiceCallRoute(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | Voic
 class VoiceInboundConfiguration(BaseModel):
     model_config = ConfigDict(extra="allow")
     route: Annotated[Optional[VoiceCallRoute], Field(
-        description="Null when the stored route type is unsupported; inspect configuration_error before changing it.",
+        description="Null when the number has no route of its own and follows your workspace's default inbound route from the voice settings. Also null when the stored route type is unsupported, in which case configuration_error says so; inspect it before changing the route.",
     )]
     configuration_error: Optional[Literal["unsupported_route_type"]] = None
     forward_as_options: Annotated[Optional[List[VoiceInboundForwardAs]], Field(
@@ -22084,8 +22166,8 @@ class VoiceCallRouteWritable(RootModel[VoiceCallRouteReject | VoiceCallRouteTrun
 
 class VoiceInboundConfigurationPut(BaseModel):
     model_config = ConfigDict(extra="allow")
-    route: Annotated[VoiceCallRouteWritable, Field(
-        description="What happens to a call arriving for this number. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can set. An unconfigured number uses \"reject\".",
+    route: Annotated[Optional[VoiceCallRouteWritable], Field(
+        description="The number's own route, or null to have it follow your workspace's default inbound route from the voice settings.",
     )]
 
 
@@ -22098,6 +22180,34 @@ class VoiceNumberUpdate(BaseModel):
         min_length=1,
     )] = None
     inbound_configuration: Optional[VoiceInboundConfigurationPut] = None
+
+
+class VoiceSettingsInboundConfiguration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    route: Annotated[VoiceCallRoute, Field(
+        description="What happens to a call arriving for this number, as it is configured now. Its `type` selects the shape, and each answer carries its own fields. Setting a route is a separate shape, and it does not offer every variant reported here.",
+    )]
+
+
+class VoiceSettings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inbound_configuration: Annotated[VoiceSettingsInboundConfiguration, Field(
+        description="What happens to a call arriving for any of your Bird numbers that has no inbound route of its own.",
+    )]
+
+
+class VoiceSettingsInboundConfigurationPut(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    route: Annotated[VoiceCallRouteWritable, Field(
+        description="What happens to a call arriving for this number. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can set.",
+    )]
+
+
+class VoiceSettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inbound_configuration: Annotated[Optional[VoiceSettingsInboundConfigurationPut], Field(
+        description="The route for calls arriving on any of your Bird numbers that has no inbound route of its own; verified caller IDs receive no calls. It takes effect on the next call to each of those numbers. Numbers with their own route keep it.",
+    )] = None
 
 
 class VoiceVerifiedNumberID(RootModel[str]):
@@ -22191,6 +22301,524 @@ class VoiceVerifiedNumberVerifyRequest(BaseModel):
         min_length=6,
         pattern="^\\d{6}$",
     )] = None
+
+
+class EsimZoneID(RootModel[str]):
+    root: str
+
+
+class EsimSchemaRevision(RootModel[str]):
+    root: str
+
+
+class EsimIdentificationSchema(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    pass
+
+
+class EsimZoneType(str, Enum):
+    local = "local"
+    regional = "regional"
+    global_ = "global"
+
+
+class EsimSpeed(str, Enum):
+    full = "full"
+    reduced = "reduced"
+
+
+class EsimOfferStatus(str, Enum):
+    draft = "draft"
+    active = "active"
+    retired = "retired"
+
+
+class EsimZone(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ezn_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="Human-readable zone name.",
+        examples=["Europe"],
+        min_length=1,
+    )]
+    revision: Annotated[int, Field(
+        description="Increments whenever the country list changes.",
+        ge=1,
+    )]
+    type: EsimZoneType
+    countries: Annotated[List[str], Field(
+        description="Countries covered by the zone, as ISO 3166-1 alpha-2 codes.",
+        min_length=1,
+    )]
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class EsimStatus(str, Enum):
+    provisioning = "provisioning"
+    ready = "ready"
+    activating = "activating"
+    active = "active"
+    suspending = "suspending"
+    suspended = "suspended"
+    resuming = "resuming"
+    releasing = "releasing"
+    released = "released"
+    expired = "expired"
+    failed = "failed"
+
+
+class EsimSubscriberID(RootModel[str]):
+    root: str
+
+
+class EsimMode(str, Enum):
+    live = "live"
+    test = "test"
+
+
+class EsimServiceCapability(str, Enum):
+    yes = "yes"
+    no = "no"
+    unknown = "unknown"
+
+
+class EsimServiceCapabilities(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[EsimServiceCapability, Field(
+        description="Whether a service is supported. `yes` confirms support, `no` confirms it is not supported, and `unknown` means support has not been established.",
+    )]
+    sms_inbound: Annotated[EsimServiceCapability, Field(
+        description="Whether a service is supported. `yes` confirms support, `no` confirms it is not supported, and `unknown` means support has not been established.",
+    )]
+    sms_outbound: Annotated[EsimServiceCapability, Field(
+        description="Whether a service is supported. `yes` confirms support, `no` confirms it is not supported, and `unknown` means support has not been established.",
+    )]
+    voice_inbound: Annotated[EsimServiceCapability, Field(
+        description="Whether a service is supported. `yes` confirms support, `no` confirms it is not supported, and `unknown` means support has not been established.",
+    )]
+    voice_outbound: Annotated[EsimServiceCapability, Field(
+        description="Whether a service is supported. `yes` confirms support, `no` confirms it is not supported, and `unknown` means support has not been established.",
+    )]
+
+
+class EsimInstallationState(str, Enum):
+    pending = "pending"
+    downloaded = "downloaded"
+    installed = "installed"
+    removed = "removed"
+    error = "error"
+
+
+class EsimInstallation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    state: Annotated[Annotated[Union[EsimInstallationState, str], Field(union_mode="left_to_right")], Field(
+        description="pending: not yet downloaded by a device; downloaded: downloaded but not installed; installed: installed on the device; removed: deleted from the device; whether the profile can be installed again depends on the carrier profile, so treat removal as final; error: download or installation failed, see error_reason. Open enum: installation state is reported by the device, so additional states may be added over time. Treat an unrecognized value as a future state, not an error.",
+        min_length=1,
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the installation state last changed. Null before the first device interaction.",
+    )] = None
+    error_reason: Annotated[Optional[str], Field(
+        description="Human-readable reason installation failed, for example an ineligible device or an exhausted download limit. Null unless state is error.",
+    )] = None
+
+
+class EsimPackageStatus(str, Enum):
+    provisioning = "provisioning"
+    pending_first_use = "pending_first_use"
+    active = "active"
+    depleted = "depleted"
+    expired = "expired"
+    removing = "removing"
+    removed = "removed"
+    failed = "failed"
+
+
+class EsimPackageBalance(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    total_bytes: Annotated[int, Field(
+        description="Total data in bytes, as purchased. Known from the order, so never null.",
+        ge=0,
+    )]
+    used_bytes: Annotated[Optional[int], Field(
+        description="Data used in bytes, or null while no network has reported on this package.",
+        ge=0,
+    )]
+    remaining_bytes: Annotated[Optional[int], Field(
+        description="Data remaining in bytes, or null while no network has reported on this package.",
+        ge=0,
+    )]
+    used_percent: Annotated[Optional[float], Field(
+        description="Share of the total data already used, as a percentage. Null while no network has reported on this package.",
+        ge=0,
+        le=100,
+    )]
+    as_of: Annotated[str, Field(
+        description="When the balance was last established. Before consumption is reported, this is the package delivery time. Check whether the consumption fields are null before treating this timestamp as a usage update.",
+        min_length=1,
+    )]
+    observed_at: Annotated[Optional[str], Field(
+        description="Measurement time supplied by the mobile network. Null when no measurement or measurement time is available. Use `as_of` for the balance update time.",
+    )]
+
+
+class EsimPackage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["epk_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^epk_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    order_id: Annotated[str, Field(
+        description="The order that purchased this package.",
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    offer_id: Annotated[str, Field(
+        description="Offer this package was purchased from.",
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    zone_id: Annotated[str, Field(
+        description="Coverage zone the package draws on. The name and countries below are captured at purchase time; the zone resource carries the live footprint.",
+        examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ezn_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    zone_name: Annotated[str, Field(
+        description="Coverage zone name, from the offer.",
+        examples=["Europe"],
+        min_length=1,
+    )]
+    countries: Annotated[List[str], Field(
+        description="Countries the package's zone covers, captured at purchase time so the package is meaningful without fetching the offer.",
+    )]
+    status: EsimPackageStatus
+    speed: Annotated[EsimSpeed, Field(description="Speed class, from the offer.")]
+    balance: EsimPackageBalance
+    activated_at: Annotated[Optional[str], Field(
+        description="When the package started consuming data (first use in its zone). Null until then.",
+    )] = None
+    expires_at: Annotated[Optional[str], Field(
+        description="When the package's validity ends and unused balance expires. Already capped by the eSIM's service period, so this is always the effective expiry. Null until the package activates.",
+    )] = None
+    price: Annotated[Money, Field(
+        description="What your workspace was billed for this package.",
+    )]
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class EsimZoneBalance(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    zone_id: Annotated[str, Field(
+        examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ezn_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    total_bytes: Annotated[int, Field(
+        description="Total purchased data for the zone, in bytes. Known from the orders, so never null.",
+        ge=0,
+    )]
+    used_bytes: Annotated[Optional[int], Field(
+        description="Reported data used in this zone, in bytes. Null if any contributing package lacks a usage report. Read individual package balances for available measurements.",
+        ge=0,
+    )]
+    remaining_bytes: Annotated[Optional[int], Field(
+        description="Data remaining, in bytes. Null under the same condition as `used_bytes`.",
+        ge=0,
+    )]
+    as_of: Annotated[str, Field(
+        description="Freshness of this combined figure - the oldest balance read among the zone's contributing packages. Each package's own balance.as_of can be newer.",
+        min_length=1,
+    )]
+    observed_at: Annotated[Optional[str], Field(
+        description="Oldest network measurement time among the contributing packages. Null if any package lacks a report or a measurement time. Use `as_of` for the balance update time.",
+    )]
+
+
+class EsimActionName(str, Enum):
+    suspend = "suspend"
+    resume = "resume"
+    release = "release"
+    install = "install"
+    top_up = "top_up"
+    assign = "assign"
+
+
+class EsimActionUnavailableReason(str, Enum):
+    permission_denied = "permission_denied"
+    network_unsupported = "network_unsupported"
+    network_unconfirmed = "network_unconfirmed"
+    esim_state = "esim_state"
+    operation_in_progress = "operation_in_progress"
+    package_limit_reached = "package_limit_reached"
+    identification_required = "identification_required"
+
+
+class EsimAvailableAction(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    action: Annotated[Union[EsimActionName, str], Field(union_mode="left_to_right")]
+    operation: Annotated[str, Field(
+        description="Operation to call for this action. Consult that operation’s reference for its request and response.",
+        examples=["suspendEsim"],
+        min_length=1,
+    )]
+    available: Annotated[bool, Field(
+        description="Whether the action is available given your permissions and the current eSIM state. The action checks these again when submitted; a later request can be refused if conditions change.",
+    )]
+    reason: Annotated[Optional[Annotated[Union[EsimActionUnavailableReason, str], Field(union_mode="left_to_right")]], Field(
+        description="Why the action is unavailable. Null while `available` is true.",
+    )]
+    requires: Annotated[Optional[List[str]], Field(
+        description="Additional parameters required by the current state, such as `acknowledge_balance_forfeit` when releasing an eSIM with remaining data. Absent when no additional parameters apply or when permissions, network support, or profile state prevent the action.",
+    )] = None
+
+
+class EsimBalanceReporting(str, Enum):
+    available = "available"
+    unavailable = "unavailable"
+
+
+class EsimNetworkAttachment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country_code: Annotated[str, Field(
+        description="Country of the network.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    country_name: Annotated[Optional[str], Field(
+        description="English name of the country, or null when not known.",
+    )] = None
+    network_name: Annotated[Optional[str], Field(
+        description="Name of the mobile network, or null when not known.",
+    )] = None
+    attached_at: Annotated[str, Field(
+        description="When the device attached.",
+        min_length=1,
+    )]
+
+
+class Esim(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subscriber_id: Annotated[Optional[str], Field(
+        description="The assigned service user, or null when the eSIM has no person assignment.",
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: EsimStatus
+    mode: EsimMode
+    iccid: Annotated[Optional[str], Field(
+        description="ICCID of the eSIM profile. Null while no profile is allocated yet, for example when provisioning failed before allocation.",
+        examples=[8944500212345678912],
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Phone number attached to this eSIM, in E.164 format, as the supplier reports it. Null while none is on record: a data-only plan comes with no number, and a plan that includes one reports it after provisioning.",
+        examples=[+31612345678],
+    )]
+    capabilities: Optional[EsimServiceCapabilities] = None
+    order_id: Annotated[str, Field(
+        description="The order that created this eSIM.",
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    display_name: Annotated[Optional[str], Field(
+        description="Free-text label for your own reference, for example a traveler or order reference.",
+        examples=["Amsterdam trip, order 8812"],
+        max_length=120,
+    )] = None
+    installation: EsimInstallation
+    packages: Annotated[List[EsimPackage], Field(
+        description="Current data packages, one per purchase.",
+    )]
+    zone_balances: Annotated[List[EsimZoneBalance], Field(
+        description="Remaining data per coverage zone, combined across the zone's packages. Derived; the packages are the source of truth.",
+    )]
+    available_actions: Annotated[Optional[List[EsimAvailableAction]], Field(
+        description="Actions currently available to you on this eSIM, with reasons for unavailable actions. Returned by the individual eSIM read. Use this to display controls and explain restrictions. Each action rechecks permissions and state when submitted, so availability is not a guarantee of success.",
+    )] = None
+    package_limit: Annotated[int, Field(
+        description="Maximum number of concurrent data packages this eSIM can hold, counted across all zones; several packages may share one zone. Enforced when packages are added.",
+        examples=[3],
+        ge=1,
+    )]
+    usage_available: Annotated[bool, Field(
+        description="Whether daily usage history is supported for this eSIM. The daily usage endpoint is currently unavailable; read package balances for reported consumption.",
+        examples=[True],
+    )]
+    balance_reporting: Annotated[EsimBalanceReporting, Field(
+        description="Whether ongoing package consumption reporting is available. Separate from daily usage history. Null package consumption values mean no measurement is available.",
+    )]
+    ready_until: Annotated[Optional[str], Field(
+        description="Activate (first network use) before this moment or the eSIM expires. Null once activated.",
+    )] = None
+    activated_at: Annotated[Optional[str], Field(
+        description="When the eSIM first used a mobile network. Null until then.",
+    )] = None
+    active_until: Annotated[Optional[str], Field(
+        description="When the eSIM's service period ends. The period starts at activation and data packages cannot outlive it. Null until activated.",
+    )] = None
+    last_attachment: Annotated[Optional[EsimNetworkAttachment], Field(
+        description="Most recent network attachment, or null before first attach.",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags for routing, filtering, and stats grouping, echoed on webhook events for the eSIM.",
+        max_length=20,
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Your own key-value data, echoed on webhook events for the eSIM. Maximum 2 KB serialized.",
+    )] = None
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class EsimOrderStatus(str, Enum):
+    scheduled = "scheduled"
+    charging = "charging"
+    provisioning = "provisioning"
+    pending = "pending"
+    completed = "completed"
+    failed = "failed"
+    canceled = "canceled"
+
+
+class EsimDelivery(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    to: Annotated[str, Field(
+        description="Recipient address. An email address for the email channel, an E.164 phone number for the sms channel.",
+        examples=["traveler@example.com"],
+        min_length=3,
+    )]
+    channel: Annotated[EsimDeliveryChannel, Field(
+        description="Channel the install credentials are delivered over.",
+    )]
+    locale: Annotated[Optional[str], Field(
+        description="Language for the message. Falls back to the closest available language, then English.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+
+
+class EsimOrderFunding(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    required_amount: Annotated[Money, Field(
+        description="Total wallet balance required for the charge, including tax. This is the required balance rather than the amount to add. Compare it with your current wallet balance.",
+    )]
+    lapses_at: Annotated[str, Field(
+        description="Earliest time a further insufficient-funds attempt can fail the order. Adding funds after this time can still complete the purchase before that attempt. Check the order status to determine whether it remains payable.",
+        examples=["2026-09-08T14:51:01Z"],
+        min_length=1,
+    )]
+
+
+class EsimOrderFailureCode(str, Enum):
+    insufficient_balance = "insufficient_balance"
+    carrier_error = "carrier_error"
+    capacity_exhausted = "capacity_exhausted"
+    offer_unavailable = "offer_unavailable"
+    internal_error = "internal_error"
+    canceled = "canceled"
+    resolved_by_support = "resolved_by_support"
+    esim_released = "esim_released"
+    mode_mismatch = "mode_mismatch"
+
+
+class EsimOrder(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+    id: Annotated[str, Field(
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: EsimOrderStatus
+    mode: EsimMode
+    offer_id: Annotated[str, Field(
+        description="Offer purchased.",
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    offer_revision: Annotated[int, Field(
+        description="Revision of the offer this order locked at creation. The quoted price stays that of this revision even if the offer changes later. The produced package snapshots its coverage at purchase; the zone's live country list governs new sales only.",
+        ge=1,
+    )]
+    zone_id: Annotated[str, Field(
+        description="Coverage zone of the purchased offer, captured at creation.",
+        examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ezn_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    esim_id: Annotated[Optional[str], Field(
+        description="The eSIM the package lands on. Set at creation when adding to an existing eSIM; set when provisioning starts for a new-eSIM order; null before that.",
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    subscriber_id: Annotated[Optional[str], Field(
+        description="Subscriber to assign when the new eSIM is delivered. Null when none was requested, including top-up orders, which retain the existing assignment.",
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    recurring_subscription_id: Annotated[Optional[str], Field(
+        description="The recurring service associated with this purchase. Absent for one-time orders.",
+        examples=["ers_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ers_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    package_id: Annotated[Optional[str], Field(
+        description="The purchased data package, set when the order completes; null before that.",
+        examples=["epk_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^epk_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    price: Annotated[Money, Field(
+        description="The quoted price, locked at creation in your billing currency. A `mode: test` order quotes this price and is never charged it, so its `wallet_transaction_id` stays null.",
+    )]
+    wallet_transaction_id: Annotated[Optional[str], Field(
+        description="The wallet transaction that paid for this order, for reconciling against your billing transactions. Null until the charge lands, and always null for a `mode: test` order, which is never charged.",
+        examples=["wtx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wtx_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    refund_transaction_id: Annotated[Optional[str], Field(
+        description="The wallet transaction that credited the charge back after a failure. Null unless the order failed after charging.",
+        examples=["wtx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wtx_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    delivery: Annotated[Optional[EsimDelivery], Field(
+        description="Where install credentials are delivered once available. Present when requested at creation.",
+    )] = None
+    funding: Annotated[Optional[EsimOrderFunding], Field(
+        description="Details of an insufficient-funds attempt while the order is in `charging`. May be null even while the order is awaiting funds; a null value does not confirm payment. Check the order status and your wallet balance.",
+    )]
+    failure_code: Annotated[Optional[Annotated[Union[EsimOrderFailureCode, str], Field(union_mode="left_to_right")]], Field(
+        description="Reason the order failed. Null unless `status` is `failed`. Handle unrecognized codes without assuming the purchase succeeded.\n\n- `canceled`: canceled while awaiting funds.\n- `resolved_by_support`: support closed an unresolved order as failed.\n- `esim_released`: the target profile became unavailable before delivery.\n- `mode_mismatch`: the purchase could not be fulfilled in its original live or test mode.\n\nAny charge is credited automatically. Check `refund_transaction_id` to confirm an issued credit.",
+    )]
+    failure_reason: Annotated[Optional[str], Field(
+        description="Why the order failed, in plain terms. Null unless status is failed.",
+    )]
+    completed_at: Annotated[Optional[str], Field(
+        description="When the order reached completed. Null before that.",
+    )]
 
 
 class VoiceLegList(BaseModel):
@@ -22494,3 +23122,1032 @@ class VoiceDestinationsUpdate(BaseModel):
     destinations: Annotated[List[DestinationSetting], Field(
         description="The destination countries to enable or disable. Only the countries listed here change; any country you do not list keeps its current setting.",
     )]
+
+
+class EsimZoneList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimZone], Field(description="Zones, newest first.")]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class EsimOfferPhoneInclusion(str, Enum):
+    always = "always"
+    on_request = "on_request"
+
+
+class EsimOfferPhone(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    included: Annotated[EsimOfferPhoneInclusion, Field(
+        description="How the plan provides a phone number.\n\n- `always`: a phone number is included with each eSIM purchased from the offer.\n- `on_request`: reserved for offers with an optional phone number; currently unavailable.",
+    )]
+    voice_inbound: Annotated[bool, Field(
+        description="The eSIM can receive calls on its phone number.",
+        examples=[False],
+    )]
+    voice_outbound: Annotated[bool, Field(
+        description="The eSIM can place calls.",
+        examples=[False],
+    )]
+    sms_inbound: Annotated[bool, Field(
+        description="The eSIM can receive text messages on its phone number.",
+        examples=[True],
+    )]
+    sms_outbound: Annotated[bool, Field(
+        description="The eSIM can send text messages.",
+        examples=[False],
+    )]
+
+
+class EsimOfferData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    amount_bytes: Annotated[int, Field(
+        description="Total data allowance in bytes.",
+        examples=[10737418240],
+        ge=1,
+    )]
+    throttled_after_bytes: Annotated[Optional[int], Field(
+        description="Data amount in bytes after which speed is reduced instead of cut off. Null when the allowance is a hard cap.",
+        ge=1,
+    )] = None
+
+
+class EsimOfferValidityType(str, Enum):
+    one_time = "one_time"
+    recurring = "recurring"
+
+
+class EsimOfferValidityUnit(str, Enum):
+    day = "day"
+    month = "month"
+
+
+class EsimOfferValidity(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: EsimOfferValidityType
+    unit: EsimOfferValidityUnit
+    value: Annotated[int, Field(
+        description="Number of units per period.",
+        examples=[30],
+        ge=1,
+    )]
+    minimum_periods: Annotated[Optional[int], Field(
+        description="For recurring offers, the minimum number of periods committed. Null when there is no minimum, and for one_time offers.",
+        ge=1,
+    )] = None
+
+
+class EsimOfferBundlePricing(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["bundle"], Field(description="Pricing type.", min_length=1)]
+    data: EsimOfferData
+    validity: Annotated[EsimOfferValidity, Field(
+        description="Validity of packages created from this offer. The period starts at activation, which happens on first use in the coverage zone. The effective validity is capped by the eSIM's service period: see the package's expires_at for the real expiry.",
+    )]
+    price: Annotated[Money, Field(
+        description="What your workspace is billed per package provisioned from this offer.",
+    )]
+
+
+class EsimOfferSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="Display name of the offer.",
+        examples=["Europe 10 GB / 30 days"],
+        min_length=1,
+    )]
+    revision: Annotated[int, Field(
+        description="Increments whenever the offer's terms change. Orders lock the revision they were quoted at.",
+        ge=1,
+    )]
+    zone_id: Annotated[str, Field(
+        description="Coverage zone the offer sells. Offers for the same footprint share one zone.",
+        examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ezn_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    speed: Annotated[EsimSpeed, Field(
+        description="Speed class. For reduced-speed offers, the bundle's data.throttled_after_bytes carries the full-speed allowance.",
+    )]
+    stackable: Annotated[bool, Field(
+        description="Whether packages from this offer can be held alongside packages from other zones on the same eSIM, subject to the eSIM's package_limit.",
+    )]
+    phone: Annotated[Optional[EsimOfferPhone], Field(
+        description="Phone service that comes with the plan, or null when the plan includes no phone number. When present, `included` says how the number is provided and the flags state which call and text directions work.",
+    )]
+    pricing: Annotated[Any, Field(
+        description="Commercial terms of the offer. Every offer in the current catalog is a bundle: a fixed allowance with a validity period for a fixed price. Match on the pricing type; treat an unrecognized type as an offer your integration cannot order yet.",
+    )]
+    product: Annotated[str, Field(
+        description="Billing product the offer's charges post under, as it appears on your invoice line items.",
+        examples=["email_sends"],
+        min_length=1,
+        pattern="^[a-z][a-z0-9]*(_[a-z0-9]+)*$",
+    )]
+    status: EsimOfferStatus
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class EsimOfferList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimOfferSummary], Field(description="Offers, newest first.")]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class EsimOffer(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="Display name of the offer.",
+        examples=["Europe 10 GB / 30 days"],
+        min_length=1,
+    )]
+    revision: Annotated[int, Field(
+        description="Increments whenever the offer's terms change. Orders lock the revision they were quoted at.",
+        ge=1,
+    )]
+    zone_id: Annotated[str, Field(
+        description="Coverage zone the offer sells. Offers for the same footprint share one zone.",
+        examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ezn_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    zone: Annotated[EsimZone, Field(
+        description="The offer's coverage zone, embedded so one read answers \"where does this work\". The zone resource is authoritative.",
+    )]
+    speed: Annotated[EsimSpeed, Field(
+        description="Speed class. For reduced-speed offers, the bundle's data.throttled_after_bytes carries the full-speed allowance.",
+    )]
+    stackable: Annotated[bool, Field(
+        description="Whether packages from this offer can be held alongside packages from other zones on the same eSIM, subject to the eSIM's package_limit.",
+    )]
+    phone: Annotated[Optional[EsimOfferPhone], Field(
+        description="Phone service that comes with the plan, or null when the plan includes no phone number. When present, `included` says how the number is provided and the flags state which call and text directions work.",
+    )]
+    pricing: Annotated[Any, Field(
+        description="Commercial terms of the offer. Every offer in the current catalog is a bundle: a fixed allowance with a validity period for a fixed price. Match on the pricing type; treat an unrecognized type as an offer your integration cannot order yet.",
+    )]
+    product: Annotated[str, Field(
+        description="Billing product the offer's charges post under, as it appears on your invoice line items.",
+        examples=["email_sends"],
+        min_length=1,
+        pattern="^[a-z][a-z0-9]*(_[a-z0-9]+)*$",
+    )]
+    status: EsimOfferStatus
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class EsimCountryRequirements(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country_code: Annotated[str, Field(
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    schema_revision: Annotated[str, Field(
+        description="Revision identifying the returned identification schema. A changed revision means the requirements or guidance changed. It does not indicate an expiry time or purchase authorization.",
+        max_length=64,
+        min_length=64,
+        pattern="^[a-f0-9]{64}$",
+    )]
+    schema: Annotated[Dict[str, Any], Field(
+        description="Complete JSON Schema draft 2020-12 document for customer-side identification validation. It declares $schema, type, title, description, properties, required, and additionalProperties. Property definitions use string or object types, standard format, pattern, minLength, maxLength, enum, and nested object keywords. Enable format assertions in your validator for email addresses and dates. Every country requires first_name, last_name, and email. Other customer-owned properties are allowed, so one details object can satisfy several countries. Bird does not receive or verify the values. Document references are opaque identifiers in customer-managed storage, not Bird upload IDs or required URLs.",
+    )]
+
+
+class EsimOfferRequirements(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    countries: List[EsimCountryRequirements]
+
+
+class EsimOrderList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimOrder], Field(description="Orders, newest first.")]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EsimOrderRecurrence(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    recurrence_revision: Annotated[int, Field(
+        description="The accepted recurring configuration revision.",
+        ge=1,
+    )]
+    accepted_price: Money
+
+
+class EsimOrderCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    offer_id: Annotated[str, Field(
+        description="Offer to purchase.",
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    esim_id: Annotated[Optional[str], Field(
+        description="Existing eSIM to add the package to. Omit to provision a new eSIM.",
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    subscriber_id: Annotated[Optional[str], Field(
+        description="Person to assign the new eSIM to when delivery completes. Must be a subscriber in this workspace. Omit to leave it unassigned. Supplying it with esim_id returns 422; top-ups retain the existing assignment. An unknown subscriber or one outside this workspace returns 404 before charging. Identification guidance does not gate purchase.",
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    offer_revision: Annotated[Optional[int], Field(
+        description="The offer revision you are quoting from. When set and the offer has since moved to a newer revision, the order is refused with a conflict instead of charging a price you did not see. Omitted, the current revision is used.",
+        ge=1,
+    )] = None
+    recurrence: Annotated[Optional[EsimOrderRecurrence], Field(
+        description="Buy the first package and enable automatic renewal in one purchase. Requires subscriber_id, offer_revision and Idempotency-Key. Omit esim_id and expected_price.",
+    )] = None
+    expected_price: Annotated[Optional[Money], Field(
+        description="The price you displayed to the buyer. When set and the workspace's current resolved price differs, the order is refused with a conflict instead of charging a different amount. Catches billing-rate changes, which move independently of the offer revision.",
+    )] = None
+    display_name: Annotated[Optional[str], Field(
+        description="Free-text label for the new eSIM, for your own reference. Ignored when esim_id is set.",
+        examples=["Amsterdam trip, order 8812"],
+        max_length=120,
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags for the new eSIM, echoed on its lifecycle webhook events. Ignored when esim_id is set.",
+        max_length=20,
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Your own key-value data for the new eSIM, echoed on its lifecycle webhook events. Maximum 2 KB serialized. Ignored when esim_id is set.",
+    )] = None
+    acknowledge_shortened_validity: Annotated[Optional[bool], Field(
+        description="Set to true to accept a validity cut short by the eSIM's service period. Without it, an order whose package would expire early is refused with a conflict that states the effective validity.",
+    )] = None
+
+
+class EsimRecurrenceDeliveryMode(str, Enum):
+    exact_period = "exact_period"
+    recurring_top_up = "recurring_top_up"
+
+
+class EsimRecurrenceModel(str, Enum):
+    calendar_month = "calendar_month"
+    fixed_days = "fixed_days"
+
+
+class EsimCheckoutOneTime(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    offer_revision: Annotated[int, Field(
+        description="The offer revision to accept when purchasing.",
+        ge=1,
+    )]
+    price: Money
+
+
+class EsimCheckoutRecurringQuote(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
+        description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
+    )]
+    offer_revision: Annotated[int, Field(
+        description="The offer revision to accept when purchasing.",
+        ge=1,
+    )]
+    recurrence_revision: Annotated[int, Field(
+        description="The recurring configuration revision to accept when purchasing.",
+        ge=1,
+    )]
+    price: Money
+    model: Annotated[EsimRecurrenceModel, Field(
+        description="Billing cadence for recurring packages.\n\n- `calendar_month`: periods follow calendar months from the billing anchor.\n- `fixed_days`: each period lasts the stated number of 24-hour days.",
+    )]
+    interval_count: Annotated[int, Field(
+        description="The number of calendar months or fixed 24-hour days per period.",
+        ge=1,
+        le=366,
+    )]
+
+
+class EsimCheckoutUnavailableReason(str, Enum):
+    not_configured = "not_configured"
+    price_unavailable = "price_unavailable"
+    no_eligible_route = "no_eligible_route"
+
+
+class EsimCheckoutRecurrence1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    available: Literal[True]
+    quote: Annotated[EsimCheckoutRecurringQuote, Field(
+        description="Published recurring terms before tax. The first period starts when payment is funded, and cancellation stops future renewal while preserving paid packages.",
+    )]
+    unavailable_reason: Optional[EsimCheckoutUnavailableReason]
+
+
+class EsimCheckoutRecurrence2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    available: Literal[False]
+    quote: Optional[EsimCheckoutRecurringQuote]
+    unavailable_reason: Annotated[EsimCheckoutUnavailableReason, Field(
+        description="Renewal is not configured, has no published price, or has no eligible mobile network. A failed lookup returns an error instead.",
+    )]
+
+
+class EsimCheckoutRecurrence(RootModel[EsimCheckoutRecurrence1 | EsimCheckoutRecurrence2]):
+    root: EsimCheckoutRecurrence1 | EsimCheckoutRecurrence2
+
+
+class EsimCheckoutOptions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    offer_id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    one_time: Annotated[EsimCheckoutOneTime, Field(
+        description="Published one-time purchase terms before tax.",
+    )]
+    recurrence: Annotated[EsimCheckoutRecurrence, Field(
+        description="When available is true, quote contains the recurring terms and unavailable_reason is null. Otherwise quote is null and unavailable_reason explains why renewal is unavailable.",
+    )]
+
+
+class EsimRecurringOffer(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
+        description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
+    )]
+    offer_id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    model: Annotated[EsimRecurrenceModel, Field(
+        description="Billing cadence for recurring packages.\n\n- `calendar_month`: periods follow calendar months from the billing anchor.\n- `fixed_days`: each period lasts the stated number of 24-hour days.",
+    )]
+    interval_count: Annotated[int, Field(
+        description="The number of calendar months or fixed days in each period.",
+        ge=1,
+        le=366,
+    )]
+    revision: Annotated[int, Field(
+        description="The recurring configuration revision to accept.",
+        ge=1,
+    )]
+    price: Money
+
+
+class EsimRecurringSubscriptionStatus(str, Enum):
+    pending = "pending"
+    active = "active"
+    needs_attention = "needs_attention"
+    ended = "ended"
+
+
+class EsimRecurringSubscription1(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
+        description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
+    )]
+    id: Annotated[str, Field(
+        examples=["ers_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ers_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    esim_id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    initial_order_id: Annotated[Optional[str], Field(
+        description="The initial purchase order, or null when recurrence was enrolled on an existing eSIM.",
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    subscriber_id: Annotated[str, Field(
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    offer_id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[EsimRecurringSubscriptionStatus, Field(
+        description="Delivery state of the recurring service. Check payment and renewal fields separately.\n\n- `pending`: enrollment or the initial purchase is still being processed.\n- `active`: the service has delivered a package and remains active.\n- `needs_attention`: delivery or a related credit remains unresolved. Check period history and the associated order before purchasing a replacement.\n- `ended`: recurrence has ended. Previously delivered packages keep their own validity.",
+    )]
+    billing_status: Annotated[Optional[str], Field(
+        description="The financial subscription state, or null while acceptance is pending.",
+    )]
+    current_period_start: Annotated[Optional[str], Field(
+        description="The authoritative billing period boundary, or null while acceptance is pending.",
+    )]
+    current_period_end: Annotated[Optional[str], Field(
+        description="The authoritative billing period boundary, or null while acceptance is pending.",
+    )]
+    cancel_at_period_end: Annotated[bool, Field(
+        description="Whether future renewal is stopped at the current paid boundary.",
+    )]
+    latest_order_id: Annotated[Optional[str], Field(
+        description="The order for the current billing period, or null before fulfillment starts.",
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the recurring service was requested.",
+        min_length=1,
+    )]
+    price: Annotated[Optional[Money], Field(
+        description="Accepted package price before tax, in its published currency. Null before Billing accepts enrollment.",
+    )]
+    model: Annotated[Optional[EsimRecurrenceModel], Field(
+        description="Accepted cadence, or null before Billing accepts enrollment.",
+    )]
+    interval_count: Annotated[Optional[int], Field(
+        description="Number of calendar months or fixed 24-hour days in each accepted period. Null before acceptance.",
+        ge=1,
+        le=366,
+    )]
+    next_renewal_at: Annotated[Optional[str], Field(
+        description="Next scheduled renewal boundary. Null when enrollment is pending or future renewals have stopped.",
+    )]
+    cancellation_effective_at: Annotated[Optional[str], Field(
+        description="When canceled recurrence ends: the paid boundary for scheduled cancellation, or the recorded cancellation time for an immediate stop. Null when renewal has not been stopped or no period was accepted. Paid packages remain available under their own validity.",
+    )]
+    stop_reason: Annotated[Optional[EsimRecurringStopReason], Field(
+        description="First recorded reason future renewal stopped. Null when no reason has been recorded. Delivery outcomes are available separately in period history.",
+    )]
+
+
+class EsimRecurringSubscription2(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
+        description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
+    )]
+    id: Annotated[str, Field(
+        examples=["ers_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ers_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    esim_id: Annotated[Optional[str], Field(
+        description="The provisioned eSIM, or null while the initial purchase is pending.",
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    initial_order_id: Annotated[str, Field(
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    subscriber_id: Annotated[str, Field(
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    offer_id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[EsimRecurringSubscriptionStatus, Field(
+        description="Delivery state of the recurring service. Check payment and renewal fields separately.\n\n- `pending`: enrollment or the initial purchase is still being processed.\n- `active`: the service has delivered a package and remains active.\n- `needs_attention`: delivery or a related credit remains unresolved. Check period history and the associated order before purchasing a replacement.\n- `ended`: recurrence has ended. Previously delivered packages keep their own validity.",
+    )]
+    billing_status: Annotated[Optional[str], Field(
+        description="The financial subscription state, or null while acceptance is pending.",
+    )]
+    current_period_start: Annotated[Optional[str], Field(
+        description="The authoritative billing period boundary, or null while acceptance is pending.",
+    )]
+    current_period_end: Annotated[Optional[str], Field(
+        description="The authoritative billing period boundary, or null while acceptance is pending.",
+    )]
+    cancel_at_period_end: Annotated[bool, Field(
+        description="Whether future renewal is stopped at the current paid boundary.",
+    )]
+    latest_order_id: Annotated[Optional[str], Field(
+        description="The order for the current billing period, or null before fulfillment starts.",
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the recurring service was requested.",
+        min_length=1,
+    )]
+    price: Annotated[Optional[Money], Field(
+        description="Accepted package price before tax, in its published currency. Null before Billing accepts enrollment.",
+    )]
+    model: Annotated[Optional[EsimRecurrenceModel], Field(
+        description="Accepted cadence, or null before Billing accepts enrollment.",
+    )]
+    interval_count: Annotated[Optional[int], Field(
+        description="Number of calendar months or fixed 24-hour days in each accepted period. Null before acceptance.",
+        ge=1,
+        le=366,
+    )]
+    next_renewal_at: Annotated[Optional[str], Field(
+        description="Next scheduled renewal boundary. Null when enrollment is pending or future renewals have stopped.",
+    )]
+    cancellation_effective_at: Annotated[Optional[str], Field(
+        description="When canceled recurrence ends: the paid boundary for scheduled cancellation, or the recorded cancellation time for an immediate stop. Null when renewal has not been stopped or no period was accepted. Paid packages remain available under their own validity.",
+    )]
+    stop_reason: Annotated[Optional[EsimRecurringStopReason], Field(
+        description="First recorded reason future renewal stopped. Null when no reason has been recorded. Delivery outcomes are available separately in period history.",
+    )]
+
+
+class EsimRecurringSubscription(RootModel[EsimRecurringSubscription1 | EsimRecurringSubscription2]):
+    root: EsimRecurringSubscription1 | EsimRecurringSubscription2
+
+
+class EsimRecurringSubscriptionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimRecurringSubscription], Field(
+        description="Recurring services in this workspace.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EsimRecurringSubscriptionCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    esim_id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    offer_id: Annotated[str, Field(
+        examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    offer_revision: Annotated[int, Field(
+        description="The accepted offer revision.",
+        examples=[1],
+        ge=1,
+    )]
+    recurrence_revision: Annotated[int, Field(
+        description="The accepted recurring configuration revision.",
+        examples=[1],
+        ge=1,
+    )]
+    accepted_price: Money
+
+
+class EsimRecurringPeriodStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
+    failing = "failing"
+    failed = "failed"
+
+
+class EsimRecurringPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
+        description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
+    )]
+    period_start: Annotated[str, Field(
+        description="Start of the funded billing period. Package activation follows the accepted delivery mode.",
+        min_length=1,
+    )]
+    period_end: Annotated[str, Field(
+        description="End of the paid billing period. A recurring top-up package can expire at a different time; check the package’s expiry.",
+        min_length=1,
+    )]
+    status: Annotated[EsimRecurringPeriodStatus, Field(
+        description="Delivery outcome of a paid period.\n\n- `pending`: package delivery has not been confirmed, including an uncertain network outcome.\n- `completed`: the package was delivered.\n- `failing`: delivery failed and the credit is being processed.\n- `failed`: failure processing is complete. Check `refund_transaction_id` for an issued credit.",
+    )]
+    net_amount: Money
+    tax_amount: Money
+    total_amount: Money
+    wallet_transaction_id: Annotated[Optional[str], Field(
+        description="Original wallet charge, or null for a free period.",
+        examples=["wtx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wtx_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    refund_transaction_id: Annotated[Optional[str], Field(
+        description="Confirmed wallet credit after definitive failure, or null when no credit was issued.",
+        examples=["wtx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wtx_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    order_id: Annotated[Optional[str], Field(
+        description="Delivery order, or null before fulfillment starts.",
+        examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eor_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    order_status: Annotated[Optional[EsimOrderStatus], Field(
+        description="Delivery order state, or null before fulfillment starts.",
+    )]
+
+
+class EsimRecurringPeriodList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    data: List[EsimRecurringPeriod]
+
+
+class EsimSubscriber(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    contact_id: Annotated[str, Field(
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class EsimSubscriberList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimSubscriber], Field(
+        description="Subscribers in creation order, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EsimSubscriberCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    contact_id: Annotated[str, Field(
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class EsimAssignmentID(RootModel[str]):
+    root: str
+
+
+class EsimAssignment(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["eas_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eas_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    subscriber_id: Annotated[str, Field(
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    esim_id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class EsimAssignmentCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subscriber_id: Annotated[str, Field(
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class EsimSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subscriber_id: Annotated[Optional[str], Field(
+        description="The assigned service user, or null when the eSIM has no person assignment.",
+        examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: EsimStatus
+    mode: EsimMode
+    iccid: Annotated[Optional[str], Field(
+        description="ICCID of the eSIM profile, or null while none is allocated.",
+        examples=[8944500212345678912],
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Phone number attached to this eSIM, in E.164 format, as the supplier reports it. Null while none is on record.",
+        examples=[+31612345678],
+    )]
+    display_name: Annotated[Optional[str], Field(
+        description="Free-text label for your own reference.",
+        max_length=120,
+    )]
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class EsimList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimSummary], Field(
+        description="eSIMs, newest first, in compact form; fetch one by id for the full aggregate.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EsimUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    display_name: Annotated[Optional[str], Field(
+        description="Free-text label for your own reference. Null clears it.",
+        max_length=120,
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Replaces the eSIM's tags.",
+        max_length=20,
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Replaces the eSIM's metadata. Maximum 2 KB serialized.",
+    )] = None
+
+
+class EsimInstallationInstructions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    ios: Annotated[List[str], Field(
+        description="Ordered steps for iOS devices.",
+        min_length=1,
+    )]
+    android: Annotated[List[str], Field(
+        description="Ordered steps for Android devices.",
+        min_length=1,
+    )]
+
+
+class EsimCredentials(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    esim_id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    ios_install_url: Annotated[Optional[str], Field(
+        description="One-tap install link for iOS 17.4 and later, derived from the activation code. Null when a valid link cannot be derived for this eSIM.",
+    )]
+    android_install_url: Annotated[Optional[str], Field(
+        description="Android installation link. Currently unavailable; returns null. Use the returned Android instructions for manual setup.",
+    )]
+    qr_code_url: Annotated[Optional[str], Field(
+        description="Hosted QR image URL. Currently unavailable; returns null. Use the activation code in your own installation flow or provide a hosted installation page.",
+    )]
+    activation_code: Annotated[str, Field(
+        description="Raw activation string for manual entry in device settings.",
+        examples=["LPA:1$smdp.example.com$K2-1AbCdE-2FgHiJ"],
+        min_length=1,
+    )]
+    smdp_address: Annotated[str, Field(
+        description="SM-DP+ server address, for building a custom install flow.",
+        examples=["smdp.example.com"],
+        min_length=1,
+    )]
+    matching_id: Annotated[str, Field(
+        description="Matching ID component of the activation code, for building a custom install flow.",
+        min_length=1,
+    )]
+    confirmation_code: Annotated[Optional[str], Field(
+        description="Confirmation code requested during installation, when available. Null means the requirement is unknown; it does not confirm that a code is unnecessary.",
+    )] = None
+    apn: Annotated[Optional[str], Field(
+        description="Access point name for mobile data, when available. Null means no APN information is available; it does not confirm automatic configuration.",
+        examples=["internet"],
+    )]
+    data_roaming_required: Annotated[Optional[bool], Field(
+        description="Whether data roaming must be enabled. Null means the requirement is unknown. When true, `instructions` includes a step to enable roaming.",
+    )]
+    instructions: Annotated[EsimInstallationInstructions, Field(
+        description="Step-by-step install instructions, covering whichever of the fields in this response carry a value, in the closest language available for the Accept-Language request header. Its `language` field names the one served.",
+    )]
+
+
+class EsimDeliveryStatus(str, Enum):
+    pending = "pending"
+    delivered = "delivered"
+    failed = "failed"
+
+
+class EsimInstallLinkID(RootModel[str]):
+    root: str
+
+
+class EsimInstallLinkMetadata(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["eil_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eil_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    expires_at: Annotated[str, Field(
+        description="When the installation link expires.",
+        min_length=1,
+    )]
+    revoked_at: Annotated[Optional[str], Field(
+        description="When the link was revoked, or null while not revoked.",
+    )]
+
+
+class EsimCredentialsDeliveryFailureCode(str, Enum):
+    invalid_recipient = "invalid_recipient"
+    suppressed = "suppressed"
+    blocked = "blocked"
+    bounced = "bounced"
+    channel_unavailable = "channel_unavailable"
+    send_failed = "send_failed"
+
+
+class EsimCredentialsDelivery(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["edv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^edv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    channel: EsimDeliveryChannel
+    to: Annotated[str, Field(
+        description="Recipient address the message goes to.",
+        examples=["traveler@example.com"],
+        min_length=3,
+    )]
+    status: EsimDeliveryStatus
+    failure_code: Annotated[Optional[Annotated[Union[EsimCredentialsDeliveryFailureCode, str], Field(union_mode="left_to_right")]], Field(
+        description="Why the delivery failed. Null unless status is failed. Open enum: treat unrecognized values as future failure kinds.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the delivery was accepted.",
+        min_length=1,
+    )]
+    settled_at: Annotated[Optional[str], Field(
+        description="When the outcome became known. Null while pending.",
+    )]
+    install_link: Annotated[Optional[EsimInstallLinkMetadata], Field(
+        description="Link metadata for explicit revocation. Null for deliveries created before hosted links were enabled.",
+    )]
+
+
+class EsimDeliveryList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[EsimCredentialsDelivery]
+
+
+class EsimInstallLink(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["eil_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eil_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    esim_id: Annotated[str, Field(
+        examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    url: Annotated[str, Field(
+        description="Private installation URL. Anyone holding it can access installation details until expiry or revocation. Store or share it securely when created; later reads do not return it.",
+        min_length=1,
+    )]
+    expires_at: Annotated[str, Field(
+        description="When the link stops granting access to installation details.",
+        min_length=1,
+    )]
+    created_at: Annotated[str, Field(
+        description="When the link was created.",
+        min_length=1,
+    )]
+
+
+class EsimPackageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimPackage], Field(description="Packages, newest first.")]
+
+
+class EsimCompatibleOfferList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[EsimOfferSummary], Field(
+        description="Orderable top-up offers for this eSIM.",
+    )]
+    as_of: Annotated[str, Field(
+        description="When this answer was computed.",
+        min_length=1,
+    )]
+
+
+class EsimSettings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    credential_delivery_enabled: Annotated[bool, Field(
+        description="Whether Bird sends eSIM install credentials to travelers for this workspace. When `false`, sending an eSIM's credentials by email or SMS is refused; reading them from the API still works, so you can deliver them yourself. This governs the install message only. Your workspace's other email and SMS sending is unaffected. Defaults to `true`.",
+        examples=[True],
+    )]
+
+
+class EsimSettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    credential_delivery_enabled: Annotated[Optional[bool], Field(
+        description="Send `false` to stop Bird sending eSIM install credentials to travelers for this workspace, or `true` to allow it again. Credentials stay readable from the API either way.",
+        examples=[False],
+    )] = None
