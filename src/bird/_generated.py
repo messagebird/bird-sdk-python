@@ -21484,7 +21484,7 @@ class Number(BaseModel):
         min_length=1,
     )]
     id: Annotated[str, Field(
-        description="Identifier of this allocated number. Pass it as `number_id` to read this number, or to release it when kind is dedicated.",
+        description="Identifier of this allocated number. Pass it as `number_id` to read this number, or to cancel or release it when kind is dedicated.",
         examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
@@ -21522,7 +21522,7 @@ class Number(BaseModel):
     )]
     released_at: Annotated[Optional[str], Field(
         description="When this number was released. `null` while it is still allocated to your workspace.",
-    )] = None
+    )]
     ownership: Annotated[Optional[NumberOwnership], Field(
         description="Ownership paperwork and activation progress. `null` when no ownership requirements, recorded block, or recorded decision apply, or when requirements or progress cannot be read and no ownership block or decision has been recorded. A recorded block still returns an ownership object with `status: unknown` when progress cannot be read; retry the read. We manage the paperwork for shared short codes, so this field is always `null` for them. Other sending requirements can apply even when ownership registration is complete.",
     )] = None

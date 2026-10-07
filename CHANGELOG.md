@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.89.1
+
+- `released_at` is now always present on a number, `null` while it is still allocated to your workspace.
+
 ## 0.89.0
 
 - Add methods to browse eSIM zones and offers, create and cancel orders, create installation links, and update, suspend, resume, or release eSIMs.
