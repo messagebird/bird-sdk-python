@@ -1793,6 +1793,13 @@ class ContactUpsertError(BaseModel):
         description="Human-readable explanation of why this entry failed.",
         min_length=1,
     )]
+    param: Annotated[Optional[str], Field(
+        description="The field in this entry that caused the failure, such as `data` or `email`. Omitted when the failure names no field.",
+        min_length=1,
+    )] = None
+    details: Annotated[Optional[List[ErrorDetail]], Field(
+        description="Per-field problems with this entry, in the same shape as the top-level error `details`. A contact property failure names the property as `data.<key>`, such as `data.plan`. Omitted when the failure has no per-field problems.",
+    )] = None
 
 
 class ContactUpsertResultItemStatus(str, Enum):
@@ -15878,7 +15885,7 @@ class EmailTemplateCreate(BaseModel):
         description="The authoring format the template is written in, fixed at creation.\n`html` is finished markup you provide, optionally personalized with\nLiquid. Liquid supports variables, filters, and control flow such\nas `{% if %}` conditionals and `{% for %}` loops. A few constructs are\nrejected when you submit, and the error names exactly what to change:\n\n- Partial includes (`{% include %}`, `{% render %}`).\n- The `increment`, `decrement`, and `ifchanged` tags.\n- The `money`, `format_date`, `format_time`, `json`, `inspect`, and `type` filters.\n- Comparing against `empty`/`blank` (use `.size == 0` instead).\n- Blocks nested far deeper than real email markup needs.\n\nA broadcast's template additionally cannot use a `{% for %}` loop,\nbecause a broadcast supplies one value per contact property, so there\nis nothing to iterate. Send with the messages API instead if the\ntemplate needs one.",
     )]
     languages: Annotated[Optional[Dict[str, EmailTemplateLanguageContent]], Field(
-        description="The initial draft's content, keyed by language tag in BCP-47 form such as\n`en` or `pt-BR`. A template holds up to 25 languages, and a send picks one\nof them.\n\nOmit this to create an empty draft and add content later.",
+        description="The initial draft's content, keyed by language tag in BCP-47 form such as\n`en` or `pt-BR`. A template holds up to 25 languages, and a send picks one\nof them.\n\nOmit this to create an empty draft and add content later.\n\nThe example's `{{ first_name }}` is a parameter, filled from\n`template.parameters` at send time. A `{{ bird.contact.<attribute> }}`\nplaceholder reads a contact record instead. A send to an email address\nhas no contact record, so it refuses such a template. A broadcast fills\nit from each recipient's contact, and a preview from the `contact` or\n`parameters` you supply.",
     )] = None
     default_language: Annotated[Optional[str], Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -23265,8 +23272,11 @@ class EsimOrder(BaseModel):
     delivery: Annotated[Optional[EsimDelivery], Field(
         description="Where install credentials are delivered once available. Present when requested at creation.",
     )] = None
+    awaiting_funds: Annotated[Optional[bool], Field(
+        description="Whether this order is in `charging` after an insufficient wallet balance refusal. The required balance is in `funding` when available. False does not confirm payment; check `status` and `wallet_transaction_id`. When absent, `funding` indicates a refusal if present; otherwise the funding state is unknown.",
+    )] = None
     funding: Annotated[Optional[EsimOrderFunding], Field(
-        description="Details of an insufficient-funds attempt while the order is in `charging`. May be null even while the order is awaiting funds; a null value does not confirm payment. Check the order status and your wallet balance.",
+        description="Details of an insufficient-funds attempt while the order is in `charging`. May be null even while the order is awaiting funds; a null value does not confirm payment. Check `awaiting_funds` to identify an outstanding insufficient-balance refusal.",
     )]
     failure_code: Annotated[Optional[Annotated[Union[EsimOrderFailureCode, str], Field(union_mode="left_to_right")]], Field(
         description="Reason the order failed. Null unless `status` is `failed`. Handle unrecognized codes without assuming the purchase succeeded.\n\n- `canceled`: canceled while awaiting funds.\n- `resolved_by_support`: support closed an unresolved order as failed.\n- `esim_released`: the target profile became unavailable before delivery.\n- `mode_mismatch`: the purchase could not be fulfilled in its original live or test mode.\n\nAny charge is credited automatically. Check `refund_transaction_id` to confirm an issued credit.",

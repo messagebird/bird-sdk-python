@@ -260,6 +260,44 @@ def email_templates_list() -> None:
         print(template.slug, template.name)
 
 
+def email_templates_author() -> None:
+    template = client.email.templates.create(
+        slug="welcome-email",
+        category="transactional",
+        source="html",
+        languages={
+            "en": {
+                "subject": "Welcome, {{ first_name }}",
+                "preview_text": "Your account is ready",
+                "html": "<!DOCTYPE html>\n<html>\n<body>\n<p>Hi {{ first_name }}, thanks for signing up.</p>\n</body>\n</html>\n",
+            },
+        },
+    )
+    print(template.id, template.draft_version_id)
+
+
+def email_templates_languages_get() -> None:
+    language = client.email.templates.versions.languages.get(
+        "TEMPLATE_ID",
+        "DRAFT_VERSION_ID",
+        "en",
+    )
+    if language.content is not None:
+        print(language.content.html)
+
+
+def email_templates_submit() -> None:
+    template_id = "TEMPLATE_ID"
+    draft_version_id = "DRAFT_VERSION_ID"
+    check = client.email.templates.versions.submit(template_id, draft_version_id, validate_only=True)
+    for problem in check.errors:
+        print(problem.language, problem.field, problem.message)
+    if check.valid:
+        result = client.email.templates.versions.submit(template_id, draft_version_id)
+        if result.version is not None:
+            print(result.version.version_number)
+
+
 def insights_email_competitive_brands_search() -> None:
     # Requires Insights preview access for the organization.
     report = client.email.competitive.brands.search(q="Everlane")

@@ -170,7 +170,7 @@ if event.root.type == "email.delivered":
 
 ## Errors
 
-Every failure raises a typed exception rooted at `BirdError`. `APIError` covers anything that goes wrong issuing a request — including transport failures — so a single `except APIError` is enough; `APIStatusError` carries the HTTP `status_code`.
+Every failure raises a typed exception rooted at `BirdError`. `APIError` covers anything that goes wrong issuing a request — including transport failures — so a single `except APIError` is enough; `APIStatusError` carries the HTTP `status_code`. When the Bird API sent the error, it also carries a readable `message`, a stable `code` such as `E01001`, and a `doc_url` to that code's page, which says what went wrong and what to do. Every code is listed at [bird.com/docs/api/errors](https://bird.com/docs/api/errors). When a response has no code or docs link, such as one from a proxy, `code` and `doc_url` are `None`.
 
 <!-- bird:snippet email.errors -->
 

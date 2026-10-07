@@ -64,7 +64,18 @@ class EmailTemplatesVersionsLanguages(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateLanguage:
-        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`."""
+        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`.
+
+        ```python
+        language = client.email.templates.versions.languages.get(
+            "TEMPLATE_ID",
+            "DRAFT_VERSION_ID",
+            "en",
+        )
+        if language.content is not None:
+            print(language.content.html)
+        ```
+        """
         return self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
             {},
@@ -174,7 +185,18 @@ class AsyncEmailTemplatesVersionsLanguages(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateLanguage:
-        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`."""
+        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`.
+
+        ```python
+        language = await client.email.templates.versions.languages.get(
+            "TEMPLATE_ID",
+            "DRAFT_VERSION_ID",
+            "en",
+        )
+        if language.content is not None:
+            print(language.content.html)
+        ```
+        """
         return await self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
             {},

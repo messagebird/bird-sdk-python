@@ -97,7 +97,20 @@ class EmailTemplatesVersionsBase(Resource):
         languages: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> EmailTemplateSubmitResult:
-        """Freeze a complete draft as the new immutable live version. Every language needs a subject and body, and the default language must be present. Submission is all or nothing and reports every language error. Set `validate_only: true` to check without publishing, or pass `expected_revision` to reject a concurrent edit. An unchanged draft is rejected. The response also carries `compatibility` across every language, each finding naming the language it is in: what the HTML uses that mail clients remove, ignore, or render inconsistently. Advisory and separate from `errors`, so a finding never fails a submit."""
+        """Freeze a complete draft as the new immutable live version. Every language needs a subject and body, and the default language must be present. Submission is all or nothing and reports every language error. Set `validate_only: true` to check without publishing, or pass `expected_revision` to reject a concurrent edit. An unchanged draft is rejected. The response also carries `compatibility` across every language, each finding naming the language it is in: what the HTML uses that mail clients remove, ignore, or render inconsistently. Advisory and separate from `errors`, so a finding never fails a submit.
+
+        ```python
+        template_id = "TEMPLATE_ID"
+        draft_version_id = "DRAFT_VERSION_ID"
+        check = client.email.templates.versions.submit(template_id, draft_version_id, validate_only=True)
+        for problem in check.errors:
+            print(problem.language, problem.field, problem.message)
+        if check.valid:
+            result = client.email.templates.versions.submit(template_id, draft_version_id)
+            if result.version is not None:
+                print(result.version.version_number)
+        ```
+        """
         body = to_wire(
             EmailTemplateSubmit,
             {
@@ -191,7 +204,20 @@ class AsyncEmailTemplatesVersionsBase(AsyncResource):
         languages: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> EmailTemplateSubmitResult:
-        """Freeze a complete draft as the new immutable live version. Every language needs a subject and body, and the default language must be present. Submission is all or nothing and reports every language error. Set `validate_only: true` to check without publishing, or pass `expected_revision` to reject a concurrent edit. An unchanged draft is rejected. The response also carries `compatibility` across every language, each finding naming the language it is in: what the HTML uses that mail clients remove, ignore, or render inconsistently. Advisory and separate from `errors`, so a finding never fails a submit."""
+        """Freeze a complete draft as the new immutable live version. Every language needs a subject and body, and the default language must be present. Submission is all or nothing and reports every language error. Set `validate_only: true` to check without publishing, or pass `expected_revision` to reject a concurrent edit. An unchanged draft is rejected. The response also carries `compatibility` across every language, each finding naming the language it is in: what the HTML uses that mail clients remove, ignore, or render inconsistently. Advisory and separate from `errors`, so a finding never fails a submit.
+
+        ```python
+        template_id = "TEMPLATE_ID"
+        draft_version_id = "DRAFT_VERSION_ID"
+        check = await client.email.templates.versions.submit(template_id, draft_version_id, validate_only=True)
+        for problem in check.errors:
+            print(problem.language, problem.field, problem.message)
+        if check.valid:
+            result = await client.email.templates.versions.submit(template_id, draft_version_id)
+            if result.version is not None:
+                print(result.version.version_number)
+        ```
+        """
         body = to_wire(
             EmailTemplateSubmit,
             {
