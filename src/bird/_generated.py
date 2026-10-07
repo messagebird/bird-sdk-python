@@ -1699,7 +1699,7 @@ class ContactCreateRequest(BaseModel):
         max_length=254,
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
-        description="Custom property values for this contact. Each key must be an active contact property. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters, and a `null` value is ignored. Unregistered or archived keys return a validation error. The serialized data is limited to 2 KB.",
+        description="Custom property values for this contact. Each key must be a registered contact property, including an archived one. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters, and a `null` value is ignored. An unregistered key returns a validation error. The serialized data is limited to 2 KB.",
     )] = None
 
 
@@ -1721,7 +1721,7 @@ class ContactBatchEntry(BaseModel):
         description="Your identifier for the contact, up to 254 characters. Unique within the workspace when set.",
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
-        description="Custom contact property values. Keys must be registered and active; values must match their declared type. Strings can contain up to 500 characters and the serialized map is limited to 2 KB. Invalid values fail this contact. Null values remove keys when updating and are ignored when creating.",
+        description="Custom contact property values. Keys must be registered contact properties, including archived ones. Values must match their declared type. Strings can contain up to 500 characters and the serialized map is limited to 2 KB. Invalid values fail this contact. Null values remove keys when updating and are ignored when creating.",
     )] = None
 
 
@@ -1851,7 +1851,7 @@ class ContactUpdateRequest(BaseModel):
         max_length=254,
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
-        description="Custom property values to merge into the contact's existing data. Supplied keys are set, keys with a `null` value are removed, and omitted keys remain unchanged. Each key must be an active contact property. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters. An unregistered or archived key returns a validation error. The serialized result is limited to 2 KB.",
+        description="Custom property values to merge into the contact's existing data. Supplied keys are set, keys with a `null` value are removed, and omitted keys remain unchanged. Each key must be a registered contact property, including an archived one. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters. An unregistered key returns a validation error. The serialized result is limited to 2 KB.",
     )] = None
 
 
@@ -2081,7 +2081,7 @@ class ContactProperty(BaseModel):
         max_length=500,
     )] = None
     archived: Annotated[Optional[bool], Field(
-        description="Whether the property is archived. Archived keys are rejected in new contact writes and when publishing a new template version. Stored contact values are preserved, and previously published versions keep rendering them. Unarchive the property to use its key in new writes and template versions.",
+        description="Whether the property is archived. Archived properties disappear from pickers and cannot be used in new template versions. Published templates keep sending. Stored values remain available to read and update. Unarchive the property to restore it.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]

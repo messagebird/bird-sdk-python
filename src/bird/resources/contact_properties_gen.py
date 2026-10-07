@@ -149,7 +149,7 @@ class ContactProperties(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
-        """Archive a contact property: the key is rejected in new contact writes and can no longer be used in a template version you publish, while stored values remain readable and versions published before the archive keep sending. Succeeds whatever else reads the key; only an already-archived property is refused. The key stays reserved and counts toward the 200-property limit; reverse with `contact_properties.unarchive`.
+        """Archive a contact property to remove it, and restore it with `contact_properties.unarchive`. It disappears from pickers and cannot be used in new template versions. Published templates keep sending. Stored values remain available, and API writes and imports still accept values of the property's type. Returns a 409 conflict if the property is already archived. Also returns a 409 while a published automation, including a paused one, uses the property in a trigger or contact write, or while an active run writes it. Remove the property from those automations or archive them, and let active runs finish or cancel them before retrying. The key stays reserved and counts toward the 200-property limit.
 
         ```python
         prop = client.contact_properties.archive("prp_01krdgeqcxet5s7t44vh8rt9mg")
@@ -169,7 +169,7 @@ class ContactProperties(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
-        """Reactivate an archived contact property so its key is accepted in contact writes and new template versions. Stored values are unchanged. Fails with a conflict if the property is not archived.
+        """Restore an archived contact property with its stored values. It appears in property pickers again and can be used in new template versions. Unarchiving a property that is not archived returns a `409` conflict.
 
         ```python
         prop = client.contact_properties.unarchive("prp_01krdgeqcxet5s7t44vh8rt9mg")
@@ -292,7 +292,7 @@ class AsyncContactProperties(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
-        """Archive a contact property: the key is rejected in new contact writes and can no longer be used in a template version you publish, while stored values remain readable and versions published before the archive keep sending. Succeeds whatever else reads the key; only an already-archived property is refused. The key stays reserved and counts toward the 200-property limit; reverse with `contact_properties.unarchive`.
+        """Archive a contact property to remove it, and restore it with `contact_properties.unarchive`. It disappears from pickers and cannot be used in new template versions. Published templates keep sending. Stored values remain available, and API writes and imports still accept values of the property's type. Returns a 409 conflict if the property is already archived. Also returns a 409 while a published automation, including a paused one, uses the property in a trigger or contact write, or while an active run writes it. Remove the property from those automations or archive them, and let active runs finish or cancel them before retrying. The key stays reserved and counts toward the 200-property limit.
 
         ```python
         prop = await client.contact_properties.archive("prp_01krdgeqcxet5s7t44vh8rt9mg")
@@ -312,7 +312,7 @@ class AsyncContactProperties(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
-        """Reactivate an archived contact property so its key is accepted in contact writes and new template versions. Stored values are unchanged. Fails with a conflict if the property is not archived.
+        """Restore an archived contact property with its stored values. It appears in property pickers again and can be used in new template versions. Unarchiving a property that is not archived returns a `409` conflict.
 
         ```python
         prop = await client.contact_properties.unarchive("prp_01krdgeqcxet5s7t44vh8rt9mg")
