@@ -42,6 +42,8 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/inbox-insights/benchmarks/industry": {"get"},
     "/v1/email/inbox-insights/domains/{sending_domain}": {"patch"},
     "/v1/email/inbox-insights/domain-monitoring": {"post"},
+    "/v1/email/inbox-insights/seed-tests/configuration": {"get"},
+    "/v1/email/inbox-insights/seed-tests": {"get", "post"},
     "/v1/email/templates": {"get", "post"},
     "/v1/email/templates/{template_ref}": {"delete", "get", "patch"},
     "/v1/email/templates/{template_ref}/duplicate": {"post"},

@@ -484,6 +484,8 @@ from bird._open_enums import (
     EmailInboxInsightsDmarcVerdict,
     EmailInboxInsightsTrapType,
     EmailInboxInsightsTrapSource,
+    EmailInboxInsightsSeedEngagementProfile,
+    EmailInboxInsightsSeedListType,
     EmailCompetitiveCampaignSignal,
 
     EmailEventType,
@@ -582,6 +584,13 @@ from bird.resources.email_inbox_insights_domains_gen import (
     EmailInboxInsightsDomainsListParams,
     EmailInboxInsightsDomainsUpdateParams,
 )
+from bird.resources.email_inbox_insights_seed_tests_gen import (
+    EmailInboxInsightsSeedTestsCreateParams,
+    EmailInboxInsightsSeedTestsListParams,
+)
+from bird.resources.email_inbox_insights_seed_tests_configuration_gen import (
+    EmailInboxInsightsSeedTestsConfigurationGetParams,
+)
 from bird.resources.email_inbox_insights_gen import (
     EmailInboxInsightsPlacementParams,
     EmailInboxInsightsAuthenticationParams,
@@ -608,6 +617,10 @@ from bird._generated import (
     EmailInboxInsightsIndustryBenchmark,
     EmailInboxInsightsPlacement,
     EmailInboxInsightsSpamTraps,
+    EmailInboxInsightsSeedTestCreate,
+    EmailInboxInsightsSeedTestRegistration,
+    EmailInboxInsightsSeedTests,
+    EmailInboxInsightsSeedTestConfiguration,
 )
 
 __all__ = [
@@ -734,6 +747,8 @@ __all__ = [
     "EmailInboxInsightsDmarcVerdict",
     "EmailInboxInsightsTrapType",
     "EmailInboxInsightsTrapSource",
+    "EmailInboxInsightsSeedEngagementProfile",
+    "EmailInboxInsightsSeedListType",
     "EmailCompetitiveCampaignSignal",
 
     "EmailCompetitiveBrandsSearchParams",
@@ -770,6 +785,13 @@ __all__ = [
     "EmailInboxInsightsIndustryBenchmark",
     "EmailInboxInsightsPlacement",
     "EmailInboxInsightsSpamTraps",
+    "EmailInboxInsightsSeedTestCreate",
+    "EmailInboxInsightsSeedTestRegistration",
+    "EmailInboxInsightsSeedTests",
+    "EmailInboxInsightsSeedTestConfiguration",
+    "EmailInboxInsightsSeedTestsCreateParams",
+    "EmailInboxInsightsSeedTestsListParams",
+    "EmailInboxInsightsSeedTestsConfigurationGetParams",
 
     "Bird",
     "AsyncBird",

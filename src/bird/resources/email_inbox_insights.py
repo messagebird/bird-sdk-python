@@ -6,10 +6,13 @@ from bird.resources.email_inbox_insights_domains_gen import AsyncEmailInboxInsig
 from bird.resources.email_inbox_insights_domain_monitoring_gen import AsyncEmailInboxInsightsDomainMonitoring, EmailInboxInsightsDomainMonitoring
 from bird.resources.email_inbox_insights_benchmarks_gen import AsyncEmailInboxInsightsBenchmarks, EmailInboxInsightsBenchmarks
 
+from bird.resources.email_inbox_insights_seed_tests import AsyncEmailInboxInsightsSeedTests, EmailInboxInsightsSeedTests
+
 
 class EmailInboxInsights(EmailInboxInsightsBase):
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
+        self.seed_tests = EmailInboxInsightsSeedTests(client)
         self.domains = EmailInboxInsightsDomains(client)
         self.domain_monitoring = EmailInboxInsightsDomainMonitoring(client)
         self.benchmarks = EmailInboxInsightsBenchmarks(client)
@@ -18,6 +21,7 @@ class EmailInboxInsights(EmailInboxInsightsBase):
 class AsyncEmailInboxInsights(AsyncEmailInboxInsightsBase):
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
+        self.seed_tests = AsyncEmailInboxInsightsSeedTests(client)
         self.domains = AsyncEmailInboxInsightsDomains(client)
         self.domain_monitoring = AsyncEmailInboxInsightsDomainMonitoring(client)
         self.benchmarks = AsyncEmailInboxInsightsBenchmarks(client)

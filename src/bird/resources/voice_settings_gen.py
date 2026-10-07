@@ -14,10 +14,28 @@ from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 
 
+class _MoneyRequired(TypedDict):
+    amount: str
+    currency_code: str
+
+
+class Money(_MoneyRequired, total=False):
+    pass
+
+
+class _VoiceDailySpendLimitUpdateRequired(TypedDict):
+    workspace_limit: Money
+
+
+class VoiceDailySpendLimitUpdate(_VoiceDailySpendLimitUpdateRequired, total=False):
+    pass
+
+
 class VoiceSettingsUpdateParams(TypedDict, total=False):
     """Params for ``client.voice.settings.update``. Every key is optional."""
 
     inbound_configuration: VoiceSettingsInboundConfigurationPut
+    daily_spend_limit: VoiceDailySpendLimitUpdate
 
 
 class VoiceSettingsResource(Resource):
@@ -26,7 +44,7 @@ class VoiceSettingsResource(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceSettings:
-        """Read the workspace's voice settings, including the default inbound route that every Bird number without its own route follows. Bird numbers whose `inbound_configuration.route` is null use this route; verified caller IDs receive no calls and never do.
+        """Read the workspace's voice settings: the default inbound route that every Bird number without its own route follows, and the daily spend limit with today's usage toward it. Bird numbers whose `inbound_configuration.route` is null use this route; verified caller IDs receive no calls and never do.
 
         ```python
         settings = client.voice.settings.get()
@@ -44,9 +62,10 @@ class VoiceSettingsResource(Resource):
         self,
         *,
         inbound_configuration: VoiceSettingsInboundConfigurationPut | None = None,
+        daily_spend_limit: VoiceDailySpendLimitUpdate | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceSettings:
-        """Change the workspace's default inbound route. Every Bird number whose own route is null follows it from the next call (verified caller IDs receive no calls): `reject` refuses those calls, `trunk` with a trunk_id delivers them to one of your SIP trunks, and `forward` with a forward_to and a forward_as connects them to one of your verified caller IDs. Numbers with a route of their own are unaffected.
+        """Change the workspace's default inbound route. Every Bird number whose own route is null follows it from the next call (verified caller IDs receive no calls): `reject` refuses those calls, `trunk` with a trunk_id delivers them to one of your SIP trunks, and `forward` with a forward_to and a forward_as connects them to one of your verified caller IDs. Numbers with a route of their own are unaffected. `daily_spend_limit.workspace_limit` sets the workspace's daily spend limit in the wallet currency, anywhere up to its `max_limit`, or null returns it to the default; calls in progress keep running. Read the wallet currency and `max_limit` with the get voice settings operation first.
 
         ```python
         from bird import VoiceCallRouteTrunk, VoiceCallRouteWritable, VoiceSettingsInboundConfigurationPut
@@ -65,6 +84,7 @@ class VoiceSettingsResource(Resource):
             VoiceSettingsUpdate,
             {
                 "inbound_configuration": inbound_configuration,
+                "daily_spend_limit": daily_spend_limit,
             },
         )
         return self._write(
@@ -82,7 +102,7 @@ class AsyncVoiceSettingsResource(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceSettings:
-        """Read the workspace's voice settings, including the default inbound route that every Bird number without its own route follows. Bird numbers whose `inbound_configuration.route` is null use this route; verified caller IDs receive no calls and never do.
+        """Read the workspace's voice settings: the default inbound route that every Bird number without its own route follows, and the daily spend limit with today's usage toward it. Bird numbers whose `inbound_configuration.route` is null use this route; verified caller IDs receive no calls and never do.
 
         ```python
         settings = await client.voice.settings.get()
@@ -100,9 +120,10 @@ class AsyncVoiceSettingsResource(AsyncResource):
         self,
         *,
         inbound_configuration: VoiceSettingsInboundConfigurationPut | None = None,
+        daily_spend_limit: VoiceDailySpendLimitUpdate | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceSettings:
-        """Change the workspace's default inbound route. Every Bird number whose own route is null follows it from the next call (verified caller IDs receive no calls): `reject` refuses those calls, `trunk` with a trunk_id delivers them to one of your SIP trunks, and `forward` with a forward_to and a forward_as connects them to one of your verified caller IDs. Numbers with a route of their own are unaffected.
+        """Change the workspace's default inbound route. Every Bird number whose own route is null follows it from the next call (verified caller IDs receive no calls): `reject` refuses those calls, `trunk` with a trunk_id delivers them to one of your SIP trunks, and `forward` with a forward_to and a forward_as connects them to one of your verified caller IDs. Numbers with a route of their own are unaffected. `daily_spend_limit.workspace_limit` sets the workspace's daily spend limit in the wallet currency, anywhere up to its `max_limit`, or null returns it to the default; calls in progress keep running. Read the wallet currency and `max_limit` with the get voice settings operation first.
 
         ```python
         from bird import VoiceCallRouteTrunk, VoiceCallRouteWritable, VoiceSettingsInboundConfigurationPut
@@ -121,6 +142,7 @@ class AsyncVoiceSettingsResource(AsyncResource):
             VoiceSettingsUpdate,
             {
                 "inbound_configuration": inbound_configuration,
+                "daily_spend_limit": daily_spend_limit,
             },
         )
         return await self._write(

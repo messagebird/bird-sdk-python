@@ -232,6 +232,22 @@ class EmailInboxInsightsGmailTab:
     UPDATES: Final = "updates"
 
 
+class EmailInboxInsightsSeedEngagementProfile:
+    """Values of EmailInboxInsightsSeedEngagementProfile known at this SDK version (open enum)."""
+
+    ALL: Final = "all"
+    ENGAGING: Final = "engaging"
+    NON_ENGAGING: Final = "non_engaging"
+
+
+class EmailInboxInsightsSeedListType:
+    """Values of EmailInboxInsightsSeedListType known at this SDK version (open enum)."""
+
+    EXCLUSIVE: Final = "exclusive"
+    PRIVATE: Final = "private"
+    PUBLIC: Final = "public"
+
+
 class EmailInboxInsightsTrapSource:
     """Values of EmailInboxInsightsTrapSource known at this SDK version (open enum)."""
 
@@ -801,6 +817,8 @@ __all__ = [
     "EmailInboxInsightsDmarcReadinessReason",
     "EmailInboxInsightsDmarcVerdict",
     "EmailInboxInsightsGmailTab",
+    "EmailInboxInsightsSeedEngagementProfile",
+    "EmailInboxInsightsSeedListType",
     "EmailInboxInsightsTrapSource",
     "EmailInboxInsightsTrapType",
     "EmailLookupFlag",

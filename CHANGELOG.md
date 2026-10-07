@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.90.0
+
+- Add Inbox Insights seed configuration, registration and history with existing `inbox_insights` permissions and organization preview access. Registration consumes shared allowance and returns addresses for a separately authorized send; uncertain outcomes require support before starting another test.
+
 ## 0.89.1
 
 - `released_at` is now always present on a number, `null` while it is still allocated to your workspace.

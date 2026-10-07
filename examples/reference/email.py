@@ -473,3 +473,53 @@ def email_stats_query() -> None:
     )
     for group in stats.data:
         print(group.dimensions, group.metrics, group.series)
+
+
+def seed_tests_configuration_get() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.seed_tests.configuration.get(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def seed_tests_list() -> None:
+    # Requires Insights preview access for the organization.
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    report = client.email.inbox_insights.seed_tests.list(sending_domain=sending_domain)
+    print(report.model_dump_json())
+
+
+def seed_tests_create() -> None:
+    # Requires Insights preview access for the organization.
+    import os
+
+    idempotency_key = os.getenv("IDEMPOTENCY_KEY")
+    if not idempotency_key:
+        raise ValueError("Set IDEMPOTENCY_KEY to a unique key for this registration and retain it for retries")
+    sending_domain = None
+    for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
+        if domain.domain == "mail.example.com":
+            sending_domain = domain.domain
+            break
+    if sending_domain is None:
+        raise ValueError("Verify mail.example.com in this workspace first")
+    configuration = client.email.inbox_insights.seed_tests.configuration.get(sending_domain=sending_domain)
+    pool = next((choice for choice in configuration.list_types if choice.available), None)
+    profile = next((choice for choice in configuration.engagement_profiles if choice.available), None)
+    if pool is None or profile is None or not configuration.regions:
+        raise ValueError("No seed-test options available")
+
+    report = client.email.inbox_insights.seed_tests.create(sending_domain=sending_domain, list_type=pool.value, engagement_profile=profile.value, regions=[configuration.regions[0].value], options={"idempotency_key": idempotency_key})
+    print(report.model_dump_json())

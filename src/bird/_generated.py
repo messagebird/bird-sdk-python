@@ -12292,6 +12292,420 @@ class EmailInboxInsightsIndustryBenchmark(BaseModel):
     )]
 
 
+class EmailInboxInsightsSeedListType(str, Enum):
+    private = "private"
+    public = "public"
+    exclusive = "exclusive"
+
+
+class EmailInboxInsightsSeedEngagementProfile(str, Enum):
+    all = "all"
+    engaging = "engaging"
+    non_engaging = "non_engaging"
+
+
+class EmailInboxInsightsSeedTestRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    test_id: Annotated[str, Field(
+        description="The test's identifier. It is a string and needs to stay one: the values are long enough that any language storing every number as a floating point value will round them, and a rounded identifier matches no test.",
+        examples=[91901],
+        min_length=1,
+    )]
+    subject: Annotated[Optional[str], Field(
+        description="Subject line of the tested send, or null before the send goes out. With `tested_at`, this is what distinguishes a test that has run from one still waiting for its send.",
+        examples=["Fall Preview, first look"],
+    )]
+    tested_at: Annotated[Optional[str], Field(
+        description="When the tested send went out, or null while the test is still awaiting it.",
+        examples=["2026-08-13T09:12:00Z"],
+    )]
+    list_type: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")]], Field(
+        description="The seed pool the test used, or null on a test that predates the recording of it.",
+    )]
+    engagement_profile: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")]], Field(
+        description="The engagement behaviour the seeds simulated, or null on a test that predates the recording of it.",
+    )]
+    seed_count: Annotated[Optional[int], Field(
+        description="How many seed addresses the test used.",
+        examples=[212],
+        ge=0,
+    )]
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the test's seed addresses that received the message in the inbox, as a percentage. Null until results arrive.",
+        examples=[89.2],
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the test was run for.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    regions: Annotated[Optional[List[str]], Field(
+        description="The regions the test placed seeds in, as the seed-test options name them. Null on a test that predates registration, whose regions were never recorded (the same unknown `list_type` and `engagement_profile` carry), and not an empty list, which would claim a test placed seeds in no region at all.",
+    )]
+    delta_pts_vs_prior: Annotated[Optional[float], Field(
+        description="How this test's inbox rate compares with the previous test for the same domain, in percentage points. Null when there is no earlier test to compare against.",
+        examples=[-3.1],
+    )]
+
+
+class EmailInboxInsightsSeedTestList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsSeedTestRow], Field(
+        description="One row per seed test, newest first.",
+    )]
+    truncated: Annotated[bool, Field(
+        description="True when the period holds more than the 100 tests returned, so the list is the newest of them rather than all of them. Request an earlier period to reach the tests left out.",
+        examples=[False],
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsGmailCategory(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[Annotated[Union[EmailInboxInsightsGmailTab, str], Field(union_mode="left_to_right")], Field(
+        description="A Gmail tab, as the measurement identifies it. A lowercase identifier rather than a\ndisplay name, so pick your own label for it, and treat the set as open: these are\nGmail's own tabs, and the measurement reports whichever one it saw.\n\n`none` is a value rather than an absence: Gmail delivered the mail under no tab at all,\nwhich is an ordinary outcome and not a gap in the measurement.",
+    )]
+    share_percent: Annotated[Optional[float], Field(
+        description="Share of the test's Gmail seeds that landed under this tab, as a percentage.",
+        examples=[61.0],
+    )]
+
+
+class EmailInboxInsightsSeedTestProvider(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mailbox_provider: Annotated[str, Field(
+        description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this provider's seeds that received the message in the inbox, as a percentage.",
+        examples=[95.0],
+    )]
+    spam_rate_percent: Annotated[Optional[float], Field(
+        description="Share of this provider's seeds that received the message in spam, as a percentage.",
+        examples=[5.0],
+    )]
+    inbox_seeds: Annotated[int, Field(
+        description="Seed addresses at this provider that received the message in the inbox.",
+        examples=[61],
+        ge=0,
+    )]
+    spam_seeds: Annotated[int, Field(
+        description="Seed addresses at this provider that received the message in spam.",
+        examples=[3],
+        ge=0,
+    )]
+    total_seeds: Annotated[int, Field(
+        description="Seed addresses at this provider included in the test.",
+        examples=[64],
+        ge=0,
+    )]
+    gmail_category: Annotated[Optional[EmailInboxInsightsGmailCategory], Field(
+        description="Which Gmail tab the test's Gmail seeds mostly landed under.",
+    )] = None
+
+
+class EmailInboxInsightsSeedTestProviders(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsSeedTestProvider], Field(
+        description="One row per mailbox provider the test placed seeds at.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsSeedTestAuth(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    spf_pass_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the test's seed mail that passed SPF, as a percentage.",
+        examples=[100.0],
+    )]
+    dkim_pass_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the test's seed mail that passed DKIM, as a percentage.",
+        examples=[100.0],
+    )]
+    dmarc_aligned_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the test's seed mail that passed DMARC alignment, as a percentage.",
+        examples=[100.0],
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsSeedEngagementSplitRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    mailbox_provider: Annotated[str, Field(
+        description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    engaged_inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Inbox rate across seeds simulating engaged recipients, as a percentage.",
+        examples=[96.0],
+    )]
+    dormant_inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Inbox rate across seeds simulating dormant recipients, as a percentage.",
+        examples=[71.0],
+    )]
+    gap_pts: Annotated[Optional[float], Field(
+        description="Engaged inbox rate minus dormant inbox rate, in percentage points. The value can be negative, which means dormant seeds placed better, and is reported as measured rather than floored at zero.",
+        examples=[25.0],
+    )]
+    engaged_seeds: Annotated[int, Field(
+        description="Seeds simulating engaged recipients at this provider.",
+        examples=[32],
+        ge=0,
+    )]
+    dormant_seeds: Annotated[int, Field(
+        description="Seeds simulating dormant recipients at this provider.",
+        examples=[32],
+        ge=0,
+    )]
+
+
+class EmailInboxInsightsSeedEngagementSplit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    items: Annotated[List[EmailInboxInsightsSeedEngagementSplitRow], Field(
+        description="One row per provider where both cohorts placed seeds.",
+    )]
+    status: Annotated[EmailInboxInsightsSectionStatus, Field(
+        description="Whether a section of the response carries figures, and when it does not, why.\n\n`ok` means the section is populated. `no_data` means the measurement ran and\nobserved nothing to report for this domain in the period. `not_configured`\nmeans the section needs a setup step that has not been completed yet, such as\nconnecting Google Postmaster Tools; treat it as an invitation to finish\nsetup rather than a fault. `unavailable` means the figures could not be retrieved this time and\nthe same request may well succeed on a retry; the rest of the response is\nunaffected. `not_applicable` means the section is meaningless for this domain\nin this period, so there is nothing to show or fix.\n\nA successful response never implies every section is populated; read each\nsection's status rather than assuming figures are present.",
+    )]
+
+
+class EmailInboxInsightsSeedTestDetail(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    test_id: Annotated[str, Field(
+        description="The test's identifier. It is a string and needs to stay one: the values are long enough that any language storing every number as a floating point value will round them, and a rounded identifier matches no test.",
+        examples=[91901],
+        min_length=1,
+    )]
+    subject: Annotated[Optional[str], Field(
+        description="Subject line of the tested send, or null before the send goes out. With `tested_at`, this is what distinguishes a test that has run from one still waiting for its send.",
+        examples=["Fall Preview, first look"],
+    )]
+    tested_at: Annotated[Optional[str], Field(
+        description="When the tested send went out, or null while the test is still awaiting it.",
+        examples=["2026-08-13T09:12:00Z"],
+    )]
+    list_type: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")]], Field(
+        description="The seed pool the test used, or null on a test that predates the recording of it.",
+    )]
+    engagement_profile: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")]], Field(
+        description="The engagement behaviour the seeds simulated, or null on a test that predates the recording of it.",
+    )]
+    seed_count: Annotated[Optional[int], Field(
+        description="How many seed addresses the test used.",
+        examples=[212],
+        ge=0,
+    )]
+    inbox_rate_percent: Annotated[Optional[float], Field(
+        description="Share of the test's seed addresses that received the message in the inbox, as a percentage. Null until results arrive.",
+        examples=[89.2],
+    )]
+    providers: Annotated[EmailInboxInsightsSeedTestProviders, Field(
+        description="The per-provider grid for one seed test.",
+    )]
+    auth: Annotated[EmailInboxInsightsSeedTestAuth, Field(
+        description="How the tested send authenticated, measured on the seed mail itself rather than on reporting from receivers.",
+    )]
+    engagement_split: Annotated[EmailInboxInsightsSeedEngagementSplit, Field(
+        description="Engaged against dormant placement, per provider. The status is `not_applicable` for a test run with a single-cohort engagement profile, where there is no second group to compare: hide the comparison rather than showing a zero gap.",
+    )]
+
+
+class EmailInboxInsightsSeedTestQuota(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    used: Annotated[int, Field(
+        description="Allowance used in the current billing period, including retained uncertain registrations. When `limit` is null, usage is not tracked and this field is zero.",
+        examples=[112],
+        ge=0,
+    )]
+    limit: Annotated[Optional[int], Field(
+        description="Seed tests included in the billing period, or null when no cap applies to this organization.",
+        examples=[300],
+        ge=0,
+    )]
+    resets_at: Annotated[str, Field(
+        description="When the billing-period allowance next resets.",
+        examples=["2026-09-01T00:00:00Z"],
+        min_length=1,
+    )]
+
+
+class EmailInboxInsightsSeedTests(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["placement"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain the figures describe.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
+    )] = None
+    generated_at: Annotated[str, Field(
+        description="When these figures were computed. The measurement service's own stamp where it publishes one; on the resources Bird derives from daily rates it has none to publish, and this is when Bird computed them.",
+        examples=["2026-08-18T09:34:00Z"],
+        min_length=1,
+    )]
+    freshness: Annotated[EmailInboxInsightsFreshness, Field(
+        description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
+    )]
+    cached_at: Annotated[Optional[str], Field(
+        description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
+        examples=["2026-08-18T09:40:02Z"],
+    )] = None
+    window: Annotated[EmailInboxInsightsWindow, Field(
+        description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
+    )]
+    compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
+    )] = None
+    tests: Annotated[EmailInboxInsightsSeedTestList, Field(
+        description="The domain's seed tests over the period, newest first, up to 100 of them. The list is capped rather than paged, so `truncated` says whether older tests in the period were left out.",
+    )]
+    latest: Annotated[Optional[EmailInboxInsightsSeedTestDetail], Field(
+        description="One seed test with its full results.",
+    )] = None
+    quota: Annotated[EmailInboxInsightsSeedTestQuota, Field(
+        description="The organization's seed-test allowance for the current billing period. Registering a test spends one of the allowance whether or not its send goes out, and a test that expires unused does not return it. Uncertain registrations can retain allowance.",
+    )]
+
+
+class EmailInboxInsightsSeedTestCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sending_domain: Annotated[str, Field(
+        description="The sending domain the test measures: one of the workspace's verified sending domains, exactly as it appears there.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    list_type: Annotated[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")], Field(
+        description="Which pool of seed addresses a test uses. Which pools an account can use depends on what has been provisioned for it, so read the usable set from the seed-test options rather than assuming these are the only values.",
+    )]
+    engagement_profile: Annotated[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")], Field(
+        description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
+    )]
+    regions: Annotated[List[str], Field(
+        description="The regions to place seeds in, as the seed-test configuration names them.",
+        min_length=1,
+    )]
+    label: Annotated[Optional[str], Field(
+        description="A name attached to this registration. It is not returned in seed-test history.",
+        examples=["Fall preview send"],
+        max_length=200,
+        min_length=1,
+    )] = None
+
+
+class EmailInboxInsightsSeedAddress(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    address: Annotated[str, Field(
+        description="The address to add to the send's recipients. Include it exactly as given; an altered address is not a seed and will not be measured.",
+        examples=["sd8241.hk@example-seeds.net"],
+        min_length=1,
+    )]
+    mailbox_provider: Annotated[str, Field(
+        description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    region: Annotated[str, Field(
+        description="The region this address sits in, as the seed-test choices name it.",
+        examples=["North America - US"],
+        min_length=1,
+    )]
+    engaging: Annotated[bool, Field(
+        description="Whether this address simulates a recipient who engages with mail. There are two behaviours rather than a scale, so a test either mixes both or uses one of them.",
+        examples=[True],
+    )]
+
+
+class EmailInboxInsightsSeedTestRegistration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    registration_id: Annotated[str, Field(
+        description="Identifies this registration. It is not the identifier the seed-test list\nreports for the resulting test.\n\nIt is here so a registration can be quoted in a support conversation, and\nso a client can tell two registrations apart. To read the results, find\nthe test in the seed-test list for this domain.",
+        examples=["43ea66c8-6837-48a4-b81b-26fdf5cc8cd8"],
+        min_length=1,
+    )]
+    seed_addresses: Annotated[List[EmailInboxInsightsSeedAddress], Field(
+        description="Every address to include in the tested send. Copy them into the send's recipients; results are measured from mail these addresses receive.",
+    )]
+    seed_count: Annotated[int, Field(
+        description="How many seed addresses the test issued.",
+        examples=[212],
+        ge=0,
+    )]
+    expires_at: Annotated[str, Field(
+        description="When the test expires if no seed mail has arrived. An expired test never produces results, and the allowance it spent is not returned, so send before this time.",
+        examples=["2026-08-27T09:12:00Z"],
+        min_length=1,
+    )]
+
+
+class EmailInboxInsightsSeedListTypeOption(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")], Field(
+        description="Which pool of seed addresses a test uses. Which pools an account can use depends on what has been provisioned for it, so read the usable set from the seed-test options rather than assuming these are the only values.",
+    )]
+    available: Annotated[bool, Field(
+        description="Whether this pool is provisioned for the account. An unavailable pool is one the account has not been set up for rather than one its plan forbids, and there is no self-serve way to enable one, so leave it out of the choices you offer rather than showing it unpickable.",
+        examples=[True],
+    )]
+
+
+class EmailInboxInsightsSeedRegionOption(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[str, Field(
+        description="The value to send when registering a test against this region. Free text rather than an enumeration: the set belongs to the measurement and is wider than the continents it looks like, so send one of these back verbatim rather than composing your own.",
+        examples=["North America - US"],
+        min_length=1,
+    )]
+
+
+class EmailInboxInsightsSeedEngagementProfileOption(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")], Field(
+        description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
+    )]
+    available: Annotated[bool, Field(
+        description="Whether this behaviour is provisioned for the account. As with the seed pools, an unavailable behaviour is one the account has not been set up for rather than one its plan forbids, so leave it out of the choices you offer rather than showing it unpickable.",
+        examples=[True],
+    )]
+
+
+class EmailInboxInsightsSeedTestConfiguration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource: Annotated[str, Field(
+        description="Which resource this response is, echoed for self-description.",
+        examples=["seed-test-configuration"],
+        min_length=1,
+    )]
+    domain: Annotated[str, Field(
+        description="The sending domain these choices apply to.",
+        examples=["mail.acme.com"],
+        min_length=1,
+    )]
+    list_types: Annotated[List[EmailInboxInsightsSeedListTypeOption], Field(
+        description="The seed pools, each flagged with whether the account can use it.",
+    )]
+    regions: Annotated[List[EmailInboxInsightsSeedRegionOption], Field(
+        description="The regions seeds can be placed in. Objects rather than bare strings, to match the two lists beside it: the measurement reports no availability for a region today, and an object can carry one later without a second array.",
+    )]
+    engagement_profiles: Annotated[List[EmailInboxInsightsSeedEngagementProfileOption], Field(
+        description="The engagement behaviours the seeds can simulate, each flagged with whether the account can use it.",
+    )]
+
+
 class EmailInboxInsightsDomain(BaseModel):
     model_config = ConfigDict(extra="allow")
     domain: Annotated[str, Field(
@@ -22189,10 +22603,46 @@ class VoiceSettingsInboundConfiguration(BaseModel):
     )]
 
 
+class VoiceDailySpendLimit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    currency_code: Annotated[str, Field(
+        description="ISO 4217 three-letter currency code.",
+        examples=["EUR"],
+        max_length=3,
+        min_length=3,
+        pattern="^[A-Z]{3}$",
+    )]
+    limit: Annotated[Optional[Money], Field(
+        description="The daily limit calls are admitted against: the workspace limit when one is set, otherwise the default, and never more than `max_limit`. Null when there is no limit.",
+    )]
+    used: Annotated[Optional[Money], Field(
+        description="Used toward today's limit, including calls in progress. A call counts its expected cost when it starts; the part it did not use returns when it is billed. Null when today's usage cannot be read right now; the limit is still enforced.",
+    )]
+    remaining: Annotated[Optional[Money], Field(
+        description="What is left of the limit today, never below zero. Null when there is no limit or today's usage cannot be read.",
+    )]
+    resets_at: Annotated[str, Field(
+        description="When usage resets to zero, at midnight UTC.",
+        min_length=1,
+    )]
+    default_limit: Annotated[Optional[Money], Field(
+        description="The daily limit a workspace has until it sets its own. Null when there is no default limit.",
+    )]
+    max_limit: Annotated[Optional[Money], Field(
+        description="The highest daily limit this workspace can set. Null when there is no maximum.",
+    )]
+    workspace_limit: Annotated[Optional[Money], Field(
+        description="The daily limit this workspace set for itself. Null when it uses the default.",
+    )]
+
+
 class VoiceSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
     inbound_configuration: Annotated[VoiceSettingsInboundConfiguration, Field(
         description="What happens to a call arriving for any of your Bird numbers that has no inbound route of its own.",
+    )]
+    daily_spend_limit: Annotated[Optional[VoiceDailySpendLimit], Field(
+        description="The workspace's daily Voice spend limit and today's usage toward it. Null until your organization has a wallet, since amounts are in its currency.",
     )]
 
 
@@ -22203,11 +22653,19 @@ class VoiceSettingsInboundConfigurationPut(BaseModel):
     )]
 
 
+class VoiceDailySpendLimitUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    workspace_limit: Annotated[Optional[Money], Field(
+        description="The workspace's own daily limit, in the organization's wallet currency from zero up to `max_limit`, with at most six decimal places; a negative or more precise amount is refused with 422. It can be above or below the default. Null removes it, so the default applies.",
+    )]
+
+
 class VoiceSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     inbound_configuration: Annotated[Optional[VoiceSettingsInboundConfigurationPut], Field(
         description="The route for calls arriving on any of your Bird numbers that has no inbound route of its own; verified caller IDs receive no calls. It takes effect on the next call to each of those numbers. Numbers with their own route keep it.",
     )] = None
+    daily_spend_limit: Optional[VoiceDailySpendLimitUpdate] = None
 
 
 class VoiceVerifiedNumberID(RootModel[str]):
