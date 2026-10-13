@@ -12,6 +12,8 @@ from bird._generated import (
     AudienceContactsRemoveRequest,
     AudienceCreateRequest,
     AudienceMember,
+    AudienceMembershipResponse,
+    AudienceMembershipStatisticsResponse,
     AudienceUpdateRequest,
 )
 from bird._models import to_wire, to_wire_exclude_unset
@@ -70,6 +72,13 @@ class _AudienceRemoveContactsRequired(TypedDict):
 
 class AudienceRemoveContactsParams(_AudienceRemoveContactsRequired, total=False):
     """Params for ``client.audiences.remove_contacts``. ``contact_ids`` is required."""
+
+
+class AudienceMembershipHistoryParams(TypedDict, total=False):
+    """Query params for ``client.audiences.membership_history``. Every key is optional."""
+
+    from_: str
+    to: str
 
 
 class Audiences(Resource):
@@ -289,6 +298,55 @@ class Audiences(Resource):
         """
         self._delete(f"/v1/audiences/{quote(audience_id, safe='')}/contacts/{quote(contact_id, safe='')}", options)
 
+    def membership(
+        self,
+        audience_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AudienceMembershipResponse:
+        """Exact current member count of one audience, including contacts without email and unsubscribed contacts, with the `data_as_of` evaluation instant. An empty audience returns `total` 0; when the count is unavailable the response is `{}` with no `membership`, never 0. For daily history use `audiences.membership_history`.
+
+        ```python
+        result = client.audiences.membership("adn_01krdgeqcxet5s7t44vh8rt9mg")
+        if result.membership is not None:
+            print(result.membership.total, result.membership.data_as_of)
+        ```
+        """
+        return self._get(
+            f"/v1/audiences/{quote(audience_id, safe='')}/membership",
+            {},
+            AudienceMembershipResponse,
+            options,
+        )
+
+    def membership_history(
+        self,
+        audience_id: str,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AudienceMembershipStatisticsResponse:
+        """Daily audience member counts for inclusive UTC dates `from`..`to`, default the last 31 dates ending today, at most 365, no future dates. Each point is the first observation of that date with its actual `observed_at`; a date without one has null `total` and `observed_at`, never 0. Period `data_as_of` is always null. For the current exact count use `audiences.membership`.
+
+        ```python
+        history = client.audiences.membership_history(
+            "adn_01krdgeqcxet5s7t44vh8rt9mg", from_="2026-10-09", to="2026-10-12",
+        )
+        for point in history.data:
+            print(point.bucket, point.total, point.observed_at)
+        ```
+        """
+        return self._get(
+            f"/v1/audiences/{quote(audience_id, safe='')}/membership-statistics",
+            {
+                "from": from_,
+                "to": to,
+            },
+            AudienceMembershipStatisticsResponse,
+            options,
+        )
+
 
 class AsyncAudiences(AsyncResource):
     def list(
@@ -506,3 +564,52 @@ class AsyncAudiences(AsyncResource):
         ```
         """
         await self._delete(f"/v1/audiences/{quote(audience_id, safe='')}/contacts/{quote(contact_id, safe='')}", options)
+
+    async def membership(
+        self,
+        audience_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AudienceMembershipResponse:
+        """Exact current member count of one audience, including contacts without email and unsubscribed contacts, with the `data_as_of` evaluation instant. An empty audience returns `total` 0; when the count is unavailable the response is `{}` with no `membership`, never 0. For daily history use `audiences.membership_history`.
+
+        ```python
+        result = await client.audiences.membership("adn_01krdgeqcxet5s7t44vh8rt9mg")
+        if result.membership is not None:
+            print(result.membership.total, result.membership.data_as_of)
+        ```
+        """
+        return await self._get(
+            f"/v1/audiences/{quote(audience_id, safe='')}/membership",
+            {},
+            AudienceMembershipResponse,
+            options,
+        )
+
+    async def membership_history(
+        self,
+        audience_id: str,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AudienceMembershipStatisticsResponse:
+        """Daily audience member counts for inclusive UTC dates `from`..`to`, default the last 31 dates ending today, at most 365, no future dates. Each point is the first observation of that date with its actual `observed_at`; a date without one has null `total` and `observed_at`, never 0. Period `data_as_of` is always null. For the current exact count use `audiences.membership`.
+
+        ```python
+        history = await client.audiences.membership_history(
+            "adn_01krdgeqcxet5s7t44vh8rt9mg", from_="2026-10-09", to="2026-10-12",
+        )
+        for point in history.data:
+            print(point.bucket, point.total, point.observed_at)
+        ```
+        """
+        return await self._get(
+            f"/v1/audiences/{quote(audience_id, safe='')}/membership-statistics",
+            {
+                "from": from_,
+                "to": to,
+            },
+            AudienceMembershipStatisticsResponse,
+            options,
+        )

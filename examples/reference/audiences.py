@@ -55,3 +55,17 @@ def audiences_remove_contact() -> None:
     client.audiences.remove_contact(
         "adn_01krdgeqcxet5s7t44vh8rt9mg", "con_01krdgeqcxet5s7t44vh8rt9mg",
     )
+
+
+def audiences_membership() -> None:
+    result = client.audiences.membership("adn_01krdgeqcxet5s7t44vh8rt9mg")
+    if result.membership is not None:
+        print(result.membership.total, result.membership.data_as_of)
+
+
+def audiences_membership_history() -> None:
+    history = client.audiences.membership_history(
+        "adn_01krdgeqcxet5s7t44vh8rt9mg", from_="2026-10-09", to="2026-10-12",
+    )
+    for point in history.data:
+        print(point.bucket, point.total, point.observed_at)

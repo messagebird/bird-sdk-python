@@ -196,6 +196,8 @@ KEEP: dict[str, set[str]] = {
     "/v1/audiences/{audience_id}/contacts": {"get", "post"},
     "/v1/audiences/{audience_id}/contacts/remove": {"post"},
     "/v1/audiences/{audience_id}/contacts/{contact_id}": {"delete"},
+    "/v1/audiences/{audience_id}/membership": {"get"},
+    "/v1/audiences/{audience_id}/membership-statistics": {"get"},
     "/v1/email/mailboxes": {"get", "post"},
     "/v1/email/mailboxes/{mailbox_id}": {"delete", "get", "patch"},
     "/v1/email/mailboxes/{mailbox_id}/restore": {"post"},

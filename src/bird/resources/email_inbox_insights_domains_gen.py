@@ -48,10 +48,10 @@ class EmailInboxInsightsDomains(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailInboxInsightsDomain]:
-        """List verified sending domains owned by the workspace and their monitoring settings. Follow next_cursor with starting_after, keeping filters and ordering. A monitored value records the workspace setting; it does not establish that vendor measurements exist. API-key calls require Insights preview access for your organization.
+        """List verified sending domains owned by the workspace and their monitoring settings. Follow next_cursor with starting_after, keeping filters and ordering. A monitored value records the workspace setting; it does not establish that vendor measurements exist.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         for domain in client.email.inbox_insights.domains.list(limit=25):
             print(domain.domain, domain.monitored)
         ```
@@ -74,10 +74,10 @@ class EmailInboxInsightsDomains(Resource):
         monitored: bool,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsDomain:
-        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change. API-key and service-account calls require Insights preview access for your organization.
+        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:write permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -117,10 +117,10 @@ class AsyncEmailInboxInsightsDomains(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailInboxInsightsDomain]:
-        """List verified sending domains owned by the workspace and their monitoring settings. Follow next_cursor with starting_after, keeping filters and ordering. A monitored value records the workspace setting; it does not establish that vendor measurements exist. API-key calls require Insights preview access for your organization.
+        """List verified sending domains owned by the workspace and their monitoring settings. Follow next_cursor with starting_after, keeping filters and ordering. A monitored value records the workspace setting; it does not establish that vendor measurements exist.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         async for domain in client.email.inbox_insights.domains.list(limit=25):
             print(domain.domain, domain.monitored)
         ```
@@ -143,10 +143,10 @@ class AsyncEmailInboxInsightsDomains(AsyncResource):
         monitored: bool,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsDomain:
-        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change. API-key and service-account calls require Insights preview access for your organization.
+        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:write permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":

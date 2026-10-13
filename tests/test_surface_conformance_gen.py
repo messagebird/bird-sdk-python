@@ -265,6 +265,8 @@ def test_surface_conformance() -> None:
     assert callable(client.audiences.add_contacts)
     assert callable(client.audiences.remove_contacts)
     assert callable(client.audiences.remove_contact)
+    assert callable(client.audiences.membership)
+    assert callable(client.audiences.membership_history)
     assert callable(client.email.mailboxes.list)
     assert callable(client.email.mailboxes.create)
     assert callable(client.email.mailboxes.get)

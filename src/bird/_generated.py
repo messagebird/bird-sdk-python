@@ -1521,30 +1521,69 @@ class EmailSendAllowanceWindow(str, Enum):
     daily = "daily"
 
 
+class EmailSendAllowanceLimitReason(str, Enum):
+    plan = "plan"
+    overage_off = "overage_off"
+    overdue_payment = "overdue_payment"
+    unfunded = "unfunded"
+    overage_ceiling = "overage_ceiling"
+    custom_limit = "custom_limit"
+
+
+class EmailBroadcastCountAllowance(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    limit: Annotated[int, Field(
+        description="Maximum number of broadcasts the organization can send in this window.",
+        examples=[20],
+        ge=0,
+    )]
+    remaining: Annotated[int, Field(
+        description="Number of broadcasts remaining in this window. At 0, you cannot send or schedule a draft.",
+        examples=[4],
+        ge=0,
+    )]
+    resets_at: Annotated[str, Field(
+        description="When the window ends and broadcast usage resets to 0. This is the end of the billing period, or the end of the UTC day when no current billing period is available.",
+        examples=["2026-09-01T00:00:00Z"],
+        min_length=1,
+    )]
+
+
 class EmailBroadcastSendQuota(BaseModel):
     model_config = ConfigDict(extra="allow")
     recipients: Annotated[int, Field(
-        description="Number of contacts the broadcast would send to right now, after contacts without an email address and contacts suppressed for the broadcast's category are dropped. The same number the broadcast's audience counts report as sendable.",
+        description="Number of contacts the broadcast could reach now. Excludes contacts without an email address and contacts suppressed for the broadcast's category. Matches the sendable count from the broadcast's audience counts.",
         examples=[12000],
         ge=0,
     )]
     allowed: Annotated[int, Field(
-        description="Number of those recipients the organization's email send allowance covers. Equal to `recipients` when nothing limits the send, and lower when part of the audience runs past what is left of it. A part-covered send goes out in whole batches, so this is cut back to a batch boundary rather than to the exact number of emails left: it can sit below `remaining` rather than matching it, and should be read rather than worked out from `limit` and `remaining`. 0 means none of them would go out, either because the audience is larger than the whole allowance, which is refused rather than sent in part, or because too little of the allowance is left to carry any of it.",
+        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients would receive the broadcast. This happens if the audience exceeds the full email limit, which rejects the send, or if the remaining allowance cannot cover a batch.",
         examples=[5000],
         ge=0,
     )]
     limited_by: Annotated[EmailSendAllowanceWindow, Field(
-        description="Which of the organization's email send allowances stops a send from reaching its whole audience.\n\n- `none`: every recipient is covered.\n- `monthly`: the allowance that runs with the billing period.\n- `daily`: the allowance that resets at the end of each UTC day.\n\nWhen both apply, the tighter of the two is reported.",
+        description="The email limit that prevents a broadcast from reaching its full audience.\n\n- `none`: the email send allowance covers every recipient.\n- `monthly`: the monthly email limit for the billing period.\n- `daily`: the daily email limit, which resets at the end of each UTC day.\n\nWhen both email limits apply, the response reports the more restrictive one. If you pass `send_at`, the check evaluates both at that time.",
     )]
     limit: Annotated[Optional[int], Field(
-        description="Size of the allowance named by `limited_by`, in emails. Omitted when nothing limits the send.",
+        description="The email limit identified by `limited_by`, in emails. Omitted when no email limit restricts the send.",
         examples=[50000],
         ge=0,
     )] = None
     remaining: Annotated[Optional[int], Field(
-        description="How much of that allowance is left in the current window, in emails. Omitted when nothing limits the send.",
+        description="The allowance remaining under the email limit identified by `limited_by`, in emails, at `send_at`, or now if you omit it. If the window resets by `send_at`, the check uses its full allowance. Omitted when no email limit restricts the send.",
         examples=[7000],
         ge=0,
+    )] = None
+    resets_at: Annotated[Optional[str], Field(
+        description="When usage resets to 0 for the email limit identified by `limited_by`, evaluated at `send_at`, or now if you omit it.\n\nA broadcast sent before this time uses the same window and the allowance left after other sends. A broadcast sent at or after this time uses a new window. If `recipients` exceeds the full `limit`, the send is rejected in any window with that limit. Pass the later time as `send_at` to check whether the other email limit still restricts the send.\n\nOmitted when no email limit restricts the send, when the reset is at or before `send_at`, or when the billing period has ended and the next one has not started.",
+        examples=["2026-09-01T00:00:00Z"],
+        min_length=1,
+    )] = None
+    limit_reason: Annotated[Optional[EmailSendAllowanceLimitReason], Field(
+        description="What sets the monthly email limit and how to raise it.\n\n- `plan`: the organization's monthly email limit. This is the plan's included volume unless we have set a different limit for the organization. If the limit matches the included volume, a plan with more included volume raises it. Otherwise, contact Bird support.\n- `overage_off`: email overage is turned off, so sending stops at the included volume. Turn email overage back on to raise the monthly email limit.\n- `overdue_payment`: an overdue payment pauses email overage, so sending stops at the included volume. Pay the overdue invoice to raise the monthly email limit.\n- `unfunded`: the wallet cannot cover email overage, or its funding cannot be confirmed, so sending stops at the included volume. Top up the wallet if it lacks funds. Email overage resumes once sufficient funding is confirmed.\n- `overage_ceiling`: email overage is billed up to a configured multiple of the included volume. A plan with more included volume raises the email overage ceiling.\n- `custom_limit`: we have set a monthly email limit for the organization that differs from the plan's included volume. Contact Bird support to change it. These limits currently report as `plan`. This enum value is declared in advance so reporting them as `custom_limit` will not be a breaking change.",
+    )] = None
+    broadcasts: Annotated[Optional[EmailBroadcastCountAllowance], Field(
+        description="The organization's broadcast count allowance for the current window. This counts broadcasts rather than emails. The window is the billing period, or the UTC day when no current billing period is available.\n\nSending or scheduling a draft uses one broadcast from the window current when you submit the request. The scheduled send time does not determine the window. Sending an already scheduled broadcast again uses no additional broadcast allowance. `send_at` on the send-quota request does not change this allowance.",
     )] = None
 
 
@@ -2165,6 +2204,64 @@ class AudienceUpdateRequest(BaseModel):
         description="Longer description of who this audience is. Set to null to clear.",
         max_length=500,
     )] = None
+
+
+class AudienceMembershipSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    total: Annotated[int, Field(
+        description="Number of members at evaluation time.",
+        ge=0,
+    )]
+    data_as_of: Annotated[str, Field(
+        description="Source evaluation instant for the live count. Membership changes committed after the read began appear in a later response.",
+        min_length=1,
+    )]
+
+
+class AudienceMembershipResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    membership: Annotated[Optional[AudienceMembershipSummary], Field(
+        description="Exact count of all audience members at the source evaluation instant, including contacts without email and unsubscribed contacts.",
+    )] = None
+
+
+class AudienceMembershipStatisticsPeriod(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive first UTC date.",
+        min_length=1,
+    )]
+    to: Annotated[str, Field(description="Inclusive last UTC date.", min_length=1)]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Always null. Use each point's observed_at for its actual observation instant.",
+    )]
+
+
+class AudienceMembershipStatisticsPoint(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="UTC date of the observation, or the requested date for a gap.",
+        min_length=1,
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Exact number of all members at observation time, or null for a gap.",
+        ge=0,
+    )]
+    observed_at: Annotated[Optional[str], Field(
+        description="Actual source observation instant, or null for a gap. This is not a day-close count.",
+    )]
+
+
+class AudienceMembershipStatisticsResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AudienceMembershipStatisticsPeriod, Field(
+        description="Requested UTC date window.",
+    )]
+    data: Annotated[List[AudienceMembershipStatisticsPoint], Field(
+        description="One point for every requested date, including gaps.",
+        max_length=365,
+    )]
 
 
 class AudienceMember(BaseModel):
@@ -4078,21 +4175,6 @@ class DestinationSuperRegion(str, Enum):
     asia_pacific = "asia_pacific"
 
 
-class DestinationSetting(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    country_code: Annotated[str, Field(
-        description="ISO 3166-1 alpha-2 country code.",
-        examples=["US"],
-        max_length=2,
-        min_length=2,
-        pattern="^[A-Za-z]{2}$",
-    )]
-    enabled: Annotated[bool, Field(
-        description="Whether to enable (`true`) or disable (`false`) this destination country.",
-        examples=[True],
-    )]
-
-
 class AllocatedNumberID(RootModel[str]):
     root: str
 
@@ -4668,24 +4750,24 @@ class WhatsAppLocationSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     latitude: Annotated[float, Field(
         description="Latitude in decimal degrees.",
-        examples=[52.3702],
+        examples=[37.7955],
         ge=-90,
         le=90,
     )]
     longitude: Annotated[float, Field(
         description="Longitude in decimal degrees.",
-        examples=[4.8952],
+        examples=[-122.3937],
         ge=-180,
         le=180,
     )]
     name: Annotated[Optional[str], Field(
         description="Name of the place, shown above the address.",
-        examples=["Bird HQ"],
+        examples=["Ferry Building"],
         max_length=1000,
     )] = None
     address: Annotated[Optional[str], Field(
         description="Street address of the place. Shown only when `name` is also set.",
-        examples=["Keizersgracht 117, Amsterdam"],
+        examples=["1 Ferry Building, San Francisco, CA 94111"],
         max_length=1000,
     )] = None
 
@@ -4700,7 +4782,7 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
         min_length=1,
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Public `https` URL of the file a media header shows. Send it on an `image`, `video`, `gif` or `document` parameter. WhatsApp fetches it at send time, so it must still be reachable then, the same way a free-form media message's `url` must.",
+        description="Public `https` URL of the file a media header shows, fetched by WhatsApp at send time. Send it on an `image`, `video`, `gif` or `document` parameter.",
         examples=["https://cdn.example.com/receipts/a1b2c3.png"],
         min_length=1,
     )] = None
@@ -4708,7 +4790,7 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
         description="The point on the map a location header opens. Send it on a `location` parameter.",
     )] = None
     name: Annotated[Optional[str], Field(
-        description="Required when the template declares named parameters: the placeholder this value fills (for example `first_name`), matching exactly one of the names the template declares. Name every parameter in that case; order does not matter once names are supplied. Omit this field for a positional template, which takes its values in `{{n}}` order instead. Sending the wrong set of names, or leaving one out that the template requires, returns a `422` `WhatsAppTemplateParameterMismatch`.",
+        description="The placeholder this value fills, for a template with named parameters (for example `first_name`); name every parameter then. Omit it for a positional template, which takes values in `{{n}}` order.",
         min_length=1,
     )] = None
 
@@ -4748,14 +4830,14 @@ class WhatsAppMessageTemplateComponentType(str, Enum):
 class WhatsAppMessageTemplateComponent(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppMessageTemplateComponentType, str], Field(union_mode="left_to_right")], Field(
-        description="Which part of the template this fills in.\n\n- `body`: the main text.\n- `button`: a button's variable.\n- `header`: the header's text, media or location.\n- `carousel`: the cards.",
+        description="Which part of the template this fills in.\n\n- `body`: the main text.\n- `button`: one button's variable, a part per button; there is no `buttons` part.\n- `header`: the header's text, media or location.\n- `carousel`: the cards.",
         min_length=1,
     )]
     parameters: Annotated[Optional[List[WhatsAppMessageTemplateComponentParameter]], Field(
-        description="The values that fill this part's placeholders. A positional template takes them in `{{n}}` placeholder order; a template with named parameters requires each parameter's `name` to match one the template declares, and order then carries no meaning. Send it on every part except `carousel`, which carries its values on `cards`. Send no `button` part at all for a button that takes no value, such as a `quick_reply` or `request_contact_info` button, or a `url` button whose address has no placeholder: a part the template has no slot for is refused here, before the message is sent and charged.",
+        description="The values for this part's placeholders, in `{{n}}` order unless the template names them. Send it on every part except `carousel`, which uses `cards`. Send no `button` part for a button that takes no value.",
     )] = None
     cards: Annotated[Optional[List[WhatsAppMessageTemplateCard]], Field(
-        description="The values that fill each card of a carousel. Send it only on a `carousel` part. A carousel sends exactly the number of cards its template was approved with, so every card needs an entry.",
+        description="Values for each carousel card, one entry per card the template was approved with. Send it only on a `carousel` part.",
         max_length=10,
         min_length=2,
     )] = None
@@ -4775,7 +4857,7 @@ class WhatsAppMessageTemplate(BaseModel):
     )]
     language: Annotated[str, Field(
         description="The canonical BCP-47 tag of the template variant that was sent.",
-        examples=["pt-BR"],
+        examples=["en-US"],
         max_length=35,
         min_length=2,
     )]
@@ -4800,17 +4882,17 @@ class WhatsAppFileID(RootModel[str]):
 class WhatsAppImage(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
-        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on an outbound message, whose file we never stored.",
+        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On an outbound message it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
-        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on outbound messages.",
+        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     caption: Annotated[Optional[str], Field(
@@ -4822,17 +4904,17 @@ class WhatsAppImage(BaseModel):
 class WhatsAppVideo(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
-        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on an outbound message, whose file we never stored.",
+        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On an outbound message it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
-        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on outbound messages.",
+        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     caption: Annotated[Optional[str], Field(
@@ -4844,17 +4926,17 @@ class WhatsAppVideo(BaseModel):
 class WhatsAppAudio(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
-        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on an outbound message, whose file we never stored.",
+        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On an outbound message it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
-        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on outbound messages.",
+        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     voice: Annotated[Optional[bool], Field(
@@ -4866,17 +4948,17 @@ class WhatsAppAudio(BaseModel):
 class WhatsAppSticker(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
-        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on an outbound message, whose file we never stored.",
+        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On an outbound message it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
-        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on outbound messages.",
+        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     animated: Annotated[Optional[bool], Field(
@@ -4888,17 +4970,17 @@ class WhatsAppSticker(BaseModel):
 class WhatsAppDocument(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
-        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on an outbound message, whose file we never stored.",
+        description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On an outbound message it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
-        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on outbound messages.",
+        description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     caption: Annotated[Optional[str], Field(
@@ -5279,6 +5361,12 @@ class Actor(BaseModel):
     )] = None
 
 
+class WhatsAppMessageOrigin(str, Enum):
+    business_agent_echo = "business_agent_echo"
+    business_app_echo = "business_app_echo"
+    history_sync = "history_sync"
+
+
 class WhatsAppErrorCode(str, Enum):
     insufficient_balance = "insufficient_balance"
     price_not_found = "price_not_found"
@@ -5373,12 +5461,15 @@ class WhatsAppMessage(BaseModel):
         description="What the contact tapped, on a message answering an interactive message or a template's quick-reply button. Inbound only.",
     )] = None
     unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
-        description="Set when the contact sent content we do not model, naming the WhatsApp content type so the message is not silently empty. Inbound only.",
+        description="Set when a message that did not come from a Bird send carries content we do not model, naming the WhatsApp content type so the message is not silently empty. Never on a message sent through Bird.",
     )] = None
     reactions: Annotated[Optional[List[WhatsAppReaction]], Field(
         description="Emoji reactions standing on this message right now, one per sender. Absent when the message has none. A reaction that was replaced by a different emoji, or taken back, is not listed; the message's reaction log keeps that history. WhatsApp accepts a reaction on a message up to 30 days old, and we keep provider ids for 15, so a reaction placed on a message older than that cannot be matched to it and does not appear here.",
     )] = None
     status: WhatsAppMessageStatus
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+    )] = None
     recipient_count: Annotated[Optional[int], Field(
         description="How many recipients a group send was addressed to, taken when the send\nwas accepted. It is the group's membership at that moment, not its\nmembership now: someone joining through the invite link while the message\nis in flight does not receive it and does not change this count.\n\nAbsent on a one-to-one message, along with `delivered_count` and\n`read_count`. A message with one recipient has no fan-out to report, and\nits delivery is what `status`, `delivered_at` and `read_at` already say.\nAbsent for the same reason on a group message sent before Bird recorded\nthe count, and on a send to a group nobody had joined yet: there is no\ndenominator to report, and none can be recovered after the fact, since\nmembership has moved on. `to.group_id` is what tells a group message from\na one-to-one one in every case, including those two. With no denominator\nto resolve against, `status` is read as stored, the way a one-to-one\nmessage's is: it reaches `sent` when the message is handed to WhatsApp and\nstops there, because delivery is confirmed per participant and a send with\nno participants collects no confirmations.\n\nIt is also the denominator `status` is resolved against: on a group\nmessage `status` reports the furthest point *every* recipient has\nreached, so it turns `delivered` only once `delivered_count` equals this\nnumber, and stays `sent` while some have confirmed and others have not.\n`failed` and `rejected` are never per recipient: there is one hand-off to\nthe WhatsApp network and one way for that to be refused. `delivered_at`\nand `read_at` are the first recipient's, not the last.",
         ge=1,
@@ -5452,13 +5543,13 @@ class WhatsAppTemplateSend(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
-        description="Which of the template's languages to send, as a BCP-47 tag (for example `en` or `pt-BR`); Meta's underscore form (`pt_BR`) is accepted and normalized. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected. The accepted message echoes the canonical BCP-47 form of the language it resolved to, which is the language it is priced at: Meta categorizes each language separately, so a send served by a different language than the one you asked for is priced at that language's category.",
-        examples=["pt-BR"],
+        description="Which of the template's languages to send, as a BCP-47 tag (for example `en-US`; Meta's `en_US` is accepted too). Omit it for the template's default language, unless the template sets `language_source_required`. A language the template lacks is handled by its `on_missing_language` setting. The message is priced at the language it resolves to, which the accepted message echoes.",
+        examples=["en-US"],
         max_length=35,
         min_length=2,
     )] = None
     components: Annotated[Optional[List[WhatsAppMessageTemplateComponent]], Field(
-        description="The values that fill the template's placeholders: one entry per content block that has placeholders, each carrying its `parameters`. A positional template takes its parameters in `{{n}}` order; a template with named parameters requires each parameter's `name` to match one the template declares. Either way, sending parameters that do not match what the template declares returns a `422` `WhatsAppTemplateParameterMismatch`.",
+        description="Values for the template's placeholders. Build it from the template language's `components`: each block's `example_parameters`, with real values, becomes that part's `parameters`. A template's `buttons` block becomes one `button` part per button that has `example_parameters`, in order; a `carousel` becomes one `cards` entry per card, built the same way. A `location` header always needs a part with a `location` parameter. Leave out other blocks without any.",
     )] = None
 
 
@@ -5471,14 +5562,14 @@ class WhatsAppTextSend(BaseModel):
         min_length=1,
     )]
     preview_url: Annotated[Optional[bool], Field(
-        description="Whether the WhatsApp client renders a preview of the first URL in `body`. A URL must begin with `http://` or `https://`, only the first one is previewed, and the client falls back to a plain link when it cannot fetch a preview. Not returned when the message is read back, because WhatsApp does not report whether a preview rendered.",
+        description="Whether the WhatsApp client previews the first link in `body`. Not returned when the message is read back.",
     )] = None
 
 
 class WhatsAppImageSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the image. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. JPEG and PNG only, up to 5 MB.",
+        description="Public `https` URL of the image. WhatsApp fetches it at send time, so it must still be reachable then. JPEG or PNG, up to 5 MB.",
         examples=["https://cdn.example.com/receipts/a1b2c3.png"],
         min_length=1,
     )]
@@ -5492,7 +5583,7 @@ class WhatsAppImageSend(BaseModel):
 class WhatsAppVideoSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the video. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. MP4 with H.264 video and AAC audio, up to 16 MB.",
+        description="Public `https` URL of the video. WhatsApp fetches it at send time, so it must still be reachable then. MP4 with H.264 video and AAC audio, up to 16 MB.",
         examples=["https://cdn.example.com/unboxing.mp4"],
         min_length=1,
     )]
@@ -5506,19 +5597,19 @@ class WhatsAppVideoSend(BaseModel):
 class WhatsAppAudioSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the audio file. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. AAC, AMR, MP3, M4A and OGG (OPUS codec, mono) are supported, up to 16 MB.",
+        description="Public `https` URL of the audio file. WhatsApp fetches it at send time, so it must still be reachable then. AAC, AMR, MP3, M4A or OGG (OPUS codec, mono), up to 16 MB.",
         examples=["https://cdn.example.com/voice/9f2e4a.ogg"],
         min_length=1,
     )]
     voice: Annotated[Optional[bool], Field(
-        description="Whether to send this as a voice note rather than a basic audio message. A voice note auto-downloads, shows the sender's profile picture, and can be transcribed for the recipient. It requires an `.ogg` file encoded with the OPUS codec; any other format makes transcription fail. Leave it false for an ordinary audio attachment.",
+        description="Whether to send this as a voice note rather than an audio file. A voice note needs an `.ogg` file encoded with the OPUS codec.",
     )] = None
 
 
 class WhatsAppStickerSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the sticker. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. WebP only: up to 100 KB for a static sticker and 500 KB for an animated one. A sticker carries no caption.",
+        description="Public `https` URL of the sticker. WhatsApp fetches it at send time, so it must still be reachable then. WebP only, up to 100 KB static or 500 KB animated.",
         examples=["https://cdn.example.com/stickers/thumbs-up.webp"],
         min_length=1,
     )]
@@ -5527,7 +5618,7 @@ class WhatsAppStickerSend(BaseModel):
 class WhatsAppDocumentSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the document. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch. Up to 100 MB. PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client; other file types are transmitted but WhatsApp does not support them.",
+        description="Public `https` URL of the document. WhatsApp fetches it at send time, so it must still be reachable then. Up to 100 MB; PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client.",
         examples=["https://cdn.example.com/invoices/a1b2c3.pdf"],
         min_length=1,
     )]
@@ -5583,7 +5674,7 @@ class WhatsAppInteractiveHeaderSend2(BaseModel):
     type: WhatsAppInteractiveHeaderSend2Type
     text: Optional[Any] = None
     url: Annotated[str, Field(
-        description="Public `https` URL of the file to show. Send it on an `image`, `video` or `document` header. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB; a document, up to 100 MB, and PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client while other file types are transmitted but unsupported. WhatsApp fetches it at send time, so it must still be reachable then: a signed URL has to outlive the send. We do not store or proxy the file. WhatsApp caches a fetched URL for 10 minutes and re-serves that copy for an identical URL sent again within the window; vary the URL to force a re-fetch.",
+        description="Public `https` URL of the file to show on an `image`, `video` or `document` header, fetched by WhatsApp at send time. The free-form `image`, `video` and `document` limits apply.",
         examples=["https://cdn.example.com/banners/workshop.png"],
         min_length=1,
     )]
@@ -5765,7 +5856,7 @@ class WhatsAppInteractiveSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["button"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
-        description="Optional content above the body. A `list` accepts a `text` header only; `button` and `cta_url` also accept an image, video or document. A `carousel` accepts none: its cards carry their own media. Neither request kind accepts one.",
+        description="Optional content above the body: text on a `list`; text, image, video or document on `button` and `cta_url`. A `carousel` and the two request kinds take none.",
     )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Annotated[Optional[str], Field(
@@ -5791,7 +5882,7 @@ class WhatsAppInteractiveSend2(BaseModel):
     type: Literal["list"]
     header: Optional[WhatsAppInteractiveSend2Header] = None
     body_text: Annotated[str, Field(
-        description="The message's main text, required on every kind, and the whole message on `location_request_message` and `request_contact_info`. The WhatsApp client turns any URL it contains into a clickable link. Only a `list` may use the full length; the other kinds cap it at 1024 characters.",
+        description="The message's main text, required on every kind. Up to 1024 characters, except on a `list`.",
         examples=["Your workshop is scheduled for 9am tomorrow."],
         max_length=4096,
         min_length=1,
@@ -5814,7 +5905,7 @@ class WhatsAppInteractiveSend3(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["cta_url"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
-        description="Optional content above the body. A `list` accepts a `text` header only; `button` and `cta_url` also accept an image, video or document. A `carousel` accepts none: its cards carry their own media. Neither request kind accepts one.",
+        description="Optional content above the body: text on a `list`; text, image, video or document on `button` and `cta_url`. A `carousel` and the two request kinds take none.",
     )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Annotated[Optional[str], Field(
@@ -5841,7 +5932,7 @@ class WhatsAppInteractiveSend4(BaseModel):
     list: Optional[Any] = None
     cta_url: Optional[Any] = None
     cards: Annotated[List[WhatsAppInteractiveCardSend], Field(
-        description="The cards to show, in the order they appear, left to right. Send this on a `carousel` message, with between 2 and 10 cards. The message's own `body_text` introduces them; a carousel carries no header and no footer of its own.",
+        description="The cards of a `carousel` message, 2 to 10, left to right. A carousel takes no header or footer of its own.",
         max_length=10,
         min_length=2,
     )]
@@ -5988,50 +6079,50 @@ class WhatsAppContactCardSend(BaseModel):
 class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
-        description="The message recipient: a phone number in E.164 format (for example `+31612345678`), the recipient's business-scoped user ID (for example `US.13491208655302741918`), which addresses a WhatsApp user whose phone number you do not have, or a WhatsApp group ID (for example `wag_01krdgeqcxet5s7t44vh8rt9mg`), which sends to every participant of that group. A value that is none of these returns a `422` `WhatsAppInvalidRecipient`. One-time-passcode templates require a phone number and return a `422` `WhatsAppRecipientNotSupportedForTemplate` when sent to a business-scoped user ID. A group ID naming no group this workspace holds returns a `404` `WhatsAppGroupNotFound`, and one whose group is not active returns a `409` `WhatsAppGroupNotActive`. Content a group cannot take is refused ahead of both, so a group ID paired with interactive content returns the `422` below whether or not the group exists.",
-        examples=[+31612345678],
+        description="The recipient: a phone number in E.164 format (for example `+14155550100`), a business-scoped user ID (for example `US.13491208655302741918`) for a WhatsApp user whose number you do not have, or a WhatsApp group ID (for example `wag_01krdgeqcxet5s7t44vh8rt9mg`). One-time-passcode templates need a phone number. Bird tracks the customer service window per identity and business number, so reply to the identity a contact's message came from, from the number it reached.",
+        examples=[+14155550100],
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="The business phone number to send from, in E.164 format. Omit it for a Bird-managed template, which selects its own number from its category: setting it there returns a `422` `WhatsAppSenderNotAllowed`. Every other send, whether free-form content of any kind or a template your workspace authored, requires it, and the number must be one this workspace owns. Omitting it returns a `422` `WhatsAppSenderRequired`, and naming a number this workspace cannot send from returns a `422` `WhatsAppSenderNotFound`. Naming a number this workspace owns but that sits on a different WhatsApp Business Account than an authored template returns a `422` `WhatsAppSenderWABAMismatch`. A number this workspace holds but has not finished connecting returns a `422` `WhatsAppSenderNotConnected`. Omit it for a group send too: the group sends on its own number, so naming one returns a `422` `WhatsAppSenderNotAllowed`.",
+        description="The business phone number to send from, in E.164 format: a connected number this workspace owns, on the same WhatsApp Business Account as an authored template. Omit it for a Bird-managed template or a group send, which use their own number; every other send requires it.",
         examples=[+13124495648],
         min_length=1,
     )] = None
     template: Annotated[Optional[WhatsAppTemplateSend], Field(
-        description="The template to send. A Bird-managed template selects the sender number from the template's category, so `from` must be omitted. A template is the only content deliverable outside a customer service window. A group send takes a template your workspace authored in any category but authentication: WhatsApp does not deliver an authentication template to a group, which returns a `422` `WhatsAppGroupContentNotSupported`. A Bird-managed template sends from a Bird-owned number that no group is scoped to, so addressing one to a group returns a `422` `WhatsAppInvalidRecipient`.",
+        description="The template to send, the only content deliverable outside the customer service window. A group takes only templates your workspace authored, outside the authentication category.",
     )] = None
     text: Annotated[Optional[WhatsAppTextSend], Field(
-        description="Free-form text to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="Free-form text. Deliverable only inside an open customer service window.",
     )] = None
     image: Annotated[Optional[WhatsAppImageSend], Field(
-        description="A free-form image to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="A free-form image. Deliverable only inside an open customer service window.",
     )] = None
     video: Annotated[Optional[WhatsAppVideoSend], Field(
-        description="A free-form video to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="A free-form video. Deliverable only inside an open customer service window.",
     )] = None
     audio: Annotated[Optional[WhatsAppAudioSend], Field(
-        description="Free-form audio to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="Free-form audio. Deliverable only inside an open customer service window.",
     )] = None
     sticker: Annotated[Optional[WhatsAppStickerSend], Field(
-        description="A free-form sticker to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="A free-form sticker. Deliverable only inside an open customer service window.",
     )] = None
     document: Annotated[Optional[WhatsAppDocumentSend], Field(
-        description="A free-form document to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="A free-form document. Deliverable only inside an open customer service window.",
     )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
-        description="A free-form location to send instead of a template. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`.",
+        description="A free-form location. Deliverable only inside an open customer service window.",
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractiveSend], Field(
-        description="Free-form interactive content to send instead of a template: body text plus reply buttons, a menu, a link button, media cards, or a single button asking the recipient to share their location or their phone number. Deliverable only inside an open 24-hour customer service window, which the contact opens by messaging or calling you and resets each time they do it again. A send into a closed window is refused with a `422` `WhatsAppServiceWindowClosed` before anything is created or charged; one whose window closes between accept and dispatch fails asynchronously, with `service_window_expired` on the message's `last_error`. WhatsApp does not deliver interactive content to a group, so a group recipient returns a `422` `WhatsAppGroupContentNotSupported`.",
+        description="Free-form interactive content: reply buttons, a list menu, a link button, media cards, or a request for the recipient's location or contact details. Deliverable only inside an open customer service window, and never to a group.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCardSend]], Field(
-        description="Contact cards to send instead of a template. Up to five: WhatsApp accepts far more, and a message that opens as one name plus a count of the rest is not a card the recipient will read.",
+        description="Up to five contact cards, each `name` carrying `formatted_name` plus at least one other part. Deliverable only inside an open customer service window.",
         max_length=5,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="Quote a message the contact will see above this one, the way replying in the WhatsApp client does. Name a message from the same conversation: one this workspace sent to this recipient, or received from them. Any content quotes, template or free-form. The quote is resolved before the send is accepted, so a quote WhatsApp cannot render fails this request rather than the message. An id naming no message this workspace holds, or one older than the 15 days we keep provider ids for, answers `404`; a message that never reached WhatsApp, or one from a different conversation than this send's `to` and `from`, answers `422`. Nothing is charged either way.",
+        description="An earlier message to quote above this one: one from the same conversation, between this `to` and `from`, in the last 15 days.",
         examples=["wam_01kya19eknftrs2s6p82asmvnh"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
@@ -7918,6 +8009,9 @@ class WhatsAppNumber(BaseModel):
     is_official_business_account: Annotated[Optional[bool], Field(
         description="Whether WhatsApp grants this number Official Business Account status as of `meta_synced_at`. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf. WhatsApp grants the status per number, so two numbers on one WhatsApp Business Account can differ. The status also decides whether a rename is possible here: a number that has it cannot be renamed through `PATCH /v1/whatsapp/numbers/{number_id}/profile` at all, and has to be renamed through WhatsApp support instead.",
     )] = None
+    is_on_business_app: Annotated[Optional[bool], Field(
+        description="Whether this number is also in use on the WhatsApp Business app, so the business keeps sending one-to-one messages from the app while you send through the API. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf.",
+    )] = None
     meta_synced_at: Annotated[Optional[str], Field(
         description="When this number's state was last read from WhatsApp. `status`, `quality_rating`, `messaging_limit`, `throughput_level`, and `is_official_business_account` all belong to that reading rather than representing live values. We re-read roughly hourly, so a change at WhatsApp can be up to an hour old here. Absent for a number we have never read back and for a number we operate on your behalf.",
         min_length=1,
@@ -9080,7 +9174,7 @@ class AMBQuickReplyItem(BaseModel):
 class AMBNativeQuickReply(BaseModel):
     model_config = ConfigDict(extra="allow")
     summary_text: Annotated[str, Field(
-        description="Text used for the device notification and shown in the transcript after the customer chooses an item. Send a separate text message to introduce the choices.",
+        description="Text used for the device notification and shown in the transcript after the customer chooses an item. Automatic introductions through the enclosing content.body depend on regional activation and the send retry mode; see content.body. For an introduction independent of activation, send a separate text message and omit content.body from the quick reply.",
         min_length=1,
     )]
     items: Annotated[List[AMBQuickReplyItem], Field(
@@ -9192,7 +9286,9 @@ class AMBNativeEvent(BaseModel):
         description="Identifier of the event image in interactive_data.data.images.",
         min_length=1,
     )] = None
-    title: Annotated[Optional[str], Field(description="Event title.")] = None
+    title: Annotated[Optional[str], Field(
+        description="Event title. Also supplies the title of each omitted received or reply bubble, where the 512-character bubble text limit applies. Supply both bubbles explicitly to use a longer event title.",
+    )] = None
 
 
 class AMBFormSplash(BaseModel):
@@ -9545,7 +9641,7 @@ class AMBNativeInteractiveContent(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["interactive"], Field(description="Apple message family.")]
     body: Annotated[Optional[str], Field(
-        description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
+        description="Automatic introductions for inline quick replies are enabled regionally in stages. When enabled for a new send containing `interactive_data.data.quick_reply`, a nonblank body is sent as separate text before the choices. Messages using `interactive_data_ref` do not receive this automatic introduction, even after activation. All parts belong to one message, which becomes sent after Apple accepts all parts. For referenced interactions, before activation, and for retries retaining legacy behavior, body is included in the interactive request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the quick reply. Omit body to send choices only. For list pickers, time pickers and forms, use interactive_data.received_message for the visible introduction. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
     subject: Annotated[Optional[str], Field(
         description="Subject displayed above the message body.",
@@ -9602,7 +9698,7 @@ class AMBNativeInboundListPickerSection(BaseModel):
 class AMBNativeInboundListPicker(BaseModel):
     model_config = ConfigDict(extra="allow")
     sections: Annotated[List[AMBNativeInboundListPickerSection], Field(
-        description="Sections and selected rows returned by Apple.",
+        description="Sections returned by Apple. Sections can include unselected options; preserve their titles and item grouping.",
     )]
 
 
@@ -14713,6 +14809,23 @@ class DomainCapabilities(BaseModel):
     inbound: Optional[DomainCapability] = None
 
 
+class DomainReceivingState(str, Enum):
+    enabled = "enabled"
+    disabling = "disabling"
+    disable_failed = "disable_failed"
+    disabled = "disabled"
+
+
+class DomainReceiving(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    state: Annotated[DomainReceivingState, Field(
+        description="Receiving control state, separate from DNS verification. `enabled` means receiving is configured; check `capabilities.inbound.status` for readiness. `disabling` means a request to turn off receiving is in progress. `disable_failed` means the latest attempt failed and can be retried. `disabled` means receiving is off and no longer blocks deletion.",
+    )]
+    managed_elsewhere: Annotated[bool, Field(
+        description="Receiving is assigned to another workspace in this organization. Its controls are unavailable in the current workspace. An authorized user must open the receiving workspace to turn it off.",
+    )]
+
+
 class DNSRecordType(str, Enum):
     TXT = "TXT"
     CNAME = "CNAME"
@@ -14836,6 +14949,9 @@ class Domain(BaseModel):
         description="Active DKIM signing configuration for the domain.",
     )]
     capabilities: DomainCapabilities
+    receiving: Annotated[DomainReceiving, Field(
+        description="Receiving state and whether it is managed from another workspace.",
+    )]
     dns_records: Annotated[List[DNSRecord], Field(
         description="The domain's DNS records and their individual verification state, returned in full on both the list and single-domain responses. This is the complete set to publish across DKIM, return-path, DMARC, tracking, and inbound; records for a staged change carry `state: pending`. Inbound MX records are always included as a regional reference, even while receiving is off and `capabilities.inbound.status` is `not_configured`. Their presence alone does not mean receiving is enabled; see `DomainUpdate.inbound`.",
     )]
@@ -14936,7 +15052,7 @@ class DomainCreate(BaseModel):
 class DomainInboundConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
     enabled: Annotated[bool, Field(
-        description="Set `true` to enable receiving on this domain, `false` to disable it. Disabling tears receiving down and removes the MX records from `dns_records`; this is immediate in the normal case, and if a step needs retrying the capability clears as soon as teardown finishes.",
+        description="Set `true` to enable receiving on this domain, `false` to disable it. Read `receiving.state` to follow the request: `disabling` while receiving is turning off, `disable_failed` if the latest attempt failed, and `disabled` when it is off. Retry a failed request with `false`. Before deleting the domain or workspace, poll the domain until `capabilities.inbound.status` is `not_configured`. Its MX records remain in `dns_records` as optional. Receiving with an assigned workspace is managed there. Disabling from a sibling workspace returns `403`; re-enabling does not move the assigned receiver. A sibling also receives `403` if it re-enables while a request to turn off receiving is pending or has failed. `receiving.managed_elsewhere` identifies this restriction before a request. Older setups without a recorded receiver can be disabled from an authorized workspace sharing the domain; re-enabling records that workspace as the receiver.",
         examples=[True],
     )]
 
@@ -16716,6 +16832,10 @@ class Mailbox(BaseModel):
         examples=["concierge@inbox.ai"],
         min_length=5,
     )]
+    forwarding_address: Annotated[Optional[str], Field(
+        description="An address we generate on our receiving domain when the mailbox is created on a domain not set up for receiving with us. Forward mail for `address` here from your current email provider, and it lands in this mailbox. Replies still go out from `address`. Immutable. It stops receiving while the mailbox is deleted, works again with the same value after a restore, and keeps working if you later enable receiving on the domain. `null` on mailboxes created on the shared domain or on a domain already enabled for receiving.",
+        examples=["k7q2mzxw4h6p5ra3@eu1.inbound.bird.com"],
+    )]
     display_name: Annotated[Optional[str], Field(
         description="Display name used as the sender name on mail from this mailbox. `null` when unset.",
         examples=["Acme Concierge"],
@@ -16820,7 +16940,7 @@ class MailboxCreate(BaseModel):
         pattern="^[A-Za-z0-9._-]+$",
     )] = None
     domain: Annotated[Optional[str], Field(
-        description="The domain the address lives under. Defaults to `inbox.ai`, our shared mailbox domain. Creating a mailbox claims the shared address for your organization on a first-come, first-served basis. The address remains reserved to your organization after the mailbox is deleted. You can instead use one of your own domains enabled for receiving email.",
+        description="The domain the address lives under. Defaults to `inbox.ai`, our shared mailbox domain. Creating a mailbox claims the shared address for your organization on a first-come, first-served basis. The address remains reserved to your organization after the mailbox is deleted. You can instead use one of your own domains. On a domain enabled for receiving, mail arrives directly. On a domain this workspace has verified (its `status` is `verified`) that is not set up for receiving, the mailbox gets a `forwarding_address`: forward mail for the address there from your current email provider, with no MX change. If another workspace receives the domain's mail, creation fails with `E17009`.",
         examples=["mail.acme.com"],
         max_length=255,
         min_length=1,
@@ -22836,13 +22956,13 @@ class EsimStatus(str, Enum):
     failed = "failed"
 
 
-class EsimSubscriberID(RootModel[str]):
-    root: str
-
-
 class EsimMode(str, Enum):
     live = "live"
     test = "test"
+
+
+class EsimSubscriberID(RootModel[str]):
+    root: str
 
 
 class EsimServiceCapability(str, Enum):
@@ -23541,6 +23661,24 @@ class CreateVoiceCallRequest(BaseModel):
     )]
 
 
+class VoiceDestinationDailySpendLimit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    limit: Annotated[Money, Field(
+        description="The most your workspace can spend on calls to this country each day, in your organization's wallet currency. Calls are also held to the workspace's own daily limit, and whichever is reached first refuses the call.",
+    )]
+    used: Annotated[Optional[Money], Field(
+        description="Used toward today's limit for this country, including calls in progress. A call counts its expected cost when it starts; the part it did not use returns when it is billed. Null when today's usage cannot be read right now; the limit is still enforced.",
+    )]
+    remaining: Annotated[Optional[Money], Field(
+        description="What is left of this country's limit today, never below zero. Null when today's usage cannot be read.",
+    )]
+    resets_at: Annotated[str, Field(
+        description="When usage resets to zero, at midnight UTC.",
+        examples=["2026-10-09T00:00:00Z"],
+        min_length=1,
+    )]
+
+
 class VoiceDestinationStatus(str, Enum):
     available = "available"
     not_supported = "not_supported"
@@ -23575,6 +23713,9 @@ class VoiceDestination(BaseModel):
     high_risk_destination: Annotated[bool, Field(
         description="Whether we treat this country as a high-risk calling destination.",
     )]
+    daily_spend_limit: Annotated[Optional[VoiceDestinationDailySpendLimit], Field(
+        description="Your workspace's daily spend limit for calls to this country and today's usage toward it. It applies whether or not the country is enabled, including to verification calls. Null when you have not set one, before your organization has a wallet, or while your wallet currency cannot be read; a limit you set is still enforced then.",
+    )]
 
 
 class VoiceDestinationList(BaseModel):
@@ -23585,10 +23726,35 @@ class VoiceDestinationList(BaseModel):
     total: Annotated[int, Field(description="Total number of destination countries.")]
 
 
+class VoiceDestinationDailySpendLimitUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    limit: Annotated[Optional[Money], Field(
+        description="The daily spend limit for calls to this country, in your organization's wallet currency, from zero up to the workspace's `max_limit` in Voice settings, with at most six decimal places. Setting an amount needs an organization wallet; removing one does not. Null removes it, so only the workspace's daily limit applies.",
+    )]
+
+
+class DestinationSetting(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country_code: Annotated[str, Field(
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    enabled: Annotated[Optional[bool], Field(
+        description="Whether to enable (`true`) or disable (`false`) this destination country. Omit it to leave the country's enabled setting unchanged.",
+        examples=[True],
+    )] = None
+    daily_spend_limit: Annotated[Optional[VoiceDestinationDailySpendLimitUpdate], Field(
+        description="Sets or removes this country's daily spend limit; omit it to leave the limit unchanged. Once today's spend reaches the limit, new calls to the country are refused, verification calls included, whether or not it is enabled; a call already in progress is not cut off, so spend can pass the limit by what that call costs.",
+    )] = None
+
+
 class VoiceDestinationsUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     destinations: Annotated[List[DestinationSetting], Field(
-        description="The destination countries to enable or disable. Only the countries listed here change; any country you do not list keeps its current setting.",
+        description="The destination countries to change. Only the countries listed here change, and only the fields you send; anything else keeps its current setting. A country listed more than once takes its last `enabled`, but may set or remove `daily_spend_limit` only once. A limit can be set only on a country the Voice service supports; removing one accepts any country code. Otherwise the request is rejected and nothing changes.",
     )]
 
 
@@ -23911,8 +24077,23 @@ class EsimRecurrenceModel(str, Enum):
     fixed_days = "fixed_days"
 
 
+class EsimCheckoutFunding(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    tax_amount: Money
+    total: Money
+    covered: Annotated[bool, Field(
+        description="Whether the wallet can currently cover this purchase after reservations and approved credit.",
+    )]
+    shortfall: Annotated[Optional[Money], Field(
+        description="Additional funds needed to cover this purchase, or null without organization billing read permission. Zero when covered is true.",
+    )]
+
+
 class EsimCheckoutOneTime(BaseModel):
     model_config = ConfigDict(extra="allow")
+    funding: Annotated[EsimCheckoutFunding, Field(
+        description="Current funding needed for this purchase, including tax and approved credit. The quoted price excludes tax; `total` includes tax for this purchase. This read reserves no funds; payment checks funding again. Test purchases have zero tax and total and are always covered.",
+    )]
     offer_revision: Annotated[int, Field(
         description="The offer revision to accept when purchasing.",
         ge=1,
@@ -23922,6 +24103,9 @@ class EsimCheckoutOneTime(BaseModel):
 
 class EsimCheckoutRecurringQuote(BaseModel):
     model_config = ConfigDict(extra="allow")
+    funding: Annotated[EsimCheckoutFunding, Field(
+        description="Current funding needed for this purchase, including tax and approved credit. The quoted price excludes tax; `total` includes tax for this purchase. This read reserves no funds; payment checks funding again. Test purchases have zero tax and total and are always covered.",
+    )]
     delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
         description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
     )]
@@ -23954,7 +24138,7 @@ class EsimCheckoutRecurrence1(BaseModel):
     model_config = ConfigDict(extra="allow")
     available: Literal[True]
     quote: Annotated[EsimCheckoutRecurringQuote, Field(
-        description="Published recurring terms before tax. The first period starts when payment is funded, and cancellation stops future renewal while preserving paid packages.",
+        description="Published recurring terms and current funding requirement. The `price` excludes tax; `funding.total` includes tax for the first period. The first period starts when payment is funded, and cancellation stops future renewal while preserving paid packages.",
     )]
     unavailable_reason: Optional[EsimCheckoutUnavailableReason]
 
@@ -23980,7 +24164,7 @@ class EsimCheckoutOptions(BaseModel):
         pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     one_time: Annotated[EsimCheckoutOneTime, Field(
-        description="Published one-time purchase terms before tax.",
+        description="Published one-time price and current funding requirement. The `price` excludes tax; `funding.total` includes tax.",
     )]
     recurrence: Annotated[EsimCheckoutRecurrence, Field(
         description="When available is true, quote contains the recurring terms and unavailable_reason is null. Otherwise quote is null and unavailable_reason explains why renewal is unavailable.",
@@ -24608,14 +24792,14 @@ class EsimCompatibleOfferList(BaseModel):
 class EsimSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
     credential_delivery_enabled: Annotated[bool, Field(
-        description="Whether Bird sends eSIM install credentials to travelers for this workspace. When `false`, sending an eSIM's credentials by email or SMS is refused; reading them from the API still works, so you can deliver them yourself. This governs the install message only. Your workspace's other email and SMS sending is unaffected. Defaults to `true`.",
-        examples=[True],
+        description="Whether Bird automatically sends an install link after a new eSIM purchase with a linked contact. Uses the contact's email address, or SMS when only a phone number is available. Defaults to `false`. Manual install-link sends remain available regardless of this setting.",
+        examples=[False],
     )]
 
 
 class EsimSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     credential_delivery_enabled: Annotated[Optional[bool], Field(
-        description="Send `false` to stop Bird sending eSIM install credentials to travelers for this workspace, or `true` to allow it again. Credentials stay readable from the API either way.",
+        description="Whether Bird automatically sends an install link after a new eSIM purchase with a linked contact. Uses the contact's email address, or SMS when only a phone number is available. Omit this field to retain the current value; a workspace without saved settings starts with `false`. Manual install-link sends remain available regardless of this setting.",
         examples=[False],
     )] = None

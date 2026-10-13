@@ -15,10 +15,10 @@ class EmailInboxInsightsDomainMonitoring(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsDomainMonitoringResult:
-        """Set up monitoring for the workspace's main verified sending domain. Takes no body. Existing monitoring returns already_on without changes. Otherwise, the sole verified domain or the domain that sent the most mail in the last 30 days is enabled; an uncertain choice returns choice_required, and no verified domains returns no_verified_domains. Only enabled has a non-null domain. Read the domain list after already_on; ask the user to choose after choice_required. Reuse an idempotency key for retries of the same setup attempt. API-key and service-account calls require Insights preview access for your organization.
+        """Set up monitoring for the workspace's main verified sending domain. Takes no body. Existing monitoring returns already_on without changes. Otherwise, the sole verified domain or the domain that sent the most mail in the last 30 days is enabled; an uncertain choice returns choice_required, and no verified domains returns no_verified_domains. Only enabled has a non-null domain. Read the domain list after already_on; ask the user to choose after choice_required. Reuse an idempotency key for retries of the same setup attempt.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:write permission in the target workspace.
         result = client.email.inbox_insights.domain_monitoring.upsert()
         print(result.outcome, result.domain)
         ```
@@ -37,10 +37,10 @@ class AsyncEmailInboxInsightsDomainMonitoring(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsDomainMonitoringResult:
-        """Set up monitoring for the workspace's main verified sending domain. Takes no body. Existing monitoring returns already_on without changes. Otherwise, the sole verified domain or the domain that sent the most mail in the last 30 days is enabled; an uncertain choice returns choice_required, and no verified domains returns no_verified_domains. Only enabled has a non-null domain. Read the domain list after already_on; ask the user to choose after choice_required. Reuse an idempotency key for retries of the same setup attempt. API-key and service-account calls require Insights preview access for your organization.
+        """Set up monitoring for the workspace's main verified sending domain. Takes no body. Existing monitoring returns already_on without changes. Otherwise, the sole verified domain or the domain that sent the most mail in the last 30 days is enabled; an uncertain choice returns choice_required, and no verified domains returns no_verified_domains. Only enabled has a non-null domain. Read the domain list after already_on; ask the user to choose after choice_required. Reuse an idempotency key for retries of the same setup attempt.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:write permission in the target workspace.
         result = await client.email.inbox_insights.domain_monitoring.upsert()
         print(result.outcome, result.domain)
         ```

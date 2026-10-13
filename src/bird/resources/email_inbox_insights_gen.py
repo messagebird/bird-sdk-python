@@ -91,10 +91,10 @@ class EmailInboxInsightsBase(Resource):
         include_ip_details: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsPlacement:
-        """Read placement for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Rates are percentages, and section statuses distinguish missing measurements. Deltas require a requested comparison and comparable prior data; absence does not mean stable placement. Provider filters add series lines without filtering the provider table. The response reports domain-wide panel/seed estimates with audience weighting, not delivery counts or a marketing/transactional split; a domain name alone does not identify a stream. Read rate measures reading, not opens. Label freshness from freshness.as_of; missing days and nulls are not zeros. Associations do not establish a cause. This read does not enable monitoring. Use `email.inbox_insights.seed_tests.list` for individual seed-test results. Google Postmaster connection status remains dashboard-only. These aggregates cannot prove placement for every customer. API-key calls require Insights preview access for your organization.
+        """Read placement for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Rates are percentages, and section statuses distinguish missing measurements. Deltas require a requested comparison and comparable prior data; absence does not mean stable placement. Provider filters add series lines without filtering the provider table. The response reports domain-wide panel/seed estimates with audience weighting, not delivery counts or a marketing/transactional split; a domain name alone does not identify a stream. Read rate measures reading, not opens. Label freshness from freshness.as_of; missing days and nulls are not zeros. Associations do not establish a cause. This read does not enable monitoring. Use `email.inbox_insights.seed_tests.list` for individual seed-test results. Google Postmaster connection status remains dashboard-only. These aggregates cannot prove placement for every customer.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -130,10 +130,10 @@ class EmailInboxInsightsBase(Resource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsAuthentication:
-        """Read SPF, DKIM and DMARC results for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Pass rates are percentages. A not_configured section does not establish that DNS records are absent or that authentication failed; the source's coverage must be checked. Read section statuses, sources.latest_data_date and freshness before drawing conclusions. Authentication and placement changes can coincide without establishing cause. This read does not configure authentication or enable monitoring. API-key calls require Insights preview access for your organization.
+        """Read SPF, DKIM and DMARC results for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Pass rates are percentages. A not_configured section does not establish that DNS records are absent or that authentication failed; the source's coverage must be checked. Read section statuses, sources.latest_data_date and freshness before drawing conclusions. Authentication and placement changes can coincide without establishing cause. This read does not configure authentication or enable monitoring.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -167,10 +167,10 @@ class EmailInboxInsightsBase(Resource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsComplaints:
-        """Read the Google Postmaster user-reported spam rate for a verified owned domain. This percentage differs from spam-folder placement and Bird feedback-loop complaints across providers. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period adds the preceding period. The period rate is an unweighted mean of reported days; sparse days are missing observations, not zero complaints. Freshness identifies the last reported day, not a promised update schedule. Correlation with placement cannot identify causative sends. Sections can report not_configured when setup is incomplete; connection status and setup are available in the dashboard, not through this read. API-key calls require Insights preview access for your organization.
+        """Read the Google Postmaster user-reported spam rate for a verified owned domain. This percentage differs from spam-folder placement and Bird feedback-loop complaints across providers. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period adds the preceding period. The period rate is an unweighted mean of reported days; sparse days are missing observations, not zero complaints. Freshness identifies the last reported day, not a promised update schedule. Correlation with placement cannot identify causative sends. Sections can report not_configured when setup is incomplete; connection status and setup are available in the dashboard, not through this read.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -204,10 +204,10 @@ class EmailInboxInsightsBase(Resource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsSpamTraps:
-        """Read spam-trap totals, kinds, networks and sampled hits for a verified owned domain. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period includes the preceding period. hit_rows has its own status and truncated_types; empty rows do not negate a positive total, and row counts cannot reconstruct total hits. A measured zero is valid. Hits alone do not identify the sending campaign or establish why placement changed. API-key calls require Insights preview access for your organization.
+        """Read spam-trap totals, kinds, networks and sampled hits for a verified owned domain. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period includes the preceding period. hit_rows has its own status and truncated_types; empty rows do not negate a positive total, and row counts cannot reconstruct total hits. A measured zero is valid. Hits alone do not identify the sending campaign or establish why placement changed.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -237,10 +237,10 @@ class EmailInboxInsightsBase(Resource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsBlocklists:
-        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means the lookup service supplied no count. Zero and an empty target list do not establish complete coverage. API-key calls require Insights preview access for your organization.
+        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means the lookup service supplied no count. Zero and an empty target list do not establish complete coverage.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -275,10 +275,10 @@ class AsyncEmailInboxInsightsBase(AsyncResource):
         include_ip_details: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsPlacement:
-        """Read placement for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Rates are percentages, and section statuses distinguish missing measurements. Deltas require a requested comparison and comparable prior data; absence does not mean stable placement. Provider filters add series lines without filtering the provider table. The response reports domain-wide panel/seed estimates with audience weighting, not delivery counts or a marketing/transactional split; a domain name alone does not identify a stream. Read rate measures reading, not opens. Label freshness from freshness.as_of; missing days and nulls are not zeros. Associations do not establish a cause. This read does not enable monitoring. Use `email.inbox_insights.seed_tests.list` for individual seed-test results. Google Postmaster connection status remains dashboard-only. These aggregates cannot prove placement for every customer. API-key calls require Insights preview access for your organization.
+        """Read placement for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Rates are percentages, and section statuses distinguish missing measurements. Deltas require a requested comparison and comparable prior data; absence does not mean stable placement. Provider filters add series lines without filtering the provider table. The response reports domain-wide panel/seed estimates with audience weighting, not delivery counts or a marketing/transactional split; a domain name alone does not identify a stream. Read rate measures reading, not opens. Label freshness from freshness.as_of; missing days and nulls are not zeros. Associations do not establish a cause. This read does not enable monitoring. Use `email.inbox_insights.seed_tests.list` for individual seed-test results. Google Postmaster connection status remains dashboard-only. These aggregates cannot prove placement for every customer.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -314,10 +314,10 @@ class AsyncEmailInboxInsightsBase(AsyncResource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsAuthentication:
-        """Read SPF, DKIM and DMARC results for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Pass rates are percentages. A not_configured section does not establish that DNS records are absent or that authentication failed; the source's coverage must be checked. Read section statuses, sources.latest_data_date and freshness before drawing conclusions. Authentication and placement changes can coincide without establishing cause. This read does not configure authentication or enable monitoring. API-key calls require Insights preview access for your organization.
+        """Read SPF, DKIM and DMARC results for a verified domain owned by the workspace. Dates are inclusive UTC days, with at most 30 days between from and to. Pass rates are percentages. A not_configured section does not establish that DNS records are absent or that authentication failed; the source's coverage must be checked. Read section statuses, sources.latest_data_date and freshness before drawing conclusions. Authentication and placement changes can coincide without establishing cause. This read does not configure authentication or enable monitoring.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -351,10 +351,10 @@ class AsyncEmailInboxInsightsBase(AsyncResource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsComplaints:
-        """Read the Google Postmaster user-reported spam rate for a verified owned domain. This percentage differs from spam-folder placement and Bird feedback-loop complaints across providers. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period adds the preceding period. The period rate is an unweighted mean of reported days; sparse days are missing observations, not zero complaints. Freshness identifies the last reported day, not a promised update schedule. Correlation with placement cannot identify causative sends. Sections can report not_configured when setup is incomplete; connection status and setup are available in the dashboard, not through this read. API-key calls require Insights preview access for your organization.
+        """Read the Google Postmaster user-reported spam rate for a verified owned domain. This percentage differs from spam-folder placement and Bird feedback-loop complaints across providers. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period adds the preceding period. The period rate is an unweighted mean of reported days; sparse days are missing observations, not zero complaints. Freshness identifies the last reported day, not a promised update schedule. Correlation with placement cannot identify causative sends. Sections can report not_configured when setup is incomplete; connection status and setup are available in the dashboard, not through this read.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -388,10 +388,10 @@ class AsyncEmailInboxInsightsBase(AsyncResource):
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsSpamTraps:
-        """Read spam-trap totals, kinds, networks and sampled hits for a verified owned domain. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period includes the preceding period. hit_rows has its own status and truncated_types; empty rows do not negate a positive total, and row counts cannot reconstruct total hits. A measured zero is valid. Hits alone do not identify the sending campaign or establish why placement changed. API-key calls require Insights preview access for your organization.
+        """Read spam-trap totals, kinds, networks and sampled hits for a verified owned domain. Dates are inclusive UTC days, at most 30 days apart; compare=previous_period includes the preceding period. hit_rows has its own status and truncated_types; empty rows do not negate a positive total, and row counts cannot reconstruct total hits. A measured zero is valid. Hits alone do not identify the sending campaign or establish why placement changed.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -421,10 +421,10 @@ class AsyncEmailInboxInsightsBase(AsyncResource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsBlocklists:
-        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means the lookup service supplied no count. Zero and an empty target list do not establish complete coverage. API-key calls require Insights preview access for your organization.
+        """Check blocklist standing for the sending infrastructure of a verified domain owned by the workspace. This is a current lookup and accepts no date window. Inspect each target status and checked_at; a null active_count means the lookup service supplied no count. Zero and an empty target list do not establish complete coverage.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":

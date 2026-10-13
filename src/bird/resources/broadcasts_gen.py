@@ -51,6 +51,12 @@ class BroadcastsListRecipientsParams(TypedDict, total=False):
     to: str
 
 
+class BroadcastsSendQuotaParams(TypedDict, total=False):
+    """Query params for ``client.broadcasts.send_quota``. Every key is optional."""
+
+    send_at: str
+
+
 class BroadcastsBase(Resource):
     def list(
         self,
@@ -237,9 +243,10 @@ class BroadcastsBase(Resource):
         self,
         broadcast_id: str,
         *,
+        send_at: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailBroadcastSendQuota:
-        """Check how much of a broadcast will actually send before sending it: `recipients` is how many contacts it would reach now, `allowed` is how many of those the organization's email send allowance covers, and `limited_by` names the allowance that stops the rest. The broadcast must already have an audience selected.
+        """Check how many recipients a broadcast could reach within your organization's daily and monthly email limits. `recipients` is the current sendable count. `allowed` is the count covered by the email send allowance. `limited_by` identifies the email limit that prevents the rest from receiving the broadcast. Before scheduling, pass your intended `scheduled_at` as `send_at`. If a daily or monthly window resets by that time, the check uses its full allowance. Otherwise, it uses the allowance remaining now. The response identifies the email limit that still restricts the send at that time. The check estimates your send quota using current limits without subtracting broadcasts that are scheduled but have not sent yet, so broadcasts scheduled for the same period may together exceed the limit even if each check shows enough quota. Without `send_at`, it checks a send now, even if the broadcast is already scheduled. An audience larger than the full `limit` cannot send in any window with that limit. This check reserves nothing. The email send allowance is checked again when the broadcast sends, using what remains after other sends. `limit_reason` explains the monthly email limit if you can read the organization's billing. `broadcasts` reports the separate broadcast count allowance. It is checked when you send or schedule, so `send_at` does not change it. If `broadcasts.remaining` is 0, you cannot send or schedule a draft. The broadcast must have an audience selected.
 
         ```python
         quota = client.broadcasts.send_quota("eb_01krdgeqcxet5s7t44vh8rt9mg")
@@ -249,7 +256,9 @@ class BroadcastsBase(Resource):
         """
         return self._get(
             f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/send-quota",
-            {},
+            {
+                "send_at": send_at,
+            },
             EmailBroadcastSendQuota,
             options,
         )
@@ -441,9 +450,10 @@ class AsyncBroadcastsBase(AsyncResource):
         self,
         broadcast_id: str,
         *,
+        send_at: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailBroadcastSendQuota:
-        """Check how much of a broadcast will actually send before sending it: `recipients` is how many contacts it would reach now, `allowed` is how many of those the organization's email send allowance covers, and `limited_by` names the allowance that stops the rest. The broadcast must already have an audience selected.
+        """Check how many recipients a broadcast could reach within your organization's daily and monthly email limits. `recipients` is the current sendable count. `allowed` is the count covered by the email send allowance. `limited_by` identifies the email limit that prevents the rest from receiving the broadcast. Before scheduling, pass your intended `scheduled_at` as `send_at`. If a daily or monthly window resets by that time, the check uses its full allowance. Otherwise, it uses the allowance remaining now. The response identifies the email limit that still restricts the send at that time. The check estimates your send quota using current limits without subtracting broadcasts that are scheduled but have not sent yet, so broadcasts scheduled for the same period may together exceed the limit even if each check shows enough quota. Without `send_at`, it checks a send now, even if the broadcast is already scheduled. An audience larger than the full `limit` cannot send in any window with that limit. This check reserves nothing. The email send allowance is checked again when the broadcast sends, using what remains after other sends. `limit_reason` explains the monthly email limit if you can read the organization's billing. `broadcasts` reports the separate broadcast count allowance. It is checked when you send or schedule, so `send_at` does not change it. If `broadcasts.remaining` is 0, you cannot send or schedule a draft. The broadcast must have an audience selected.
 
         ```python
         quota = await client.broadcasts.send_quota("eb_01krdgeqcxet5s7t44vh8rt9mg")
@@ -453,7 +463,9 @@ class AsyncBroadcastsBase(AsyncResource):
         """
         return await self._get(
             f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/send-quota",
-            {},
+            {
+                "send_at": send_at,
+            },
             EmailBroadcastSendQuota,
             options,
         )

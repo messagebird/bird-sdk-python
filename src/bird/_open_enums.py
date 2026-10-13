@@ -664,6 +664,14 @@ class WhatsAppKeywordOperation:
     OPT_OUT: Final = "opt_out"
 
 
+class WhatsAppMessageOrigin:
+    """Values of WhatsAppMessageOrigin known at this SDK version (open enum)."""
+
+    BUSINESS_AGENT_ECHO: Final = "business_agent_echo"
+    BUSINESS_APP_ECHO: Final = "business_app_echo"
+    HISTORY_SYNC: Final = "history_sync"
+
+
 class WhatsAppMetaHealthEntityType:
     """Values of WhatsAppMetaHealthEntityType known at this SDK version (open enum)."""
 
@@ -861,6 +869,7 @@ __all__ = [
     "WhatsAppInteractiveReplyType",
     "WhatsAppInteractiveType",
     "WhatsAppKeywordOperation",
+    "WhatsAppMessageOrigin",
     "WhatsAppMetaHealthEntityType",
     "WhatsAppNumberErrorCode",
     "WhatsAppNumberMessagingLimit",

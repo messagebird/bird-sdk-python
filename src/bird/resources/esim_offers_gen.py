@@ -94,7 +94,7 @@ class EsimOffers(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EsimCheckoutOptions:
-        """Returns published one-time terms and automatic renewal availability for a new eSIM. Automatic renewal includes its own price and cadence when an eligible mobile network is available. Availability is checked again when purchasing; this read does not reserve a package."""
+        """Returns published one-time terms and automatic renewal availability for a new eSIM, including tax-inclusive totals and current funding shortfalls. Automatic renewal includes its own price and cadence when an eligible mobile network is available. Availability and funding are checked again when purchasing; this read reserves no funds or package."""
         return self._get(
             f"/v1/esim/offers/{quote(offer_id, safe='')}/checkout",
             {},
@@ -180,7 +180,7 @@ class AsyncEsimOffers(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EsimCheckoutOptions:
-        """Returns published one-time terms and automatic renewal availability for a new eSIM. Automatic renewal includes its own price and cadence when an eligible mobile network is available. Availability is checked again when purchasing; this read does not reserve a package."""
+        """Returns published one-time terms and automatic renewal availability for a new eSIM, including tax-inclusive totals and current funding shortfalls. Automatic renewal includes its own price and cadence when an eligible mobile network is available. Availability and funding are checked again when purchasing; this read reserves no funds or package."""
         return await self._get(
             f"/v1/esim/offers/{quote(offer_id, safe='')}/checkout",
             {},

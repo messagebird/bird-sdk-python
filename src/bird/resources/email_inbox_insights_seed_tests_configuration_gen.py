@@ -28,10 +28,10 @@ class EmailInboxInsightsSeedTestsConfiguration(Resource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsSeedTestConfiguration:
-        """Read available seed pools, regions and engagement profiles for an owned sending domain before `email.inbox_insights.seed_tests.create`. Use only available pools and preserve region strings exactly. Scoped API keys, OAuth and service accounts require organization preview access.
+        """Read available seed pools, regions and engagement profiles for an owned sending domain before `email.inbox_insights.seed_tests.create`. Use only available pools and preserve region strings exactly.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":
@@ -60,10 +60,10 @@ class AsyncEmailInboxInsightsSeedTestsConfiguration(AsyncResource):
         sending_domain: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsSeedTestConfiguration:
-        """Read available seed pools, regions and engagement profiles for an owned sending domain before `email.inbox_insights.seed_tests.create`. Use only available pools and preserve region strings exactly. Scoped API keys, OAuth and service accounts require organization preview access.
+        """Read available seed pools, regions and engagement profiles for an owned sending domain before `email.inbox_insights.seed_tests.create`. Use only available pools and preserve region strings exactly.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires inbox_insights:read permission in the target workspace.
         sending_domain = None
         async for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
             if domain.domain == "mail.example.com":

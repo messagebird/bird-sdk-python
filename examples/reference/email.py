@@ -299,19 +299,19 @@ def email_templates_submit() -> None:
 
 
 def insights_email_competitive_brands_search() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     report = client.email.competitive.brands.search(q="Everlane")
     print(report.model_dump_json())
 
 
 def insights_email_competitive_watchlist_get() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     report = client.email.competitive.watchlist.get(range=30)
     print(report.model_dump_json())
 
 
 def insights_email_competitive_watchlist_brands_create() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:write permission in the target workspace.
     matches = client.email.competitive.brands.search(q="Everlane")
     match = next((brand for brand in matches.data if brand.name == "Everlane"), None)
     if match is None:
@@ -321,7 +321,7 @@ def insights_email_competitive_watchlist_brands_create() -> None:
 
 
 def insights_email_competitive_watchlist_brands_get() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     watchlist = client.email.competitive.watchlist.get(range=30)
     entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
     if entry is None or entry.watchlist_brand_id is None:
@@ -332,7 +332,7 @@ def insights_email_competitive_watchlist_brands_get() -> None:
 
 
 def insights_email_competitive_watchlist_brands_sendTime() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     watchlist = client.email.competitive.watchlist.get(range=30)
     entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
     if entry is None or entry.watchlist_brand_id is None:
@@ -343,7 +343,7 @@ def insights_email_competitive_watchlist_brands_sendTime() -> None:
 
 
 def insights_email_competitive_watchlist_brands_delete() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:write permission in the target workspace.
     watchlist = client.email.competitive.watchlist.get(range=30)
     entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
     if entry is None or entry.watchlist_brand_id is None:
@@ -353,13 +353,13 @@ def insights_email_competitive_watchlist_brands_delete() -> None:
 
 
 def insights_email_competitive_watchlist_notable() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     report = client.email.competitive.watchlist.notable(range=30)
     print(report.model_dump_json())
 
 
 def insights_email_competitive_volumeSeries() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     watchlist = client.email.competitive.watchlist.get(range=30)
     entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
     if entry is None or entry.watchlist_brand_id is None:
@@ -370,7 +370,7 @@ def insights_email_competitive_volumeSeries() -> None:
 
 
 def insights_email_competitive_watchlist_brands_campaigns_list() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     watchlist = client.email.competitive.watchlist.get(range=30)
     entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
     if entry is None or entry.watchlist_brand_id is None:
@@ -381,7 +381,7 @@ def insights_email_competitive_watchlist_brands_campaigns_list() -> None:
 
 
 def insights_email_competitive_watchlist_brands_campaigns_get() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires competitive:read permission in the target workspace.
     watchlist = client.email.competitive.watchlist.get(range=30)
     entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
     if entry is None or entry.watchlist_brand_id is None:
@@ -398,13 +398,13 @@ def insights_email_competitive_watchlist_brands_campaigns_get() -> None:
 
 
 def insights_email_inboxInsights_domains_list() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     for domain in client.email.inbox_insights.domains.list(limit=25):
         print(domain.domain, domain.monitored)
 
 
 def insights_email_inboxInsights_domains_update() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:write permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -417,13 +417,13 @@ def insights_email_inboxInsights_domains_update() -> None:
 
 
 def insights_email_inboxInsights_domainMonitoring_upsert() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:write permission in the target workspace.
     result = client.email.inbox_insights.domain_monitoring.upsert()
     print(result.outcome, result.domain)
 
 
 def insights_email_inboxInsights_placement() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -436,7 +436,7 @@ def insights_email_inboxInsights_placement() -> None:
 
 
 def insights_email_inboxInsights_authentication() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -449,7 +449,7 @@ def insights_email_inboxInsights_authentication() -> None:
 
 
 def insights_email_inboxInsights_complaints() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -462,7 +462,7 @@ def insights_email_inboxInsights_complaints() -> None:
 
 
 def insights_email_inboxInsights_spamTraps() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -475,7 +475,7 @@ def insights_email_inboxInsights_spamTraps() -> None:
 
 
 def insights_email_inboxInsights_blocklists() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -488,7 +488,7 @@ def insights_email_inboxInsights_blocklists() -> None:
 
 
 def insights_email_inboxInsights_benchmarks_industry() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -514,7 +514,7 @@ def email_stats_query() -> None:
 
 
 def seed_tests_configuration_get() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -527,7 +527,7 @@ def seed_tests_configuration_get() -> None:
 
 
 def seed_tests_list() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:read permission in the target workspace.
     sending_domain = None
     for domain in client.email.inbox_insights.domains.list(search="mail.example.com"):
         if domain.domain == "mail.example.com":
@@ -540,7 +540,7 @@ def seed_tests_list() -> None:
 
 
 def seed_tests_create() -> None:
-    # Requires Insights preview access for the organization.
+    # Requires inbox_insights:write permission in the target workspace.
     import os
 
     idempotency_key = os.getenv("IDEMPOTENCY_KEY")

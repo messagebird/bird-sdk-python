@@ -27,10 +27,10 @@ class EmailCompetitiveBase(Resource):
         brand_ids: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveVolumeSeries:
-        """Accepts up to 20 distinct watchlist entry IDs from `email.competitive.watchlist.get`. Omitting brand_ids requests the workspace's own line. Competitor lines retain the requested order after the workspace line, when present. Each line's source distinguishes estimated panel volume from the workspace's accepted sends. Returns daily series without pagination. API-key calls require Insights preview access for your organization.
+        """Accepts up to 20 distinct watchlist entry IDs from `email.competitive.watchlist.get`. Omitting brand_ids requests the workspace's own line. Competitor lines retain the requested order after the workspace line, when present. Each line's source distinguishes estimated panel volume from the workspace's accepted sends. Returns daily series without pagination.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         watchlist = client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:
@@ -59,10 +59,10 @@ class AsyncEmailCompetitiveBase(AsyncResource):
         brand_ids: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveVolumeSeries:
-        """Accepts up to 20 distinct watchlist entry IDs from `email.competitive.watchlist.get`. Omitting brand_ids requests the workspace's own line. Competitor lines retain the requested order after the workspace line, when present. Each line's source distinguishes estimated panel volume from the workspace's accepted sends. Returns daily series without pagination. API-key calls require Insights preview access for your organization.
+        """Accepts up to 20 distinct watchlist entry IDs from `email.competitive.watchlist.get`. Omitting brand_ids requests the workspace's own line. Competitor lines retain the requested order after the workspace line, when present. Each line's source distinguishes estimated panel volume from the workspace's accepted sends. Returns daily series without pagination.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         watchlist = await client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:

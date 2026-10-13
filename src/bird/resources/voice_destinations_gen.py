@@ -14,13 +14,30 @@ from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 
 
+class _MoneyRequired(TypedDict):
+    amount: str
+    currency_code: str
+
+
+class Money(_MoneyRequired, total=False):
+    pass
+
+
+class _VoiceDestinationDailySpendLimitUpdateRequired(TypedDict):
+    limit: Money
+
+
+class VoiceDestinationDailySpendLimitUpdate(_VoiceDestinationDailySpendLimitUpdateRequired, total=False):
+    pass
+
+
 class _DestinationSettingRequired(TypedDict):
     country_code: str
-    enabled: bool
 
 
 class DestinationSetting(_DestinationSettingRequired, total=False):
-    pass
+    enabled: bool
+    daily_spend_limit: VoiceDestinationDailySpendLimitUpdate
 
 
 class _VoiceDestinationsUpdateRequired(TypedDict):
@@ -37,7 +54,7 @@ class VoiceDestinations(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceDestinationList:
-        """Every country the Voice service supports, each marked with whether the workspace has enabled it and whether it is currently callable. A call to a country the workspace has not enabled is refused, so check here when a specific destination fails while others succeed.
+        """Every country the Voice service supports, each marked with whether the workspace has enabled it, whether the platform supports calling it (status), and its daily spend limit with today's usage. A call to a country the workspace has not enabled, or whose daily limit is spent, is refused, so check here when a specific destination fails while others succeed.
 
         ```python
         destinations = client.voice.destinations.list()
@@ -58,7 +75,7 @@ class VoiceDestinations(Resource):
         destinations: Sequence[DestinationSetting],
         options: RequestOptions | None = None,
     ) -> VoiceDestinationList:
-        """Enable or disable the countries this workspace may place voice calls to. Only the countries you list change; any country you omit keeps its current setting. Enabling one is what lets a call to it past the destination gate; disabling one refuses every call there, so confirm a disable with the user first. Read `voice.destinations.list` first for the current settings and whether Bird carries calls to the country at all.
+        """Enable or disable the countries this workspace may place voice calls to. Only the countries you list change; any country you omit keeps its current setting. Enabling one is what lets a call to it past the destination gate; disabling one refuses every call there, so confirm a disable with the user first. A destination's `daily_spend_limit` caps its daily spend, verification calls included, independently of whether it is enabled. Read `voice.destinations.list` first for the current settings and whether Bird carries calls to the country at all.
 
         ```python
         destinations = client.voice.destinations.update(
@@ -88,7 +105,7 @@ class AsyncVoiceDestinations(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceDestinationList:
-        """Every country the Voice service supports, each marked with whether the workspace has enabled it and whether it is currently callable. A call to a country the workspace has not enabled is refused, so check here when a specific destination fails while others succeed.
+        """Every country the Voice service supports, each marked with whether the workspace has enabled it, whether the platform supports calling it (status), and its daily spend limit with today's usage. A call to a country the workspace has not enabled, or whose daily limit is spent, is refused, so check here when a specific destination fails while others succeed.
 
         ```python
         destinations = await client.voice.destinations.list()
@@ -109,7 +126,7 @@ class AsyncVoiceDestinations(AsyncResource):
         destinations: Sequence[DestinationSetting],
         options: RequestOptions | None = None,
     ) -> VoiceDestinationList:
-        """Enable or disable the countries this workspace may place voice calls to. Only the countries you list change; any country you omit keeps its current setting. Enabling one is what lets a call to it past the destination gate; disabling one refuses every call there, so confirm a disable with the user first. Read `voice.destinations.list` first for the current settings and whether Bird carries calls to the country at all.
+        """Enable or disable the countries this workspace may place voice calls to. Only the countries you list change; any country you omit keeps its current setting. Enabling one is what lets a call to it past the destination gate; disabling one refuses every call there, so confirm a disable with the user first. A destination's `daily_spend_limit` caps its daily spend, verification calls included, independently of whether it is enabled. Read `voice.destinations.list` first for the current settings and whether Bird carries calls to the country at all.
 
         ```python
         destinations = await client.voice.destinations.update(

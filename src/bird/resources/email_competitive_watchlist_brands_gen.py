@@ -43,10 +43,10 @@ class EmailCompetitiveWatchlistBrandsBase(Resource):
         brand_id: str,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveWatchlistBrand:
-        """Add a brand using the panel brand_id returned by brand search. The response id identifies the new workspace watchlist entry for reads and removal. Each entry uses one place in the organization-wide allowance and tracks the brand's highest-volume sending domain. Reuse an idempotency key when retrying the same addition. API-key, OAuth, and service-account calls require Insights preview access for your organization.
+        """Add a brand using the panel brand_id returned by brand search. The response id identifies the new workspace watchlist entry for reads and removal. Each entry uses one place in the organization-wide allowance and tracks the brand's highest-volume sending domain. Reuse an idempotency key when retrying the same addition.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:write permission in the target workspace.
         matches = client.email.competitive.brands.search(q="Everlane")
         match = next((brand for brand in matches.data if brand.name == "Everlane"), None)
         if match is None:
@@ -75,10 +75,10 @@ class EmailCompetitiveWatchlistBrandsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Remove the workspace watchlist entry using its cwb_ ID. This frees one place in the organization-wide allowance. Adding the brand again creates a new entry; removal does not delete campaign data from eDataSource. API-key calls require Insights preview access for your organization.
+        """Remove the workspace watchlist entry using its cwb_ ID. This frees one place in the organization-wide allowance. Adding the brand again creates a new entry; removal does not delete campaign data from eDataSource.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:write permission in the target workspace.
         watchlist = client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:
@@ -96,10 +96,10 @@ class EmailCompetitiveWatchlistBrandsBase(Resource):
         range: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveBrandProfile:
-        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown, plus ESP and estimated list size. The watchlist already supplies headline comparisons. Rates are fractions. Interpret nulls by field: unavailable rates, no observed last campaign, or no overlap returned by the panel. Panel read rate differs from open rate. Tracked domains can cover only part of a brand's program. API-key calls require Insights preview access for your organization.
+        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown, plus ESP and estimated list size. The watchlist already supplies headline comparisons. Rates are fractions. Interpret nulls by field: unavailable rates, no observed last campaign, or no overlap returned by the panel. Panel read rate differs from open rate. Tracked domains can cover only part of a brand's program.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         watchlist = client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:
@@ -125,10 +125,10 @@ class EmailCompetitiveWatchlistBrandsBase(Resource):
         timezone: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveSendTimeGrid:
-        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe observed sending activity, not arrival, reading or subscriber availability. The returned period and timezone label the grid; the panel caches it for a day, so it can lag other reports. sample_days counts days available for observation, not campaigns or independent recipients. peak_send_window can be null when no sending was observed. This describes a competitor's schedule, not a best time for your audience; timing hypotheses need your own controlled test and engagement evidence. API-key calls require Insights preview access for your organization.
+        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe observed sending activity, not arrival, reading or subscriber availability. The returned period and timezone label the grid; the panel caches it for a day, so it can lag other reports. sample_days counts days available for observation, not campaigns or independent recipients. peak_send_window can be null when no sending was observed. This describes a competitor's schedule, not a best time for your audience; timing hypotheses need your own controlled test and engagement evidence.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         watchlist = client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:
@@ -155,10 +155,10 @@ class AsyncEmailCompetitiveWatchlistBrandsBase(AsyncResource):
         brand_id: str,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveWatchlistBrand:
-        """Add a brand using the panel brand_id returned by brand search. The response id identifies the new workspace watchlist entry for reads and removal. Each entry uses one place in the organization-wide allowance and tracks the brand's highest-volume sending domain. Reuse an idempotency key when retrying the same addition. API-key, OAuth, and service-account calls require Insights preview access for your organization.
+        """Add a brand using the panel brand_id returned by brand search. The response id identifies the new workspace watchlist entry for reads and removal. Each entry uses one place in the organization-wide allowance and tracks the brand's highest-volume sending domain. Reuse an idempotency key when retrying the same addition.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:write permission in the target workspace.
         matches = await client.email.competitive.brands.search(q="Everlane")
         match = next((brand for brand in matches.data if brand.name == "Everlane"), None)
         if match is None:
@@ -187,10 +187,10 @@ class AsyncEmailCompetitiveWatchlistBrandsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Remove the workspace watchlist entry using its cwb_ ID. This frees one place in the organization-wide allowance. Adding the brand again creates a new entry; removal does not delete campaign data from eDataSource. API-key calls require Insights preview access for your organization.
+        """Remove the workspace watchlist entry using its cwb_ ID. This frees one place in the organization-wide allowance. Adding the brand again creates a new entry; removal does not delete campaign data from eDataSource.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:write permission in the target workspace.
         watchlist = await client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:
@@ -208,10 +208,10 @@ class AsyncEmailCompetitiveWatchlistBrandsBase(AsyncResource):
         range: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveBrandProfile:
-        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown, plus ESP and estimated list size. The watchlist already supplies headline comparisons. Rates are fractions. Interpret nulls by field: unavailable rates, no observed last campaign, or no overlap returned by the panel. Panel read rate differs from open rate. Tracked domains can cover only part of a brand's program. API-key calls require Insights preview access for your organization.
+        """Read one watched brand using the `watchlist_brand_id` from `email.competitive.watchlist.get`; the panel `brand_id` returned by `email.competitive.brands.search` is not accepted. The response includes headline figures and a mailbox-provider breakdown, plus ESP and estimated list size. The watchlist already supplies headline comparisons. Rates are fractions. Interpret nulls by field: unavailable rates, no observed last campaign, or no overlap returned by the panel. Panel read rate differs from open rate. Tracked domains can cover only part of a brand's program.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         watchlist = await client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:
@@ -237,10 +237,10 @@ class AsyncEmailCompetitiveWatchlistBrandsBase(AsyncResource):
         timezone: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveSendTimeGrid:
-        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe observed sending activity, not arrival, reading or subscriber availability. The returned period and timezone label the grid; the panel caches it for a day, so it can lag other reports. sample_days counts days available for observation, not campaigns or independent recipients. peak_send_window can be null when no sending was observed. This describes a competitor's schedule, not a best time for your audience; timing hypotheses need your own controlled test and engagement evidence. API-key calls require Insights preview access for your organization.
+        """Takes a watchlist_brand_id from `email.competitive.watchlist.get` and an optional IANA timezone. Covers the last 90 days, with no range parameter. Cells describe observed sending activity, not arrival, reading or subscriber availability. The returned period and timezone label the grid; the panel caches it for a day, so it can lag other reports. sample_days counts days available for observation, not campaigns or independent recipients. peak_send_window can be null when no sending was observed. This describes a competitor's schedule, not a best time for your audience; timing hypotheses need your own controlled test and engagement evidence.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         watchlist = await client.email.competitive.watchlist.get(range=30)
         entry = next((row for row in watchlist.data if row.name == "Everlane" and row.watchlist_brand_id), None)
         if entry is None or entry.watchlist_brand_id is None:

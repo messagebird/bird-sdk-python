@@ -28,10 +28,10 @@ class EmailCompetitiveBrands(Resource):
         q: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveBrandSearchResults:
-        """Find a competitor by brand name or sending domain without adding it. For existing competitors, `email.competitive.watchlist.get` already returns names, tracked domains and watchlist IDs. Search returns at most eight matches, each with its highest-volume sending domain, not every domain a brand uses. Resolve ambiguous names against the intended domain before any authorized addition. An empty or limited result describes this search, not exhaustive panel coverage. The returned panel `brand_id` differs from a saved `watchlist_brand_id`. API-key calls require Insights preview access for your organization.
+        """Find a competitor by brand name or sending domain without adding it. For existing competitors, `email.competitive.watchlist.get` already returns names, tracked domains and watchlist IDs. Search returns at most eight matches, each with its highest-volume sending domain, not every domain a brand uses. Resolve ambiguous names against the intended domain before any authorized addition. An empty or limited result describes this search, not exhaustive panel coverage. The returned panel `brand_id` differs from a saved `watchlist_brand_id`.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         report = client.email.competitive.brands.search(q="Everlane")
         print(report.model_dump_json())
         ```
@@ -53,10 +53,10 @@ class AsyncEmailCompetitiveBrands(AsyncResource):
         q: str | None = None,
         options: RequestOptions | None = None,
     ) -> EmailCompetitiveBrandSearchResults:
-        """Find a competitor by brand name or sending domain without adding it. For existing competitors, `email.competitive.watchlist.get` already returns names, tracked domains and watchlist IDs. Search returns at most eight matches, each with its highest-volume sending domain, not every domain a brand uses. Resolve ambiguous names against the intended domain before any authorized addition. An empty or limited result describes this search, not exhaustive panel coverage. The returned panel `brand_id` differs from a saved `watchlist_brand_id`. API-key calls require Insights preview access for your organization.
+        """Find a competitor by brand name or sending domain without adding it. For existing competitors, `email.competitive.watchlist.get` already returns names, tracked domains and watchlist IDs. Search returns at most eight matches, each with its highest-volume sending domain, not every domain a brand uses. Resolve ambiguous names against the intended domain before any authorized addition. An empty or limited result describes this search, not exhaustive panel coverage. The returned panel `brand_id` differs from a saved `watchlist_brand_id`.
 
         ```python
-        # Requires Insights preview access for the organization.
+        # Requires competitive:read permission in the target workspace.
         report = await client.email.competitive.brands.search(q="Everlane")
         print(report.model_dump_json())
         ```
