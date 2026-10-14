@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.94.0
+
+- Add `reply_message_id` and `replied_at` to Apple Messages for Business messages, naming the latest customer reply to an outbound message once Bird matches it.
+
 ## 0.93.0
 
 - Read exact audience membership counts and daily observations, including evaluation times and explicit gaps for missing observations.

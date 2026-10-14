@@ -745,7 +745,7 @@ class EmailMessageSendRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
-        description="Custom email headers as key-value pairs (for example `References`, `In-Reply-To`, or your own `X-*` headers). Reserved headers are rejected with a `422`. Set the message's addressing and subject through the dedicated fields: `from`, `to`, `cc`, `bcc`, `reply_to`, and `subject`. The API automatically generates `Content-Type`, `Content-Transfer-Encoding`, `DKIM-Signature`, `Received`, and `Return-Path`. You cannot override these generated headers. `List-Unsubscribe` and `List-Unsubscribe-Post` are honored as-is on `transactional` sends. Marketing sends receive a compliant unsubscribe header, so supplying either one is rejected with a `422`. Header values may not contain carriage-return or line-feed characters. Up to 25 headers per send, each value up to 998 characters.",
+        description="Custom email headers, such as `References`, `In-Reply-To`, and `X-*` headers. Reserved headers and values containing carriage returns or line feeds return `422`. Set addressing and subject through their dedicated fields. Transactional sends accept `List-Unsubscribe` and `List-Unsubscribe-Post`. Marketing sends use Bird-managed unsubscribe by default.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions:\n\n- Filter the list endpoint by tag name.\n- Slice analytics rollups by tag.\n- Surface in webhook payloads.\n\nCap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.",
@@ -9579,7 +9579,7 @@ class AMBNativePayment(BaseModel):
 class AMBNativeInteractivePayload(BaseModel):
     model_config = ConfigDict(extra="allow")
     request_identifier: Annotated[Optional[str], Field(
-        description="Correlation identifier for this interaction. Bird generates one when omitted.",
+        description="Correlation identifier for this interaction. Bird generates one when omitted. Use a new value for each message. A reply is linked to its request only when no other sent message in the conversation uses the same identifier.",
         pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )] = None
     images: Annotated[Optional[List[AMBNativeImage]], Field(
@@ -9918,6 +9918,15 @@ class AMBMessage(BaseModel):
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    reply_message_id: Annotated[Optional[str], Field(
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    replied_at: Annotated[Optional[str], Field(
+        description="When Apple delivered the reply in `reply_message_id` to Bird. This can be slightly earlier than that reply's `created_at`, which records when Bird processed it. Omitted until a reply is matched, and in webhook payloads.",
+        examples=["2026-10-13T10:09:00Z"],
+    )] = None
     locale: Annotated[Optional[str], Field(
         description="Locale for this message, preserved in Apple’s format, for example en_US. Outbound messages use the request override, then the conversation locale, then the business default. Inbound messages preserve the locale in Apple’s callback. Null when unknown.",
         examples=["en_US"],
@@ -9940,7 +9949,7 @@ class AMBMessage(BaseModel):
         description="Failure detail for a message or invitation that could not be sent or was rejected.",
     )] = None
     created_at: Annotated[str, Field(
-        description="The moment this message was accepted (outbound) or received (inbound). This is the timestamp the outbound statistics families bucket and attribute on; there is no separate `accepted_at` field.",
+        description="The moment this message was accepted (outbound), or recorded by Bird after Apple delivered it (inbound). This is the timestamp the outbound statistics families bucket and attribute on; there is no separate `accepted_at` field.",
         min_length=1,
     )]
     sent_at: Annotated[Optional[str], Field(
