@@ -9203,9 +9203,8 @@ class AMBMessageSource(str, Enum):
 class AMBNativeAttachment(BaseModel):
     model_config = ConfigDict(extra="allow")
     source_url: Annotated[Optional[str], Field(
-        description="HTTPS URL Bird downloads and uploads to Apple.",
+        description="HTTPS URL Bird downloads and uploads to Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
         min_length=1,
-        pattern="^https://",
     )] = None
     name: Annotated[Optional[str], Field(description="Display filename.")] = None
     mime_type: Annotated[Optional[str], Field(
@@ -9254,9 +9253,8 @@ class AMBNativeTextContent(BaseModel):
 class AMBNativeRichLinkImage(BaseModel):
     model_config = ConfigDict(extra="allow")
     source_url: Annotated[str, Field(
-        description="HTTPS URL of a PNG preview image up to 200 kB. Bird fetches and encodes it when sending.",
+        description="HTTPS URL of a PNG preview image up to 200 kB. Bird fetches and encodes it when sending. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
         min_length=1,
-        pattern="^https://",
     )]
     mime_type: Annotated[Optional[Literal["image/png"]], Field(
         description="PNG media type required by Apple. Defaults to image/png.",
@@ -9266,9 +9264,8 @@ class AMBNativeRichLinkImage(BaseModel):
 class AMBNativeRichLinkVideo(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="HTTPS video URL fetched by Apple.",
+        description="HTTPS video URL fetched by Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
         min_length=1,
-        pattern="^https://",
     )]
     mime_type: Annotated[Optional[str], Field(
         description="Media type of the video. Defaults to video/mp4; supply the actual type for other formats.",
@@ -9284,9 +9281,8 @@ class AMBNativeRichLinkAssets(BaseModel):
 class AMBNativeRichLinkData(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="HTTPS URL opened by the preview.",
+        description="HTTPS URL opened by the preview. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
         min_length=1,
-        pattern="^https://",
     )]
     title: Annotated[str, Field(description="Preview title.", min_length=1)]
     assets: AMBNativeRichLinkAssets
@@ -9337,7 +9333,6 @@ class AMBRichLinkConstruct(BaseModel):
         description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. A URL Apple cannot build a preview for is refused with a `422` `AMBConstructPayloadFailed`; send `rich_link` content with your own `title` and `image` instead.",
         examples=["https://apps.apple.com/app/id123456789?clip=1"],
         min_length=1,
-        pattern="^https://",
     )]
     store_region: Annotated[Optional[str], Field(
         description="ISO 3166-1 alpha-2 country code.",
@@ -9418,9 +9413,8 @@ class AMBNativeImage(BaseModel):
         min_length=1,
     )]
     source_url: Annotated[str, Field(
-        description="HTTPS URL of a PNG image up to 200 kB. Total interactive image data must not exceed 5 MB.",
+        description="HTTPS URL of a PNG image up to 200 kB. Total interactive image data must not exceed 5 MB. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
         min_length=1,
-        pattern="^https://",
     )]
     description: Annotated[Optional[str], Field(
         description="Accessibility description read by VoiceOver.",
@@ -9893,9 +9887,8 @@ class AMBNativeInteractiveData(BaseModel):
     received_message: Optional[AMBMessageBubble] = None
     reply_message: Optional[AMBMessageBubble] = None
     app_icon_source_url: Annotated[Optional[str], Field(
-        description="Publicly accessible HTTPS URL of the app's PNG icon. The icon must be smaller than 15 kB. We fetch and include it in the request to Apple.",
+        description="Publicly accessible HTTPS URL of the app's PNG icon. The icon must be smaller than 15 kB. We fetch and include it in the request to Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
         min_length=1,
-        pattern="^https://",
     )] = None
     data: Annotated[Optional[AMBNativeInteractivePayload], Field(
         description="Exactly one built-in interaction. Protocol versions are managed by Bird.",
