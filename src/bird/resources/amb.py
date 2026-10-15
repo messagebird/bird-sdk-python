@@ -11,6 +11,25 @@ from bird.resources.amb_conversations_gen import AsyncAmbConversations, AmbConve
 from bird.resources.amb_routing_rules_gen import AsyncAmbRoutingRules, AmbRoutingRules
 from bird.resources.amb_stats import AsyncAmbStats, AmbStats
 from bird.resources.amb_suppressions_gen import AsyncAmbSuppressions, AmbSuppressions
+from bird.resources.amb_templates import AsyncAmbTemplates, AmbTemplates
+
+
+def _template_body(
+    *,
+    template: str | None,
+    language: str | None,
+    parameters: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if template is None and language is None and parameters is None:
+        return None
+    tmpl: dict[str, Any] = {}
+    if template is not None:
+        tmpl["id" if template.startswith("amt_") else "slug"] = template
+    if language is not None:
+        tmpl["language"] = language
+    if parameters is not None:
+        tmpl["parameters"] = parameters
+    return tmpl
 
 
 class Amb(AmbBase):
@@ -21,13 +40,17 @@ class Amb(AmbBase):
         self.routing_rules = AmbRoutingRules(client)
         self.stats = AmbStats(client)
         self.suppressions = AmbSuppressions(client)
+        self.templates = AmbTemplates(client)
 
     def send(
         self,
         *,
         from_: str,
         to: str,
-        content: Mapping[str, Any],
+        content: Mapping[str, Any] | None = None,
+        template: str | None = None,
+        language: str | None = None,
+        parameters: Mapping[str, Any] | None = None,
         source: str | None = None,
         category: str | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -38,6 +61,9 @@ class Amb(AmbBase):
         options: RequestOptions | None = None,
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
+        Supply either ``content`` (native text, rich_link, or interactive) or a
+        stored ``template`` (by id or slug, with optional ``language`` and
+        ``parameters``); the two are mutually exclusive.
 
         Example:
             message = bird.amb.send(
@@ -47,8 +73,9 @@ class Amb(AmbBase):
             )
         """
         body = to_wire(AMBMessageSendRequest, {
-            "from": from_, "to": to, "content": content, "source": source,
-            "category": category, "metadata": metadata, "tags": tags,
+            "from": from_, "to": to, "content": content,
+            "template": _template_body(template=template, language=language, parameters=parameters),
+            "source": source, "category": category, "metadata": metadata, "tags": tags,
             "group": group, "intent": intent, "locale": locale,
         })
         return self._write("POST", "/v1/amb/messages", body, AMBMessage, options)
@@ -62,13 +89,17 @@ class AsyncAmb(AsyncAmbBase):
         self.routing_rules = AsyncAmbRoutingRules(client)
         self.stats = AsyncAmbStats(client)
         self.suppressions = AsyncAmbSuppressions(client)
+        self.templates = AsyncAmbTemplates(client)
 
     async def send(
         self,
         *,
         from_: str,
         to: str,
-        content: Mapping[str, Any],
+        content: Mapping[str, Any] | None = None,
+        template: str | None = None,
+        language: str | None = None,
+        parameters: Mapping[str, Any] | None = None,
         source: str | None = None,
         category: str | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -79,6 +110,9 @@ class AsyncAmb(AsyncAmbBase):
         options: RequestOptions | None = None,
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
+        Supply either ``content`` (native text, rich_link, or interactive) or a
+        stored ``template`` (by id or slug, with optional ``language`` and
+        ``parameters``); the two are mutually exclusive.
 
         Example:
             message = await bird.amb.send(
@@ -88,8 +122,9 @@ class AsyncAmb(AsyncAmbBase):
             )
         """
         body = to_wire(AMBMessageSendRequest, {
-            "from": from_, "to": to, "content": content, "source": source,
-            "category": category, "metadata": metadata, "tags": tags,
+            "from": from_, "to": to, "content": content,
+            "template": _template_body(template=template, language=language, parameters=parameters),
+            "source": source, "category": category, "metadata": metadata, "tags": tags,
             "group": group, "intent": intent, "locale": locale,
         })
         return await self._write("POST", "/v1/amb/messages", body, AMBMessage, options)
@@ -98,10 +133,13 @@ class AsyncAmb(AsyncAmbBase):
 class _AmbSendRequired(TypedDict):
     from_: str
     to: str
-    content: Mapping[str, Any]
 
 
 class AmbSendParams(_AmbSendRequired, total=False):
+    content: Mapping[str, Any]
+    template: str
+    language: str
+    parameters: Mapping[str, Any]
     source: str
     category: str
     metadata: Mapping[str, Any]

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.95.0
+
+- **Breaking:** Apple Messages native rich link content gains a `rich_link_construct` option that asks Apple to build the link preview when the message is sent, instead of a prior construct-payload call; a strict `oneOf` reader of rich link content needs to handle this third shape alongside `rich_link_data` and `rich_link_data_ref`.
+- Apple Messages templates: read templates, versions and languages; send a message from a template.
+- Add `assets`, `assets.folders`, and `assets.references` methods to browse and organize media-library files and inspect permitted usage.
+- WhatsApp message webhook events gain `origin`, typed `WhatsAppMessageOrigin`, set when the WhatsApp Business app or the Meta Business Agent sent the message rather than Bird.
+
 ## 0.94.0
 
 - Add `reply_message_id` and `replied_at` to Apple Messages for Business messages, naming the latest customer reply to an outbound message once Bird matches it.

@@ -92,6 +92,23 @@ class AMBSuppressionReason:
     OPTED_OUT: Final = "opted_out"
 
 
+class AssetKind:
+    """Values of AssetKind known at this SDK version (open enum)."""
+
+    AUDIO: Final = "audio"
+    DOCUMENT: Final = "document"
+    IMAGE: Final = "image"
+    VIDEO: Final = "video"
+
+
+class AssetReferenceUsage:
+    """Values of AssetReferenceUsage known at this SDK version (open enum)."""
+
+    BOTH: Final = "both"
+    DRAFT: Final = "draft"
+    PUBLISHED: Final = "published"
+
+
 class DestinationRegion:
     """Values of DestinationRegion known at this SDK version (open enum)."""
 
@@ -815,6 +832,8 @@ __all__ = [
     "AMBMessageEventType",
     "AMBSuppressionOrigin",
     "AMBSuppressionReason",
+    "AssetKind",
+    "AssetReferenceUsage",
     "DestinationRegion",
     "DestinationSuperRegion",
     "EmailClientFamily",

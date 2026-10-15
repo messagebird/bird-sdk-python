@@ -28,6 +28,7 @@ from bird.resources.email import AsyncEmail, Email
 from bird.resources.lookup_gen import AsyncLookup, Lookup
 from bird.resources.numbers import AsyncNumbers, Numbers
 from bird.resources.broadcasts import AsyncBroadcasts, Broadcasts
+from bird.resources.assets import Assets, AsyncAssets
 from bird.resources.preferences import AsyncPreferences, Preferences
 from bird.resources.workspace_gen import AsyncWorkspaceResource, WorkspaceResource
 from bird.resources.realtime import AsyncRealtime, Realtime
@@ -196,6 +197,7 @@ class Bird(SyncAPIClient):
         self.suppressions = Suppressions(self)
         self.lookup = Lookup(self)
         self.numbers = Numbers(self)
+        self.assets = Assets(self)
         self.preferences = Preferences(self)
         self.broadcasts = Broadcasts(self, email_defaults)
         self.workspace = WorkspaceResource(self)
@@ -332,6 +334,7 @@ class AsyncBird(AsyncAPIClient):
         self.suppressions = AsyncSuppressions(self)
         self.lookup = AsyncLookup(self)
         self.numbers = AsyncNumbers(self)
+        self.assets = AsyncAssets(self)
         self.preferences = AsyncPreferences(self)
         self.broadcasts = AsyncBroadcasts(self, email_defaults)
         self.workspace = AsyncWorkspaceResource(self)

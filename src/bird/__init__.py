@@ -53,7 +53,19 @@ from bird.resources.whatsapp_numbers_gen import (
     WhatsappNumbersListEventsParams,
     WhatsappNumbersListParams,
 )
+from bird.resources.assets_gen import AssetsListParams, AssetsUpdateParams
+from bird.resources.assets_folders_gen import (
+    AssetsFoldersCreateParams,
+    AssetsFoldersListParams,
+    AssetsFoldersUpdateParams,
+)
 from bird._generated import (
+    Asset,
+    AssetList,
+    AssetFolder,
+    AssetFolderList,
+    AssetReference,
+    AssetReferenceList,
     Audience,
     AudienceList,
     AudienceMember,
@@ -468,6 +480,8 @@ from bird._generated import (
 )
 
 from bird._open_enums import (
+    AssetKind,
+    AssetReferenceUsage,
     EsimActionName,
     EsimActionUnavailableReason,
     AMBBusinessAccountReviewStatus,
@@ -627,6 +641,19 @@ from bird._generated import (
 )
 
 __all__ = [
+    "Asset",
+    "AssetList",
+    "AssetFolder",
+    "AssetFolderList",
+    "AssetReference",
+    "AssetReferenceList",
+    "AssetsListParams",
+    "AssetsUpdateParams",
+    "AssetsFoldersCreateParams",
+    "AssetsFoldersListParams",
+    "AssetsFoldersUpdateParams",
+    "AssetKind",
+    "AssetReferenceUsage",
     "AMBBusinessAccount",
     "AMBBusinessAccountCreate",
     "AMBBusinessAccountEvent",

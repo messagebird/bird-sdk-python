@@ -3523,8 +3523,253 @@ class Attachment(BaseModel):
     )]
 
 
+class AssetKindFilter(str, Enum):
+    image = "image"
+    video = "video"
+    audio = "audio"
+    document = "document"
+
+
+class AssetContentTypeFilter(str, Enum):
+    image_png = "image/png"
+    image_jpeg = "image/jpeg"
+    image_gif = "image/gif"
+    video_mp4 = "video/mp4"
+    video_webm = "video/webm"
+    video_quicktime = "video/quicktime"
+    audio_mpeg = "audio/mpeg"
+    audio_mp4 = "audio/mp4"
+    audio_ogg = "audio/ogg"
+    audio_wav = "audio/wav"
+    application_pdf = "application/pdf"
+
+
+class AssetDeletedFilter(str, Enum):
+    exclude = "exclude"
+    include = "include"
+    only = "only"
+
+
+class AssetFolderID(RootModel[str]):
+    root: str
+
+
 class AssetID(RootModel[str]):
     root: str
+
+
+class AssetKind(str, Enum):
+    image = "image"
+    video = "video"
+    audio = "audio"
+    document = "document"
+
+
+class Asset(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+    id: Annotated[str, Field(
+        examples=["ast_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ast_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    url: Annotated[str, Field(
+        description="The asset's permanent public URL. Safe to embed or link in sent messages; for a document the usable form is a link.",
+        min_length=1,
+    )]
+    thumbnail_url: Annotated[Optional[str], Field(
+        description="A small preview of the asset, for rendering a picker or a grid. Intended for your own interfaces rather than for embedding in messages. Null for every kind but `image`: generating a preview of a video, an audio file, or a document would mean rendering its contents, which the library does not do. Show an icon for the `kind` instead.",
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="The asset's display name. Defaults to the uploaded file's name.",
+        min_length=1,
+    )]
+    content_type: Annotated[str, Field(
+        description="The stored file's media type, determined from its contents.",
+        min_length=1,
+    )]
+    kind: Annotated[Annotated[Union[AssetKind, str], Field(union_mode="left_to_right")], Field(
+        description="The category a media-library asset's type falls into. Use it to group or filter a\nmixed library.\n\n- `image`: covers PNG, JPEG, and GIF.\n- `video`: covers MP4, WebM, and QuickTime.\n- `audio`: covers MP3, M4A, Ogg, and WAV.\n- `document`: covers PDF.",
+    )]
+    size_bytes: Annotated[int, Field(
+        description="The stored file's size in bytes. Images are re-encoded on upload, so for those this can differ from the size of the file you sent. Every other kind is stored byte-for-byte.",
+    )]
+    width: Annotated[Optional[int], Field(
+        description="The stored image's width in pixels. Null for every kind but `image`.",
+    )]
+    height: Annotated[Optional[int], Field(
+        description="The stored image's height in pixels. Null for every kind but `image`.",
+    )]
+    alt_text: Annotated[Optional[str], Field(
+        description="Default alternative text describing the asset, carried along whenever it is placed. Most mail clients block images by default, so for an image this is often the only thing a recipient reads.",
+        max_length=1000,
+    )]
+    folder_id: Annotated[Optional[str], Field(
+        description="The folder the asset is filed in, or null when it sits at the top level of the library. Filing an asset never changes its URL.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    deleted_at: Annotated[Optional[str], Field(
+        description="When the asset was removed from the library, or null if it is still listed. A removed asset keeps serving at its original URL.",
+    )]
+
+
+class AssetList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[Asset]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class AssetUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="The asset's display name.",
+        max_length=255,
+        min_length=1,
+    )] = None
+    alt_text: Annotated[Optional[str], Field(
+        description="Default alternative text describing the image. Send null to clear it.",
+        max_length=1000,
+    )] = None
+    folder_id: Annotated[Optional[str], Field(
+        description="The folder to file the asset in. Send null to move it to the top level of the library. Moving an asset never changes its URL.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class AssetReferenceUsage(str, Enum):
+    draft = "draft"
+    published = "published"
+    both = "both"
+
+
+class AssetReferenceResourceType(str, Enum):
+    email_template = "email_template"
+
+
+class AssetReference(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    resource_type: Annotated[Annotated[Union[AssetReferenceResourceType, str], Field(union_mode="left_to_right")], Field(
+        description="What kind of resource this is. New kinds appear as other products start using the media library, so treat an unfamiliar value as a resource this client does not know how to link to rather than as an error.",
+        min_length=1,
+    )]
+    resource_id: Annotated[str, Field(
+        description="The resource's own identifier, carrying that resource's prefix (`emt_` for an email template), for linking straight to it.",
+        examples=["emt_01j9zyq8k7f0ra2m6c4x5w8pv3"],
+        min_length=1,
+    )]
+    resource_name: Annotated[str, Field(
+        description="The resource's current display name, read when you list references.",
+        min_length=1,
+    )]
+    usage: Annotated[Annotated[Union[AssetReferenceUsage, str], Field(union_mode="left_to_right")], Field(
+        description="Which copy of a resource uses an asset.\n\n- `draft`: it is not reaching anyone yet.\n- `published`: the change has to be published before recipients see it.\n- `both`: the asset is used in both copies.",
+    )]
+
+
+class AssetReferenceList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[AssetReference]
+    truncated: Annotated[bool, Field(
+        description="True when more resources use this asset than one response can carry, so the list is a partial answer. Replace the asset's usages you can see, then list again to find the rest.",
+    )]
+
+
+class AssetFolder(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+    id: Annotated[str, Field(
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="The folder's display name. Unique among folders sharing the same parent, compared without regard to case.",
+        max_length=255,
+        min_length=1,
+    )]
+    parent_id: Annotated[Optional[str], Field(
+        description="The folder this one sits in, or null when it sits at the top level of the library.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    path: Annotated[str, Field(
+        description="The folder's location written out from the top level, such as `/Marketing/Logos`. Provided so a caller can display a folder without walking its parents.",
+        min_length=1,
+    )]
+
+
+class AssetFolderList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[AssetFolder]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class AssetFolderCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="The folder's display name. Must be unique among folders sharing the same parent, compared without regard to case. Cannot contain `/`.",
+        max_length=255,
+        min_length=1,
+    )]
+    parent_id: Annotated[Optional[str], Field(
+        description="The folder to create this one in. Omit it, or send null, to create the folder at the top level of the library.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class AssetFolderUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="The folder's display name. Must be unique among folders sharing the same parent, compared without regard to case. Cannot contain `/`.",
+        max_length=255,
+        min_length=1,
+    )] = None
+    parent_id: Annotated[Optional[str], Field(
+        description="The folder to move this one into. Send null to move it to the top level of the library. A folder cannot be moved into itself or into one of its own subfolders.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class ComplianceSubmissionID(RootModel[str]):
@@ -9086,11 +9331,28 @@ class AMBRichLinkReference(BaseModel):
     )]
 
 
+class AMBRichLinkConstruct(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    url: Annotated[str, Field(
+        description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. A URL Apple cannot build a preview for is refused with a `422` `AMBConstructPayloadFailed`; send `rich_link` content with your own `title` and `image` instead.",
+        examples=["https://apps.apple.com/app/id123456789?clip=1"],
+        min_length=1,
+        pattern="^https://",
+    )]
+    store_region: Annotated[Optional[str], Field(
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
+
+
 class AMBNativeRichLinkContent(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["rich_link"], Field(description="Apple message family.")]
     body: Annotated[Optional[str], Field(
-        description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
+        description="Automatic introductions for rich links are enabled regionally in stages. When enabled for a new send, a nonblank body is sent as a separate text before the link. All parts belong to one message, which becomes sent after Apple accepts all parts. Before activation, and for retries retaining legacy behavior, body is included in the rich link request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the rich link. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
     subject: Annotated[Optional[str], Field(
         description="Subject displayed above the message body.",
@@ -9101,6 +9363,9 @@ class AMBNativeRichLinkContent(BaseModel):
     rich_link_data: Optional[AMBNativeRichLinkData] = None
     rich_link_data_ref: Annotated[Optional[AMBRichLinkReference], Field(
         description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
+    )] = None
+    rich_link_construct: Annotated[Optional[AMBRichLinkConstruct], Field(
+        description="Asks Apple to build the rich link preview when the message is sent, rather than through a prior `POST /v1/amb/messages/construct-payload` call. No caller holds a signed reference until the send itself resolves one.",
     )] = None
 
 
@@ -9872,6 +10137,18 @@ class AMBError(BaseModel):
     )]
 
 
+class AMBTemplateID(RootModel[str]):
+    root: str
+
+
+class AMBTemplateVersionID(RootModel[str]):
+    root: str
+
+
+class AMBTemplateContentHash(RootModel[str]):
+    root: str
+
+
 class AMBMessage(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
@@ -9966,6 +10243,35 @@ class AMBMessage(BaseModel):
         description="Apple purpose identifier carried by this message. Omitted when absent from the message or unavailable on a historical record.",
         min_length=1,
     )] = None
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language whose text was rendered, in canonical form. Null when the send used no template. This can differ from `requested_language` when the template's fallback policy selects another language.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    template_id: Annotated[Optional[str], Field(
+        description="The template rendered for this message, or null for a message sent with native content.",
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_version_id: Annotated[Optional[str], Field(
+        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a message sent with native content. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_content_hash: Annotated[Optional[str], Field(
+        description="The rendered language's source fingerprint, or null for a message sent with native content.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
 
 
 class AMBMessageList(BaseModel):
@@ -9987,6 +10293,31 @@ class AMBMessageList(BaseModel):
     )]
 
 
+class AMBTemplateSend(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[Optional[str], Field(
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    slug: Annotated[Optional[str], Field(
+        description="The workspace or built-in template to send, by its immutable slug. Read the template's live version to see its variables.",
+        examples=["bird_order_update"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )] = None
+    language: Annotated[Optional[str], Field(
+        description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.",
+        examples=["fr"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A missing key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
+    )] = None
+
+
 class AMBMessageSendRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
@@ -10003,11 +10334,14 @@ class AMBMessageSendRequest(BaseModel):
     source: Annotated[Optional[AMBMessageSource], Field(
         description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
     )] = None
-    content: Annotated[AMBMessageContent, Field(
+    content: Annotated[Optional[AMBMessageContent], Field(
         description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
-    )]
+    )] = None
+    template: Annotated[Optional[AMBTemplateSend], Field(
+        description="Send using a stored template instead of native content. The category is derived from the template, so `category` is rejected alongside it.",
+    )] = None
     category: Annotated[Optional[str], Field(
-        description="Free-form reporting label; it does not change sending or suppression policy, for example `order_update`. Omit it to send with the default empty category.",
+        description="Free-form reporting label; it does not change sending or suppression policy, for example `order_update`. Omit it to send with the default empty category. Rejected alongside `template`, where the category is derived from the template.",
         examples=["order_update"],
         max_length=64,
     )] = None
@@ -11030,6 +11364,393 @@ class AMBConversationStatsResponse(BaseModel):
     )]
     data: Annotated[List[AMBConversationStatsPoint], Field(
         description="One row per day or hour in chronological order. Buckets with no activity contain zero counts.",
+    )]
+
+
+class AMBTemplateCategory(str, Enum):
+    transactional = "transactional"
+    marketing = "marketing"
+
+
+class AMBTemplateLanguageState(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[Annotated[Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
+    )]
+    draft: Annotated[Optional[bool], Field(
+        description="Whether the draft has an unpublished change for this language. When true beside `live`, sends keep using the older published content until submit.",
+    )] = None
+
+
+class AMBTemplateSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[Optional[str], Field(
+        description="The workspace that owns the template. Null for a built-in `system` template.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The immutable handle used to address and send the template.",
+        examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[str, Field(
+        description="The template's display name.",
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Null if it has no description.",
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
+    )]
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
+    )]
+    category: Annotated[AMBTemplateCategory, Field(
+        description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
+    )]
+    content_kind: Annotated[AMBContentKind, Field(
+        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The permanent editable draft version. Null for a built-in template.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version sends resolve to, or null before first publication.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    published_version_id: Annotated[Optional[str], Field(
+        description="Deprecated. Use `live_version_id`, which carries the same value.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    languages: Annotated[Dict[str, AMBTemplateLanguageState], Field(
+        description="Each language and its live or draft state, keyed by canonical BCP-47 tag.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="Languages the live version can currently send. Empty before first publication.",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When the template was last published. Null before first publication and for built-in templates.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for built-in templates.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for built-in templates.",
+    )]
+
+
+class AMBTemplateList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBTemplateSummary], Field(
+        description="One page of Apple Messages templates.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class AMBTemplate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[Optional[str], Field(
+        description="The workspace that owns the template. Null for a built-in `system` template.",
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    slug: Annotated[str, Field(
+        description="The immutable handle used to address and send the template. A built-in template's slug starts with `bird_`.",
+        examples=["order-shipped"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[str, Field(
+        description="The template's display name. It defaults to the slug and can be changed on workspace templates.",
+        examples=["Order shipped"],
+        max_length=255,
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Null if it has no description.",
+    )]
+    scope: Annotated[TemplateScope, Field(
+        description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
+    )]
+    status: Annotated[TemplateStatus, Field(
+        description="Where the template stands as a whole. The same five states on every channel.\n\n- `draft`: nothing has ever gone live.\n- `pending`: nothing is live and at least one language is in review.\n- `active`: at least one language is live, so something can be sent.\n- `rejected`: it was reviewed and every language was refused.\n- `inactive`: nothing is live and nothing is in review, so content was withdrawn or was blocked before anything went live.\n\nA template with one language live is `active` even while another is still\ndrafted or refused. Read `languages` for the state of each language and its\nreason.\n\nWhich values a channel reports follows its review model. A channel whose\ncontent a third party reviews uses all five. On email and SMS, where content\ngoes live on publish, a template is `draft`, `active` or `inactive`, and\n`pending` and `rejected` are reserved for the review stage coming to both, so\na template reaching either is not a breaking change.",
+    )]
+    category: Annotated[AMBTemplateCategory, Field(
+        description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
+    )]
+    content_kind: Annotated[AMBContentKind, Field(
+        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    draft_version_id: Annotated[Optional[str], Field(
+        description="The permanent editable draft version. Null for a built-in template.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    live_version_id: Annotated[Optional[str], Field(
+        description="The version sends resolve to, or null before a workspace template is first published. A built-in template points to a synthetic published version that projects its current catalogue content.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    published_version_id: Annotated[Optional[str], Field(
+        description="Deprecated. Use `live_version_id`, which carries the same value.",
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    revision: Annotated[Optional[int], Field(
+        description="The draft revision to use for concurrent-edit checks. Null for a built-in template.",
+        ge=0,
+    )]
+    languages: Annotated[Dict[str, AMBTemplateLanguageState], Field(
+        description="Each language the template has, keyed by canonical BCP-47 tag, with its live state and whether the draft contains unpublished changes. Content is available from version reads.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="Languages the live version can currently send. Empty before first publication.",
+    )]
+    on_missing_language: Annotated[TemplateOnMissingLanguage, Field(
+        description="How a send handles a requested language that the live version does not have.",
+    )]
+    language_source_required: Annotated[bool, Field(
+        description="Whether each send must name a language instead of using the live version's default.",
+    )]
+    last_submitted_at: Annotated[Optional[str], Field(
+        description="When the template was last published. Null before first publication and for built-in templates.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the template was created. Null for built-in templates.",
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the template was last modified. Null for built-in templates.",
+    )]
+
+
+class AMBTemplateVersionStatus(str, Enum):
+    draft = "draft"
+    published = "published"
+
+
+class AMBTemplateVersionSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="Sequential publication number. Null for the draft; a built-in template reports 1.",
+        ge=1,
+    )]
+    status: Annotated[AMBTemplateVersionStatus, Field(
+        description="Whether the version is the editable draft or published. Published workspace versions are immutable and remain `published` after a later version goes live. A built-in template's synthetic published version projects the current catalogue entry.",
+    )]
+    revision: Annotated[int, Field(description="The version's revision counter.", ge=0)]
+    variables: Annotated[List[TemplateVariable], Field(
+        description="Variables inferred from the version's content and shared by each language.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    available_languages: Annotated[List[str], Field(
+        description="Languages this version contains, without their content.",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the version was created. Null for a built-in template's synthetic version.",
+    )]
+    published_at: Annotated[Optional[str], Field(
+        description="When the version was published. Null for the draft and for a built-in template's synthetic version.",
+    )]
+
+
+class AMBTemplateVersionList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBTemplateVersionSummary], Field(
+        description="One page of the template's versions, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class AMBTemplateVersionLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    content: Annotated[AMBMessageContent, Field(
+        description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter.",
+        ge=0,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A fingerprint of Apple Messages template content, prefixed with its algorithm. Compare it within this API version to identify the exact source without transferring it.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null for a built-in template.",
+    )]
+
+
+class AMBTemplateVersion(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    template_id: Annotated[str, Field(
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    version_number: Annotated[Optional[int], Field(
+        description="Sequential publication number. Null for the draft; a built-in template reports 1.",
+        ge=1,
+    )]
+    status: Annotated[AMBTemplateVersionStatus, Field(
+        description="Whether the version is the editable draft or published. Published workspace versions are immutable and remain `published` after a later version goes live. A built-in template's synthetic published version projects the current catalogue entry.",
+    )]
+    revision: Annotated[int, Field(
+        description="The version revision. A draft revision advances with each metadata or content change. Published workspace versions are frozen; a built-in template's synthetic version reports 0.",
+        ge=0,
+    )]
+    variables: Annotated[List[TemplateVariable], Field(
+        description="Variables inferred from the version's content. Every language in a publishable Apple Messages version uses the same set. Built-in templates may apply additional typed constraints described by each variable.",
+    )]
+    languages: Annotated[Dict[str, AMBTemplateVersionLanguage], Field(
+        description="Full content for each language, keyed by canonical BCP-47 tag.",
+    )]
+    default_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the version was created. Null for a built-in template's synthetic version.",
+    )]
+    published_at: Annotated[Optional[str], Field(
+        description="When the version was published. Null for the draft and for a built-in template's synthetic version.",
+    )]
+
+
+class AMBTemplateLanguageSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter.",
+        ge=0,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A fingerprint of Apple Messages template content, prefixed with its algorithm. Compare it within this API version to identify the exact source without transferring it.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null for a built-in template.",
+    )]
+
+
+class AMBTemplateLanguageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[AMBTemplateLanguageSummary], Field(
+        description="The version's languages ordered by canonical tag, without content.",
+    )]
+
+
+class AMBTemplateLanguage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    content: Annotated[AMBMessageContent, Field(
+        description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
+    )]
+    revision: Annotated[int, Field(
+        description="This language's revision counter, used for concurrent-edit checks on draft writes.",
+        ge=0,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A fingerprint of Apple Messages template content, prefixed with its algorithm. Compare it within this API version to identify the exact source without transferring it.",
+        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
+        min_length=1,
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When this language was last saved. Null for a built-in template.",
     )]
 
 
@@ -17762,7 +18483,7 @@ class WebhookConnectorID(RootModel[str]):
 class WebhookConnectorSetup(BaseModel):
     model_config = ConfigDict(extra="allow")
     connector_id: Annotated[str, Field(
-        description="The connector to deliver through. Each connector, its fields and the setup to do on its\nplatform first:\n\n- `claude_managed_agents`: Claude Managed Agents. Send each message you receive to your Claude managed agent.\n  - `agent_id` (`config`, required): Returned when you create the agent. Sessions use its latest version.\n  - `environment_id` (`config`, required): Returned when you create the environment.\n  - `api_key` (secret, in `credentials`, required): From the Claude workspace your agent runs in.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, set up your agent in Claude. In the Claude Console, create the agent, its environment and an API key in the same workspace, then come back here with their IDs and the key. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 2: Create an API key. In the Claude workspace your agent runs in. See https://platform.claude.com/settings/keys.\n  - Setup 3: Copy the agent and environment IDs. Each create returns its ID. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n- `grok_bot`: Grok Bot. Send each message you receive to a Grok Bot routine.\n  - `webhook_url` (`config`, required): The routine's webhook URL.\n  - `sender_key` (secret, in `credentials`, required): The routine's sender key. Bird sends it only as the Bearer token.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, ask Grok Bot to create a routine. Ask Grok Bot to create a routine with a webhook trigger, then paste the webhook URL and sender key it gives you below. See https://cursor.com/docs/cloud-agent/automations#webhook-triggers.",
+        description="The connector to deliver through. Each connector, its fields and the setup to do on its\nplatform first:\n\n- `claude_managed_agents`: Claude Managed Agents. Send each message you receive to your Claude managed agent.\n  - `agent_id` (`config`, required): Returned when you create the agent. Sessions use its latest version.\n  - `environment_id` (`config`, required): Returned when you create the environment.\n  - `vault_id` (`config`, optional): A credential vault the agent uses, such as the one holding its Bird MCP credential, so it can reply through Bird.\n  - `api_key` (secret, in `credentials`, required): From the Claude workspace your agent runs in.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, set up your agent in Claude. In the Claude Console, create the agent, its environment and an API key in the same workspace, then come back here with their IDs and the key. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 2: Create an API key. In the Claude workspace your agent runs in. See https://platform.claude.com/settings/keys.\n  - Setup 3: Copy the agent and environment IDs. Each create returns its ID. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 4: Optionally, add a credential vault. To let the agent reply through Bird, store its Bird MCP credential in a Claude credential vault and give the vault ID here. Each session gets that vault. See https://platform.claude.com/docs/en/managed-agents/vaults.\n- `grok_bot`: Grok Bot. Send each message you receive to a Grok Bot routine.\n  - `webhook_url` (`config`, required): The routine's webhook URL.\n  - `sender_key` (secret, in `credentials`, required): The routine's sender key. Bird sends it only as the Bearer token.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, ask Grok Bot to create a routine. Ask Grok Bot to create a routine with a webhook trigger, then paste the webhook URL and sender key it gives you below. See https://cursor.com/docs/cloud-agent/automations#webhook-triggers.",
         examples=["claude_managed_agents"],
         max_length=64,
         min_length=1,
@@ -20937,16 +21658,19 @@ class EventWhatsAppAcceptedData(BaseModel):
         description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
     )] = None
 
 
@@ -20991,161 +21715,22 @@ class EventWhatsAppDeliveredData(BaseModel):
         description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
     )] = None
     recipient: Annotated[Optional[WhatsAppAddress], Field(
         description="The participant delivery was confirmed to, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
-    )] = None
-
-
-class EventWhatsAppReadData(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    whatsapp_id: Annotated[str, Field(
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
-    )]
-    from_: Annotated[WhatsAppAddress, Field(
-        alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
-    )]
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-    recipient: Annotated[Optional[WhatsAppAddress], Field(
-        description="The participant who opened the message, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
-    )] = None
-
-
-class EventWhatsAppReceivedData(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    whatsapp_id: Annotated[str, Field(
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
-    )]
-    from_: Annotated[WhatsAppAddress, Field(
-        alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
-    )]
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-    text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
-    image: Annotated[Optional[WhatsAppImage], Field(
-        description="Image the contact sent.",
-    )] = None
-    video: Annotated[Optional[WhatsAppVideo], Field(
-        description="Video the contact sent.",
-    )] = None
-    audio: Annotated[Optional[WhatsAppAudio], Field(
-        description="Audio the contact sent.",
-    )] = None
-    sticker: Annotated[Optional[WhatsAppSticker], Field(
-        description="Sticker the contact sent.",
-    )] = None
-    document: Annotated[Optional[WhatsAppDocument], Field(
-        description="Document the contact sent.",
-    )] = None
-    location: Annotated[Optional[WhatsAppLocation], Field(
-        description="Location the contact sent.",
-    )] = None
-    contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
-        description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
-    )] = None
-    interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
-        description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
-    )] = None
-    unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
-        description="Set when the contact sent content the API does not model, naming the WhatsApp content type.",
-    )] = None
-
-
-class EventWhatsAppSentData(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    whatsapp_id: Annotated[str, Field(
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    workspace_id: Annotated[str, Field(
-        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
-    )]
-    from_: Annotated[WhatsAppAddress, Field(
-        alias="from",
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    to: Annotated[WhatsAppAddress, Field(
-        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
-    )]
-    in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
-        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
 
 
@@ -21190,16 +21775,19 @@ class EventWhatsAppFailedData(BaseModel):
         description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -21343,6 +21931,49 @@ class EventWhatsAppReacted(BaseModel):
     )]
 
 
+class EventWhatsAppReadData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[EventWhatsAppBaseDirection, Field(
+        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
+    )]
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+    )] = None
+    recipient: Annotated[Optional[WhatsAppAddress], Field(
+        description="The participant who opened the message, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
+    )] = None
+
+
 class EventWhatsAppRead(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.read"], Field(
@@ -21358,6 +21989,74 @@ class EventWhatsAppRead(BaseModel):
     data: Annotated[EventWhatsAppReadData, Field(
         description="Payload of the whatsapp.read event.",
     )]
+
+
+class EventWhatsAppReceivedData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[EventWhatsAppBaseDirection, Field(
+        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
+    )]
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+    )] = None
+    text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
+    image: Annotated[Optional[WhatsAppImage], Field(
+        description="Image the contact sent.",
+    )] = None
+    video: Annotated[Optional[WhatsAppVideo], Field(
+        description="Video the contact sent.",
+    )] = None
+    audio: Annotated[Optional[WhatsAppAudio], Field(
+        description="Audio the contact sent.",
+    )] = None
+    sticker: Annotated[Optional[WhatsAppSticker], Field(
+        description="Sticker the contact sent.",
+    )] = None
+    document: Annotated[Optional[WhatsAppDocument], Field(
+        description="Document the contact sent.",
+    )] = None
+    location: Annotated[Optional[WhatsAppLocation], Field(
+        description="Location the contact sent.",
+    )] = None
+    contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
+        description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
+    )] = None
+    interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
+        description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
+    )] = None
+    unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
+        description="Set when the contact sent content the API does not model, naming the WhatsApp content type.",
+    )] = None
 
 
 class EventWhatsAppReceived(BaseModel):
@@ -21397,16 +22096,19 @@ class EventWhatsAppRejectedData(BaseModel):
         description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message. Null when the message carried no tags.",
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
     )]
     metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message. Null when the message carried no metadata.",
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the `in_reply_to_message_id` the send request quoted. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -21430,6 +22132,46 @@ class EventWhatsAppRejected(BaseModel):
     )]
 
 
+class EventWhatsAppSentData(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    whatsapp_id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[EventWhatsAppBaseDirection, Field(
+        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
+        min_length=1,
+    )]
+    from_: Annotated[WhatsAppAddress, Field(
+        alias="from",
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    to: Annotated[WhatsAppAddress, Field(
+        description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
+    )]
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
+    )]
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
+    )]
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+    )] = None
+
+
 class EventWhatsAppSent(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.sent"], Field(
@@ -21438,7 +22180,7 @@ class EventWhatsAppSent(BaseModel):
         min_length=1,
     )]
     timestamp: Annotated[str, Field(
-        description="Time the API handed the message to Meta for delivery.",
+        description="Time the message was handed to Meta for delivery.",
         examples=["2026-07-16T12:00:00Z"],
         min_length=1,
     )]
