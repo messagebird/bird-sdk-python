@@ -29,6 +29,18 @@ class WebhookFilter(_WebhookFilterRequired, total=False):
     pass
 
 
+class WebhookConnectorSetupUpdate(TypedDict, total=False):
+    connector_id: str
+    action: str
+    credentials: Mapping[str, str]
+    config: Mapping[str, Any]
+
+
+class WebhookDestinationUpdate(TypedDict, total=False):
+    type: str
+    connector: WebhookConnectorSetupUpdate
+
+
 class WebhooksListParams(TypedDict, total=False):
     """Query params for ``client.webhooks.list``. Every key is optional."""
 
@@ -69,7 +81,7 @@ class WebhooksUpdateParams(TypedDict, total=False):
     description: str
     filter: WebhookFilter | None
     events: Sequence[str]
-    credentials: Mapping[str, str]
+    destination: WebhookDestinationUpdate
     status: str
 
 
@@ -256,7 +268,7 @@ class WebhooksBase(Resource):
         description: str | None = None,
         filter: WebhookFilter | None | Omit = omit,
         events: Sequence[str] | None = None,
-        credentials: Mapping[str, str] | None = None,
+        destination: WebhookDestinationUpdate | None = None,
         status: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpoint:
@@ -279,8 +291,8 @@ class WebhooksBase(Resource):
             _body["filter"] = filter
         if events is not None:
             _body["events"] = events
-        if credentials is not None:
-            _body["credentials"] = credentials
+        if destination is not None:
+            _body["destination"] = destination
         if status is not None:
             _body["status"] = status
         body = to_wire_exclude_unset(WebhookEndpointUpdate, _body)
@@ -476,7 +488,7 @@ class AsyncWebhooksBase(AsyncResource):
         description: str | None = None,
         filter: WebhookFilter | None | Omit = omit,
         events: Sequence[str] | None = None,
-        credentials: Mapping[str, str] | None = None,
+        destination: WebhookDestinationUpdate | None = None,
         status: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpoint:
@@ -499,8 +511,8 @@ class AsyncWebhooksBase(AsyncResource):
             _body["filter"] = filter
         if events is not None:
             _body["events"] = events
-        if credentials is not None:
-            _body["credentials"] = credentials
+        if destination is not None:
+            _body["destination"] = destination
         if status is not None:
             _body["status"] = status
         body = to_wire_exclude_unset(WebhookEndpointUpdate, _body)

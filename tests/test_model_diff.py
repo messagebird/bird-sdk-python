@@ -1,4 +1,6 @@
+import sys
 from enum import Enum
+from importlib import import_module
 from pathlib import Path
 from runpy import run_path
 from types import ModuleType
@@ -6,7 +8,10 @@ from typing import Literal, Optional, Union
 
 from pydantic import create_model
 
-surface = run_path(str(Path(__file__).resolve().parents[1] / "scripts/model_diff.py"))["surface"]
+scripts = Path(__file__).resolve().parents[1] / "scripts"
+sys.path.insert(0, str(scripts))
+comparison = run_path(str(scripts / "model_diff.py"))
+surface = comparison["surface"]
 
 
 class Kind(str, Enum):
@@ -43,3 +48,30 @@ def test_surface_compares_fixed_values():
     assert expected == equivalent
     assert expected != unrestricted
     assert expected != wrong_value
+
+
+def test_component_names_exclude_unreachable_schema_collisions(monkeypatch, tmp_path):
+    import yaml
+
+    named = comparison["component_schemas"]
+    generate_models = import_module("generate_models")
+
+    path, methods = next(iter(generate_models.KEEP.items()))
+    monkeypatch.setattr(generate_models, "KEEP", {path: methods})
+    bundle = tmp_path / "bundle.yaml"
+    bundle.write_text(yaml.safe_dump({
+        "paths": {path: {next(iter(methods)): {
+            "responses": {"200": {"content": {"application/json": {
+                "schema": {"$ref": "#/components/schemas/Record"},
+            }}}},
+        }}},
+        "components": {"schemas": {
+            "Record": {"type": "object", "properties": {"region": {"type": "string"}}},
+            "Region": {"type": "string", "enum": ["us1", "eu1"]},
+            "WebhookEvent": {"type": "object"},
+            "WebhookEventType": {"type": "string"},
+        }},
+    }))
+    monkeypatch.setitem(named.__globals__, "BUNDLE", bundle)
+
+    assert named() == {"Record", "WebhookEvent", "WebhookEventType"}

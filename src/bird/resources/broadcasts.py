@@ -16,6 +16,12 @@ from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._exceptions import BirdError
 from bird._generated import (
     EmailBroadcast,
+    EmailMessage,
+    EmailBroadcastValidationResult,
+    EmailBroadcastValidationRequest,
+    EmailBroadcastPreviewRequest,
+    EmailBroadcastTestRequest,
+    EmailBroadcastPreviewResult,
     EmailBroadcastCreateRequest,
     EmailBroadcastSendNowRequest,
     EmailBroadcastUpdateRequest,
@@ -52,10 +58,27 @@ _BROADCAST_DEFAULT_KEYS = tuple(
 )
 
 
-def _create_template(template: str | None, language: str | None) -> dict[str, Any] | None:
+def _given(value: Any) -> bool:
+    return value is not None and not isinstance(value, Omit)
+
+
+def _overrides_wire(overrides: Mapping[str, Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    # A complete replacement map: a null language here would otherwise become a destructive
+    # {} clear, so both levels must already be mappings. Scalar None inside one stays null.
+    if not isinstance(overrides, Mapping) or not all(isinstance(values, Mapping) for values in overrides.values()):
+        raise BirdError("template.parameter_overrides must map each language to a JSON object")
+    return {language: dict(values) for language, values in overrides.items()}
+
+
+def _create_template(
+    template: str | None, language: str | None, parameters: Mapping[str, Any] | None | Omit,
+    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
+) -> dict[str, Any] | None:
     # The language is one of the template's own languages, so it travels inside
     # the template reference rather than beside it.
     if template is None:
+        if _given(parameters) or _given(parameter_overrides):
+            raise ValueError("parameters needs a template")
         if language is not None:
             raise ValueError("language needs a template: the language is chosen from the template it belongs to")
         return None
@@ -81,11 +104,13 @@ def _create_body(
     scheduled_at: str | datetime | None,
     defaults: EmailDefaults | None = None,
     language: str | None = None,
+    parameters: Mapping[str, Any] | None | Omit = omit,
+    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
 ) -> dict[str, Any]:
     fields: dict[str, Any] = {
         "from": from_,
         "audience_id": audience_id,
-        "template": _create_template(template, language),
+        "template": _create_template(template, language, parameters, parameter_overrides),
         "reply_to": reply_to,
         "headers": headers,
         "tags": tags,
@@ -106,7 +131,12 @@ def _create_body(
             wire = "from" if key == "from_" else key
             if fields.get(wire) is None and (value := defaults.get(key)) is not None:
                 fields[wire] = value
-    return to_wire(EmailBroadcastCreateRequest, fields)
+    body = to_wire(EmailBroadcastCreateRequest, fields)
+    if parameters is not None and not isinstance(parameters, Omit):
+        body["template"]["parameters"] = dict(parameters)
+    if parameter_overrides is not None and not isinstance(parameter_overrides, Omit):
+        body["template"]["parameter_overrides"] = _overrides_wire(parameter_overrides)
+    return body
 
 
 def _update_body(
@@ -122,6 +152,8 @@ def _update_body(
     ip_pool_id: str | None | Omit,
     category: str | None,
     language: str | None | Omit = omit,
+    parameters: Mapping[str, Any] | None | Omit = omit,
+    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {}
     if from_ is not None:
@@ -135,10 +167,15 @@ def _update_body(
     # Clearing the template clears its language too, so ``language=None``
     # beside ``template=None`` asks for the same clear twice and goes through.
     if not isinstance(template, Omit) and template is None:
+        if _given(parameters) or _given(parameter_overrides):
+            raise ValueError("parameters cannot accompany a cleared template")
         if not isinstance(language, Omit) and language is not None:
             raise ValueError("language needs a template: the language is chosen from the template it belongs to")
         body["template"] = None
-    elif not isinstance(template, Omit) or not isinstance(language, Omit):
+    elif (
+        not isinstance(template, Omit) or not isinstance(language, Omit)
+        or _given(parameters) or _given(parameter_overrides)
+    ):
         nested: dict[str, Any] = {}
         if not isinstance(template, Omit):
             nested["id"] = template
@@ -161,7 +198,12 @@ def _update_body(
         body["ip_pool_id"] = ip_pool_id
     if category is not None:
         body["category"] = category
-    return to_wire_exclude_unset(EmailBroadcastUpdateRequest, body)
+    wire = to_wire_exclude_unset(EmailBroadcastUpdateRequest, body)
+    if parameters is not None and not isinstance(parameters, Omit):
+        wire["template"]["parameters"] = dict(parameters)
+    if parameter_overrides is not None and not isinstance(parameter_overrides, Omit):
+        wire["template"]["parameter_overrides"] = _overrides_wire(parameter_overrides)
+    return wire
 
 
 def _send_body(scheduled_at: str | datetime | None) -> dict[str, Any]:
@@ -169,6 +211,27 @@ def _send_body(scheduled_at: str | datetime | None) -> dict[str, Any]:
         EmailBroadcastSendNowRequest, {"scheduled_at": _scheduled_at_wire(scheduled_at)}
     )
 
+
+
+def _parameter_operation_body(
+    template: Mapping[str, Any] | None | Omit,
+    from_: EmailAddressInput | Omit,
+    reply_to: Sequence[EmailAddressInput] | None | Omit,
+    headers: Mapping[str, str] | Omit,
+    contact_id: str | Omit = omit,
+) -> dict[str, Any]:
+    if isinstance(template, Mapping) and "parameters" in template:
+        if not isinstance(template["parameters"], Mapping):
+            raise BirdError("template.parameters must be a non-null JSON object")
+    if isinstance(template, Mapping) and "parameter_overrides" in template:
+        overrides = template["parameter_overrides"]
+        if not isinstance(overrides, Mapping) or not all(isinstance(v, Mapping) for v in overrides.values()):
+            raise BirdError("template.parameter_overrides must map each language to a JSON object")
+    body: dict[str, Any] = {}
+    for key, value in (("template", template), ("from", from_), ("reply_to", reply_to), ("headers", headers), ("contact_id", contact_id)):
+        if not isinstance(value, Omit):
+            body[key] = value
+    return body
 
 class Broadcasts(BroadcastsBase):
     """Broadcasts: draft, update, send, cancel, and read how one landed. Reach
@@ -193,6 +256,8 @@ class Broadcasts(BroadcastsBase):
         ip_pool_id: str | None = None,
         category: str | None = None,
         language: str | None = None,
+        parameters: Mapping[str, Any] | None | Omit = omit,
+        parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         send: bool | None = None,
         scheduled_at: str | datetime | None = None,
         options: RequestOptions | None = None,
@@ -218,7 +283,7 @@ class Broadcasts(BroadcastsBase):
         body = _create_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
-            self._defaults, language,
+            self._defaults, language, parameters, parameter_overrides,
         )
         return self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -238,6 +303,8 @@ class Broadcasts(BroadcastsBase):
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
         language: str | None | Omit = omit,
+        parameters: Mapping[str, Any] | None | Omit = omit,
+        parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a broadcast that is still a draft or is scheduled, and return
@@ -256,7 +323,8 @@ class Broadcasts(BroadcastsBase):
         """
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category, language,
+            track_opens, track_clicks, ip_pool_id, category, language, parameters,
+            parameter_overrides,
         )
         return self._write(
             "PATCH",
@@ -291,6 +359,107 @@ class Broadcasts(BroadcastsBase):
             options,
         )
 
+    def validate(
+        self,
+        broadcast_id: str,
+        *,
+        template: Mapping[str, Any] | None | Omit = omit,
+        from_: EmailAddressInput | Omit = omit,
+        reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
+        headers: Mapping[str, str] | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> EmailBroadcastValidationResult:
+        """Check the broadcast's saved inputs, or the ones given here, against
+        the template's current published version without saving anything or
+        evaluating recipients. ``template`` takes the same ``language``,
+        ``parameters`` and ``parameter_overrides`` an update would; omitted
+        arguments use what the broadcast already has.
+
+        ```python
+        result = client.broadcasts.validate(
+            "eb_01krdgeqcxet5s7t44vh8rt9mg",
+            template={"parameters": {"title": "Welcome", "discount": 20}},
+        )
+        print(result.ready_for_admission, result.problems)
+        ```
+        """
+        body = _parameter_operation_body(template, from_, reply_to, headers)
+        body = to_wire_exclude_unset(EmailBroadcastValidationRequest, body)
+        return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/validate", body, EmailBroadcastValidationResult, options)
+
+    def preview(
+        self,
+        broadcast_id: str,
+        *,
+        contact_id: str | Omit = omit,
+        template: Mapping[str, Any] | None | Omit = omit,
+        from_: EmailAddressInput | Omit = omit,
+        reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
+        headers: Mapping[str, str] | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> EmailBroadcastPreviewResult:
+        """Render the broadcast's current published content for one contact,
+        using its actual values and the inputs given here, without sending
+        mail. Pass ``contact_id`` when the template reads contact data; the
+        returned ``preview_fingerprint`` is what ``test`` repeats.
+
+        ```python
+        preview = client.broadcasts.preview(
+            "eb_01krdgeqcxet5s7t44vh8rt9mg",
+            template={"parameters": {"title": "Welcome", "discount": 20}},
+            contact_id="con_01krdgeqcxet5s7t44vh8rt9mg",
+        )
+        print(preview.subject, preview.preview_fingerprint)
+        ```
+        """
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body = to_wire_exclude_unset(EmailBroadcastPreviewRequest, body)
+        return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/preview", body, EmailBroadcastPreviewResult, options)
+
+    def test(
+        self,
+        broadcast_id: str,
+        *,
+        contact_id: str | Omit = omit,
+        to: str,
+        preview_fingerprint: str,
+        template: Mapping[str, Any] | None | Omit = omit,
+        from_: EmailAddressInput | Omit = omit,
+        reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
+        headers: Mapping[str, str] | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> EmailMessage:
+        """Send the exact content a fresh preview rendered to one authorized
+        member of your organization, never to the broadcast's audience. Repeat
+        the preview's inputs and its ``preview_fingerprint``; if the
+        publication, inputs or contact changed since, it raises a ``409``.
+        Reuse one ``idempotency_key`` per intent so a retry sends once.
+
+        ```python
+        template = {"parameters": {"title": "Welcome", "discount": 20}}
+        contact_id = "con_01krdgeqcxet5s7t44vh8rt9mg"
+        preview = client.broadcasts.preview(
+            "eb_01krdgeqcxet5s7t44vh8rt9mg", template=template, contact_id=contact_id
+        )
+        accepted = client.broadcasts.test(
+            "eb_01krdgeqcxet5s7t44vh8rt9mg",
+            template=template,
+            contact_id=contact_id,
+            to="member@example.com",
+            preview_fingerprint=preview.preview_fingerprint,
+            options={"idempotency_key": "broadcast-preview-intent-1"},
+        )
+        print(accepted.id, accepted.status)
+        ```
+        """
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body["to"] = to
+        body["preview_fingerprint"] = preview_fingerprint
+        body = to_wire_exclude_unset(EmailBroadcastTestRequest, body)
+        if not options or not options.get("idempotency_key"):
+            raise BirdError("broadcasts.test requires a nonempty caller idempotency_key")
+        return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/test", body, EmailMessage, options)
+
 
 class AsyncBroadcasts(AsyncBroadcastsBase):
     """Async mirror of `Broadcasts`."""
@@ -314,6 +483,8 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         ip_pool_id: str | None = None,
         category: str | None = None,
         language: str | None = None,
+        parameters: Mapping[str, Any] | None | Omit = omit,
+        parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         send: bool | None = None,
         scheduled_at: str | datetime | None = None,
         options: RequestOptions | None = None,
@@ -322,7 +493,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         body = _create_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
-            self._defaults, language,
+            self._defaults, language, parameters, parameter_overrides,
         )
         return await self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -342,12 +513,15 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
         language: str | None | Omit = omit,
+        parameters: Mapping[str, Any] | None | Omit = omit,
+        parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a draft or scheduled broadcast. See `Broadcasts.update`."""
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category, language,
+            track_opens, track_clicks, ip_pool_id, category, language, parameters,
+            parameter_overrides,
         )
         return await self._write(
             "PATCH",
@@ -372,3 +546,56 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
             EmailBroadcast,
             options,
         )
+
+    async def validate(
+        self,
+        broadcast_id: str,
+        *,
+        template: Mapping[str, Any] | None | Omit = omit,
+        from_: EmailAddressInput | Omit = omit,
+        reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
+        headers: Mapping[str, str] | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> EmailBroadcastValidationResult:
+        """Check a broadcast's inputs without saving. See `Broadcasts.validate`."""
+        body = _parameter_operation_body(template, from_, reply_to, headers)
+        body = to_wire_exclude_unset(EmailBroadcastValidationRequest, body)
+        return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/validate", body, EmailBroadcastValidationResult, options)
+
+    async def preview(
+        self,
+        broadcast_id: str,
+        *,
+        contact_id: str | Omit = omit,
+        template: Mapping[str, Any] | None | Omit = omit,
+        from_: EmailAddressInput | Omit = omit,
+        reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
+        headers: Mapping[str, str] | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> EmailBroadcastPreviewResult:
+        """Render a broadcast for one contact. See `Broadcasts.preview`."""
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body = to_wire_exclude_unset(EmailBroadcastPreviewRequest, body)
+        return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/preview", body, EmailBroadcastPreviewResult, options)
+
+    async def test(
+        self,
+        broadcast_id: str,
+        *,
+        contact_id: str | Omit = omit,
+        to: str,
+        preview_fingerprint: str,
+        template: Mapping[str, Any] | None | Omit = omit,
+        from_: EmailAddressInput | Omit = omit,
+        reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
+        headers: Mapping[str, str] | Omit = omit,
+        options: RequestOptions | None = None,
+    ) -> EmailMessage:
+        """Send a rendered test to one member. See `Broadcasts.test`."""
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body["to"] = to
+        body["preview_fingerprint"] = preview_fingerprint
+        body = to_wire_exclude_unset(EmailBroadcastTestRequest, body)
+        if not options or not options.get("idempotency_key"):
+            raise BirdError("broadcasts.test requires a nonempty caller idempotency_key")
+        return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/test", body, EmailMessage, options)

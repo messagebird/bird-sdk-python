@@ -15,6 +15,12 @@ def broadcasts_create() -> None:
         from_="newsletter@example.com",
         audience_id="adn_01krdgeqcxet5s7t44vh8rt9mg",
         template="emt_01krdgeqcxet5s7t44vh8rt9mg",
+        parameters={
+            "title": "Welcome",
+            "offer": "OCTOBER20",
+            "discount": 20,
+            "featured": False,
+        },
     )
     print(broadcast.id, broadcast.status)
 
@@ -28,6 +34,7 @@ def broadcasts_update() -> None:
     broadcast = client.broadcasts.update(
         "eb_01krdgeqcxet5s7t44vh8rt9mg",
         template="emt_01krdgeqcxet5s7t44vh8rt9mg",
+        parameters={},
     )
     print(broadcast.status)
 
@@ -78,3 +85,61 @@ def broadcasts_list_clicked_links() -> None:
     links = client.broadcasts.list_clicked_links("eb_01krdgeqcxet5s7t44vh8rt9mg")
     for link in links.data:
         print(link.url, link.click_count, link.recipient_count)
+
+
+def broadcasts_validate() -> None:
+    template = {
+        "parameters": {
+            "title": "Welcome",
+            "offer": "OCTOBER20",
+            "discount": 20,
+            "featured": False,
+        }
+    }
+    result = client.broadcasts.validate("eb_01krdgeqcxet5s7t44vh8rt9mg", template=template)
+    print(result.ready_for_admission, result.problems)
+
+
+def broadcasts_preview() -> None:
+    template = {
+        "parameters": {
+            "title": "Welcome",
+            "offer": "OCTOBER20",
+            "discount": 20,
+            "featured": False,
+        }
+    }
+    contact_id = "con_01krdgeqcxet5s7t44vh8rt9mg"
+    preview = client.broadcasts.preview(
+        "eb_01krdgeqcxet5s7t44vh8rt9mg", template=template, contact_id=contact_id
+    )
+    print(preview.subject, preview.preview_fingerprint)
+
+
+def broadcasts_test() -> None:
+    template = {
+        "parameters": {
+            "title": "Welcome",
+            "offer": "OCTOBER20",
+            "discount": 20,
+            "featured": False,
+        }
+    }
+    contact_id = "con_01krdgeqcxet5s7t44vh8rt9mg"
+    preview = client.broadcasts.preview(
+        "eb_01krdgeqcxet5s7t44vh8rt9mg", template=template, contact_id=contact_id
+    )
+    accepted = client.broadcasts.test(
+        "eb_01krdgeqcxet5s7t44vh8rt9mg",
+        template=template,
+        contact_id=contact_id,
+        to="member@example.com",
+        preview_fingerprint=preview.preview_fingerprint,
+        options={"idempotency_key": "broadcast-preview-intent-1"},
+    )
+    print(accepted.id, accepted.status)
+
+
+def email_template_parameters() -> None:
+    discovery = client.email.templates.parameters("emt_01krdgeqcxet5s7t44vh8rt9mg")
+    print(discovery.parameters, discovery.variables)

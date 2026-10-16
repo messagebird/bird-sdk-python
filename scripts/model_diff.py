@@ -36,7 +36,8 @@ from pathlib import Path
 import yaml
 from pydantic import RootModel
 
-BUNDLE = Path(__file__).resolve().parents[3] / "backend/openapi/.generated/openapi.public.bundle.yaml"
+SCRIPTS = Path(__file__).resolve().parent
+BUNDLE = SCRIPTS.parents[2] / "backend/openapi/.generated/openapi.public.bundle.yaml"
 
 
 def load(path: str, name: str):
@@ -88,10 +89,21 @@ def surface(mod) -> dict[str, object]:
 
 
 def component_schemas() -> frozenset[str]:
-    """The names the spec itself gives its schemas, which the SDK exports."""
+    """The names the oracle's pruned input gives its schemas, which the SDK exports.
+
+    Unreached components are excluded: dcg names inline array items after their
+    field (`regions` -> `Region`), which can coincide with one the SDK never reaches.
+    """
     if not BUNDLE.exists():
         sys.exit(f"OpenAPI bundle not found: {BUNDLE}")
+    # A runpy or importlib load leaves this directory off sys.path, and
+    # generate_models needs it for its sibling, the generated surface_ops.
+    if str(SCRIPTS) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS))
+    from generate_models import prune
+
     spec = yaml.safe_load(BUNDLE.read_text())
+    prune(spec)
     return frozenset(spec.get("components", {}).get("schemas", {}))
 
 

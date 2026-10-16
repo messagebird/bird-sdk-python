@@ -9,6 +9,7 @@ from urllib.parse import quote
 from bird._generated import (
     EmailTemplate,
     EmailTemplateDuplicate,
+    EmailTemplateParameters,
     EmailTemplatePreview,
     EmailTemplatePreviewRequest,
     EmailTemplateSummary,
@@ -58,6 +59,12 @@ class EmailTemplatesDuplicateParams(TypedDict, total=False):
     """Params for ``client.email.templates.duplicate``. Every key is optional."""
 
     slug: str
+
+
+class EmailTemplatesParametersParams(TypedDict, total=False):
+    """Query params for ``client.email.templates.parameters``. Every key is optional."""
+
+    language: str
 
 
 class EmailTemplatesPreviewParams(TypedDict, total=False):
@@ -179,6 +186,23 @@ class EmailTemplatesBase(Resource):
             f"/v1/email/templates/{quote(template_ref, safe='')}/duplicate",
             body,
             EmailTemplate,
+            options,
+        )
+
+    def parameters(
+        self,
+        template_ref: str,
+        *,
+        language: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailTemplateParameters:
+        """Get the parameters and variables used by the template's published content in one language. The result describes the template and holds no saved values. Parameters are the names a broadcast supplies in `template.parameters`, and variables are the `bird.` references Bird fills in. The result identifies list values, which broadcast parameters cannot supply. It also includes a fingerprint that identifies the published content without exposing contact values. You cannot select an older template version. Requires email_marketing read permission in addition to email_management read. Parameter sites cover template subject, HTML and text; envelope overrides are checked by broadcast validation."""
+        return self._get(
+            f"/v1/email/templates/{quote(template_ref, safe='')}/parameters",
+            {
+                "language": language,
+            },
+            EmailTemplateParameters,
             options,
         )
 
@@ -322,6 +346,23 @@ class AsyncEmailTemplatesBase(AsyncResource):
             f"/v1/email/templates/{quote(template_ref, safe='')}/duplicate",
             body,
             EmailTemplate,
+            options,
+        )
+
+    async def parameters(
+        self,
+        template_ref: str,
+        *,
+        language: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailTemplateParameters:
+        """Get the parameters and variables used by the template's published content in one language. The result describes the template and holds no saved values. Parameters are the names a broadcast supplies in `template.parameters`, and variables are the `bird.` references Bird fills in. The result identifies list values, which broadcast parameters cannot supply. It also includes a fingerprint that identifies the published content without exposing contact values. You cannot select an older template version. Requires email_marketing read permission in addition to email_management read. Parameter sites cover template subject, HTML and text; envelope overrides are checked by broadcast validation."""
+        return await self._get(
+            f"/v1/email/templates/{quote(template_ref, safe='')}/parameters",
+            {
+                "language": language,
+            },
+            EmailTemplateParameters,
             options,
         )
 

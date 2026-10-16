@@ -216,6 +216,7 @@ class RealtimeChannelInclude(str, Enum):
 
 
 class RealtimePublish(BaseModel):
+    "A Realtime publish: delivers one event to one or more channels of the app. Listing several channels fans the event out to all of them (broadcast) in a single call."
     model_config = ConfigDict(extra="allow")
     event: Annotated[str, Field(
         description="The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.",
@@ -242,6 +243,7 @@ class RealtimePublish(BaseModel):
 
 
 class RealtimeChannelListItem(BaseModel):
+    "One occupied channel. A listed channel is occupied by definition; counts appear only when requested via `include` and applicable."
     model_config = ConfigDict(extra="allow")
     member_count: Annotated[Optional[int], Field(
         description="Distinct members (presence channels only; requires `include=member_count`).",
@@ -259,6 +261,7 @@ class RealtimeChannelListItem(BaseModel):
 
 
 class RealtimePublishResult(BaseModel):
+    "The result of a Realtime publish. The event was accepted and fanned out to the requested channels; delivery to connected clients is asynchronous."
     model_config = ConfigDict(extra="allow")
     data: Annotated[Optional[List[RealtimeChannelListItem]], Field(
         description="Per-channel attributes at publish time, present only when the request asked for them via `include`; one item per distinct target channel, sorted by name.",
@@ -266,6 +269,7 @@ class RealtimePublishResult(BaseModel):
 
 
 class RealtimeBatchEvent(BaseModel):
+    "A single event published to one channel as part of a batch."
     model_config = ConfigDict(extra="allow")
     event: Annotated[str, Field(
         description="The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.",
@@ -294,6 +298,7 @@ class RealtimeBatchEvent(BaseModel):
 
 
 class RealtimeBatchPublish(BaseModel):
+    "A batch of events, each delivered to a single channel, in one request."
     model_config = ConfigDict(extra="allow")
     events: Annotated[List[RealtimeBatchEvent], Field(
         description="Up to 10 events per batch.",
@@ -303,6 +308,7 @@ class RealtimeBatchPublish(BaseModel):
 
 
 class RealtimeBatchPublishResultItem(BaseModel):
+    "Attributes of one batch item's channel at publish time. Items are positional: the n-th item corresponds to the n-th event in the request."
     model_config = ConfigDict(extra="allow")
     member_count: Annotated[Optional[int], Field(
         description="Distinct members (presence channels only; requires `include=member_count`).",
@@ -320,6 +326,7 @@ class RealtimeBatchPublishResultItem(BaseModel):
 
 
 class RealtimeBatchPublishResult(BaseModel):
+    "The result of a Realtime batch publish. The events were accepted for delivery; delivery to connected clients is asynchronous."
     model_config = ConfigDict(extra="allow")
     data: Annotated[Optional[List[RealtimeBatchPublishResultItem]], Field(
         description="Per-event channel attributes at publish time, present only when at least one event asked for them via `include`. Positional: one item per event, in request order.",
@@ -327,6 +334,7 @@ class RealtimeBatchPublishResult(BaseModel):
 
 
 class RealtimeChannelsList(BaseModel):
+    "The app's occupied channels. The Realtime service does not paginate this listing, so all occupied channels are returned in one response."
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[RealtimeChannelListItem], Field(
         description="The occupied channels, sorted by name.",
@@ -334,6 +342,7 @@ class RealtimeChannelsList(BaseModel):
 
 
 class RealtimeChannelInfo(BaseModel):
+    "State of a single channel. Counts appear only when requested and applicable."
     model_config = ConfigDict(extra="allow")
     member_count: Annotated[Optional[int], Field(
         description="Distinct members (presence channels only; requires `include=member_count`).",
@@ -351,6 +360,7 @@ class RealtimeMemberID(RootModel[str]):
 
 
 class RealtimeChannelMember(BaseModel):
+    "A member present on a presence channel."
     model_config = ConfigDict(extra="allow")
     member_id: Annotated[str, Field(
         description="An app-defined member ID for your application's end user, assigned when your auth server authorizes them. Use up to 128 URL-safe characters because member IDs appear directly in API request paths. The value can include `+ : @ . _ -`, but not `/ ? # %` or whitespace.",
@@ -361,11 +371,13 @@ class RealtimeChannelMember(BaseModel):
 
 
 class RealtimeChannelMembers(BaseModel):
+    "The members present on a presence channel."
     model_config = ConfigDict(extra="allow")
     members: List[RealtimeChannelMember]
 
 
 class RealtimeMemberPublish(BaseModel):
+    "An event addressed to one member rather than to a channel. Every connection that member currently holds receives it; if they hold none, the event is dropped."
     model_config = ConfigDict(extra="allow")
     event: Annotated[str, Field(
         description="The event name clients bind to. Application event names are free-form; the `bird:` and `bird_internal:` prefixes are reserved for the protocol and rejected.",
@@ -405,6 +417,7 @@ class EmailID(RootModel[str]):
 
 
 class EmailAddress(BaseModel):
+    "An email address with an optional display name."
     model_config = ConfigDict(extra="allow")
     email: Annotated[str, Field(
         description="Email address.",
@@ -433,6 +446,7 @@ class EmailTemplateVersionID(RootModel[str]):
 
 
 class Tag(BaseModel):
+    "Structured key/value label attached to a message or a call. Use tags for low-cardinality filtering dimensions (category, experiment ID, template ID); they surface in the list filter of whatever carries them.\n\nOn a message they also surface in the event log and in webhook payloads, and a message can carry `metadata` beside them for arbitrary per-send context that does not need to be filterable. A call has none of those three: its tags are set on the wire when the call is placed, and the call record is the one place you read them back.\n\nWhatever carries the tags defines how many it may have. Tag names are unique: a send that repeats one is rejected, and on a call the first instance of a name wins."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
         description="Tag name. ASCII letters, digits, underscore, and hyphen only. Case-sensitive. Maximum 32 characters.",
@@ -455,6 +469,7 @@ class EmailAttachmentID(RootModel[str]):
 
 
 class EmailAttachmentRef(BaseModel):
+    "Attachment metadata returned on API reads. Download the file during its retention window with `GET /v1/email/messages/{message_id}/attachments/{attachment_id}`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["ea_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -485,6 +500,7 @@ class EmailAttachmentRef(BaseModel):
 
 
 class EmailMessage(BaseModel):
+    "An email message, including a recipient's copy of a broadcast. `broadcast_id` identifies the broadcast that sent the message and is absent for other sends. A broadcast records one message per recipient; these copies share the same `broadcast_id`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -658,6 +674,7 @@ class TemplateSlug(RootModel[str]):
 
 
 class EmailTemplateSend(BaseModel):
+    "A reference to the template to send. Identify the template by its `id` or its `slug`, supplying exactly one of the two, and give the values for its caller parameters in `parameters`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -683,6 +700,7 @@ class EmailTemplateSend(BaseModel):
 
 
 class EmailAttachment(BaseModel):
+    "A file attached to an email. Put the base64-encoded bytes in `content` and the\nrecipient-facing name in `filename`. To show an image inline, set `content_id`\nand reference it from the HTML body with `<img src=\"cid:...\"/>`.\n\nThe generated message is limited to 20 MB across the HTML body, text body,\nattachments, and inline images after base64 and MIME encoding. Keep raw\nattachment content at or below 15 MB to leave room for encoding and the body.\n\nBatch sends apply the same 20 MB limit to each message and to the full request\nbody. Executable and script content types are rejected."
     model_config = ConfigDict(extra="allow")
     filename: Annotated[str, Field(
         description="The name the recipient sees on the attachment.",
@@ -783,6 +801,7 @@ class EmailMessageSendRequest(BaseModel):
 
 
 class EmailMessageBatchRequest(BaseModel):
+    "Batch of email message send requests."
     model_config = ConfigDict(extra="allow")
     messages: Annotated[List[EmailMessageSendRequest], Field(
         description="Email message send requests, up to 100. All items are validated before any are queued. Attachments are allowed on individual messages. Each message must stay within the 20 MB estimated generated message-size cap. The serialized JSON request body for the batch has a hard 20 MB cap.",
@@ -1136,7 +1155,20 @@ class AudienceID(RootModel[str]):
     root: str
 
 
+class EmailBroadcastParameterName(RootModel[str]):
+    root: str
+
+
+class EmailBroadcastParameters(RootModel[Dict[str, Any]]):
+    root: Dict[str, Any]
+
+
+class EmailBroadcastParameterOverrides(RootModel[Dict[str, Dict[str, Any]]]):
+    root: Dict[str, Dict[str, Any]]
+
+
 class EmailBroadcastTemplate(BaseModel):
+    "The template a broadcast sends, the exact version of it the broadcast is fixed to, and which of that version's languages goes out.\n\n`parameters` and `parameter_overrides` are returned on customer detail and mutation responses when the caller has email_management read permission, and omitted without that permission and from list responses. They are also omitted from staff-only responses. Broadcasts created before parameters existed return `parameters` as an empty object. `parameter_overrides` is also omitted for a broadcast that has never sent it; an empty object means language rules apply with no overrides."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -1155,6 +1187,121 @@ class EmailBroadcastTemplate(BaseModel):
         min_length=1,
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
+    )] = None
+    parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
+        description="Complete map of per-language parameter values, keyed by a BCP-47 language tag of at most 35 characters such as `es` or `pt-BR`. Each language holds only the names whose value differs for that language; a name it leaves out uses the value in `parameters`, including later changes to it. A value that is present always applies, even when it is `\"\"`, `0`, `false`, `null` or equal to the `parameters` value. To return a name to the `parameters` value, send the map without it. Sending this map, even as `{}`, applies language rules to the broadcast: `parameters` must hold every input the default language's content, sender name, reply-to or headers use, and an input only the selected language uses may come from that language's entry instead. A broadcast that never sends it keeps the selected-language rules. Values for the default language, or for a language the broadcast does not send, are kept but not used. Omission retains the map unless the template ID changes, which clears it; an empty object removes every override, null is invalid and a language with no names is removed. Tags are stored in canonical BCP-47 form, so two spellings of one tag are refused. The compact map is limited to 16384 UTF-8 bytes, and `parameters` and every language together are limited to 128 distinct names.",
+    )] = None
+
+
+class EmailBroadcastParameterProblemCode(str, Enum):
+    parameter_json_invalid = "parameter_json_invalid"
+    parameter_map_invalid = "parameter_map_invalid"
+    parameter_name_invalid = "parameter_name_invalid"
+    parameter_value_unsupported = "parameter_value_unsupported"
+    parameter_duplicate_key = "parameter_duplicate_key"
+    parameter_bytes_exceeded = "parameter_bytes_exceeded"
+    parameter_names_exceeded = "parameter_names_exceeded"
+    parameter_depth_exceeded = "parameter_depth_exceeded"
+    parameter_language_invalid = "parameter_language_invalid"
+    parameter_required = "parameter_required"
+    sensitive_input_unsupported = "sensitive_input_unsupported"
+    render_profile_unsupported = "render_profile_unsupported"
+    rendered_envelope_invalid = "rendered_envelope_invalid"
+    contact_property_unknown = "contact_property_unknown"
+    template_unavailable = "template_unavailable"
+    language_unavailable = "language_unavailable"
+    sender_unavailable = "sender_unavailable"
+    audience_unavailable = "audience_unavailable"
+    recipient_render_failed = "recipient_render_failed"
+    render_budget_exceeded = "render_budget_exceeded"
+    transport_missing = "transport_missing"
+    transport_invalid = "transport_invalid"
+
+
+class EmailBroadcastParameterProblemPhase(str, Enum):
+    request = "request"
+    validation = "validation"
+    execution = "execution"
+
+
+class EmailBroadcastParameterProblemSeverity(str, Enum):
+    error = "error"
+
+
+class EmailBroadcastParameterProblemSite(str, Enum):
+    subject = "subject"
+    html = "html"
+    text = "text"
+    from_name = "from_name"
+    reply_to = "reply_to"
+
+
+class ContactID(RootModel[str]):
+    root: str
+
+
+class EmailBroadcastParameterProblem(BaseModel):
+    "One problem with a broadcast's template inputs. A diagnostic names the input or field it is about and never includes its value."
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Annotated[Union[EmailBroadcastParameterProblemCode, str], Field(union_mode="left_to_right")], Field(
+        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
+    )]
+    phase: Annotated[Annotated[Union[EmailBroadcastParameterProblemPhase, str], Field(union_mode="left_to_right")], Field(
+        description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
+    )]
+    severity: Annotated[Annotated[Union[EmailBroadcastParameterProblemSeverity, str], Field(union_mode="left_to_right")], Field(
+        description="How a broadcast input diagnostic affects sending.\n\n- `error`: the broadcast cannot send until the problem is fixed.",
+    )]
+    pointer: Annotated[Optional[str], Field(
+        description="A JSON pointer to the request or broadcast field the problem is about, such as `/template/parameters/first_name` or `/from`. Absent when the problem is not about one field.",
+        examples=["/template/parameters/first_name"],
+    )] = None
+    site: Annotated[Optional[Annotated[Union[EmailBroadcastParameterProblemSite, str], Field(union_mode="left_to_right")]], Field(
+        description="The part of the email where the input is used.\n\n- `subject`: the subject line.\n- `html`: the HTML body, including its inbox preview text.\n- `text`: the plain-text body.\n- `from_name`: the sender display name.\n- `reply_to`: the reply-to addresses.\n\nA custom header is reported as `header:` followed by the header name as the broadcast sets it, for example `header:X-Campaign`.",
+    )] = None
+    budget: Annotated[Optional[str], Field(
+        description="The rendering limit that was exceeded, such as `output_bytes` or `nesting`, when `code` is `render_budget_exceeded`. It is reported with `limit` on problems from sending a broadcast, in `failure_parameters`.",
+        examples=["output_bytes"],
+        min_length=1,
+    )] = None
+    limit: Annotated[Optional[int], Field(
+        description="The value of the limit named by `budget`.",
+    )] = None
+    contact_id: Annotated[Optional[str], Field(
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class EmailBroadcastFailureParameters(BaseModel):
+    "Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values."
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Annotated[Union[EmailBroadcastParameterProblemCode, str], Field(union_mode="left_to_right")], Field(
+        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
+    )]
+    phase: Annotated[Annotated[Union[EmailBroadcastParameterProblemPhase, str], Field(union_mode="left_to_right")], Field(
+        description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
+    )]
+    pointer: Annotated[Optional[str], Field(
+        description="A JSON pointer to the broadcast field the failure is about, such as `/template/parameters/first_name` or `/template`.",
+        examples=["/template/parameters/first_name"],
+    )] = None
+    observed_version_id: Annotated[Optional[str], Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    problems: Annotated[Optional[List[EmailBroadcastParameterProblem]], Field(
+        description="Up to 20 of the problems found. A recipient problem names its contact in `contact_id`.",
+        max_length=20,
+    )] = None
+    failure_count: Annotated[int, Field(
+        description="How many recipients failed to render, including those not listed in `problems`. It can be `0` when the broadcast failed while it was being prepared, before any recipient was rendered.",
+        ge=0,
+    )]
 
 
 class EmailBroadcastCategory(str, Enum):
@@ -1327,6 +1474,9 @@ class EmailBroadcast(BaseModel):
     canceled_at: Annotated[Optional[str], Field(
         description="When the broadcast was canceled, and absent if it never was. This is when cancellation was requested, so it is set as soon as the status is `canceling` and does not move while the remaining sends stop and the status becomes `canceled`.",
     )] = None
+    failure_parameters: Annotated[Optional[EmailBroadcastFailureParameters], Field(
+        description="Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values.",
+    )] = None
 
 
 class EmailBroadcastList(BaseModel):
@@ -1349,6 +1499,7 @@ class EmailBroadcastList(BaseModel):
 
 
 class EmailBroadcastTemplateCreate(BaseModel):
+    "The template a new broadcast sends, and which of that template's languages goes out."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -1361,6 +1512,16 @@ class EmailBroadcastTemplateCreate(BaseModel):
         max_length=35,
         min_length=2,
     )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
+    )] = None
+    parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
+        description="Complete map of per-language parameter values, keyed by a BCP-47 language tag of at most 35 characters such as `es` or `pt-BR`. Each language holds only the names whose value differs for that language; a name it leaves out uses the value in `parameters`, including later changes to it. A value that is present always applies, even when it is `\"\"`, `0`, `false`, `null` or equal to the `parameters` value. To return a name to the `parameters` value, send the map without it. Sending this map, even as `{}`, applies language rules to the broadcast: `parameters` must hold every input the default language's content, sender name, reply-to or headers use, and an input only the selected language uses may come from that language's entry instead. A broadcast that never sends it keeps the selected-language rules. Values for the default language, or for a language the broadcast does not send, are kept but not used. Omission retains the map unless the template ID changes, which clears it; an empty object removes every override, null is invalid and a language with no names is removed. Tags are stored in canonical BCP-47 form, so two spellings of one tag are refused. The compact map is limited to 16384 UTF-8 bytes, and `parameters` and every language together are limited to 128 distinct names.",
+    )] = None
+
+
+class EmailBroadcastHeaders(RootModel[Dict[str, str]]):
+    root: Dict[str, str]
 
 
 class EmailBroadcastCreateRequestCategory(str, Enum):
@@ -1369,6 +1530,7 @@ class EmailBroadcastCreateRequestCategory(str, Enum):
 
 
 class EmailBroadcastCreateRequest(BaseModel):
+    "A broadcast sends one email to a whole audience. Every field here is optional, so you can create an empty draft and fill it in later. To actually send, a broadcast needs three things: a `from` address on a verified domain, an `audience_id`, and a `template`.\n\nLeave `send` false, which is the default, and you get a draft. Update it as often as you like, then send it when you are ready. Set `send` to true and the broadcast goes out as soon as it is created, or at `scheduled_at` if you set one."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[Optional[EmailAddressInput], Field(
         alias="from",
@@ -1388,7 +1550,7 @@ class EmailBroadcastCreateRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
-        description="Custom email headers to set on the broadcast, as name and value pairs. Up to 25 of them, each value up to 998 characters. Two names are ours and cannot be set here: `List-Unsubscribe` and `List-Unsubscribe-Post` are dropped if you send them, whatever the category. We add the one-click unsubscribe pair to a marketing broadcast ourselves, and a transactional broadcast has neither header.",
+        description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Labels on this broadcast, each one a `name` and a `value`, up to 20 of them. You can filter the broadcast list by a tag, break your stats down by one, and read them back off webhook payloads. Use tags for anything you want to find broadcasts by later, and `metadata` for data you only want handed back to you.",
@@ -1419,9 +1581,10 @@ class EmailBroadcastCreateRequest(BaseModel):
 
 
 class EmailBroadcastTemplateUpdate(BaseModel):
+    "A change to the template, language, or parameter maps a broadcast sends. Omitted properties retain their values unless the template ID changes. A changed ID clears the old language, parameters and parameter overrides before applying supplied replacements; repeating the same ID retains them."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
-        description="Move the broadcast to this template. Sending an `id` releases the version the broadcast was fixed to, so the next send fixes on the template's published version at that point; repeating the `id` the broadcast already has does the same thing, which is how you take a newly published version, and keeps the language already selected. Leave it out to keep the template and the version it is fixed to, and send a `language` on its own to change only the language. To take the template off a draft, set `template` itself to null.",
+        description="Select this template. Changing the ID clears the old language, parameters and parameter overrides before supplied replacements. Repeating the same ID retains those values and clears the selected template version, so the next preparation uses the template's latest published version. Omit id to retain the selected template. Adding parameters to a draft created before parameters existed may clear its selected version so it uses the template's latest published version. To clear a draft's selection, set template itself to null.",
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
@@ -1432,6 +1595,12 @@ class EmailBroadcastTemplateUpdate(BaseModel):
         max_length=35,
         min_length=2,
     )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
+    )] = None
+    parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
+        description="Complete map of per-language parameter values, keyed by a BCP-47 language tag of at most 35 characters such as `es` or `pt-BR`. Each language holds only the names whose value differs for that language; a name it leaves out uses the value in `parameters`, including later changes to it. A value that is present always applies, even when it is `\"\"`, `0`, `false`, `null` or equal to the `parameters` value. To return a name to the `parameters` value, send the map without it. Sending this map, even as `{}`, applies language rules to the broadcast: `parameters` must hold every input the default language's content, sender name, reply-to or headers use, and an input only the selected language uses may come from that language's entry instead. A broadcast that never sends it keeps the selected-language rules. Values for the default language, or for a language the broadcast does not send, are kept but not used. Omission retains the map unless the template ID changes, which clears it; an empty object removes every override, null is invalid and a language with no names is removed. Tags are stored in canonical BCP-47 form, so two spellings of one tag are refused. The compact map is limited to 16384 UTF-8 bytes, and `parameters` and every language together are limited to 128 distinct names.",
+    )] = None
 
 
 class EmailBroadcastUpdateRequestCategory(str, Enum):
@@ -1440,6 +1609,7 @@ class EmailBroadcastUpdateRequestCategory(str, Enum):
 
 
 class EmailBroadcastUpdateRequest(BaseModel):
+    "Changes a broadcast that is still a draft or is scheduled. Whatever you send here is applied, and anything you leave out keeps the value it already had. Once a broadcast has started sending it can no longer be edited."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[Optional[EmailAddressInput], Field(
         alias="from",
@@ -1459,7 +1629,7 @@ class EmailBroadcastUpdateRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
-        description="Custom email headers to set on the broadcast, as name and value pairs. What you send replaces the headers the draft already had rather than adding to them. Up to 25 of them, each value up to 998 characters. Two names are ours and cannot be set here: `List-Unsubscribe` and `List-Unsubscribe-Post` are dropped if you send them, whatever the category. We add the one-click unsubscribe pair to a marketing broadcast ourselves, and a transactional broadcast has neither header.",
+        description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Labels on this broadcast, each one a `name` and a `value`, that you can filter and search broadcasts by. What you send replaces the tags the draft already had rather than adding to them.",
@@ -1484,6 +1654,7 @@ class EmailBroadcastUpdateRequest(BaseModel):
 
 
 class EmailBroadcastCounts(BaseModel):
+    "How many people a broadcast would reach right now, narrowing from everyone in the audience down to the ones it could actually be sent to.\n\nThese are live numbers, worked out at the moment you ask. Audience membership and suppressions change, so they can drift between now and when the broadcast sends.\n\n**They are about the audience, not about delivery, and sending does not change them.** Once the broadcast has sent, its own `recipient_count` is the number that actually went out, and what each of those recipients did with the message is in [the broadcast's recipients](/docs/api/reference/list-email-broadcast-recipients) and [its events](/docs/api/reference/list-email-broadcast-events). `status` is here so you can tell which question these numbers are answering, and `broadcast_id` names what they are about."
     model_config = ConfigDict(extra="allow")
     broadcast_id: Annotated[str, Field(
         description="The broadcast these counts are for.",
@@ -1531,6 +1702,7 @@ class EmailSendAllowanceLimitReason(str, Enum):
 
 
 class EmailBroadcastCountAllowance(BaseModel):
+    "The organization's broadcast count allowance for the current window. This counts broadcasts rather than emails. The window is the billing period, or the UTC day when no current billing period is available.\n\nSending or scheduling a draft uses one broadcast from the window current when you submit the request. The scheduled send time does not determine the window. Sending an already scheduled broadcast again uses no additional broadcast allowance. `send_at` on the send-quota request does not change this allowance."
     model_config = ConfigDict(extra="allow")
     limit: Annotated[int, Field(
         description="Maximum number of broadcasts the organization can send in this window.",
@@ -1550,6 +1722,7 @@ class EmailBroadcastCountAllowance(BaseModel):
 
 
 class EmailBroadcastSendQuota(BaseModel):
+    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit."
     model_config = ConfigDict(extra="allow")
     recipients: Annotated[int, Field(
         description="Number of contacts the broadcast could reach now. Excludes contacts without an email address and contacts suppressed for the broadcast's category. Matches the sendable count from the broadcast's audience counts.",
@@ -1588,6 +1761,7 @@ class EmailBroadcastSendQuota(BaseModel):
 
 
 class EmailBroadcastClickedLink(BaseModel):
+    "One destination URL a broadcast's recipients clicked, with its exact click and recipient totals. Grouped over every click event the broadcast has, not a sample."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="The clicked URL.",
@@ -1622,6 +1796,328 @@ class EmailBroadcastClickedLinkList(BaseModel):
     )]
 
 
+class EmailBroadcastValidationRequest(BaseModel):
+    "Replacements over the saved broadcast for this validation only. A supplied field replaces the saved value and an omitted field keeps it; nothing is saved. A changed template ID clears the saved language and parameters before supplied replacements apply, and repeating the same ID keeps them."
+    model_config = ConfigDict(extra="allow")
+    template: Annotated[Optional[EmailBroadcastTemplateUpdate], Field(
+        description="Replaces the template, language or parameters for this request. Null removes the template for this request.",
+    )] = None
+    from_: Annotated[Optional[EmailAddressInput], Field(
+        alias="from",
+        description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
+    )] = None
+    reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        description="Replaces the reply-to addresses for this request. Null removes them.",
+        max_length=25,
+        min_length=1,
+    )] = None
+    headers: Annotated[Optional[Dict[str, str]], Field(
+        description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
+    )] = None
+
+
+class EmailBroadcastResolution(BaseModel):
+    "The published template version and language a validation or preview checked. It does not fix the version a later send uses."
+    model_config = ConfigDict(extra="allow")
+    template_id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    observed_version_id: Annotated[str, Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    requested_language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    effective_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    requirements_fingerprint: Annotated[str, Field(
+        description="An opaque value that changes when the checked version, its content or the inputs it uses change. Compare it with an earlier value to tell whether the requirements are still the same. Do not parse it.",
+        min_length=1,
+    )]
+    default_language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+
+
+class EmailBroadcastValidationResult(BaseModel):
+    "Whether the broadcast's current template and inputs pass validation. Validation does not save, fix a template version or evaluate recipients."
+    model_config = ConfigDict(extra="allow")
+    ready_for_admission: Annotated[bool, Field(
+        description="Whether the current template and supplied broadcast inputs pass validation, including checks that the sender and audience can be used. Sending also checks permissions, limits, the audience's recipients and their values, so `true` does not guarantee the broadcast sends.",
+    )]
+    resolution: Annotated[Optional[EmailBroadcastResolution], Field(
+        description="The published template version and language a validation or preview checked. It does not fix the version a later send uses.",
+    )] = None
+    problems: Annotated[List[EmailBroadcastParameterProblem], Field(
+        description="The problems found. Empty when `ready_for_admission` is true.",
+    )]
+    unused_parameters: Annotated[List[str], Field(
+        description="Names supplied in `template.parameters`, or in the selected language's `template.parameter_overrides` entry, that the selected content and envelope do not use. Rendering the selected content ignores them. With `template.parameter_overrides`, this can include a name in `base_parameters` that only the default language uses, and `template.parameters` must still hold its value.",
+    )]
+    base_parameters: Annotated[Optional[List[str]], Field(
+        description="Input names `template.parameters` must hold, returned with `resolution`. Without `template.parameter_overrides` these are the inputs the selected language uses. With it they are every input the default language's content or the envelope uses, including names the selected language does not use.",
+    )] = None
+    override_parameters: Annotated[Optional[List[str]], Field(
+        description="Input names only the selected language uses, returned with `resolution`. Each may come from that language's entry in `template.parameter_overrides` or from `template.parameters`. Always empty without `template.parameter_overrides`.",
+    )] = None
+
+
+class EmailBroadcastPreviewRequest(BaseModel):
+    "Replacements over the saved broadcast, and the contact to render this preview for. A supplied field replaces the saved value for this preview only and an omitted field keeps it; nothing is saved. A changed template ID clears the saved language and parameters before supplied replacements apply, and repeating the same ID keeps them."
+    model_config = ConfigDict(extra="allow")
+    template: Annotated[Optional[EmailBroadcastTemplateUpdate], Field(
+        description="Replaces the template, language or parameters for this request. Null removes the template for this request.",
+    )] = None
+    from_: Annotated[Optional[EmailAddressInput], Field(
+        alias="from",
+        description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
+    )] = None
+    reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        description="Replaces the reply-to addresses for this request. Null removes them.",
+        max_length=25,
+        min_length=1,
+    )] = None
+    headers: Annotated[Optional[Dict[str, str]], Field(
+        description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
+    )] = None
+    contact_id: Annotated[Optional[str], Field(
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class EmailBroadcastResolvedParameters(RootModel[Dict[str, Any]]):
+    root: Dict[str, Any]
+
+
+class EmailBroadcastPreviewResult(BaseModel):
+    "A broadcast rendered for one contact, with the inputs it used. Preview sends nothing, and its unsubscribe link is a placeholder that unsubscribes no one."
+    model_config = ConfigDict(extra="allow")
+    resolution: Annotated[EmailBroadcastResolution, Field(
+        description="The published template version and language a validation or preview checked. It does not fix the version a later send uses.",
+    )]
+    contact_id: Annotated[Optional[str], Field(
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    subject: Annotated[str, Field(
+        description="The rendered subject line.",
+        min_length=0,
+    )]
+    preheader: Annotated[str, Field(
+        description="The text of the hidden preview block that this render of `html` includes, which inbox clients can show beside the subject. It is empty when the template has no preview text, when the text renders empty, or when the rendered HTML does not include the block. A version published earlier can have preview text whose block its markup leaves out, escapes or removes; publishing the template again places the block. This value describes the rendered HTML and does not show how a provider or inbox displays it. Use it instead of reading the hidden block in `html`.",
+        min_length=0,
+    )]
+    html: Annotated[str, Field(
+        description="The rendered HTML body. When `preheader` is not empty, it includes the hidden block that carries that text.",
+        min_length=0,
+    )]
+    text: Annotated[str, Field(
+        description="The rendered plain-text body.",
+        min_length=0,
+    )]
+    resolved_parameters: Annotated[Dict[str, Any], Field(
+        description="The broadcast inputs this render used, by name, each with the string, number, boolean or null value it used. It holds the values taken from `template.parameters` or the selected language's `template.parameter_overrides` entry, and only for names the rendered content or envelope uses. Contact values are never included. A number keeps the digits it was supplied with.",
+    )]
+    problems: Annotated[List[EmailBroadcastParameterProblem], Field(
+        description="Problems with the broadcast's inputs found while rendering this preview.",
+    )]
+    preview_fingerprint: Annotated[str, Field(
+        description="An opaque value for this rendered content. It changes when the published version, an input, a contact value, a fallback or the envelope changes. To send this content as a test, repeat the same inputs with this value. Do not parse it.",
+        min_length=1,
+    )]
+
+
+class EmailBroadcastTestRequest(BaseModel):
+    "The inputs of a preview, repeated with its fingerprint, and the member to send its rendered content to. Send the same template, envelope and contact fields the preview used; nothing is saved to the broadcast. A user may send to their own current member email; another destination, or a machine principal, also requires members read permission. The personalization contact and the destination are independent."
+    model_config = ConfigDict(extra="allow")
+    template: Annotated[Optional[EmailBroadcastTemplateUpdate], Field(
+        description="Replaces the template, language or parameters for this request. Null removes the template for this request.",
+    )] = None
+    from_: Annotated[Optional[EmailAddressInput], Field(
+        alias="from",
+        description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
+    )] = None
+    reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        description="Replaces the reply-to addresses for this request. Null removes them.",
+        max_length=25,
+        min_length=1,
+    )] = None
+    headers: Annotated[Optional[Dict[str, str]], Field(
+        description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
+    )] = None
+    contact_id: Annotated[Optional[str], Field(
+        examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    to: Annotated[str, Field(
+        description="The email address of a current organization member with access to this workspace.",
+        examples=["member@example.com"],
+        min_length=1,
+    )]
+    preview_fingerprint: Annotated[str, Field(
+        description="The `preview_fingerprint` returned by the preview whose content you are sending.",
+        examples=["fingerprint_from_matching_preview"],
+        min_length=1,
+    )]
+
+
+class EmailBroadcastTestResult(BaseModel):
+    "An email message, including a recipient's copy of a broadcast. `broadcast_id` identifies the broadcast that sent the message and is absent for other sends. A broadcast records one message per recipient; these copies share the same `broadcast_id`."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    from_: Annotated[EmailAddress, Field(
+        alias="from",
+        description="An email address with an optional display name.",
+    )]
+    to: Annotated[List[EmailAddress], Field(
+        description="Primary recipients. Length is the recipient count. Use the broadcasts endpoint for audience-targeted sends. Each entry's `name` is present when a display name was provided on the send.",
+        max_length=50,
+        min_length=1,
+    )]
+    cc: Annotated[Optional[List[EmailAddress]], Field(description="CC recipients.")] = None
+    bcc: Annotated[Optional[List[EmailAddress]], Field(description="BCC recipients.")] = None
+    subject: Annotated[str, Field(
+        description="The subject line as delivered. For a send that used a template, the stored subject is the template's, so this reports it with the send's `parameters` substituted in, which is what the recipient saw.",
+        min_length=1,
+    )]
+    category: Annotated[EmailMessageCategory, Field(
+        description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
+    )]
+    reply_to: Annotated[Optional[List[EmailAddress]], Field(
+        description="Reply-To addresses, if set on the send. Empty/null when no Reply-To was provided.",
+        max_length=25,
+    )] = None
+    status: EmailMessageStatus
+    accepted_count: Annotated[int, Field(
+        description="How many recipients are in the `accepted` state, meaning we have the message and are getting ready to deliver it.",
+    )]
+    processed_count: Annotated[int, Field(
+        description="How many recipients the message has been prepared for and queued for delivery.",
+    )]
+    delivered_count: Annotated[int, Field(
+        description="How many recipients' messages were accepted by their mail server.",
+    )]
+    bounced_count: Annotated[int, Field(
+        description="Number of recipients that resulted in a permanent delivery failure.",
+    )]
+    complained_count: Annotated[int, Field(
+        description="Number of recipients that reported spam.",
+    )]
+    deferred_count: Annotated[int, Field(
+        description="Number of recipients in transient delivery deferral. Their mail server asked for a retry, and delivery attempts continue.",
+    )]
+    rejected_count: Annotated[int, Field(
+        description="Number of recipients rejected before delivery. Read the per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` for the specific cause.",
+    )]
+    processing_latency_ms: Annotated[Optional[int], Field(
+        description="Time between the send being accepted and the message being prepared for delivery, in milliseconds, for the fastest recipient. Null until the first recipient reaches `processed`.",
+        ge=0,
+    )] = None
+    delivery_latency_ms: Annotated[Optional[int], Field(
+        description="Time between the message being processed and the receiving mail server accepting it, in milliseconds, for the fastest delivered recipient. Null until the first recipient is delivered.",
+        ge=0,
+    )] = None
+    total_latency_ms: Annotated[Optional[int], Field(
+        description="End-to-end accept → delivered time for the fastest delivered recipient, in milliseconds. Null until the first recipient is delivered.",
+        ge=0,
+    )] = None
+    open_count: Annotated[int, Field(
+        description="Total open events across all recipients.",
+    )]
+    click_count: Annotated[int, Field(
+        description="Total click events across all recipients.",
+    )]
+    requested_language: Annotated[Optional[str], Field(
+        description="The template language this send asked for, in canonical form (`pt-BR` for a request of `pt-br`). Null when the send named no language (it took the template's default) or used no template at all. Compare it with `resolved_language`: when they differ, the language you asked for was not available and the template's `on_missing_language` policy chose the one shown there instead.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    resolved_language: Annotated[Optional[str], Field(
+        description="The template language this send was actually delivered in, in canonical form. Null when the send used no template. A non-null value with a null `requested_language` means the send named no language and took the template's default.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    template_id: Annotated[Optional[str], Field(
+        description="The template this send rendered from, or null for a send that supplied its content inline.",
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    template_version_id: Annotated[Optional[str], Field(
+        description="The exact template version this send rendered from, or null for an inline send. A template's live version changes every time you submit it, so this is what identifies the wording that was actually delivered, together with `resolved_language`.",
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    broadcast_id: Annotated[Optional[str], Field(
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    tags: Annotated[Optional[List[Tag]], Field(
+        description="Labels on this message, each one a `name` and a `value`, that you can filter and search messages by. Use tags for anything you want to find messages by later, and `metadata` for data you only want handed back to you.",
+    )] = None
+    metadata: Annotated[Optional[Dict[str, Any]], Field(
+        description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
+    )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
+    )] = None
+    attachments: Annotated[Optional[List[EmailAttachmentRef]], Field(
+        description="Attachment metadata for the send. Empty when no attachments were included. Raw content is not echoed. When content storage is enabled, download an attachment by its `id` via the message's attachment endpoint.",
+    )] = None
+    track_opens: Annotated[bool, Field(
+        description="Whether open tracking is enabled for this send.",
+    )]
+    track_clicks: Annotated[bool, Field(
+        description="Whether click tracking is enabled for this send.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the send request was accepted.",
+        min_length=1,
+    )]
+    thread_id: Annotated[Optional[str], Field(
+        description="Thread this message belongs to, or null when the message is not part of one.",
+        pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    in_reply_to_message_id: Annotated[Optional[str], Field(
+        description="The message this one is a reply to, if any.",
+        examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    delivered_at: Annotated[Optional[str], Field(
+        description="When all recipients reached a terminal delivered state, or null if not yet fully delivered.",
+    )] = None
+    scheduled_at: Annotated[Optional[str], Field(
+        description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
+    )] = None
+
+
 class EmailBroadcastSendNowRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     scheduled_at: Annotated[Optional[str], Field(
@@ -1634,11 +2130,8 @@ class ContactIdentifierFilter(str, Enum):
     phone_number = "phone_number"
 
 
-class ContactID(RootModel[str]):
-    root: str
-
-
 class AudienceRef(BaseModel):
+    "A compact reference to an audience, carrying its ID and display name."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -1743,6 +2236,7 @@ class ContactCreateRequest(BaseModel):
 
 
 class ContactBatchEntry(BaseModel):
+    "A contact to create or update. Field values are validated individually during processing, so an invalid contact returns a failed result while valid contacts are saved. The request must still contain an object with the declared field types. Omitted fields keep their stored values on an existing contact."
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
         description="Email address, up to 254 characters. Trimmed and lowercased before matching. Invalid addresses fail this contact.",
@@ -1796,6 +2290,7 @@ class ContactUpsertRequest(BaseModel):
 
 
 class ContactUpsertEntry(BaseModel):
+    "The identifiers a batch entry supplied, in the normalized form used for matching. A field is `null` when the entry did not include it. These values identify the request entry and do not represent the contact's current state."
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
         description="Email address this entry carried, trimmed and lowercased. `null` when the entry carried none.",
@@ -1975,6 +2470,7 @@ class PreferenceOrigin(str, Enum):
 
 
 class Preference(BaseModel):
+    "One person's current stated preference for one channel: whether they have consented to or opted out of receiving messages at a handle, and how much traffic the statement covers. A key holds one current statement (a newer statement replaces it, an older one is refused), and the full history behind the current state is kept internally. `sender_scope` and `topic_id` are part of the key: a preference with both null applies channel-wide."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -2041,6 +2537,7 @@ class PreferenceList(BaseModel):
 
 
 class PreferenceCreate(BaseModel):
+    "Records one preference statement for a handle. Writing is an upsert by key (channel, handle, sender scope, and topic), and statements are causally ordered: a statement dated older than the key's current one is refused and returned with `applied: false` rather than applied out of order."
     model_config = ConfigDict(extra="allow")
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
@@ -2079,6 +2576,7 @@ class PreferenceTransitionID(RootModel[str]):
 
 
 class PreferenceWriteResult(BaseModel):
+    "The outcome of one preference write or delete. `applied: true` means the request took effect: either it changed the record, or an identical statement already had. `applied: false` means it was refused as older than the key's current statement; `preference` then carries the statement that survived, and `transition_id` identifies the refusal on the key's record."
     model_config = ConfigDict(extra="allow")
     applied: Annotated[bool, Field(
         description="Whether the request took effect. False only when it was refused as out of order; the surviving, newer statement is returned in `preference`.",
@@ -2207,6 +2705,7 @@ class AudienceUpdateRequest(BaseModel):
 
 
 class AudienceMembershipSummary(BaseModel):
+    "Exact count of all audience members at the source evaluation instant, including contacts without email and unsubscribed contacts."
     model_config = ConfigDict(extra="allow")
     total: Annotated[int, Field(
         description="Number of members at evaluation time.",
@@ -2219,6 +2718,7 @@ class AudienceMembershipSummary(BaseModel):
 
 
 class AudienceMembershipResponse(BaseModel):
+    "Exact audience membership at evaluation time. Membership is absent when the count is unavailable."
     model_config = ConfigDict(extra="allow")
     membership: Annotated[Optional[AudienceMembershipSummary], Field(
         description="Exact count of all audience members at the source evaluation instant, including contacts without email and unsubscribed contacts.",
@@ -2226,6 +2726,7 @@ class AudienceMembershipResponse(BaseModel):
 
 
 class AudienceMembershipStatisticsPeriod(BaseModel):
+    "Inclusive UTC date window for daily membership observations. Snapshots do not establish continuous freshness; data_as_of is always null."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -2239,6 +2740,7 @@ class AudienceMembershipStatisticsPeriod(BaseModel):
 
 
 class AudienceMembershipStatisticsPoint(BaseModel):
+    "First successful membership observation for a UTC date. Both total and observed_at are null when no retained observation exists; a successful empty audience has total zero."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="UTC date of the observation, or the requested date for a gap.",
@@ -2254,6 +2756,7 @@ class AudienceMembershipStatisticsPoint(BaseModel):
 
 
 class AudienceMembershipStatisticsResponse(BaseModel):
+    "Daily membership observations in ascending UTC date order. Missing observations are explicit null gaps; changes between samples are unobserved."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AudienceMembershipStatisticsPeriod, Field(
         description="Requested UTC date window.",
@@ -2361,6 +2864,7 @@ class SMSSegmentsEncoding(str, Enum):
 
 
 class SMSSegments(BaseModel):
+    "Segment breakdown for the message body. Segment count drives billing."
     model_config = ConfigDict(extra="allow")
     count: Annotated[int, Field(
         description="Number of segments the body is split into. Each segment is a billable unit.",
@@ -2379,6 +2883,7 @@ class SMSSegments(BaseModel):
 
 
 class MessageCost(BaseModel):
+    "What was charged for a message, split into the components that make it up. `null` until at least one component has been priced."
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
         description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
@@ -2403,6 +2908,7 @@ class MessageCost(BaseModel):
 
 
 class SMSMessageEffectiveOptions(BaseModel):
+    "The settings Bird applied to this message. Every option is reported, whether you set it on the send or took the default that was in force at the time."
     model_config = ConfigDict(extra="allow")
     smart_encoding: Annotated[bool, Field(
         description="Whether Bird replaced characters outside the GSM-7 alphabet in this message's body with their closest equivalent before sending it. When `true`, `text` is the body as sent and `segments` describes that body.",
@@ -2425,6 +2931,7 @@ class SMSErrorCode(str, Enum):
 
 
 class SMSError(BaseModel):
+    "Failure detail for a message that could not be delivered or was rejected."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason:\n\n- `invalid_destination`: The number is unassigned, ported out, or malformed.\n- `unreachable`: The handset is off or outside coverage.\n- `blocked_by_carrier`: The carrier filtered the message.\n- `blocked_by_fraud_protection`: Bird fraud protection blocked suspected SMS pumping.\n- `blocked_by_recipient`: The recipient device blocked the sender.\n- `landline_unreachable`: The destination is a landline that does not accept SMS.\n- `content_rejected`: The carrier rejected the content.\n- `sender_unregistered`: The sender is not registered for the destination.\n- `recipient_opted_out`: The recipient is on a suppression list.\n- `provider_unavailable`: The provider remained unavailable after retries.\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `unknown`: The failure could not be classified.\n\nThis is an open enum. Accept unrecognized values.",
@@ -2570,6 +3077,7 @@ class SMSMessageList(BaseModel):
 
 
 class SMSSendOptions(BaseModel):
+    "Settings that change how Bird processes this message. Each option applies to this send only; omit one to use its default."
     model_config = ConfigDict(extra="allow")
     smart_encoding: Annotated[Optional[bool], Field(
         description="Replace characters outside the GSM-7 alphabet with their closest GSM-7 equivalent before sending: typically curly quotes, dashes, ellipses, fullwidth forms, and non-breaking spaces.\n\nOne such character forces the whole body into `UCS2`, which more than halves the characters that fit in a segment, so replacing them often lowers the segment count and the cost.\n\nDisabled by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet afterwards, such as an emoji or a non-Latin script, is sent exactly as you supplied it. Read the message back to see what was applied: `text` is the body as sent.",
@@ -2583,6 +3091,7 @@ class SMSSendOptions(BaseModel):
 
 
 class SMSTemplateSend(BaseModel):
+    "A send-by-template reference. Identify the template by `id` or `slug`, or use the deprecated `name` for a legacy built-in template. Supply exactly one reference, optionally select a language, and pass variable values in `parameters`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -2612,6 +3121,7 @@ class SMSTemplateSend(BaseModel):
 
 
 class SMSMessageSendRequest(BaseModel):
+    "A message to send. Supply exactly one of `text` (free-text, which also requires `category`) or `template` (a stored template, whose category is derived). Supplying both, or neither, is rejected."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
         description="Recipient phone number in E.164 format (for example `+14155550100`). One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.",
@@ -2680,6 +3190,7 @@ class SMSMessageSendRequest(BaseModel):
 
 
 class SMSMessageBatchRequest(BaseModel):
+    "Batch of SMS message send requests."
     model_config = ConfigDict(extra="allow")
     messages: Annotated[List[SMSMessageSendRequest], Field(
         description="SMS message send requests, up to 100. Each is an independent send; all are validated before any is queued.",
@@ -2689,6 +3200,7 @@ class SMSMessageBatchRequest(BaseModel):
 
 
 class SMSBatchSummary(BaseModel):
+    "Aggregate result for an SMS batch."
     model_config = ConfigDict(extra="allow")
     accepted_count: Annotated[int, Field(
         description="Number of messages accepted in the batch. Acceptance is all-or-nothing, so this equals the number of messages submitted.",
@@ -2781,6 +3293,7 @@ class TemplateLanguageStatus(str, Enum):
 
 
 class SMSTemplateLanguageState(BaseModel):
+    "Whether a language is live and whether its draft has unpublished changes."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Annotated[Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")], Field(
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
@@ -2791,6 +3304,7 @@ class SMSTemplateLanguageState(BaseModel):
 
 
 class SMSTemplateSummary(BaseModel):
+    "An SMS template without content or draft concurrency settings."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -2897,6 +3411,7 @@ class TemplateOnMissingLanguage(str, Enum):
 
 
 class SMSTemplate(BaseModel):
+    "One SMS template identity and its authoring state. Content and variables live on versions, so this resource stays shallow."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -2998,6 +3513,7 @@ class TemplateVariableType(str, Enum):
 
 
 class TemplateVariable(BaseModel):
+    "A single variable slot a template fills in when it sends. Most slots are filled from the values supplied when sending; on email, a slot with `system` true is filled by Bird itself, per recipient. The same shape on email, SMS and WhatsApp, so reading what a template needs works the same way whichever channel you are sending on."
     model_config = ConfigDict(extra="allow")
     key: Annotated[str, Field(
         description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` you repeat on the matching parameter inside `components`, or, for a template whose placeholders are positional, the position itself as `1`, `2` and so on.",
@@ -3028,6 +3544,7 @@ class SMSTemplateVersionStatus(str, Enum):
 
 
 class SMSTemplateVersionSummary(BaseModel):
+    "One SMS template version without its text."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -3087,6 +3604,7 @@ class SMSTemplateVersionList(BaseModel):
 
 
 class SMSTemplateVersionLanguage(BaseModel):
+    "One language's content and revision metadata within a version."
     model_config = ConfigDict(extra="allow")
     text: Annotated[str, Field(
         description="SMS template text, limited to 16 KiB of UTF-8 source. Blank text can be saved in a draft but cannot be published. Workspace templates support scalar variables, conditional text, and bounded filters. Loops, assignments, captures, partials, collections, and string-expanding filters are rejected.",
@@ -3107,6 +3625,7 @@ class SMSTemplateVersionLanguage(BaseModel):
 
 
 class SMSTemplateVersion(BaseModel):
+    "One SMS template version with its content. A workspace template keeps one editable draft and immutable published versions. A built-in template exposes its current catalogue content as one synthetic published version."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -3150,6 +3669,7 @@ class SMSTemplateVersion(BaseModel):
 
 
 class SMSTemplateLanguageSummary(BaseModel):
+    "One language of an SMS template version without its text."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -3179,6 +3699,7 @@ class SMSTemplateLanguageList(BaseModel):
 
 
 class SMSTemplateLanguage(BaseModel):
+    "One language's full SMS template text and revision metadata."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -3240,6 +3761,7 @@ class SMSSuppressionEndReason(str, Enum):
 
 
 class SMSSuppression(BaseModel):
+    "One period during which a sender's messages to a subscriber are stopped: when it started, what started it, and what ended it. A subscriber who opts out, opts back in, and opts out again has three of these on record rather than one current state, and each keeps its own dates once it ends. The list returns the periods in force; fetch one by ID to read an ended one."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["ssu_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -3316,6 +3838,7 @@ class SMSSuppressionList(BaseModel):
 
 
 class SMSSuppressionCreate(BaseModel):
+    "Stops one sender's messages to one subscriber. Both ends are required, because a suppression covers a sender-and-subscriber pair rather than a subscriber alone."
     model_config = ConfigDict(extra="allow")
     destination: Annotated[str, Field(
         description="The subscriber to stop messaging, in E.164 format.",
@@ -3458,6 +3981,7 @@ class SMSKeywordRuleCreate(BaseModel):
 
 
 class SMSKeywordRuleUpdate(BaseModel):
+    "Changes the reply and the added keywords. What a rule applies to (its operation, country, language and number) is fixed once created: those decide which inbound messages reach it, so changing one would make it a different rule. Delete it and create the one you want."
     model_config = ConfigDict(extra="allow")
     keywords: Annotated[Optional[List[str]], Field(
         description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.",
@@ -3483,6 +4007,7 @@ class AttachmentStatus(str, Enum):
 
 
 class Attachment(BaseModel):
+    "A supporting document uploaded for an SMS registration (10DLC campaign evidence, toll-free verification opt-in screenshots). Reference it from the registration's own attachment-id field to submit it as evidence."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -3566,6 +4091,7 @@ class AssetKind(str, Enum):
 
 
 class Asset(BaseModel):
+    "A file in the workspace's media library, hosted at a permanent public URL. Embed or link `url` anywhere hosted media is needed, including in email that has already been sent: an asset's bytes and URL never change."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -3639,6 +4165,7 @@ class AssetList(BaseModel):
 
 
 class AssetUpdate(BaseModel):
+    "Fields to change on an asset. Omit a field to leave it as it is. The asset's bytes and URL are fixed and cannot be changed."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
         description="The asset's display name.",
@@ -3668,6 +4195,7 @@ class AssetReferenceResourceType(str, Enum):
 
 
 class AssetReference(BaseModel):
+    "A resource that uses an asset, so you can find everything to update before replacing an image."
     model_config = ConfigDict(extra="allow")
     resource_type: Annotated[Annotated[Union[AssetReferenceResourceType, str], Field(union_mode="left_to_right")], Field(
         description="What kind of resource this is. New kinds appear as other products start using the media library, so treat an unfamiliar value as a resource this client does not know how to link to rather than as an error.",
@@ -3696,6 +4224,7 @@ class AssetReferenceList(BaseModel):
 
 
 class AssetFolder(BaseModel):
+    "A folder in the workspace's media library. Folders organize assets for the people browsing them and never appear in an asset's URL, so moving an asset between folders leaves every message that already embeds it untouched."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -3743,6 +4272,7 @@ class AssetFolderList(BaseModel):
 
 
 class AssetFolderCreate(BaseModel):
+    "The folder to create."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
         description="The folder's display name. Must be unique among folders sharing the same parent, compared without regard to case. Cannot contain `/`.",
@@ -3758,6 +4288,7 @@ class AssetFolderCreate(BaseModel):
 
 
 class AssetFolderUpdate(BaseModel):
+    "Fields to change on a folder. Omit a field to leave it as it is. Renaming a folder or moving it changes nothing about the assets inside it, including their URLs."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
         description="The folder's display name. Must be unique among folders sharing the same parent, compared without regard to case. Cannot contain `/`.",
@@ -3777,6 +4308,7 @@ class ComplianceSubmissionID(RootModel[str]):
 
 
 class SMSStatsSummaryPeriod(BaseModel):
+    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -3798,6 +4330,7 @@ class SMSStatsSummaryPeriod(BaseModel):
 
 
 class SMSDeliveryStats(BaseModel):
+    "SMS lifecycle counts and rates for a whole period or breakdown. Counts use the message send time, so a later delivery stays attributed to the bucket in which the message was sent. Rates are null when their denominator is zero."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[int, Field(
         description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
@@ -3848,6 +4381,7 @@ class SMSDeliveryStats(BaseModel):
 
 
 class SMSLatencyQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
     model_config = ConfigDict(extra="allow")
     p50_ms: Annotated[Optional[int], Field(
         description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
@@ -3867,6 +4401,7 @@ class SMSLatencyQuantiles(BaseModel):
 
 
 class SMSLatencyStats(BaseModel):
+    "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to carrier handoff.\n- `delivery`: From carrier handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying event contributes a measurement.\nIndividual percentiles can also be null."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[Optional[SMSLatencyQuantiles], Field(
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
@@ -3880,6 +4415,7 @@ class SMSLatencyStats(BaseModel):
 
 
 class SMSStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. A `*_pct_change` value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero. A `*_rate_pp` value is the signed difference between rate fractions and is null when either rate is undefined."
     model_config = ConfigDict(extra="allow")
     accepted_pct_change: Annotated[Optional[float], Field(
         description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
@@ -3922,6 +4458,7 @@ class SMSStatsComparisonDelta(BaseModel):
 
 
 class SMSStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -3932,6 +4469,7 @@ class SMSStatsComparison(BaseModel):
 
 
 class SMSStatsSummary(BaseModel):
+    "Single-row aggregate across the full requested period, covering SMS lifecycle counts plus the derived delivery and failure rates, and latency percentiles. Use this endpoint for KPI tiles and reporting; the daily and hourly endpoints carry the same counts per bucket.\n\nEvery count is a sum of per-bucket counts across the window. Latency percentiles are computed across the whole period rather than summed per bucket. Rates are null when their denominator is zero."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -3947,6 +4485,7 @@ class StatsGrain(str, Enum):
 
 
 class SMSStatsSeriesPeriod(BaseModel):
+    "The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -3971,6 +4510,7 @@ class SMSStatsSeriesPeriod(BaseModel):
 
 
 class SMSDeliveryCounts(BaseModel):
+    "SMS lifecycle counts for a time bucket. Counts use the message send time, so a message accepted on Monday and delivered on Tuesday counts in Monday's bucket. Rates are available only for whole periods and breakdowns."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[int, Field(
         description="Distinct messages accepted for sending after admission checks.",
@@ -4010,6 +4550,7 @@ class SMSDeliveryCounts(BaseModel):
 
 
 class SMSStatsPoint(BaseModel):
+    "SMS lifecycle counts for one time bucket (a calendar day or hour), bucketed by send time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. Per-bucket values include counts only. The summary and breakdown endpoints report rates and latency as whole-window aggregates."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
@@ -4020,6 +4561,7 @@ class SMSStatsPoint(BaseModel):
 
 
 class SMSStatsResponse(BaseModel):
+    "Time-series stats payload. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -4047,6 +4589,7 @@ class StatsTrendGrain(str, Enum):
 
 
 class SMSOriginatorStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single originator (the sender address messages were sent from) over the requested period."
     model_config = ConfigDict(extra="allow")
     originator: Annotated[str, Field(
         description="Sender address this row aggregates, either an alphanumeric sender ID or a phone number. Matches the message `from` value.",
@@ -4061,6 +4604,7 @@ class SMSOriginatorStatsPoint(BaseModel):
 
 
 class SMSStatsByOriginatorResponse(BaseModel):
+    "Per-originator breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4076,6 +4620,7 @@ class SMSStatsByOriginatorResponse(BaseModel):
 
 
 class SMSCountryStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single destination country over the requested period."
     model_config = ConfigDict(extra="allow")
     country: Annotated[str, Field(
         description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code.",
@@ -4090,6 +4635,7 @@ class SMSCountryStatsPoint(BaseModel):
 
 
 class SMSStatsByCountryResponse(BaseModel):
+    "Per-country breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4105,6 +4651,7 @@ class SMSStatsByCountryResponse(BaseModel):
 
 
 class SMSCategoryStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single message category over the requested period."
     model_config = ConfigDict(extra="allow")
     category: Annotated[str, Field(
         description="The category this row aggregates, as set at send time. `transactional` is one-to-one messaging triggered by a user action; `marketing` is bulk sending. New categories may be added over time.",
@@ -4119,6 +4666,7 @@ class SMSCategoryStatsPoint(BaseModel):
 
 
 class SMSStatsByCategoryResponse(BaseModel):
+    "Per-category breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4144,6 +4692,7 @@ class SMSStatsLifecycleSortMetric(str, Enum):
 
 
 class SMSErrorCodeStatsPoint(BaseModel):
+    "Delivery and latency statistics for one standardized failure reason over the requested period."
     model_config = ConfigDict(extra="allow")
     error_code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason this row aggregates. Matches the `error_code` message-list filter.",
@@ -4156,6 +4705,7 @@ class SMSErrorCodeStatsPoint(BaseModel):
 
 
 class SMSStatsByErrorCodeResponse(BaseModel):
+    "Per-error-code breakdown for the requested period, ranked by the `sort` metric (default `failed`) descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4171,6 +4721,7 @@ class SMSStatsByErrorCodeResponse(BaseModel):
 
 
 class SMSCarrierStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single delivery carrier over the requested period."
     model_config = ConfigDict(extra="allow")
     carrier: Annotated[str, Field(
         description="The delivery carrier this row aggregates, as resolved for the destination handset.",
@@ -4185,6 +4736,7 @@ class SMSCarrierStatsPoint(BaseModel):
 
 
 class SMSStatsByCarrierResponse(BaseModel):
+    "Per-carrier breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4200,6 +4752,7 @@ class SMSStatsByCarrierResponse(BaseModel):
 
 
 class SMSTagStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single tag (`name:value`) over the requested period."
     model_config = ConfigDict(extra="allow")
     tag: Annotated[str, Field(
         description="The tag this row aggregates, in `name:value` form. Each distinct name-and-value pair is its own row, and a message carrying several tags is counted once under each of them, so rows do not sum to the period total.",
@@ -4214,6 +4767,7 @@ class SMSTagStatsPoint(BaseModel):
 
 
 class SMSStatsByTagResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4239,6 +4793,7 @@ class SMSStatusStatsPointStatus(str, Enum):
 
 
 class SMSStatusStatsPoint(BaseModel):
+    "The number of messages that ended the requested period in a single lifecycle status. This transposes the lifecycle counts into one row per status, so it carries no rates or latency."
     model_config = ConfigDict(extra="allow")
     status: Annotated[SMSStatusStatsPointStatus, Field(
         description="The lifecycle status this row counts. These are successive lifecycle stages. The `accepted` status was admitted for sending, `sent` was handed to the carrier, and `delivered` was confirmed by the carrier. The `undelivered`, `failed`, and `expired` statuses are failure outcomes. The `rejected` status was refused before a send attempt. Counted outcomes are a subset of the full message status vocabulary. The pre-send `scheduled`, cancellation `canceled`, and inbound-only `received` statuses are not send outcomes, so they never appear here.",
@@ -4253,6 +4808,7 @@ class SMSStatusStatsPoint(BaseModel):
 
 
 class SMSStatsByStatusResponse(BaseModel):
+    "Lifecycle-status breakdown for the requested period, ordered by message count descending. Statuses with no activity are omitted."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4268,6 +4824,7 @@ class SMSStatsByStatusResponse(BaseModel):
 
 
 class SMSInboundStatsComparisonDelta(BaseModel):
+    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
     model_config = ConfigDict(extra="allow")
     received_pct_change: Annotated[Optional[float], Field(
         description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
@@ -4276,6 +4833,7 @@ class SMSInboundStatsComparisonDelta(BaseModel):
 
 
 class SMSInboundStatsComparison(BaseModel):
+    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4289,6 +4847,7 @@ class SMSInboundStatsComparison(BaseModel):
 
 
 class SMSInboundStatsSummaryResponse(BaseModel):
+    "Total received messages over the requested period."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4302,6 +4861,7 @@ class SMSInboundStatsSummaryResponse(BaseModel):
 
 
 class SMSInboundStatsPoint(BaseModel):
+    "One time bucket of received-message counts, attributed by arrival time."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="Start of the bucket this row covers, as a calendar day (YYYY-MM-DD) for the daily series or an hour boundary (RFC 3339) for the hourly one.",
@@ -4317,6 +4877,7 @@ class SMSInboundStatsPoint(BaseModel):
 
 
 class SMSInboundStatsResponse(BaseModel):
+    "Received-message time series. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -4327,6 +4888,7 @@ class SMSInboundStatsResponse(BaseModel):
 
 
 class SMSInboundCountryStatsPoint(BaseModel):
+    "Received-message volume for one country."
     model_config = ConfigDict(extra="allow")
     country: Annotated[str, Field(
         description="The country of the Bird number the messages arrived on, as an ISO 3166-1 alpha-2 code. This identifies where the message was received. It does not identify the sender's country.",
@@ -4341,6 +4903,7 @@ class SMSInboundCountryStatsPoint(BaseModel):
 
 
 class SMSInboundStatsByCountryResponse(BaseModel):
+    "Received-message volume broken down by country, ranked by volume."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4356,6 +4919,7 @@ class SMSInboundStatsByCountryResponse(BaseModel):
 
 
 class SMSInboundOperatorStatsPoint(BaseModel):
+    "Received-message volume for one mobile operator."
     model_config = ConfigDict(extra="allow")
     mcc_mnc: Annotated[str, Field(
         description="Mobile country code and mobile network code of the network the sending subscriber is on. The breakdown keys on this rather than on an operator name because the carrier reports a name only where a surcharge applies, which would leave most of the world in one unnamed bucket.",
@@ -4370,6 +4934,7 @@ class SMSInboundOperatorStatsPoint(BaseModel):
 
 
 class SMSInboundStatsByOperatorResponse(BaseModel):
+    "Received-message volume broken down by operator, ranked by volume."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4385,6 +4950,7 @@ class SMSInboundStatsByOperatorResponse(BaseModel):
 
 
 class SMSInboundNumberStatsPoint(BaseModel):
+    "Received-message volume for one of your numbers."
     model_config = ConfigDict(extra="allow")
     number: Annotated[str, Field(
         description="The Bird number the messages arrived on, in E.164, or the short code they were sent to. This is the same value the message resource exposes as `to`.",
@@ -4399,6 +4965,7 @@ class SMSInboundNumberStatsPoint(BaseModel):
 
 
 class SMSInboundStatsByNumberResponse(BaseModel):
+    "Received-message volume broken down by number, ranked by volume."
     model_config = ConfigDict(extra="allow")
     period: Annotated[SMSStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -4445,6 +5012,7 @@ class PhoneNumberLookupRequest(BaseModel):
 
 
 class LookupNetworkInfo(BaseModel):
+    "The network a number belongs to."
     model_config = ConfigDict(extra="allow")
     carrier_name: Annotated[Optional[str], Field(
         description="The carrier's name, absent when the carrier could not be identified.",
@@ -4508,6 +5076,7 @@ class LookupClassificationValue(str, Enum):
 
 
 class LookupClassification(BaseModel):
+    "The allocated service of the number's range. Returned when you request the\n`classification` property.\n\nThis sits beside `line_type` rather than replacing it, so you can always see\nwhich source answered. The `line_type` property is included in the base lookup\nand comes from the carrier platform. The `classification` property is\nseparately billed and comes from an intelligence source."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     value: Annotated[Optional[LookupClassificationValue], Field(
@@ -4516,6 +5085,7 @@ class LookupClassification(BaseModel):
 
 
 class LookupPresence(BaseModel):
+    "Whether the number is live on its network right now. Returned when you\nrequest the `presence` property.\n\nThe result reflects a real-time query to the network where the number is\nregistered."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     reachable: Annotated[Optional[bool], Field(
@@ -4524,6 +5094,7 @@ class LookupPresence(BaseModel):
 
 
 class LookupRoaming(BaseModel):
+    "Whether the number is roaming, and on which network. Returned when you request the `roaming` property."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     is_roaming: Annotated[Optional[bool], Field(
@@ -4538,6 +5109,7 @@ class LookupRoaming(BaseModel):
 
 
 class LookupSimSwap(BaseModel):
+    "When the number's SIM last changed. Returned when you request the `sim_swap` property."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     last_swapped_at: Annotated[Optional[str], Field(
@@ -4552,6 +5124,7 @@ class LookupSimSwap(BaseModel):
 
 
 class LookupPortingEvent(BaseModel):
+    "One recorded move of a number between networks."
     model_config = ConfigDict(extra="allow")
     occurred_at: Annotated[Optional[str], Field(
         description="When the move was recorded, `null` when the record carries no date.",
@@ -4562,6 +5135,7 @@ class LookupPortingEvent(BaseModel):
 
 
 class LookupPorting(BaseModel):
+    "Whether the number has ever moved network, when it last did, and its full porting record. Returned when you request the `porting` property. The base lookup only reports whether the number has ever ported, through the `ported` flag."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     ported: Annotated[Optional[bool], Field(
@@ -4579,6 +5153,7 @@ class LookupPorting(BaseModel):
 
 
 class LookupScore(BaseModel):
+    "A credibility score for the number. Returned when you request the `score` property."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     value: Annotated[Optional[int], Field(
@@ -4589,6 +5164,7 @@ class LookupScore(BaseModel):
 
 
 class PhoneNumberLookup(BaseModel):
+    "Information about a phone number.\n\nThe number, its flags, and its line type are included in the base lookup and\nare always present. The country and two networks are present when identified.\nEach property you request through `type` is returned in a block with the same\nname and its own `status`. A property you did not request is absent. A\nproperty that could not be answered is present with only its `status`. Each\nrequested property is billed only when its status is `ok`.\n\nFields with no value are omitted rather than returned as `null`."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The number that was looked up, in E.164 format.",
@@ -4662,6 +5238,7 @@ class EmailLookupReason(str, Enum):
 
 
 class EmailLookup(BaseModel):
+    "Assessment of whether an email address accepts mail, the confidence and reason for that\nassessment, and a suggested correction when the address appears misspelled.\n\n`result` is the field to decide on; `delivery_confidence` grades it, and\n`flags` describes the address itself rather than its deliverability, so a\nperfectly valid address can still have `role` or `disposable`.\n\nFields without resolved values are omitted rather than sent as null. Every\nfield present in the response was resolved."
     model_config = ConfigDict(extra="allow")
     email: Annotated[str, Field(
         description="The address that was looked up, exactly as you sent it.",
@@ -4700,6 +5277,7 @@ class EmailLookupBatchRequest(BaseModel):
 
 
 class EmailLookupBatchItem(BaseModel):
+    "Assessment of whether an email address accepts mail, the confidence and reason for that\nassessment, and a suggested correction when the address appears misspelled.\n\n`result` is the field to decide on; `delivery_confidence` grades it, and\n`flags` describes the address itself rather than its deliverability, so a\nperfectly valid address can still have `role` or `disposable`.\n\nFields without resolved values are omitted rather than sent as null. Every\nfield present in the response was resolved."
     model_config = ConfigDict(extra="allow")
     email: Annotated[str, Field(
         description="The submitted value after trimming surrounding whitespace. May be empty or malformed.",
@@ -4756,6 +5334,7 @@ class VerificationTerminalReason(str, Enum):
 
 
 class VerificationTo(BaseModel):
+    "The recipient to verify. Provide an `email`, a `phone_number`, or both; at least one is required. The addresses also identify the verification: a check must supply exactly the set used on the create call, so a verification created with both addresses is not found by either one alone."
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
         description="The recipient's email address. Case does not matter; the address is lowercased before use.",
@@ -4850,6 +5429,7 @@ class Verification(BaseModel):
 
 
 class VerificationOptions(BaseModel):
+    "Per-request overrides applied to this verification only."
     model_config = ConfigDict(extra="allow")
     code_length: Annotated[Optional[int], Field(
         description="Passcode length for this verification. Omit to use the configured length.",
@@ -4955,6 +5535,7 @@ class WhatsAppMessageID(RootModel[str]):
 
 
 class WhatsAppAddress(BaseModel):
+    "Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[Optional[str], Field(
         description="Phone number in E.164 format, when known.",
@@ -4992,6 +5573,7 @@ class WhatsAppTemplateParameterType(str, Enum):
 
 
 class WhatsAppLocationSend(BaseModel):
+    "A free-form location to send: a point on the map the recipient can open in their maps app. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     latitude: Annotated[float, Field(
         description="Latitude in decimal degrees.",
@@ -5047,6 +5629,7 @@ class WhatsAppMessageTemplateCardComponentType(str, Enum):
 
 
 class WhatsAppMessageTemplateCardComponent(BaseModel):
+    "The values that fill one block of one carousel card."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppMessageTemplateCardComponentType, str], Field(union_mode="left_to_right")], Field(
         description="Which part of the card this fills in.\n\n- `header`: the card's image or video.\n- `body`: its text.\n- `button`: a button's variable.",
@@ -5059,6 +5642,7 @@ class WhatsAppMessageTemplateCardComponent(BaseModel):
 
 
 class WhatsAppMessageTemplateCard(BaseModel):
+    "The values that fill one card of a carousel. Cards fill in the order the template was approved with, so send one entry per card and keep them in that order."
     model_config = ConfigDict(extra="allow")
     components: Annotated[List[WhatsAppMessageTemplateCardComponent], Field(
         description="The values that fill this card's blocks.",
@@ -5089,6 +5673,7 @@ class WhatsAppMessageTemplateComponent(BaseModel):
 
 
 class WhatsAppMessageTemplate(BaseModel):
+    "The template a message was sent from. On reads `slug`, `language`, `category`, and `components` are always present; `components` is an empty array for an authentication template (the filled-in values, for example a verification code, are never returned)."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
         description="The template's stable handle (for example `bird_otp`).",
@@ -5112,6 +5697,7 @@ class WhatsAppMessageTemplate(BaseModel):
 
 
 class WhatsAppText(BaseModel):
+    "Text content of a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     body: Annotated[str, Field(
         description="The message text.",
@@ -5125,6 +5711,7 @@ class WhatsAppFileID(RootModel[str]):
 
 
 class WhatsAppImage(BaseModel):
+    "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
@@ -5147,6 +5734,7 @@ class WhatsAppImage(BaseModel):
 
 
 class WhatsAppVideo(BaseModel):
+    "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
@@ -5169,6 +5757,7 @@ class WhatsAppVideo(BaseModel):
 
 
 class WhatsAppAudio(BaseModel):
+    "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
@@ -5191,6 +5780,7 @@ class WhatsAppAudio(BaseModel):
 
 
 class WhatsAppSticker(BaseModel):
+    "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
@@ -5213,6 +5803,7 @@ class WhatsAppSticker(BaseModel):
 
 
 class WhatsAppDocument(BaseModel):
+    "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
@@ -5239,6 +5830,7 @@ class WhatsAppDocument(BaseModel):
 
 
 class WhatsAppLocation(BaseModel):
+    "Location content of a WhatsApp message: a point on the map the recipient can open in their maps app."
     model_config = ConfigDict(extra="allow")
     latitude: Annotated[Optional[float], Field(
         description="Latitude in decimal degrees.",
@@ -5263,6 +5855,7 @@ class WhatsAppLocation(BaseModel):
 
 
 class WhatsAppContactName(BaseModel):
+    "The contact's name, in the parts their device supplied. Every part is optional: WhatsApp sends what the card holds and omits the rest."
     model_config = ConfigDict(extra="allow")
     formatted_name: Annotated[Optional[str], Field(
         description="The whole name as the contact's device renders it.",
@@ -5276,6 +5869,7 @@ class WhatsAppContactName(BaseModel):
 
 
 class WhatsAppContactOrg(BaseModel):
+    "Where the contact works, as their card records it."
     model_config = ConfigDict(extra="allow")
     company: Annotated[Optional[str], Field(examples=["Lucky Shrub"])] = None
     department: Annotated[Optional[str], Field(examples=["Engineering"])] = None
@@ -5283,6 +5877,7 @@ class WhatsAppContactOrg(BaseModel):
 
 
 class WhatsAppContactPhone(BaseModel):
+    "One phone number on a shared contact card."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[Optional[str], Field(
         description="The number as the card holds it, normalized to E.164 where we can parse it. A card is whatever the contact's device stored, so a number that no country's numbering plan accepts, an extension among them, is passed through exactly as it arrived rather than dropped. Parse defensively: most values are E.164 and none is guaranteed to be.",
@@ -5295,6 +5890,7 @@ class WhatsAppContactPhone(BaseModel):
 
 
 class WhatsAppContactEmail(BaseModel):
+    "One email address on a shared contact card."
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(examples=["barbara@example.com"])] = None
     type: Annotated[Optional[str], Field(
@@ -5304,6 +5900,7 @@ class WhatsAppContactEmail(BaseModel):
 
 
 class WhatsAppContactUrl(BaseModel):
+    "One website on a shared contact card."
     model_config = ConfigDict(extra="allow")
     url: Annotated[Optional[str], Field(
         description="The address as the card holds it, which is often bare rather than a full URL, so it is passed through as text rather than validated.",
@@ -5316,6 +5913,7 @@ class WhatsAppContactUrl(BaseModel):
 
 
 class WhatsAppContactAddress(BaseModel):
+    "One postal address on a shared contact card."
     model_config = ConfigDict(extra="allow")
     street: Annotated[Optional[str], Field(examples=["1 Hacker Way"])] = None
     city: Annotated[Optional[str], Field(examples=["Menlo Park"])] = None
@@ -5338,6 +5936,7 @@ class WhatsAppContactCardOrigin(str, Enum):
 
 
 class WhatsAppContactCard(BaseModel):
+    "A contact card on this message: one the contact shared, or one this workspace sent.\nNothing here is required. WhatsApp sends the parts the card holds and omits the rest, and a card that arrives with only an `origin` is still meaningful, so an empty card reads back empty rather than being dropped."
     model_config = ConfigDict(extra="allow")
     origin: Annotated[Optional[Annotated[Union[WhatsAppContactCardOrigin, str], Field(union_mode="left_to_right")]], Field(
         description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since. Set on a card the contact shared; absent on one this workspace sent.",
@@ -5383,6 +5982,7 @@ class WhatsAppInteractiveHeaderType(str, Enum):
 
 
 class WhatsAppInteractiveHeader(BaseModel):
+    "What the interactive message showed above its body. `type` names the kind and the field that carries it: `text` for a line of copy, `url` for the file every other kind shows. As on the message itself, the read vocabulary is open: dispatch on `type` and treat an unrecognized value as a header kind added since."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppInteractiveHeaderType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of header this is, and which field carries it.",
@@ -5403,6 +6003,7 @@ class WhatsAppInteractiveButtonType(str, Enum):
 
 
 class WhatsAppInteractiveQuickReplyButton(BaseModel):
+    "A reply button's label and the handle it carries back. On the echo of a message Bird sent, the pair the send declared; on an inbound `interactive_reply`, the pair the contact tapped. No length is declared here, because a tap can echo a template's quick-reply button, whose label runs longer than an interactive message's own allows."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
         description="The handle the button carries back, never shown to the recipient. On a tap on a template's quick-reply button, it is the payload that template declared.",
@@ -5417,6 +6018,7 @@ class WhatsAppInteractiveQuickReplyButton(BaseModel):
 
 
 class WhatsAppInteractiveCtaUrl(BaseModel):
+    "The link button the message offered: its label and the address it opens."
     model_config = ConfigDict(extra="allow")
     text: Annotated[str, Field(
         description="The button's label.",
@@ -5431,6 +6033,7 @@ class WhatsAppInteractiveCtaUrl(BaseModel):
 
 
 class WhatsAppInteractiveButton(BaseModel):
+    "One button the message offered. The field named by `type` is the one that is present. As on the message itself, the read vocabulary is open: dispatch on `type` and treat an unrecognized value as a button kind added since."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppInteractiveButtonType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of button this is, and which field carries it.",
@@ -5444,6 +6047,7 @@ class WhatsAppInteractiveButton(BaseModel):
 
 
 class WhatsAppInteractiveListRow(BaseModel):
+    "One option in a list's menu. On the echo of a message Bird sent, the row as declared; on an inbound `interactive_reply`, the row the contact chose. No length is declared here: this is what WhatsApp reported, not what a send is held to."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
         description="The handle the row carries back, never shown to the recipient.",
@@ -5462,6 +6066,7 @@ class WhatsAppInteractiveListRow(BaseModel):
 
 
 class WhatsAppInteractiveListSection(BaseModel):
+    "One group of options in the menu the message showed."
     model_config = ConfigDict(extra="allow")
     title: Annotated[str, Field(
         description="The group's heading, shown above its rows.",
@@ -5474,6 +6079,7 @@ class WhatsAppInteractiveListSection(BaseModel):
 
 
 class WhatsAppInteractiveList(BaseModel):
+    "The menu the message offered: a button that opens it, and the groups of options behind it."
     model_config = ConfigDict(extra="allow")
     button_text: Annotated[str, Field(
         description="The label of the button that opens the menu.",
@@ -5486,6 +6092,7 @@ class WhatsAppInteractiveList(BaseModel):
 
 
 class WhatsAppInteractiveCard(BaseModel):
+    "One card the carousel showed, in the position it appeared in."
     model_config = ConfigDict(extra="allow")
     header: Annotated[WhatsAppInteractiveHeader, Field(
         description="The image or video shown at the top of the card.",
@@ -5500,6 +6107,7 @@ class WhatsAppInteractiveCard(BaseModel):
 
 
 class WhatsAppInteractive(BaseModel):
+    "Interactive content of a WhatsApp message: body text plus something the recipient can tap. The field named by `type` is the one that is present, except on `location_request_message` and `request_contact_info`, which name no field: each is a single button asking the recipient for something, so `body_text` is the whole message. Outbound only, and so an echo of what the send asked for: a contact cannot send interactive content, and a tap on it reads as `interactive_reply`, or on a location or contact request as the message the recipient shared in answer. Unlike the send schema, this one does not pin each `type` to its field. The vocabulary in `type` is open, so dispatch on it and treat an unrecognized value as a kind added since. Only the discriminator is open: this schema declares no additional properties, so a new kind's own payload field arrives here in the same change that introduces the kind, which is additive."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppInteractiveType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of interactive message this is, and which field carries it.",
@@ -5536,6 +6144,7 @@ class WhatsAppInteractiveReplyType(str, Enum):
 
 
 class WhatsAppInteractiveReply(BaseModel):
+    "What the contact tapped, on an inbound message answering an interactive message or a template's quick-reply button. `type` names the kind and the field it names carries it, as everywhere else in this arm. Inbound only: a message that offers something to tap reads as `interactive` instead, and the two never appear together."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppInteractiveReplyType, str], Field(union_mode="left_to_right")], Field(
         description="Which kind of tap this reply came from, and which field carries it.",
@@ -5558,6 +6167,7 @@ class WhatsAppUnsupportedType(str, Enum):
 
 
 class WhatsAppUnsupported(BaseModel):
+    "A message whose content we do not model, named so it is visible in the message log rather than arriving empty. Never on a message sent through Bird."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppUnsupportedType, str], Field(union_mode="left_to_right")], Field(
         description="The WhatsApp content type we did not model. `unsupported` is not a placeholder here: WhatsApp reports its own `unsupported` type for a message its own clients cannot render, and that arrives as this value. Open enum: WhatsApp adds content types over time, so treat an unrecognized value as a future type rather than an error.",
@@ -5567,6 +6177,7 @@ class WhatsAppUnsupported(BaseModel):
 
 
 class WhatsAppReaction(BaseModel):
+    "An emoji reaction standing on a message. One entry per sender: reacting again replaces that sender's entry rather than adding one, and removing a reaction drops it from the list. A one-to-one message therefore carries at most two, one for the contact and one for your business number. This is the folded current state, so it names no single change; the message's reaction log is what records how each one arrived."
     model_config = ConfigDict(extra="allow")
     emoji: Annotated[str, Field(
         description="The emoji, as WhatsApp sent it. It is not normalized, so two emoji that render identically can differ byte for byte and compare unequal.",
@@ -5624,6 +6235,7 @@ class WhatsAppErrorCode(str, Enum):
 
 
 class WhatsAppError(BaseModel):
+    "Failure detail for a message that could not be delivered or was rejected."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
@@ -5774,6 +6386,7 @@ class WhatsAppMessageList(BaseModel):
 
 
 class WhatsAppTemplateSend(BaseModel):
+    "A send-by-template reference. Identify the template by its `id` or its `slug` (supply exactly one), optionally name a language, and fill its placeholders through `components`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -5799,6 +6412,7 @@ class WhatsAppTemplateSend(BaseModel):
 
 
 class WhatsAppTextSend(BaseModel):
+    "Free-form text to send. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     body: Annotated[str, Field(
         description="The message text. The WhatsApp client turns any URL it contains into a clickable link.",
@@ -5812,6 +6426,7 @@ class WhatsAppTextSend(BaseModel):
 
 
 class WhatsAppImageSend(BaseModel):
+    "A free-form image to send, with an optional caption. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="Public `https` URL of the image. WhatsApp fetches it at send time, so it must still be reachable then. JPEG or PNG, up to 5 MB.",
@@ -5826,6 +6441,7 @@ class WhatsAppImageSend(BaseModel):
 
 
 class WhatsAppVideoSend(BaseModel):
+    "A free-form video to send, with an optional caption. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="Public `https` URL of the video. WhatsApp fetches it at send time, so it must still be reachable then. MP4 with H.264 video and AAC audio, up to 16 MB.",
@@ -5840,6 +6456,7 @@ class WhatsAppVideoSend(BaseModel):
 
 
 class WhatsAppAudioSend(BaseModel):
+    "Free-form audio to send, either as a voice note or as a basic audio file. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="Public `https` URL of the audio file. WhatsApp fetches it at send time, so it must still be reachable then. AAC, AMR, MP3, M4A or OGG (OPUS codec, mono), up to 16 MB.",
@@ -5852,6 +6469,7 @@ class WhatsAppAudioSend(BaseModel):
 
 
 class WhatsAppStickerSend(BaseModel):
+    "A free-form sticker to send. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="Public `https` URL of the sticker. WhatsApp fetches it at send time, so it must still be reachable then. WebP only, up to 100 KB static or 500 KB animated.",
@@ -5861,6 +6479,7 @@ class WhatsAppStickerSend(BaseModel):
 
 
 class WhatsAppDocumentSend(BaseModel):
+    "A free-form document to send, with an optional caption and filename. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="Public `https` URL of the document. WhatsApp fetches it at send time, so it must still be reachable then. Up to 100 MB; PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client.",
@@ -5935,6 +6554,7 @@ class WhatsAppInteractiveButtonTypeWrite(str, Enum):
 
 
 class WhatsAppInteractiveQuickReplyButtonSend(BaseModel):
+    "One tappable reply button. Tapping it sends `slug` back as an inbound message, which reads as an `interactive_reply`."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
         description="Your own handle for this button, echoed back on the reply. You choose the value and it is never shown to the recipient, so it can carry whatever your application needs to route the answer. Any characters, up to 256.",
@@ -5951,6 +6571,7 @@ class WhatsAppInteractiveQuickReplyButtonSend(BaseModel):
 
 
 class WhatsAppInteractiveCtaUrlSend(BaseModel):
+    "A button that opens a link in the recipient's browser, so a long or opaque address never has to appear in the message body."
     model_config = ConfigDict(extra="allow")
     text: Annotated[str, Field(
         description="The button's label.",
@@ -5989,6 +6610,7 @@ class WhatsAppInteractiveButtonSend(RootModel[WhatsAppInteractiveButtonSend1 | W
 
 
 class WhatsAppInteractiveListRowSend(BaseModel):
+    "One option in a list's menu. Choosing it sends `slug` back as an inbound message, which reads as an `interactive_reply`."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
         description="Your own handle for this option, echoed back on the reply. You choose the value and it is never shown to the recipient. Any characters, up to 200.",
@@ -6010,6 +6632,7 @@ class WhatsAppInteractiveListRowSend(BaseModel):
 
 
 class WhatsAppInteractiveListSectionSend(BaseModel):
+    "One group of options in a list's menu. A menu with a single group still carries a title, which WhatsApp shows above its rows."
     model_config = ConfigDict(extra="allow")
     title: Annotated[str, Field(
         description="The group's heading, shown above its rows.",
@@ -6025,6 +6648,7 @@ class WhatsAppInteractiveListSectionSend(BaseModel):
 
 
 class WhatsAppInteractiveListSend(BaseModel):
+    "A menu of options behind a single button. The recipient taps the button, WhatsApp opens the menu, and choosing one option sends it back as a reply."
     model_config = ConfigDict(extra="allow")
     button_text: Annotated[str, Field(
         description="The label of the button that opens the menu.",
@@ -6212,6 +6836,7 @@ class WhatsAppInteractiveSend(RootModel[WhatsAppInteractiveSend1 | WhatsAppInter
 
 
 class WhatsAppContactNameSend(BaseModel):
+    "The contact's name. `formatted_name` is what the card shows, and WhatsApp additionally requires at least one of the parts below it, so a card carrying only a formatted name is rejected."
     model_config = ConfigDict(extra="allow")
     formatted_name: Annotated[str, Field(
         description="The whole name, as the card should render it.",
@@ -6227,6 +6852,7 @@ class WhatsAppContactNameSend(BaseModel):
 
 
 class WhatsAppContactOrgSend(BaseModel):
+    "Where the contact works, as the card should record it."
     model_config = ConfigDict(extra="allow")
     company: Annotated[Optional[str], Field(examples=["Lucky Shrub"], max_length=128)] = None
     department: Annotated[Optional[str], Field(examples=["Legal"], max_length=128)] = None
@@ -6234,6 +6860,7 @@ class WhatsAppContactOrgSend(BaseModel):
 
 
 class WhatsAppContactPhoneSend(BaseModel):
+    "One phone number to put on a contact card."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The number to show. Send it in E.164 to get a card the recipient can message from; any other form still renders, with an invite button.",
@@ -6249,6 +6876,7 @@ class WhatsAppContactPhoneSend(BaseModel):
 
 
 class WhatsAppContactEmailSend(BaseModel):
+    "One email address to put on a contact card."
     model_config = ConfigDict(extra="allow")
     email: Annotated[str, Field(
         examples=["barbara@example.com"],
@@ -6263,6 +6891,7 @@ class WhatsAppContactEmailSend(BaseModel):
 
 
 class WhatsAppContactUrlSend(BaseModel):
+    "One website to put on a contact card."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="The address to show. Not validated as a URL, because a card commonly carries a bare domain.",
@@ -6278,6 +6907,7 @@ class WhatsAppContactUrlSend(BaseModel):
 
 
 class WhatsAppContactAddressSend(BaseModel):
+    "One postal address to put on a contact card."
     model_config = ConfigDict(extra="allow")
     street: Annotated[Optional[str], Field(
         examples=["1 Lucky Shrub Way"],
@@ -6300,6 +6930,7 @@ class WhatsAppContactAddressSend(BaseModel):
 
 
 class WhatsAppContactCardSend(BaseModel):
+    "A contact card to send. WhatsApp shows the name on the card and the rest in a profile view the recipient opens from it.\nA card carrying a phone number renders buttons that message or save the contact; a card without one can only be added to an address book."
     model_config = ConfigDict(extra="allow")
     name: WhatsAppContactNameSend
     org: Annotated[Optional[WhatsAppContactOrgSend], Field(
@@ -6322,6 +6953,7 @@ class WhatsAppContactCardSend(BaseModel):
 
 
 class WhatsAppMessageSendRequest(BaseModel):
+    "A WhatsApp message to send, carrying exactly one kind of content."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
         description="The recipient: a phone number in E.164 format (for example `+14155550100`), a business-scoped user ID (for example `US.13491208655302741918`) for a WhatsApp user whose number you do not have, or a WhatsApp group ID (for example `wag_01krdgeqcxet5s7t44vh8rt9mg`). One-time-passcode templates need a phone number. Bird tracks the customer service window per identity and business number, so reply to the identity a contact's message came from, from the number it reached.",
@@ -6382,6 +7014,7 @@ class WhatsAppMessageSendRequest(BaseModel):
 
 
 class WhatsAppReadReceiptRequest(BaseModel):
+    "What to acknowledge on the inbound message. An absent body and `{}` mean the same thing: mark the message read and show nothing."
     model_config = ConfigDict(extra="allow")
     typing_indicator: Annotated[Optional[bool], Field(
         description="Show a typing indicator to the contact as well as marking the message read. WhatsApp clears it when you send your next message, or after 25 seconds, whichever comes first. Only ask for one if you are about to reply.",
@@ -6390,6 +7023,7 @@ class WhatsAppReadReceiptRequest(BaseModel):
 
 
 class WhatsAppReadReceipt(BaseModel):
+    "The acknowledgement Bird accepted. There is no status to poll afterwards: WhatsApp reports nothing about a read receipt."
     model_config = ConfigDict(extra="allow")
     typing_indicator: Annotated[bool, Field(
         description="Whether a typing indicator was requested alongside the read receipt.",
@@ -6455,6 +7089,7 @@ class WhatsAppReactionEventID(RootModel[str]):
 
 
 class WhatsAppReactionAccepted(BaseModel):
+    "A reaction as accepted, which WhatsApp has not applied yet and may still refuse. It names the reaction-log entry the request created, so a caller that places two changes on one message can tell which entry is which; read the message's `reactions` for what currently stands, or its reaction log for what became of this one."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["war_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -6476,6 +7111,7 @@ class WhatsAppReactionEventStatus(str, Enum):
 
 
 class WhatsAppReactionEvent(BaseModel):
+    "One change to a reaction on a message: a reaction placed, replaced by a different emoji, or taken back. Entries are never edited, so a sender who reacts twice and then removes it leaves three of them."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["war_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -6562,6 +7198,7 @@ class WhatsAppGroupOperationField(str, Enum):
 
 
 class WhatsAppGroupError(BaseModel):
+    "Why a change to a group did not take effect. Meta documents no code vocabulary for a group refusal, since every sample payload carries an undocumented `code` beside its message, so this relays what it said rather than classifying it, the way a template submission failure does."
     model_config = ConfigDict(extra="allow")
     description: Annotated[str, Field(
         description="WhatsApp's own explanation of the refusal, passed through. Show it to the person who asked for the change; never match on its text. Carries Bird's own words instead when the failure was Bird's verdict, such as a confirmation that never arrived.",
@@ -6575,6 +7212,7 @@ class WhatsAppGroupError(BaseModel):
 
 
 class WhatsAppGroupOperationResult(BaseModel):
+    "What became of one field in a `settings_update`. WhatsApp applies each field separately, so a single update can leave some applied and others refused."
     model_config = ConfigDict(extra="allow")
     field: Annotated[WhatsAppGroupOperationField, Field(
         description="The setting this result reports on.",
@@ -6589,6 +7227,7 @@ class WhatsAppGroupOperationResult(BaseModel):
 
 
 class WhatsAppGroupOperation(BaseModel):
+    "The last change asked of this group or participant, and where it got to. WhatsApp confirms a change on a webhook rather than in its reply, so an operation is `pending` until that arrives. While it is, another change to the same thing is refused with a `409` `WhatsAppGroupUpdateInProgress`; a change to a different participant is not, so several removals can be in flight at once. Absent on something nothing has been asked of yet."
     model_config = ConfigDict(extra="allow")
     type: Annotated[WhatsAppGroupOperationType, Field(description="What was asked.")]
     status: Annotated[WhatsAppGroupOperationStatus, Field(
@@ -6613,6 +7252,7 @@ class WhatsAppGroupOperation(BaseModel):
 
 
 class WhatsAppGroupParticipant(BaseModel):
+    "Someone who joined the group. The business number that created the group is its admin and is not listed."
     model_config = ConfigDict(extra="allow")
     bsuid: Annotated[str, Field(
         description="Business-scoped user ID, Meta's identifier for this person against your business. The one identifier every participant has: WhatsApp always sends it, and it is stable for as long as they are in the group.",
@@ -6635,6 +7275,7 @@ class WhatsAppGroupParticipant(BaseModel):
 
 
 class WhatsAppGroupPinnedMessage(BaseModel):
+    "A message pinned at the top of a group's chat."
     model_config = ConfigDict(extra="allow")
     message_id: Annotated[str, Field(
         description="The pinned message, as returned in the send response's `id`.",
@@ -6650,6 +7291,7 @@ class WhatsAppGroupPinnedMessage(BaseModel):
 
 
 class WhatsAppGroup(BaseModel):
+    "A WhatsApp group your business created and administers. People join by opening its invite link, not by being added."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="Unique identifier for the group. Accepted by every `/v1/whatsapp/groups/{group_id}` operation, and as `to` when sending a message to the group.",
@@ -6736,6 +7378,7 @@ class WhatsAppGroupList(BaseModel):
 
 
 class WhatsAppGroupCreate(BaseModel):
+    "The group to create. WhatsApp issues the invite link, and people join by opening it, so a create request names no participants."
     model_config = ConfigDict(extra="allow")
     whatsapp_number_id: Annotated[str, Field(
         description="The business number that will own and administer the group, as its id in `GET /v1/whatsapp/numbers`. It must be a number your workspace can send from, and WhatsApp must have granted it Official Business Account status; a number without that status returns a `412` `WhatsAppGroupsNotEligible`. The number cannot be changed afterwards, and every message to the group is sent from it.",
@@ -6760,6 +7403,7 @@ class WhatsAppGroupCreate(BaseModel):
 
 
 class WhatsAppGroupUpdate(BaseModel):
+    "The changes to make. Fields you omit are left as they are. WhatsApp applies each field separately, so one can be rejected while the others take effect; the group's `updated_at` moves when a change lands."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
         description="A new name for the group. Participants see the change in the group's chat.",
@@ -6781,6 +7425,7 @@ class WhatsAppGroupUpdate(BaseModel):
 
 
 class WhatsAppGroupInviteLink(BaseModel):
+    "A group's invite link."
     model_config = ConfigDict(extra="allow")
     invite_link: Annotated[str, Field(
         description="The group's one invite link. Every link the group had before this one stops working.",
@@ -6790,6 +7435,7 @@ class WhatsAppGroupInviteLink(BaseModel):
 
 
 class WhatsAppGroupPinnedMessageCreate(BaseModel):
+    "A message to pin at the top of the group's chat."
     model_config = ConfigDict(extra="allow")
     message_id: Annotated[str, Field(
         description="The message to pin. It has to be one this group carries: a message in another group, or a one-to-one message, returns a `422` `WhatsAppMessageNotInGroup`.",
@@ -6810,6 +7456,7 @@ class WhatsAppGroupJoinRequestID(RootModel[str]):
 
 
 class WhatsAppGroupJoinRequest(BaseModel):
+    "Someone waiting to be let into a group that requires approval."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="Unique identifier for the join request. Pass it to the batch-approve and batch-reject operations.",
@@ -6859,6 +7506,7 @@ class WhatsAppGroupJoinRequestList(BaseModel):
 
 
 class WhatsAppGroupJoinRequestDecision(BaseModel):
+    "The join requests to decide on."
     model_config = ConfigDict(extra="allow")
     join_request_ids: Annotated[List[str], Field(
         description="The join requests to act on, as returned by `GET /v1/whatsapp/groups/{group_id}/join-requests`. Each is decided on its own, so one can fail while the rest succeed. An ID that names no waiting request returns a `422` `WhatsAppGroupJoinRequestNotFound`. The 50 is Bird's own request bound, not a WhatsApp one: how many people the group can hold does not limit how many can queue at its link, so a rejection sweep is not held to the size of the group it is refusing entry to.",
@@ -6868,6 +7516,7 @@ class WhatsAppGroupJoinRequestDecision(BaseModel):
 
 
 class WhatsAppGroupJoinRequestFailure(BaseModel):
+    "A join request the decision could not be applied to."
     model_config = ConfigDict(extra="allow")
     join_request_id: Annotated[str, Field(
         description="The join request that was not decided.",
@@ -6881,6 +7530,7 @@ class WhatsAppGroupJoinRequestFailure(BaseModel):
 
 
 class WhatsAppGroupJoinRequestDecisionResult(BaseModel):
+    "What happened to each join request in the batch. WhatsApp decides them one by one, so a batch can be part-applied: the requests it accepted are in `decided`, and the rest are in `failed` with the reason."
     model_config = ConfigDict(extra="allow")
     decided: Annotated[List[str], Field(
         description="The join requests WhatsApp accepted the decision for. A person approved here can enter the group; a person rejected here sees the join button again.",
@@ -6968,6 +7618,7 @@ class WhatsAppTemplateCardComponentFormat(str, Enum):
 
 
 class WhatsAppTemplateCardComponent(BaseModel):
+    "One content block inside a carousel card."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppTemplateCardComponentType, str], Field(union_mode="left_to_right")], Field(
         description="The card block's type.",
@@ -6993,6 +7644,7 @@ class WhatsAppTemplateCardComponent(BaseModel):
 
 
 class WhatsAppTemplateCard(BaseModel):
+    "One card in a carousel."
     model_config = ConfigDict(extra="allow")
     components: Annotated[List[WhatsAppTemplateCardComponent], Field(
         description="This card's content blocks, in display order.",
@@ -7075,6 +7727,7 @@ class WhatsAppTemplateRejectionCategory(str, Enum):
 
 
 class WhatsAppTemplateRejection(BaseModel):
+    "Why Meta refused a language's content, and what it says about fixing it. Present when `status` is `rejected`."
     model_config = ConfigDict(extra="allow")
     category: Annotated[Optional[Annotated[Union[WhatsAppTemplateRejectionCategory, str], Field(union_mode="left_to_right")]], Field(
         description="Why Meta refused a language's content, in Meta's own vocabulary, lowercased. Read it with `reason`, which carries Meta's human-written detail, and `recommendation`, which carries its suggested fix. This is an open enum. Accept unrecognized values.",
@@ -7090,6 +7743,7 @@ class WhatsAppTemplateRejection(BaseModel):
 
 
 class WhatsAppTemplateSubmissionError(BaseModel):
+    "Why the submission itself did not complete. Distinct from `rejection`, which is Meta refusing the content it was given."
     model_config = ConfigDict(extra="allow")
     description: Annotated[str, Field(
         description="Human-readable explanation of why the submission did not complete.",
@@ -7103,6 +7757,7 @@ class WhatsAppTemplateSubmissionError(BaseModel):
 
 
 class WhatsAppTemplateLanguageState(BaseModel):
+    "Where one language stands, without its content: content lives under a version, read that for it. An object rather than a bare status string, so detail beyond status can arrive later as a sibling property instead of a breaking change."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         description="On a template, where this language stands on the version currently in service. On a version, what that version's submission did with this language. Absent on a draft, which has not been submitted.",
@@ -7128,6 +7783,7 @@ class WhatsAppTemplateVersionID(RootModel[str]):
 
 
 class WhatsAppTemplate(BaseModel):
+    "A message template: one identity holding a copy of the message per language. Each language is reviewed, priced and paused by Meta on its own, so the template's own status is an aggregate and the per-language detail is in `languages`. A version contains the content."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -7244,6 +7900,7 @@ class WhatsAppTemplateRevision(RootModel[int]):
 
 
 class WhatsAppTemplateVersionSummary(BaseModel):
+    "One version of a template, without its content. A version holds a full copy of every language it was submitted with. Listing versions therefore names the languages and what became of each without carrying their content. Read a single version for its content. Read its shallow language collection for content hashes."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -7296,6 +7953,7 @@ class WhatsAppTemplateVersionList(BaseModel):
 
 
 class WhatsAppTemplateVersionLanguage(BaseModel):
+    "One language's content in one version, and what that submission did with it."
     model_config = ConfigDict(extra="allow")
     components: Annotated[List[WhatsAppTemplateComponent], Field(
         description="This language's content in this version, in display order.",
@@ -7312,6 +7970,7 @@ class WhatsAppTemplateVersionLanguage(BaseModel):
 
 
 class WhatsAppTemplateVersion(BaseModel):
+    "One version of a template: the content of every language it holds, frozen when it was submitted, alongside what Meta made of each. A draft is a version too: a mutable one, with no number and no submission date."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -7342,6 +8001,7 @@ class WhatsAppTemplateVersion(BaseModel):
 
 
 class WhatsAppTemplateLanguageSummary(BaseModel):
+    "One language of a version without its content. Fetch the language itself for the content."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -7386,6 +8046,7 @@ class WhatsAppTemplateQualityScore(str, Enum):
 
 
 class WhatsAppTemplateQuality(BaseModel):
+    "Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating."
     model_config = ConfigDict(extra="allow")
     current_score: Annotated[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")], Field(
         description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
@@ -7401,6 +8062,7 @@ class WhatsAppTemplateQuality(BaseModel):
 
 
 class WhatsAppTemplateLanguage(BaseModel):
+    "One language of one version: its content, what the submission carrying it did with it, and everything Meta holds about it."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -7459,6 +8121,7 @@ class WhatsAppTemplateLanguage(BaseModel):
 
 
 class WhatsAppStatsSummaryPeriod(BaseModel):
+    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -7480,6 +8143,7 @@ class WhatsAppStatsSummaryPeriod(BaseModel):
 
 
 class WhatsAppDeliveryStats(BaseModel):
+    "WhatsApp lifecycle counts and rates for the requested period, attributed by send time, so a later delivery stays attributed to the period in which its message was accepted, and a recent period under-reports `delivered` while delivery reports are still arriving. The sibling `engagement` block reports read counts and rates. Rates are null when their denominator is zero. Very large counts are close estimates rather than exact tallies."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[int, Field(
         description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
@@ -7521,6 +8185,7 @@ class WhatsAppDeliveryStats(BaseModel):
 
 
 class WhatsAppEngagementStats(BaseModel):
+    "WhatsApp engagement counts and the derived read rate for the scope of the containing row (the whole requested period or a breakdown dimension). The `read` field is the number of distinct messages confirmed read by the recipient. Send time determines attribution; the instant the read receipt arrived does not. A read is counted in the period its message was accepted in, alongside that message's own delivery when one arrived. The read rate divides reads by messages delivered in the same scope and is null when its denominator is zero. Very large counts are close estimates rather than exact tallies."
     model_config = ConfigDict(extra="allow")
     read: Annotated[int, Field(
         description="Distinct messages confirmed read by the recipient.",
@@ -7535,6 +8200,7 @@ class WhatsAppEngagementStats(BaseModel):
 
 
 class WhatsAppLatencyQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
     model_config = ConfigDict(extra="allow")
     p50_ms: Annotated[Optional[int], Field(
         description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
@@ -7554,6 +8220,7 @@ class WhatsAppLatencyQuantiles(BaseModel):
 
 
 class WhatsAppLatencyStats(BaseModel):
+    "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to WhatsApp handoff.\n- `delivery`: From WhatsApp handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying message contributes a measurement.\nIndividual percentiles can also be null. `delivery` is measured on a best-effort basis, so\nit can be absent for a scope whose `processing` and `total` are present."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
@@ -7567,6 +8234,7 @@ class WhatsAppLatencyStats(BaseModel):
 
 
 class WhatsAppStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. A `*_pct_change` value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero. A `*_rate_pp` value is the signed difference between rate fractions and is null when either rate is undefined."
     model_config = ConfigDict(extra="allow")
     accepted_pct_change: Annotated[Optional[float], Field(
         description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
@@ -7611,6 +8279,7 @@ class WhatsAppStatsComparisonDelta(BaseModel):
 
 
 class WhatsAppStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7622,6 +8291,7 @@ class WhatsAppStatsComparison(BaseModel):
 
 
 class WhatsAppStatsSummary(BaseModel):
+    "WhatsApp lifecycle counts, rates, engagement, and latency percentiles for the full requested period. Counts aggregate the time buckets. Latency percentiles cover the whole period. Rates are null when their denominator is zero."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7633,6 +8303,7 @@ class WhatsAppStatsSummary(BaseModel):
 
 
 class WhatsAppStatsSeriesPeriod(BaseModel):
+    "The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -7657,6 +8328,7 @@ class WhatsAppStatsSeriesPeriod(BaseModel):
 
 
 class WhatsAppDeliveryCounts(BaseModel):
+    "WhatsApp lifecycle counts for a time bucket, attributed by send time. A message accepted on Monday and delivered on Tuesday counts in Monday's bucket. The sibling `engagement` block reports read counts. Rates are available only for the whole period. Very large counts are close estimates rather than exact tallies."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[int, Field(
         description="Distinct messages accepted for sending after admission checks.",
@@ -7686,6 +8358,7 @@ class WhatsAppDeliveryCounts(BaseModel):
 
 
 class WhatsAppEngagementCounts(BaseModel):
+    "WhatsApp engagement counts for a time bucket, attributed by send time. A message accepted on Monday and read on Tuesday counts in Monday's bucket. Read rates are available only for the whole period. Very large counts are close estimates rather than exact tallies."
     model_config = ConfigDict(extra="allow")
     read: Annotated[int, Field(
         description="Distinct messages confirmed read by the recipient.",
@@ -7695,6 +8368,7 @@ class WhatsAppEngagementCounts(BaseModel):
 
 
 class WhatsAppStatsPoint(BaseModel):
+    "WhatsApp lifecycle counts, engagement, and latency percentiles for one time bucket (a calendar day or hour), bucketed by send time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. Rates apply to the whole window rather than individual buckets."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
@@ -7707,6 +8381,7 @@ class WhatsAppStatsPoint(BaseModel):
 
 
 class WhatsAppStatsResponse(BaseModel):
+    "Time-series stats payload. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -7717,6 +8392,7 @@ class WhatsAppStatsResponse(BaseModel):
 
 
 class WhatsAppErrorCodeStatsPoint(BaseModel):
+    "Number of failed messages for a single normalized failure reason over the requested period."
     model_config = ConfigDict(extra="allow")
     error_code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="The normalized failure reason this row aggregates, matching the `last_error.code` reported on an individual failed message.",
@@ -7729,6 +8405,7 @@ class WhatsAppErrorCodeStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByErrorCodeResponse(BaseModel):
+    "Per-error-code failure breakdown for the requested period, ranked by failure count descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7744,6 +8421,7 @@ class WhatsAppStatsByErrorCodeResponse(BaseModel):
 
 
 class WhatsAppTemplateStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, engagement and latency for a single WhatsApp template over the requested period."
     model_config = ConfigDict(extra="allow")
     template_id: Annotated[str, Field(
         description="The template these messages were sent from, using the same `id` the WhatsApp template endpoints return. A send that resolved no template does not appear in this breakdown. A template renamed after it was used to send still reports under this one `id`, and a template deleted after sending keeps its row rather than dropping the messages.",
@@ -7757,6 +8435,7 @@ class WhatsAppTemplateStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByTemplateResponse(BaseModel):
+    "Per-template breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7772,6 +8451,7 @@ class WhatsAppStatsByTemplateResponse(BaseModel):
 
 
 class WhatsAppTemplateCategoryStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, and engagement for a single WhatsApp template category over the requested period."
     model_config = ConfigDict(extra="allow")
     category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
         description="The template category this row aggregates.",
@@ -7782,6 +8462,7 @@ class WhatsAppTemplateCategoryStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByTemplateCategoryResponse(BaseModel):
+    "Per-template-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7797,6 +8478,7 @@ class WhatsAppStatsByTemplateCategoryResponse(BaseModel):
 
 
 class WhatsAppTagStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, and engagement for a single tag (name:value) over the requested period."
     model_config = ConfigDict(extra="allow")
     tag: Annotated[str, Field(
         description="The tag this row aggregates, in `name:value` form.",
@@ -7809,6 +8491,7 @@ class WhatsAppTagStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByTagResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7824,6 +8507,7 @@ class WhatsAppStatsByTagResponse(BaseModel):
 
 
 class WhatsAppPhoneNumberStatsPoint(BaseModel):
+    "Lifecycle counts, rates, and engagement for one business phone number over the requested period, including whether the number is shared."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The business sender phone number in E.164 form.",
@@ -7840,6 +8524,7 @@ class WhatsAppPhoneNumberStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByPhoneNumberResponse(BaseModel):
+    "Per-phone-number breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7855,6 +8540,7 @@ class WhatsAppStatsByPhoneNumberResponse(BaseModel):
 
 
 class WhatsAppCountryStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, engagement and latency for a single destination country over the requested period."
     model_config = ConfigDict(extra="allow")
     country: Annotated[str, Field(
         description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code. `ZZ` collects recipients whose country could not be resolved.",
@@ -7869,6 +8555,7 @@ class WhatsAppCountryStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByCountryResponse(BaseModel):
+    "Per-country breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7884,6 +8571,7 @@ class WhatsAppStatsByCountryResponse(BaseModel):
 
 
 class WhatsAppInboundStatsComparisonDelta(BaseModel):
+    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
     model_config = ConfigDict(extra="allow")
     received_pct_change: Annotated[Optional[float], Field(
         description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
@@ -7892,6 +8580,7 @@ class WhatsAppInboundStatsComparisonDelta(BaseModel):
 
 
 class WhatsAppInboundStatsComparison(BaseModel):
+    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7905,6 +8594,7 @@ class WhatsAppInboundStatsComparison(BaseModel):
 
 
 class WhatsAppInboundStatsSummaryResponse(BaseModel):
+    "Total received messages for the requested period."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7918,6 +8608,7 @@ class WhatsAppInboundStatsSummaryResponse(BaseModel):
 
 
 class WhatsAppInboundStatsPoint(BaseModel):
+    "Received-message count for one time bucket (a calendar day or hour), bucketed by the time each message reached your number."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
@@ -7933,6 +8624,7 @@ class WhatsAppInboundStatsPoint(BaseModel):
 
 
 class WhatsAppInboundStatsResponse(BaseModel):
+    "Received-message time series. `period` echoes the range the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -7943,6 +8635,7 @@ class WhatsAppInboundStatsResponse(BaseModel):
 
 
 class WhatsAppInboundPhoneNumberStatsPoint(BaseModel):
+    "Received-message count for a single business phone number over the requested period."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The business phone number that received the messages, in E.164 form.",
@@ -7957,6 +8650,7 @@ class WhatsAppInboundPhoneNumberStatsPoint(BaseModel):
 
 
 class WhatsAppInboundStatsByPhoneNumberResponse(BaseModel):
+    "Per-phone-number breakdown of received messages for the requested period, ranked by volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -8015,6 +8709,7 @@ class WhatsAppAgentNotificationID(RootModel[str]):
 
 
 class WhatsAppAgentNotificationError(BaseModel):
+    "Why a notification sent to the agent failed."
     model_config = ConfigDict(extra="allow")
     description: Annotated[str, Field(
         description="WhatsApp's own explanation, passed through: what it said when it refused the notification, or its failure summary once it had worked on it. Show it to the person who sent the notification; never match on its text. Carries Bird's own words instead when the failure was Bird's verdict, such as no outcome arriving within a day.",
@@ -8028,6 +8723,7 @@ class WhatsAppAgentNotificationError(BaseModel):
 
 
 class WhatsAppAgentNotification(BaseModel):
+    "A notification you sent the agent about one contact, and what came of it. The agent decides whether to write to the contact about it; that message, if any, shows up on the contact's conversation."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="Unique identifier for the notification.",
@@ -8102,6 +8798,7 @@ class WhatsAppAgentNotificationList(BaseModel):
 
 
 class WhatsAppAgentNotificationCreate(BaseModel):
+    "Something that happened in your systems that the agent should tell the contact about, such as a payment landing or an order shipping. WhatsApp processes it in the background, so read the notification back for what came of it."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -8158,6 +8855,7 @@ class WhatsAppNumberErrorCode(str, Enum):
 
 
 class WhatsAppNumberError(BaseModel):
+    "Why a number's connection was refused for good. `code` is the standardized reason. `description` explains the failure where one was recorded, and `meta_error_code` carries WhatsApp's own code when available. It accompanies the `failed` status only; a number still being retried carries no error."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[WhatsAppNumberErrorCode, str], Field(union_mode="left_to_right")], Field(
         description="Standardized failure reason.",
@@ -8396,6 +9094,7 @@ class WhatsAppBusinessVertical(str, Enum):
 
 
 class WhatsAppNumberProfile(BaseModel):
+    "The business profile WhatsApp shows to people this number messages. It is read from WhatsApp on each request rather than from a stored copy, so it is always current and a WhatsApp outage makes it briefly unavailable."
     model_config = ConfigDict(extra="allow")
     display_name: Annotated[Optional[str], Field(
         description="The name WhatsApp verifies for this number. Once WhatsApp approves it, it appears at the top of a chat with this number; `display_name_status` is what says whether it has. Set when the number was connected, and changed from the dashboard or the CLI, as [WhatsApp phone numbers](/docs/guides/whatsapp/phone-number-setup) explains. This field still returns the current name until a requested change completes.",
@@ -8608,6 +9307,7 @@ class AMBSuppressionEndedReason(str, Enum):
 
 
 class AMBSuppression(BaseModel):
+    "One retained suppression episode for an address. A null account scope covers the same address in every account in the workspace; it does not link different opaque identities."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["asp_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -8795,6 +9495,7 @@ class AMBBusinessAccountSubmissionList(BaseModel):
 
 
 class AMBBusinessAccountSubmissionCreate(BaseModel):
+    "The submission commits three distinct attachments uploaded to this workspace. `readiness_attachment_id` identifies the PDF business readiness assessment; `use_cases_attachment_id` identifies the PDF describing proposed customer use cases; `video_attachment_id` identifies the MP4 demonstration of the customer experience. Invalid or duplicate evidence returns 422."
     model_config = ConfigDict(extra="allow")
     readiness_attachment_id: Annotated[str, Field(
         examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -8840,6 +9541,7 @@ class AMBEntryPoint(BaseModel):
 
 
 class AMBChannelSettings(BaseModel):
+    "A business's entry points, default locale, and landing-page brand settings. OpenID Connect providers use separate business authentication provider operations. Apple Pay merchant settings use the separate business Apple Pay configuration operations. Supply custom iMessage app metadata on each message."
     model_config = ConfigDict(extra="allow")
     entry_points: Annotated[List[AMBEntryPoint], Field(
         description="The entry points customers can use to open a conversation with this business, each matched against the group and intent an inbound message reports.",
@@ -8902,6 +9604,7 @@ class AMBRoutingRuleMatchKind(str, Enum):
 
 
 class AMBRoutingRule(BaseModel):
+    "A rule that puts a conversation into a queue when it is created or reopened, based on the group and intent the entry point that started it carried."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -9201,6 +9904,7 @@ class AMBMessageSource(str, Enum):
 
 
 class AMBNativeAttachment(BaseModel):
+    "Provide source_url or the complete encrypted reference, never both."
     model_config = ConfigDict(extra="allow")
     source_url: Annotated[Optional[str], Field(
         description="HTTPS URL Bird downloads and uploads to Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
@@ -9289,6 +9993,7 @@ class AMBNativeRichLinkData(BaseModel):
 
 
 class AMBRichLinkReference(BaseModel):
+    "Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple."
     model_config = ConfigDict(extra="allow")
     title: Annotated[Optional[str], Field(
         description="Title supplied by Apple for the preview.",
@@ -9328,6 +10033,7 @@ class AMBRichLinkReference(BaseModel):
 
 
 class AMBRichLinkConstruct(BaseModel):
+    "Asks Apple to build the rich link preview when the message is sent, rather than through a prior `POST /v1/amb/messages/construct-payload` call. No caller holds a signed reference until the send itself resolves one."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. A URL Apple cannot build a preview for is refused with a `422` `AMBConstructPayloadFailed`; send `rich_link` content with your own `title` and `image` instead.",
@@ -9631,6 +10337,7 @@ class AMBFormPickerPage(BaseModel):
 
 
 class AMBFormDatePickerOptions(BaseModel):
+    "Apple defaults to UTC when interpreting these dates."
     model_config = ConfigDict(extra="allow")
     date_format: Annotated[Optional[str], Field(
         description="Format used to read the date values in these options. Defaults to `MM/dd/yyyy`.",
@@ -9809,6 +10516,7 @@ class AMBNativeFormData(BaseModel):
 
 
 class AMBNativeDynamic(BaseModel):
+    "Form content. Bird supplies Apple’s messageForms template and protocol version."
     model_config = ConfigDict(extra="allow")
     data: AMBNativeFormData
 
@@ -9818,6 +10526,7 @@ class AMBAuthenticationID(RootModel[str]):
 
 
 class AMBNativeAuthentication(BaseModel):
+    "Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials."
     model_config = ConfigDict(extra="allow")
     authentication_id: Annotated[str, Field(
         examples=["amauth_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -9827,6 +10536,7 @@ class AMBNativeAuthentication(BaseModel):
 
 
 class AMBNativePayment(BaseModel):
+    "Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials."
     model_config = ConfigDict(extra="allow")
     payment_id: Annotated[str, Field(
         examples=["apay_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -9836,6 +10546,7 @@ class AMBNativePayment(BaseModel):
 
 
 class AMBNativeInteractivePayload(BaseModel):
+    "Exactly one built-in interaction. Protocol versions are managed by Bird."
     model_config = ConfigDict(extra="allow")
     request_identifier: Annotated[Optional[str], Field(
         description="Correlation identifier for this interaction. Bird generates one when omitted. Use a new value for each message. A reply is linked to its request only when no other sent message in the conversation uses the same identifier.",
@@ -9859,6 +10570,7 @@ class AMBNativeInteractivePayload(BaseModel):
 
 
 class AMBNativeInteractiveData(BaseModel):
+    "A built-in interaction or custom iMessage app. Custom apps require the app metadata and both message bubbles."
     model_config = ConfigDict(extra="allow")
     app_id: Annotated[Optional[str], Field(
         description="App Store identifier of the iMessage app.",
@@ -10112,6 +10824,7 @@ class AMBStatsErrorCode(RootModel[str]):
 
 
 class AMBError(BaseModel):
+    "Failure detail for a message or invitation that could not be sent or was rejected."
     model_config = ConfigDict(extra="allow")
     code: Annotated[str, Field(
         description="Machine-readable reason a send failed, in one of two namespaces: `bird:` for a reason Bird's own pipeline assigned (for example `bird:business_not_registered`), or `apple:` followed by the HTTP status Apple's API returned for the send attempt (for example `apple:404`). This is an open, growing set in both namespaces; accept unrecognized values.",
@@ -10287,6 +11000,7 @@ class AMBMessageList(BaseModel):
 
 
 class AMBTemplateSend(BaseModel):
+    "A send-by-template reference. Identify the template by `id` or `slug`. Supply exactly one reference, optionally select a language, and pass variable values in `parameters`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -10312,6 +11026,7 @@ class AMBTemplateSend(BaseModel):
 
 
 class AMBMessageSendRequest(BaseModel):
+    "A message to send. Supply exactly one of `content` (native content) or `template` (a stored template, whose category is derived). Supplying both, or neither, is rejected."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -10394,6 +11109,7 @@ class AMBConversationStatus(str, Enum):
 
 
 class AMBConversationRecipient(BaseModel):
+    "The customer on the other side of this Apple Messages for Business conversation."
     model_config = ConfigDict(extra="allow")
     opaque_user_id: Annotated[Optional[str], Field(
         description="Apple's opaque identifier for this customer with this business. Null when no identifier is recorded.",
@@ -10406,6 +11122,7 @@ class AMBConversationRecipient(BaseModel):
 
 
 class AMBConversationRouting(BaseModel):
+    "Routing context the conversation is filed under. Routing rules set it when the conversation opens or reopens, or when the customer writes after it was resolved. A teammate can move the queue or apply a pending `routing_change`."
     model_config = ConfigDict(extra="allow")
     group_id: Annotated[Optional[str], Field(
         description="The business's routing group carried by Apple from the entry point. This identifies a routing destination within the business. Null when the message that set the current routing carried no group.",
@@ -10428,6 +11145,7 @@ class AMBConversationRouting(BaseModel):
 
 
 class AMBConversationRoutingChange(BaseModel):
+    "Routing from the customer's latest message that names a different group or intent than the conversation's current `routing`. `message_id` is that inbound message and `received_at` is when it arrived. Routing rules select its queue when the message arrives, but the conversation keeps its current queue until you apply the change."
     model_config = ConfigDict(extra="allow")
     group_id: Annotated[Optional[str], Field(
         description="Group carried by the message. Null when the message carried only an intent.",
@@ -10459,6 +11177,7 @@ class AMBConversationRoutingChange(BaseModel):
 
 
 class AMBConversationLastMessage(BaseModel):
+    "A reference to the most recent message in either direction. Read its content through the conversation's message list."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -10485,6 +11204,7 @@ class AMBConversationClosedReason(str, Enum):
 
 
 class AMBConversation(BaseModel):
+    "A conversation between your business and one customer on Apple Messages for Business. It holds the customer's device capabilities, the console's read state, assignment, and labels, and the routing queue the conversation is in."
     model_config = ConfigDict(extra="allow")
     inbox_status: Annotated[ConversationInboxStatus, Field(
         description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
@@ -10582,6 +11302,7 @@ class AMBConversationRoutingChangeAction(str, Enum):
 
 
 class AMBConversationRoutingChangeDecision(BaseModel):
+    "Settles the conversation's pending `routing_change`. `message_id` names the change you reviewed: the request fails with `409` when the pending change has a different message ID, because a newer customer message replaced it or a teammate already settled it. Either action clears `routing_change`."
     model_config = ConfigDict(extra="allow")
     action: Annotated[AMBConversationRoutingChangeAction, Field(
         description="`apply` adopts the pending change's group, intent, entry point and queue. `dismiss` discards it and leaves group, intent and entry point unchanged.",
@@ -10594,6 +11315,7 @@ class AMBConversationRoutingChangeDecision(BaseModel):
 
 
 class AMBConversationUpdate(BaseModel):
+    "Assignment, labels, inbox status, queue, routing change and workspace read state. Omit a field to leave it unchanged. Inbox status is independent of the Apple channel's open or closed state. `queue` moves the conversation and clears any pending `routing_change`; it can be combined with a `dismiss` decision but not with `apply`, which sets the queue itself."
     model_config = ConfigDict(extra="allow")
     assigned_to: Annotated[Optional[str], Field(
         description="User to assign this conversation to. Pass a workspace member's user ID, `me` for the signed-in user, or null to unassign it. An API key cannot use `me` and receives a `422` response.",
@@ -10627,6 +11349,7 @@ class AMBConversationTypingEvent(str, Enum):
 
 
 class AMBConversationTypingRequest(BaseModel):
+    "A typing indicator to send to the customer's device on this conversation."
     model_config = ConfigDict(extra="allow")
     event: Annotated[AMBConversationTypingEvent, Field(
         description="The typing signal to send. `typing_start` tells the customer's device that an operator is composing a reply. `typing_end` tells it composition stopped without a message following. Apple expects at most one `typing_start` before the reply it precedes; sending it again before that reply is not meaningful and may be dropped. `typing_end`'s behavior against a live conversation is unproven: the legacy platform's implementation was disabled after it caused issues, so treat it as best-effort.",
@@ -10671,6 +11394,7 @@ class AMBSuppressionCreate(BaseModel):
 
 
 class AMBStatsSummaryPeriod(BaseModel):
+    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -10697,6 +11421,7 @@ class AMBStatsAttribution(str, Enum):
 
 
 class AMBOutboundStatsCounts(BaseModel):
+    "Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[int, Field(
         description="Distinct messages accepted for sending after admission checks. This is the denominator for `sent_rate` and `send_failure_rate`.",
@@ -10733,6 +11458,7 @@ class AMBOutboundStatsCounts(BaseModel):
 
 
 class AMBStatsQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
     model_config = ConfigDict(extra="allow")
     p50_ms: Annotated[Optional[int], Field(
         description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
@@ -10752,6 +11478,7 @@ class AMBStatsQuantiles(BaseModel):
 
 
 class AMBStatsLatency(BaseModel):
+    "Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[AMBStatsQuantiles, Field(
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
@@ -10759,6 +11486,7 @@ class AMBStatsLatency(BaseModel):
 
 
 class AMBStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero."
     model_config = ConfigDict(extra="allow")
     accepted_pct_change: Annotated[Optional[float], Field(
         description="Relative change in accepted messages (`counts.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
@@ -10779,6 +11507,7 @@ class AMBStatsComparisonDelta(BaseModel):
 
 
 class AMBStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change."
     model_config = ConfigDict(extra="allow")
     monthly_active_contacts: Annotated[Optional[int], Field(
         description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
@@ -10802,6 +11531,7 @@ class AMBStatsComparison(BaseModel):
 
 
 class AMBStatsSummary(BaseModel):
+    "Outbound Apple Messages for Business counts and latency percentiles for the full requested period. Counts and percentiles are computed over the whole period rather than combined from the returned time-series values."
     model_config = ConfigDict(extra="allow")
     monthly_active_contacts: Annotated[Optional[int], Field(
         description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
@@ -10828,6 +11558,7 @@ class AMBStatsSummary(BaseModel):
 
 
 class AMBStatsSeriesPeriod(BaseModel):
+    "The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -10852,6 +11583,7 @@ class AMBStatsSeriesPeriod(BaseModel):
 
 
 class AMBStatsPoint(BaseModel):
+    "Outbound Apple Messages for Business counts and processing-latency percentiles for one time bucket (a calendar day or hour), bucketed by acceptance time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. There is no `first_response` here. Read first-response latency from the summary or a breakdown endpoint."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
@@ -10867,6 +11599,7 @@ class AMBStatsPoint(BaseModel):
 
 
 class AMBStatsResponse(BaseModel):
+    "Time-series stats payload. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -10880,6 +11613,7 @@ class AMBStatsResponse(BaseModel):
 
 
 class AMBBusinessAccountStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single business over the requested period."
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[str, Field(
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -10898,6 +11632,7 @@ class AMBBusinessAccountStatsPoint(BaseModel):
 
 
 class AMBStatsByBusinessResponse(BaseModel):
+    "Per-business breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -10916,6 +11651,7 @@ class AMBStatsByBusinessResponse(BaseModel):
 
 
 class AMBMessageKindStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single message content kind over the requested period."
     model_config = ConfigDict(extra="allow")
     message_kind: Annotated[AMBContentKind, Field(
         description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
@@ -10932,6 +11668,7 @@ class AMBMessageKindStatsPoint(BaseModel):
 
 
 class AMBStatsByMessageKindResponse(BaseModel):
+    "Per-content-kind breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -10950,6 +11687,7 @@ class AMBStatsByMessageKindResponse(BaseModel):
 
 
 class AMBIntentStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single entry-point intent over the requested period."
     model_config = ConfigDict(extra="allow")
     intent: Annotated[str, Field(
         description="The intent these messages were routed under, as configured in the business's entry points. Intents are workspace-defined and have no fixed vocabulary.",
@@ -10968,6 +11706,7 @@ class AMBIntentStatsPoint(BaseModel):
 
 
 class AMBStatsByIntentResponse(BaseModel):
+    "Per-intent breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -10986,6 +11725,7 @@ class AMBStatsByIntentResponse(BaseModel):
 
 
 class AMBGroupStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single entry-point group over the requested period."
     model_config = ConfigDict(extra="allow")
     group: Annotated[str, Field(
         description="The group these messages were routed under, as configured in the business's entry points. Groups are workspace-defined and have no fixed vocabulary.",
@@ -11004,6 +11744,7 @@ class AMBGroupStatsPoint(BaseModel):
 
 
 class AMBStatsByGroupResponse(BaseModel):
+    "Per-group breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11022,6 +11763,7 @@ class AMBStatsByGroupResponse(BaseModel):
 
 
 class AMBCategoryStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single message category over the requested period."
     model_config = ConfigDict(extra="allow")
     category: Annotated[str, Field(
         description="The category these messages were sent with. Defaults to an empty string when a send names no category.",
@@ -11040,6 +11782,7 @@ class AMBCategoryStatsPoint(BaseModel):
 
 
 class AMBStatsByCategoryResponse(BaseModel):
+    "Per-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11058,6 +11801,7 @@ class AMBStatsByCategoryResponse(BaseModel):
 
 
 class AMBTagStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single tag over the requested period."
     model_config = ConfigDict(extra="allow")
     tag: Annotated[str, Field(
         description="The tag these messages carry, as a bare name or a `name:value` pair. A message with several tags is counted once under each, so rows do not sum to the period total.",
@@ -11076,6 +11820,7 @@ class AMBTagStatsPoint(BaseModel):
 
 
 class AMBStatsByTagResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200). Only tagged messages appear."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11094,6 +11839,7 @@ class AMBStatsByTagResponse(BaseModel):
 
 
 class AMBErrorCodeStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single failure reason over the requested period."
     model_config = ConfigDict(extra="allow")
     error_code: Annotated[str, Field(
         description="Machine-readable reason a send failed, in one of two namespaces: `bird:` for a reason Bird's own pipeline assigned (for example `bird:business_not_registered`), or `apple:` followed by the HTTP status Apple's API returned for the send attempt (for example `apple:404`). This is an open, growing set in both namespaces; accept unrecognized values.",
@@ -11113,6 +11859,7 @@ class AMBErrorCodeStatsPoint(BaseModel):
 
 
 class AMBStatsByErrorCodeResponse(BaseModel):
+    "Per-failure-reason breakdown for the requested period, ranked by `send_failed + rejected` descending and capped at the requested `limit` (default 50, max 200). Only messages carrying an error code appear: a `bird:` code is usually a rejection, an `apple:` code a send failure."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11131,6 +11878,7 @@ class AMBStatsByErrorCodeResponse(BaseModel):
 
 
 class AMBInboundStatsComparisonDelta(BaseModel):
+    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
     model_config = ConfigDict(extra="allow")
     received_pct_change: Annotated[Optional[float], Field(
         description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
@@ -11139,6 +11887,7 @@ class AMBInboundStatsComparisonDelta(BaseModel):
 
 
 class AMBInboundStatsComparison(BaseModel):
+    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11154,6 +11903,7 @@ class AMBInboundStatsComparison(BaseModel):
 
 
 class AMBInboundStatsSummary(BaseModel):
+    "Total inbound Apple Messages for Business messages for the requested period."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11172,6 +11922,7 @@ class AMBInboundStatsSummary(BaseModel):
 
 
 class AMBInboundStatsPoint(BaseModel):
+    "Received-message count for one time bucket (a calendar day or hour), bucketed by the time each message occurred."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
@@ -11186,6 +11937,7 @@ class AMBInboundStatsPoint(BaseModel):
 
 
 class AMBInboundStatsResponse(BaseModel):
+    "Received-message time series. `period` echoes the range the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -11199,6 +11951,7 @@ class AMBInboundStatsResponse(BaseModel):
 
 
 class AMBInboundBusinessStatsPoint(BaseModel):
+    "Received-message count for a single business over the requested period."
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[str, Field(
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -11213,6 +11966,7 @@ class AMBInboundBusinessStatsPoint(BaseModel):
 
 
 class AMBInboundStatsByBusinessResponse(BaseModel):
+    "Per-business breakdown of received messages for the requested period, ranked by volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11231,6 +11985,7 @@ class AMBInboundStatsByBusinessResponse(BaseModel):
 
 
 class AMBInboundIntentStatsPoint(BaseModel):
+    "Received-message count for a single entry-point intent over the requested period."
     model_config = ConfigDict(extra="allow")
     intent: Annotated[str, Field(
         description="The intent these messages arrived under, as configured in the business's entry points. Intents are workspace-defined and have no fixed vocabulary.",
@@ -11245,6 +12000,7 @@ class AMBInboundIntentStatsPoint(BaseModel):
 
 
 class AMBInboundStatsByIntentResponse(BaseModel):
+    "Per-intent breakdown of received messages for the requested period, ranked by volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11263,6 +12019,7 @@ class AMBInboundStatsByIntentResponse(BaseModel):
 
 
 class AMBConversationStatsCounts(BaseModel):
+    "Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies."
     model_config = ConfigDict(extra="allow")
     started: Annotated[int, Field(
         description="Count of conversation-started events in scope.",
@@ -11287,6 +12044,7 @@ class AMBConversationStatsCounts(BaseModel):
 
 
 class AMBConversationStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero."
     model_config = ConfigDict(extra="allow")
     started_pct_change: Annotated[Optional[float], Field(
         description="Relative change in conversation starts (`counts.started`) versus the previous period, as a signed fraction. Null when the previous period had none.",
@@ -11307,6 +12065,7 @@ class AMBConversationStatsComparisonDelta(BaseModel):
 
 
 class AMBConversationStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11320,6 +12079,7 @@ class AMBConversationStatsComparison(BaseModel):
 
 
 class AMBConversationStatsSummary(BaseModel):
+    "Conversation lifecycle counts for the full requested period. Counts aggregate the time buckets."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -11336,6 +12096,7 @@ class AMBConversationStatsSummary(BaseModel):
 
 
 class AMBConversationStatsPoint(BaseModel):
+    "Conversation lifecycle counts for one time bucket (a calendar day or hour), bucketed by when each event occurred."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
@@ -11348,6 +12109,7 @@ class AMBConversationStatsPoint(BaseModel):
 
 
 class AMBConversationStatsResponse(BaseModel):
+    "Conversation lifecycle time series. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[AMBStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -11366,6 +12128,7 @@ class AMBTemplateCategory(str, Enum):
 
 
 class AMBTemplateLanguageState(BaseModel):
+    "Whether a language is live and whether its draft has unpublished changes."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Annotated[Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")], Field(
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
@@ -11376,6 +12139,7 @@ class AMBTemplateLanguageState(BaseModel):
 
 
 class AMBTemplateSummary(BaseModel):
+    "An Apple Messages template without content or draft concurrency settings."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -11476,6 +12240,7 @@ class AMBTemplateList(BaseModel):
 
 
 class AMBTemplate(BaseModel):
+    "One Apple Messages template identity and its authoring state. Content and variables live on versions, so this resource stays shallow."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -11573,6 +12338,7 @@ class AMBTemplateVersionStatus(str, Enum):
 
 
 class AMBTemplateVersionSummary(BaseModel):
+    "One Apple Messages template version without its content."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -11632,6 +12398,7 @@ class AMBTemplateVersionList(BaseModel):
 
 
 class AMBTemplateVersionLanguage(BaseModel):
+    "One language's content and revision metadata within a version."
     model_config = ConfigDict(extra="allow")
     content: Annotated[AMBMessageContent, Field(
         description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
@@ -11651,6 +12418,7 @@ class AMBTemplateVersionLanguage(BaseModel):
 
 
 class AMBTemplateVersion(BaseModel):
+    "One Apple Messages template version with its content. A workspace template keeps one editable draft and immutable published versions. A built-in template exposes its current catalogue content as one synthetic published version."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["amv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -11694,6 +12462,7 @@ class AMBTemplateVersion(BaseModel):
 
 
 class AMBTemplateLanguageSummary(BaseModel):
+    "One language of an Apple Messages template version without its content."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -11723,6 +12492,7 @@ class AMBTemplateLanguageList(BaseModel):
 
 
 class AMBTemplateLanguage(BaseModel):
+    "One language's full Apple Messages template content and revision metadata."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -11787,6 +12557,7 @@ class WhatsAppBusinessPortfolioMarketingMessagesStatus(str, Enum):
 
 
 class WhatsAppBusinessPortfolio(BaseModel):
+    "The Meta business portfolio that owns a WhatsApp Business Account. Bird holds no resource of its own for a portfolio, which is why the identifier is named `meta_id`: it is meaningful only against Meta's own tools, and it is not a Bird identifier."
     model_config = ConfigDict(extra="allow")
     meta_id: Annotated[str, Field(
         description="Meta's identifier for the portfolio. Treat it as an opaque string.",
@@ -11809,6 +12580,7 @@ class WhatsAppBusinessAccountBanState(str, Enum):
 
 
 class WhatsAppBusinessAccountBan(BaseModel):
+    "WhatsApp's ban on this account, as WhatsApp announced it. Absent when there is no ban, and also when there is one WhatsApp announced before Bird began recording bans, or whose notification never reached Bird, since WhatsApp does not replay them. This is what WhatsApp announced rather than the account's current state, so it is never the field to read to decide whether an account can send."
     model_config = ConfigDict(extra="allow")
     state: WhatsAppBusinessAccountBanState
     occurred_at: Annotated[str, Field(
@@ -11837,6 +12609,7 @@ class WhatsAppMetaHealthEntityType(str, Enum):
 
 
 class WhatsAppMetaHealthError(BaseModel):
+    "One reason Meta gives for a verdict that is not `available`. Field names are Meta's own. They are not Bird error codes and do not appear in Bird's error catalog."
     model_config = ConfigDict(extra="allow")
     error_code: Annotated[int, Field(
         description="Meta's numeric health error code, for example `141006` (payment method error), `141010` (business not verified), `141014` (account banned).",
@@ -11855,6 +12628,7 @@ class WhatsAppMetaHealthError(BaseModel):
 
 
 class WhatsAppMetaHealthEntity(BaseModel):
+    "Meta's verdict for one node in the chain a message passes through."
     model_config = ConfigDict(extra="allow")
     entity_type: Annotated[Union[WhatsAppMetaHealthEntityType, str], Field(union_mode="left_to_right")]
     meta_id: Annotated[str, Field(
@@ -11877,6 +12651,7 @@ class WhatsAppMetaHealthEntity(BaseModel):
 
 
 class WhatsAppMetaHealthStatus(BaseModel):
+    "Meta's own messaging health for this account. `can_send_message` is Meta's aggregate: `blocked` if any entity is blocked, else `limited` if any is limited, else `available`. Read `entities` to see which node carries the verdict and why."
     model_config = ConfigDict(extra="allow")
     can_send_message: WhatsAppMetaHealthVerdict
     entities: Annotated[List[WhatsAppMetaHealthEntity], Field(
@@ -11979,6 +12754,7 @@ class WhatsAppSuppressionEndedReason(str, Enum):
 
 
 class WhatsAppSuppression(BaseModel):
+    "One period during which an address is suppressed: when it started and, once it is over, what ended it. An address suppressed, ended and suppressed again has two of these on record rather than one current state. The list returns the periods in force; fetch one by ID to read one that has ended."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["was_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -12155,6 +12931,7 @@ class WhatsAppKeywordRuleCreate(BaseModel):
 
 
 class WhatsAppKeywordRuleUpdate(BaseModel):
+    "Changes the reply and the added keywords. What a rule applies to (its operation, country and WhatsApp Business Account) is fixed once created: those decide which inbound messages reach it, so changing one would make it a different rule. Delete it and create the one you want."
     model_config = ConfigDict(extra="allow")
     keywords: Annotated[Optional[List[str]], Field(
         description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.",
@@ -12178,6 +12955,7 @@ class EmailInboxInsightsWeightingSource(str, Enum):
 
 
 class EmailInboxInsightsWeighting(BaseModel):
+    "How the placement figures in this response were weighted, so a number is\nself-describing wherever it is quoted or screenshotted.\n\nPlacement rates are a weighted average of per-provider rates against an\naudience mix (the share of recipients expected at each mailbox provider)\nrather than a share of delivered volume."
     model_config = ConfigDict(extra="allow")
     weight_set_id: Annotated[str, Field(
         description="The measurement's own identifier for the audience mix, carried through so a client can tell two weightings apart without comparing `basis` strings. No operation accepts it.",
@@ -12202,6 +12980,7 @@ class EmailInboxInsightsMeasurementSources(str, Enum):
 
 
 class EmailInboxInsightsMeasurement(BaseModel):
+    "How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report."
     model_config = ConfigDict(extra="allow")
     sources: Annotated[List[Annotated[Union[EmailInboxInsightsMeasurementSources, str], Field(union_mode="left_to_right")]], Field(
         description="Identifiers of the measurement systems that contributed to these figures. The set grows as measurement coverage does, so treat the values as labels rather than a closed list.",
@@ -12218,6 +12997,7 @@ class EmailInboxInsightsFreshnessLagHint(str, Enum):
 
 
 class EmailInboxInsightsFreshness(BaseModel):
+    "How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string."
     model_config = ConfigDict(extra="allow")
     as_of: Annotated[Optional[str], Field(
         description="The most recent UTC day the figures include, or null for a live lookup that has no measurement window.",
@@ -12230,6 +13010,7 @@ class EmailInboxInsightsFreshness(BaseModel):
 
 
 class EmailInboxInsightsWindow(BaseModel):
+    "The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment."
     model_config = ConfigDict(extra="allow")
     start: Annotated[str, Field(
         description="First UTC day of the period, inclusive.",
@@ -12247,6 +13028,7 @@ class EmailInboxInsightsWindow(BaseModel):
 
 
 class EmailInboxInsightsComparedTo(BaseModel):
+    "The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison."
     model_config = ConfigDict(extra="allow")
     start: Annotated[str, Field(
         description="First UTC day of the prior period, inclusive.",
@@ -12261,6 +13043,7 @@ class EmailInboxInsightsComparedTo(BaseModel):
 
 
 class EmailInboxInsightsPlacementCounts(BaseModel):
+    "Raw measured placements behind a set of rates, before any weighting. A measured placement is one message whose mailbox destination the measurement observed."
     model_config = ConfigDict(extra="allow")
     inbox: Annotated[int, Field(
         description="Measured placements observed in the inbox.",
@@ -12285,6 +13068,7 @@ class EmailInboxInsightsPlacementCounts(BaseModel):
 
 
 class EmailInboxInsightsPlacementDeltaPts(BaseModel):
+    "How the domain-wide rates moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data. Without a requested comparison or comparable prior data they are absent, not zero change."
     model_config = ConfigDict(extra="allow")
     inbox: Annotated[float, Field(
         description="Inbox-rate movement in percentage points; negative means it fell.",
@@ -12305,6 +13089,7 @@ class EmailInboxInsightsSectionStatus(str, Enum):
 
 
 class EmailInboxInsightsPlacementSummary(BaseModel):
+    "The domain-wide placement figures for the period.\n\nThese rates are weighted against the audience mix in `measurement.weighting`,\nso they can legitimately differ from any single provider row, which has no\nmix to weight. Rates are percentages of measured placements, never of\ndelivered volume."
     model_config = ConfigDict(extra="allow")
     inbox_rate_percent: Annotated[Optional[float], Field(
         description="Estimated share of measured placements that landed in the inbox, as a percentage.",
@@ -12338,6 +13123,7 @@ class EmailInboxInsightsMailboxProvider(RootModel[str]):
 
 
 class EmailInboxInsightsPlacementProvider(BaseModel):
+    "One mailbox provider's placement for the period. Unlike the domain-wide summary, a single provider's rates are unweighted: there is no audience mix to weight within one provider."
     model_config = ConfigDict(extra="allow")
     mailbox_provider: Annotated[str, Field(
         description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
@@ -12366,6 +13152,7 @@ class EmailInboxInsightsPlacementProvider(BaseModel):
 
 
 class EmailInboxInsightsPlacementProviders(BaseModel):
+    "The per-provider placement table."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsPlacementProvider], Field(
         description="One row per mailbox provider the measurement observed for this domain in the period.",
@@ -12376,6 +13163,7 @@ class EmailInboxInsightsPlacementProviders(BaseModel):
 
 
 class EmailInboxInsightsPlacementSeriesPoint(BaseModel):
+    "One bucket of the placement series."
     model_config = ConfigDict(extra="allow")
     date: Annotated[str, Field(
         description="First UTC day of the bucket.",
@@ -12408,6 +13196,7 @@ class EmailInboxInsightsPlacementSeriesPoint(BaseModel):
 
 
 class EmailInboxInsightsPlacementSeries(BaseModel):
+    "The placement time series, at the grain named in `window.group_by`.\n\nThe series is sparse: buckets with no measured placement are omitted rather\nthan returned as zeros, because an invented zero would be indistinguishable\nfrom a measured one. Index by date, never by position."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsPlacementSeriesPoint], Field(
         description="One point per bucket with measured placements. With providers named in the request, one point per bucket per provider.",
@@ -12427,6 +13216,7 @@ class EmailInboxInsightsGmailTab(str, Enum):
 
 
 class EmailInboxInsightsGmailTabCategory(BaseModel):
+    "How the domain's Gmail-placed mail split across one Gmail tab."
     model_config = ConfigDict(extra="allow")
     category: Annotated[Annotated[Union[EmailInboxInsightsGmailTab, str], Field(union_mode="left_to_right")], Field(
         description="A Gmail tab, as the measurement identifies it. A lowercase identifier rather than a\ndisplay name, so pick your own label for it, and treat the set as open: these are\nGmail's own tabs, and the measurement reports whichever one it saw.\n\n`none` is a value rather than an absence: Gmail delivered the mail under no tab at all,\nwhich is an ordinary outcome and not a gap in the measurement.",
@@ -12446,6 +13236,7 @@ class EmailInboxInsightsGmailTabCategory(BaseModel):
 
 
 class EmailInboxInsightsGmailTabs(BaseModel):
+    "Where the domain's Gmail-placed mail landed across Gmail's tabs. The status is `not_applicable` when the domain had no Gmail placement in the period; hide the section rather than showing an empty split."
     model_config = ConfigDict(extra="allow")
     categories: Annotated[List[EmailInboxInsightsGmailTabCategory], Field(
         description="One entry per Gmail tab that received mail.",
@@ -12456,6 +13247,7 @@ class EmailInboxInsightsGmailTabs(BaseModel):
 
 
 class EmailInboxInsightsPlacementIpDetail(BaseModel):
+    "One sending IP's placement and authentication pass rates for the period."
     model_config = ConfigDict(extra="allow")
     ip: Annotated[str, Field(
         description="The sending IP address.",
@@ -12480,6 +13272,7 @@ class EmailInboxInsightsPlacementIpDetail(BaseModel):
 
 
 class EmailInboxInsightsPlacementIpDetails(BaseModel):
+    "Per-IP placement detail for the domain's sending infrastructure. Returned only when the request asked for IP detail."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsPlacementIpDetail], Field(
         description="One row per sending IP the measurement observed for this domain in the period.",
@@ -12490,6 +13283,7 @@ class EmailInboxInsightsPlacementIpDetails(BaseModel):
 
 
 class EmailInboxInsightsPlacement(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -12545,6 +13339,7 @@ class EmailInboxInsightsAuthPassRateSource(str, Enum):
 
 
 class EmailInboxInsightsAuthPassRate(BaseModel):
+    "One authentication check's pass rate over the period."
     model_config = ConfigDict(extra="allow")
     pass_rate_percent: Annotated[Optional[float], Field(
         description="Share of the domain's measured mail that passed this check, as a percentage.",
@@ -12583,6 +13378,7 @@ class EmailInboxInsightsDmarcSource(str, Enum):
 
 
 class EmailInboxInsightsDmarc(BaseModel):
+    "The domain's DMARC standing over the period."
     model_config = ConfigDict(extra="allow")
     aligned_rate_percent: Annotated[Optional[float], Field(
         description="Share of the domain's measured mail that passed DMARC alignment, as a percentage.",
@@ -12625,6 +13421,7 @@ class EmailInboxInsightsAuthSourceCategory(str, Enum):
 
 
 class EmailInboxInsightsAuthSource(BaseModel):
+    "One system observed sending as this domain, with how its mail authenticates."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
         description="The sending source as the reporting identifies it. Not a fixed list: unidentified senders, mostly forwarders, appear as a real category.",
@@ -12663,6 +13460,7 @@ class EmailInboxInsightsAuthSource(BaseModel):
 
 
 class EmailInboxInsightsAuthSources(BaseModel):
+    "Every system observed sending as this domain, with how each authenticates. This is the table that shows who else sends under the domain's name."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsAuthSource], Field(
         description="One row per observed sending source.",
@@ -12677,6 +13475,7 @@ class EmailInboxInsightsAuthSources(BaseModel):
 
 
 class EmailInboxInsightsAuthentication(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -12724,6 +13523,7 @@ class EmailInboxInsightsAuthentication(BaseModel):
 
 
 class EmailInboxInsightsComplaintPeak(BaseModel):
+    "The worst day for complaints in the period."
     model_config = ConfigDict(extra="allow")
     date: Annotated[str, Field(
         description="The UTC day the highest rate fell on.",
@@ -12737,6 +13537,7 @@ class EmailInboxInsightsComplaintPeak(BaseModel):
 
 
 class EmailInboxInsightsComplaintRate(BaseModel):
+    "The rate at which the domain's mail is reported as spam, as Google Postmaster measures it."
     model_config = ConfigDict(extra="allow")
     gmail_postmaster_spam_rate_percent: Annotated[Optional[float], Field(
         description="Share of the domain's Gmail-received mail that recipients reported as spam, as a percentage, from Google Postmaster.",
@@ -12755,6 +13556,7 @@ class EmailInboxInsightsComplaintRate(BaseModel):
 
 
 class EmailInboxInsightsComplaintSeriesPoint(BaseModel):
+    "One bucket of the complaint-rate series."
     model_config = ConfigDict(extra="allow")
     date: Annotated[str, Field(
         description="First UTC day of the bucket.",
@@ -12768,6 +13570,7 @@ class EmailInboxInsightsComplaintSeriesPoint(BaseModel):
 
 
 class EmailInboxInsightsComplaintSeries(BaseModel):
+    "The complaint-rate series, at the grain named in `window.group_by`. Index by date, never by position."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsComplaintSeriesPoint], Field(
         description="One point per bucket.",
@@ -12778,6 +13581,7 @@ class EmailInboxInsightsComplaintSeries(BaseModel):
 
 
 class EmailInboxInsightsComplaints(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -12827,6 +13631,7 @@ class EmailInboxInsightsTrapType(str, Enum):
 
 
 class EmailInboxInsightsSpamTrapTypeCount(BaseModel):
+    "Trap hits of one kind."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[EmailInboxInsightsTrapType, str], Field(union_mode="left_to_right")], Field(
         description="What kind of spam trap was hit. `pristine` addresses were never used by a real person and never subscribed to anything, so a hit means the address was harvested or guessed rather than collected. `recycled` addresses belonged to a real person once and were retired, so hits point at stale list data. `typo` addresses catch misspellings of real domains, `parked` addresses sit on domains that are registered but not used for real mail, and `mixed` covers hits the trap network reports without a single kind. The trap network decides this set and can add to it, so treat an unrecognised value as a label to show rather than a case to exhaust. A hit whose kind is new is still a hit worth acting on.",
@@ -12844,6 +13649,7 @@ class EmailInboxInsightsTrapSource(str, Enum):
 
 
 class EmailInboxInsightsSpamTrapSourceCount(BaseModel):
+    "Trap hits attributed to one trap network."
     model_config = ConfigDict(extra="allow")
     source: Annotated[Annotated[Union[EmailInboxInsightsTrapSource, str], Field(union_mode="left_to_right")], Field(
         description="The trap network that observed a hit. The set grows as coverage does, so treat the values as labels rather than a closed list.",
@@ -12856,6 +13662,7 @@ class EmailInboxInsightsSpamTrapSourceCount(BaseModel):
 
 
 class EmailInboxInsightsSpamTrapHit(BaseModel):
+    "One trap address this domain's mail reached, with enough detail to trace where the address came from. A row can represent several hits on the same trap, so read `hit_count` rather than counting rows."
     model_config = ConfigDict(extra="allow")
     first_seen: Annotated[str, Field(
         description="When the trap network first observed mail from this domain at this trap.",
@@ -12890,6 +13697,7 @@ class EmailInboxInsightsSpamTrapHit(BaseModel):
 
 
 class EmailInboxInsightsSpamTrapHits(BaseModel):
+    "The individual trap hits behind the totals. A sample rather than a guaranteed complete list, and its rows do not count hits: one row is one trap address, carrying a `hit_count` for how many times that address was reached. Neither the number of rows nor the sum of `hit_count` reconstructs `total`, because that field is absent wherever the trap network does not break the figure out. Read `truncated_types` for what the measurement capped rather than inferring completeness by comparing counts."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsSpamTrapHit], Field(
         description="One entry per trap reached, newest first.",
@@ -12903,6 +13711,7 @@ class EmailInboxInsightsSpamTrapHits(BaseModel):
 
 
 class EmailInboxInsightsSpamTraps(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -12956,6 +13765,7 @@ class EmailInboxInsightsSpamTraps(BaseModel):
 
 
 class EmailInboxInsightsBlocklistListing(BaseModel):
+    "One listing of a target on one blocklist."
     model_config = ConfigDict(extra="allow")
     is_active: Annotated[bool, Field(
         description="Whether this listing is in force now. A false entry is history: it shows the target was listed and has since cleared, which is why the target's `is_listed` can be false while listings are present.",
@@ -12991,6 +13801,7 @@ class EmailInboxInsightsBlocklistTargetTargetType(str, Enum):
 
 
 class EmailInboxInsightsBlocklistTarget(BaseModel):
+    "One target lookup result, its current status, and the listings seen against it.\n\nRead `status` before `is_listed`. Each target is looked up independently and\nany one of them can fail while the rest succeed, so a target whose status is\nnot `ok` was not checked and `is_listed: false` on it means nothing. Rendering\nthat as \"clear\" is the one outcome this resource must never produce."
     model_config = ConfigDict(extra="allow")
     target: Annotated[str, Field(
         description="The sending IP or domain selected for lookup.",
@@ -13019,6 +13830,7 @@ class EmailInboxInsightsBlocklistTarget(BaseModel):
 
 
 class EmailInboxInsightsBlocklists(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -13056,6 +13868,7 @@ class EmailInboxInsightsBlocklists(BaseModel):
 
 
 class EmailInboxInsightsIndustry(BaseModel):
+    "The industry a sending domain was classified into."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="The measurement's own identifier for this industry, carried through so a client can tell two cohorts apart without comparing labels. No operation accepts it.",
@@ -13070,6 +13883,7 @@ class EmailInboxInsightsIndustry(BaseModel):
 
 
 class EmailInboxInsightsIndustryBenchmark(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -13131,6 +13945,7 @@ class EmailInboxInsightsSeedEngagementProfile(str, Enum):
 
 
 class EmailInboxInsightsSeedTestRow(BaseModel):
+    "The fields every view of a seed test carries.\n\nThere is no status field. The measurement reports none for a test it has\nalready run, and nothing else on the surface stands in for one, so a test\nthat is still waiting for its send says so by having no subject and no\ntested-at date rather than by being labelled."
     model_config = ConfigDict(extra="allow")
     test_id: Annotated[str, Field(
         description="The test's identifier. It is a string and needs to stay one: the values are long enough that any language storing every number as a floating point value will round them, and a rounded identifier matches no test.",
@@ -13175,6 +13990,7 @@ class EmailInboxInsightsSeedTestRow(BaseModel):
 
 
 class EmailInboxInsightsSeedTestList(BaseModel):
+    "The domain's seed tests over the period, newest first, up to 100 of them. The list is capped rather than paged, so `truncated` says whether older tests in the period were left out."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsSeedTestRow], Field(
         description="One row per seed test, newest first.",
@@ -13189,6 +14005,7 @@ class EmailInboxInsightsSeedTestList(BaseModel):
 
 
 class EmailInboxInsightsGmailCategory(BaseModel):
+    "Which Gmail tab the test's Gmail seeds mostly landed under."
     model_config = ConfigDict(extra="allow")
     category: Annotated[Annotated[Union[EmailInboxInsightsGmailTab, str], Field(union_mode="left_to_right")], Field(
         description="A Gmail tab, as the measurement identifies it. A lowercase identifier rather than a\ndisplay name, so pick your own label for it, and treat the set as open: these are\nGmail's own tabs, and the measurement reports whichever one it saw.\n\n`none` is a value rather than an absence: Gmail delivered the mail under no tab at all,\nwhich is an ordinary outcome and not a gap in the measurement.",
@@ -13200,6 +14017,7 @@ class EmailInboxInsightsGmailCategory(BaseModel):
 
 
 class EmailInboxInsightsSeedTestProvider(BaseModel):
+    "How one mailbox provider treated the test, with the seed counts behind the rates. Seed counts are small by nature, so a single seed moves a rate noticeably."
     model_config = ConfigDict(extra="allow")
     mailbox_provider: Annotated[str, Field(
         description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
@@ -13235,6 +14053,7 @@ class EmailInboxInsightsSeedTestProvider(BaseModel):
 
 
 class EmailInboxInsightsSeedTestProviders(BaseModel):
+    "The per-provider grid for one seed test."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsSeedTestProvider], Field(
         description="One row per mailbox provider the test placed seeds at.",
@@ -13245,6 +14064,7 @@ class EmailInboxInsightsSeedTestProviders(BaseModel):
 
 
 class EmailInboxInsightsSeedTestAuth(BaseModel):
+    "How the tested send authenticated, measured on the seed mail itself rather than on reporting from receivers."
     model_config = ConfigDict(extra="allow")
     spf_pass_rate_percent: Annotated[Optional[float], Field(
         description="Share of the test's seed mail that passed SPF, as a percentage.",
@@ -13264,6 +14084,7 @@ class EmailInboxInsightsSeedTestAuth(BaseModel):
 
 
 class EmailInboxInsightsSeedEngagementSplitRow(BaseModel):
+    "How one provider treated engaged seeds against dormant ones. A gap means the provider is sorting the same mail differently by how the recipient behaves."
     model_config = ConfigDict(extra="allow")
     mailbox_provider: Annotated[str, Field(
         description="A mailbox provider, as the measurement identifies it. A lowercase identifier rather than\na display name, so pick your own label for it, and treat the set as open: this is a long\ntail rather than a handful of household names, and some entries are domains\n(`fastmail.com`, `seznam.cz`) rather than brands.\n\nThe measurement places mail into its own seed lists, so its buckets are not the ones the\n[mailbox-provider stats breakdown](/docs/api/reference/get-email-stats-by-mailbox-provider)\nreports: Microsoft's properties appear here as `hotmail` rather than `microsoft`, and\n`apple` appears here where the Competitive Insights panel has no measurement for it at\nall. None of the three is a joinable dimension against the others.",
@@ -13295,6 +14116,7 @@ class EmailInboxInsightsSeedEngagementSplitRow(BaseModel):
 
 
 class EmailInboxInsightsSeedEngagementSplit(BaseModel):
+    "Engaged against dormant placement, per provider. The status is `not_applicable` for a test run with a single-cohort engagement profile, where there is no second group to compare: hide the comparison rather than showing a zero gap."
     model_config = ConfigDict(extra="allow")
     items: Annotated[List[EmailInboxInsightsSeedEngagementSplitRow], Field(
         description="One row per provider where both cohorts placed seeds.",
@@ -13305,6 +14127,7 @@ class EmailInboxInsightsSeedEngagementSplit(BaseModel):
 
 
 class EmailInboxInsightsSeedTestDetail(BaseModel):
+    "The fields every view of a seed test carries.\n\nThere is no status field. The measurement reports none for a test it has\nalready run, and nothing else on the surface stands in for one, so a test\nthat is still waiting for its send says so by having no subject and no\ntested-at date rather than by being labelled."
     model_config = ConfigDict(extra="allow")
     test_id: Annotated[str, Field(
         description="The test's identifier. It is a string and needs to stay one: the values are long enough that any language storing every number as a floating point value will round them, and a rounded identifier matches no test.",
@@ -13346,6 +14169,7 @@ class EmailInboxInsightsSeedTestDetail(BaseModel):
 
 
 class EmailInboxInsightsSeedTestQuota(BaseModel):
+    "The organization's seed-test allowance for the current billing period. Registering a test spends one of the allowance whether or not its send goes out, and a test that expires unused does not return it. Uncertain registrations can retain allowance."
     model_config = ConfigDict(extra="allow")
     used: Annotated[int, Field(
         description="Allowance used in the current billing period, including retained uncertain registrations. When `limit` is null, usage is not tracked and this field is zero.",
@@ -13365,6 +14189,7 @@ class EmailInboxInsightsSeedTestQuota(BaseModel):
 
 
 class EmailInboxInsightsSeedTests(BaseModel):
+    "The meta every Inbox Insights resource carries, whatever it measures, so one client adapter serves them all."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -13409,6 +14234,7 @@ class EmailInboxInsightsSeedTests(BaseModel):
 
 
 class EmailInboxInsightsSeedTestCreate(BaseModel):
+    "How to configure a seed test. The choices available for a domain come from the seed-test configuration."
     model_config = ConfigDict(extra="allow")
     sending_domain: Annotated[str, Field(
         description="The sending domain the test measures: one of the workspace's verified sending domains, exactly as it appears there.",
@@ -13434,6 +14260,7 @@ class EmailInboxInsightsSeedTestCreate(BaseModel):
 
 
 class EmailInboxInsightsSeedAddress(BaseModel):
+    "One seed address to include in the tested send."
     model_config = ConfigDict(extra="allow")
     address: Annotated[str, Field(
         description="The address to add to the send's recipients. Include it exactly as given; an altered address is not a seed and will not be measured.",
@@ -13457,6 +14284,7 @@ class EmailInboxInsightsSeedAddress(BaseModel):
 
 
 class EmailInboxInsightsSeedTestRegistration(BaseModel):
+    "A registered seed test and the addresses it measures.\n\nRegistering a test does not put the addresses into a send. Add them to the\nrecipients of the send you want measured, and the test appears in the\nseed-test list for the domain once its seed mail has been measured.\n\nThere is no status field. The measurement reports none for a seed test at any\npoint, so read the test's own fields instead: a registered test has addresses\nand an expiry date, and it gains a subject and a tested-at date once its send\ngoes out."
     model_config = ConfigDict(extra="allow")
     registration_id: Annotated[str, Field(
         description="Identifies this registration. It is not the identifier the seed-test list\nreports for the resulting test.\n\nIt is here so a registration can be quoted in a support conversation, and\nso a client can tell two registrations apart. To read the results, find\nthe test in the seed-test list for this domain.",
@@ -13479,6 +14307,7 @@ class EmailInboxInsightsSeedTestRegistration(BaseModel):
 
 
 class EmailInboxInsightsSeedListTypeOption(BaseModel):
+    "One seed pool a test can be run against, and whether this account can use it."
     model_config = ConfigDict(extra="allow")
     value: Annotated[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")], Field(
         description="Which pool of seed addresses a test uses. Which pools an account can use depends on what has been provisioned for it, so read the usable set from the seed-test options rather than assuming these are the only values.",
@@ -13490,6 +14319,7 @@ class EmailInboxInsightsSeedListTypeOption(BaseModel):
 
 
 class EmailInboxInsightsSeedRegionOption(BaseModel):
+    "One region seeds can be placed in."
     model_config = ConfigDict(extra="allow")
     value: Annotated[str, Field(
         description="The value to send when registering a test against this region. Free text rather than an enumeration: the set belongs to the measurement and is wider than the continents it looks like, so send one of these back verbatim rather than composing your own.",
@@ -13499,6 +14329,7 @@ class EmailInboxInsightsSeedRegionOption(BaseModel):
 
 
 class EmailInboxInsightsSeedEngagementProfileOption(BaseModel):
+    "One engagement behaviour a test can simulate, and whether this account can use it."
     model_config = ConfigDict(extra="allow")
     value: Annotated[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")], Field(
         description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
@@ -13510,6 +14341,7 @@ class EmailInboxInsightsSeedEngagementProfileOption(BaseModel):
 
 
 class EmailInboxInsightsSeedTestConfiguration(BaseModel):
+    "The choices available when registering a seed test for a domain: which seed\npools the account can use, which regions seeds can be placed in, and which\nengagement behaviours the seeds can simulate.\n\nThis is reference data rather than a measurement, so it carries no period and\nno measurement detail. It changes only when an account's provisioning does."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="Which resource this response is, echoed for self-description.",
@@ -13533,6 +14365,7 @@ class EmailInboxInsightsSeedTestConfiguration(BaseModel):
 
 
 class EmailInboxInsightsDomain(BaseModel):
+    "One of the workspace's verified sending domains, and whether Inbox Insights is switched on for it."
     model_config = ConfigDict(extra="allow")
     domain: Annotated[str, Field(
         description="The sending domain, lowercased, as it appears in your sending domains.",
@@ -13546,6 +14379,7 @@ class EmailInboxInsightsDomain(BaseModel):
 
 
 class EmailInboxInsightsDomains(BaseModel):
+    "A page of sending domains this workspace can report on, and which of them Inbox Insights is switched on for."
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[EmailInboxInsightsDomain], Field(
         description="One entry per verified domain in this page, whether or not it is switched on. A domain that has not been verified does not appear, because verification is what proves the domain is yours to report on.",
@@ -13565,6 +14399,7 @@ class EmailInboxInsightsDomains(BaseModel):
 
 
 class EmailInboxInsightsDomainUpdate(BaseModel):
+    "The Inbox Insights setting to change for a sending domain."
     model_config = ConfigDict(extra="allow")
     monitored: Annotated[bool, Field(
         description="Whether the workspace wants this domain monitored. Enabling enrolls it with eDataSource; disabling removes only the workspace preference and preserves vendor enrollment and measurement history. Verified ownership governs report access.",
@@ -13580,6 +14415,7 @@ class EmailInboxInsightsDomainMonitoringOutcome(str, Enum):
 
 
 class EmailInboxInsightsDomainMonitoringResult(BaseModel):
+    "What switching on the workspace's main sending domain did. There are four outcomes, because each one leaves the customer somewhere different: one domain is now reporting, one already was, we could not tell which domain is the main one, or there is no verified domain to report on at all."
     model_config = ConfigDict(extra="allow")
     outcome: Annotated[EmailInboxInsightsDomainMonitoringOutcome, Field(
         description="What switching on the main sending domain did.\n\n- `enabled`: Inbox Insights is now switched on for the domain named alongside this.\n- `already_on`: at least one domain was already switched on, so nothing changed.\n- `choice_required`: the main sending domain could not be identified, most often\n  because the workspace has several verified domains and no sending to rank them\n  by. Ask the customer to choose.\n- `no_verified_domains`: the workspace has no verified sending domain, so there is\n  nothing to report on until one is verified.",
@@ -13592,6 +14428,7 @@ class EmailInboxInsightsDomainMonitoringResult(BaseModel):
 
 
 class EmailStatsSeriesPeriod(BaseModel):
+    "The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -13616,6 +14453,7 @@ class EmailStatsSeriesPeriod(BaseModel):
 
 
 class EmailBounceStatsWithRates(BaseModel):
+    "Breakdown of `bounced` by failure type, with each rate as a fraction of `bounced`. Counts are distinct bounced recipients of that type; the five types approximately partition `bounced`, so the five rates sum to roughly 1.0 when `bounced` is non-zero."
     model_config = ConfigDict(extra="allow")
     hard: Annotated[int, Field(
         description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain).",
@@ -13675,6 +14513,7 @@ class EmailBounceStatsWithRates(BaseModel):
 
 
 class EmailDeliveryStats(BaseModel):
+    "Delivery counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). Lifecycle counts identify distinct recipients that reached the named stage in scope; `oob_bounces` counts distinct failure events. Period summaries count each identity once per metric across the whole window, so adding time-bucket distinct counts can overstate the summary. Event time determines attribution; send time does not. A recipient delivered on Monday counts in Monday's row. A recipient who bounced and then succeeded on a retry can appear in both `bounced` and `delivered`. Very large counts are close estimates rather than exact tallies.\n\nThese counts are successive lifecycle stages, so a recipient can appear in more than one:\n\n- `rejected`: Happens before any send attempt, from suppression, policy, or a generation failure.\n- `deferred`: A temporary in-flight delay that is still being retried.\n- `bounced`: A delivery failure, with its own hard, soft, admin, block, and undetermined sub-types.\n- `complained`: Post-delivery spam feedback.\n\nEach rate is a fraction in the range 0 to 1 and is null when its denominator is zero. `accepted` is reported only where it can be attributed (time buckets and the period summary). Breakdown rows omit it."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[Optional[int], Field(
         description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary. Breakdown rows leave it out, because their rollups do not have it.",
@@ -13753,6 +14592,7 @@ class EmailDeliveryStats(BaseModel):
 
 
 class EmailEngagementStats(BaseModel):
+    "Engagement counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). `opens`, `opens_non_prefetched` and `clicks` count distinct engagement events (deduplicated occurrences). The `unique_*` fields count distinct recipients. `unsubscribes` counts distinct unsubscribe events. An event counts in the time bucket when it occurs, even if the message was sent in an earlier bucket. Counts are deduplicated with a scalable approximate counting method, so very large counts are close estimates rather than exact tallies. Each rate divides the counts in this scope and is null when its denominator is zero."
     model_config = ConfigDict(extra="allow")
     opens: Annotated[int, Field(
         description="Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).",
@@ -13807,6 +14647,7 @@ class EmailEngagementStats(BaseModel):
 
 
 class EmailLatencyQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement."
     model_config = ConfigDict(extra="allow")
     p50_ms: Annotated[Optional[int], Field(
         description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
@@ -13826,6 +14667,7 @@ class EmailLatencyQuantiles(BaseModel):
 
 
 class EmailLatencyStats(BaseModel):
+    "Latency percentiles (p50, p95, p99) in milliseconds for the bucket. On the summary endpoint these are computed across the whole period rather than per bucket. Three families are reported:\n\n- `processing`: Time from accepting the send to handing the message off for delivery. Measured per processed recipient; null when no recipient in the bucket has reached the processed stage.\n- `delivery`: Time from handoff to the receiving mail server accepting the message, dominated by recipient-side delivery behavior. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n- `total`: End-to-end time from accepting the send to delivery, and the number most worth watching against your own delivery targets. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n\nEach family is reported independently. A family is omitted when no qualifying\nevent contributed a latency measurement in the bucket. This also applies when\nthe workspace has not recorded latency for that stage yet. The `processing`\nfamily can therefore be present while `delivery` and `total` are absent. A\nclient must handle a missing family, and a null p50/p95/p99 within a present\nfamily, by rendering a placeholder rather than assuming a number."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[Optional[EmailLatencyQuantiles], Field(
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
@@ -13839,6 +14681,7 @@ class EmailLatencyStats(BaseModel):
 
 
 class EmailStatsPoint(BaseModel):
+    "Aggregate stats for one time bucket (a calendar day or hour, per the requested grain, in the requested `timezone` or UTC by default), bucketed by event time. Buckets with no activity are included with zero counts and null latency percentiles, so the series charts continuously without client-side gap handling."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD, in the requested `timezone`) or hour this point covers, matching the period's grain. An hour bucket is an RFC 3339 UTC instant marking the start of the hour. It falls on a local hour boundary when `timezone` is set, which is on the UTC hour only for whole-hour offsets.",
@@ -13856,6 +14699,7 @@ class EmailStatsPoint(BaseModel):
 
 
 class EmailStatsResponse(BaseModel):
+    "Time-series stats payload. `period` echoes the range and bucket grain actually computed against. `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -13899,6 +14743,7 @@ class EmailStatsSortMetric(str, Enum):
 
 
 class EmailStatsPeriod(BaseModel):
+    "The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -13918,6 +14763,7 @@ class EmailStatsPeriod(BaseModel):
 
 
 class EmailStatsSeriesPoint(BaseModel):
+    "One point in a breakdown row's trend series: the headline delivery and engagement rates for that row's dimension value over a single day or hour. Returned only when `include_trend=true`. The bucket grain (day or hour) follows the `trend_grain` parameter. Counts and rates are approximate at scale."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (YYYY-MM-DD) or hour (ISO 8601, on the hour) this point covers, matching the requested `trend_grain`.",
@@ -13957,6 +14803,7 @@ class EmailStatsSeriesPoint(BaseModel):
 
 
 class EmailTagStatsPoint(BaseModel):
+    "Aggregate delivery and engagement stats for a single tag name-and-value pair over the requested period."
     model_config = ConfigDict(extra="allow")
     tag: Annotated[str, Field(
         description="The tag this row aggregates, formatted as `name:value` from the tag set at send time (for example `campaign:welcome-series`). Each distinct name-and-value pair is its own row.",
@@ -13972,6 +14819,7 @@ class EmailTagStatsPoint(BaseModel):
 
 
 class EmailStatsTagsResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -14071,24 +14919,28 @@ class EmailStatsQueryGrain(str, Enum):
 
 
 class EmailStatsQueryStringFilter(BaseModel):
+    "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
     include: Optional[List[str]] = None
     exclude: Optional[List[str]] = None
 
 
 class EmailStatsQueryCategoryFilter(BaseModel):
+    "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
     include: Optional[List[EmailMessageCategory]] = None
     exclude: Optional[List[EmailMessageCategory]] = None
 
 
 class EmailStatsQueryTemplateFilter(BaseModel):
+    "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
     include: Optional[List[str]] = None
     exclude: Optional[List[str]] = None
 
 
 class EmailStatsQueryTagFilter(BaseModel):
+    "Select one case-sensitive tag name. A name without values requires that tag to exist. Exclude-only predicates retain events without that tag. Include and exclude together accept at most 20 distinct normalized values with no overlap."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(examples=["campaign"], min_length=1)]
     include: Optional[List[str]] = None
@@ -14100,18 +14952,21 @@ class IPPoolID(RootModel[str]):
 
 
 class EmailStatsQueryIPPoolFilter(BaseModel):
+    "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
     include: Optional[List[str]] = None
     exclude: Optional[List[str]] = None
 
 
 class EmailStatsQueryBroadcastFilter(BaseModel):
+    "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
     include: Optional[List[str]] = None
     exclude: Optional[List[str]] = None
 
 
 class EmailStatsQueryFilters(BaseModel):
+    "Predicates on the context recorded for each event. Dimensions combine with AND. Unsupported metric and dimension combinations return 422, including for an empty workspace."
     model_config = ConfigDict(extra="allow")
     sending_domain: Annotated[Optional[EmailStatsQueryStringFilter], Field(
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
@@ -14170,6 +15025,7 @@ class EmailStatsQueryFilters(BaseModel):
 
 
 class EmailStatsQueryRequest(BaseModel):
+    "Select email metrics for one workspace and one time window. Group-only fields require group_by; defaults apply after grouping is selected. Queries are limited to 20,000 series points, 1,000,000 selected metric cells including period rows, and a 4 MiB JSON response. Unsupported combinations or unavailable history return 422."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -14225,6 +15081,7 @@ class EmailStatsQueryRequest(BaseModel):
 
 
 class EmailStatsQueryDimensions(BaseModel):
+    "Contains the requested group_by property, including a null value when context is missing. Ungrouped results use an empty object."
     model_config = ConfigDict(extra="allow")
     sending_domain: Annotated[Optional[str], Field(
         description="Recorded sending domain value. Null represents missing context and differs from an empty string.",
@@ -14292,6 +15149,7 @@ class EmailStatsQueryDimensions(BaseModel):
 
 
 class EmailStatsQueryMetrics(BaseModel):
+    "Selected metric values. Counts are nonnegative approximate distinct counts. Period uniques and rates are computed independently of buckets; summing bucket or group values does not reconstruct period totals. Zero means a supported empty population; undefined rates and empty latency samples are null."
     model_config = ConfigDict(extra="allow")
     sends_accepted: Annotated[Optional[int], Field(
         description="Distinct sends accepted by Bird, counted by email identity.",
@@ -14452,6 +15310,7 @@ class EmailStatsQueryMetrics(BaseModel):
 
 
 class EmailStatsQueryPoint(BaseModel):
+    "One time bucket with the selected metrics. Bucket timestamps label nominal boundaries; edge buckets count events inside the normalized period."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="Nominal bucket start as a UTC RFC 3339 instant.",
@@ -14463,6 +15322,7 @@ class EmailStatsQueryPoint(BaseModel):
 
 
 class EmailStatsQueryGroup(BaseModel):
+    "One group ranked over the whole requested period. Its optional series contains complete chronological buckets, including zero counts and null undefined values for empty buckets."
     model_config = ConfigDict(extra="allow")
     dimensions: Annotated[EmailStatsQueryDimensions, Field(
         description="Contains the requested group_by property, including a null value when context is missing. Ungrouped results use an empty object.",
@@ -14476,6 +15336,7 @@ class EmailStatsQueryGroup(BaseModel):
 
 
 class EmailStatsQueryPeriod(BaseModel):
+    "Normalized half-open period. The response end is exclusive; replay the original inclusive request bounds when following cursors."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -14496,6 +15357,7 @@ class EmailStatsQueryPeriod(BaseModel):
 
 
 class EmailStatsQueryResponse(BaseModel):
+    "Selected email metrics with normalized bounds. Ungrouped requests return one group and null cursors, including empty windows. Grouped requests without observed groups return an empty data array. Live page reads can reflect new events or changed ranking."
     model_config = ConfigDict(extra="allow")
     data: List[EmailStatsQueryGroup]
     period: Annotated[EmailStatsQueryPeriod, Field(
@@ -14516,6 +15378,7 @@ class EmailStatsQueryResponse(BaseModel):
 
 
 class EmailStatsSummaryPeriod(BaseModel):
+    "The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted)."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -14537,6 +15400,7 @@ class EmailStatsSummaryPeriod(BaseModel):
 
 
 class EmailStatsComparisonDelta(BaseModel):
+    "The change in each headline metric from the preceding period to the requested one. A `*_pct_change` field is a signed relative change in a count, computed as `(current - previous) / previous`, so `0.5` means 50% higher and `-0.2` means 20% lower. It is null when the previous period's count was zero because a relative change cannot be computed. A `*_rate_pp` field is the signed difference between the two periods' rate values. Each value is expressed as a fraction. A value of `0.012` means the rate rose by 1.2 percentage points. A value of `-0.003` means it fell by 0.3 points. The field is null when either period's rate is undefined, because its denominator was zero. `delivery_rate_pp` and `bounce_rate_pp` range from `-1` to `1`, because the rates behind them cannot exceed 1. The engagement deltas have no fixed bound, because events are counted when they arrive rather than when the message was sent, which can push their rate above 1."
     model_config = ConfigDict(extra="allow")
     sends_accepted_pct_change: Annotated[Optional[float], Field(
         description="Relative change in accepted messages (the `sends_accepted` count) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
@@ -14589,6 +15453,7 @@ class EmailStatsComparisonDelta(BaseModel):
 
 
 class EmailStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending the day immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsSummaryPeriod, Field(
         description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
@@ -14605,6 +15470,7 @@ class EmailStatsComparison(BaseModel):
 
 
 class EmailStatsSummary(BaseModel):
+    "A single row that aggregates delivery and engagement counts, plus derived\nrates, across the whole requested period. Use this endpoint for KPI\ntiles, campaign reporting, and anywhere you need a rate with a meaningful\ndenominator. The daily and hourly endpoints report the same rates, but\nper bucket, each one dividing that bucket's own counts.\n\nDistinct message, recipient, and event counts are computed across the whole\nrequested period. An identity present in more than one time bucket counts\nonce for that metric in the period summary, so adding daily or hourly\ndistinct counts can overstate the summary. Very large counts are close\nestimates rather than exact tallies. Latency percentiles are also computed\nacross the whole period. A rate is null when its denominator is zero."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsSummaryPeriod, Field(
         description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
@@ -14621,6 +15487,7 @@ class EmailStatsSummary(BaseModel):
 
 
 class EmailSendingIpDeliveryStats(BaseModel):
+    "Delivery counts and rates for messages attributed to a single sending IP. Per-IP results omit `accepted` and `processed` counts. The sending IP becomes known only after a message is delivered, bounced, deferred, or bounced late. Those earlier lifecycle states cannot be attributed to a specific IP. Spam complaints and out-of-band bounce notifications also lack per-IP attribution on this breakdown. The `complained` and `oob_bounces` fields therefore read 0. Their rates read 0 when the denominator is non-zero and null when it is zero. The `effective_delivered` field equals `delivered`, and `all_bounces` equals `bounced`."
     model_config = ConfigDict(extra="allow")
     delivered: Annotated[int, Field(
         description="Distinct recipients whose message the receiving mail server accepted.",
@@ -14684,6 +15551,7 @@ class EmailSendingIpDeliveryStats(BaseModel):
 
 
 class EmailDeliveryLatencyStats(BaseModel):
+    "Latency percentiles (p50, p95, p99) in milliseconds for the messages in this breakdown row, for breakdowns whose dimension is known only from delivery onward (sending IP, mailbox provider).\n\n- `delivery`: Time from handing the message off to the receiving mail server accepting it. Null when no deliveries occurred for this row in the period.\n- `total`: End-to-end time from accepting the send to delivery. Null when no deliveries occurred for this row in the period.\n\nThese breakdowns have no `processing` latency family. A message's row identifies which sending IP carried it or which mailbox provider received it. This becomes known only after the receiving mail server reports a delivery, bounce, deferral, or late bounce. The accept-to-processed phase ends before that attribution is known, preventing row-level processing latency. Use `GET /v1/email/stats/daily` for processing-latency percentiles across the whole workspace."
     model_config = ConfigDict(extra="allow")
     delivery: Annotated[EmailLatencyQuantiles, Field(
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
@@ -14694,6 +15562,7 @@ class EmailDeliveryLatencyStats(BaseModel):
 
 
 class EmailSendingIpStatsPoint(BaseModel):
+    "Delivery and latency stats for messages sent from a single IP address over the requested period. Per-IP attribution begins only after a message is processed: we learn which IP a message used only from its delivery, bounce, deferral, and late-bounce events. Acceptance and processing events do not contribute to per-IP attribution. As a result, per-IP rows omit the `accepted` and `processed` counts and the `processing` latency family. Those fields never appear on a per-IP row. They are not returned as null."
     model_config = ConfigDict(extra="allow")
     sending_ip: Annotated[str, Field(
         description="The IP address used to send messages aggregated in this row.",
@@ -14714,6 +15583,7 @@ class EmailSendingIpStatsPoint(BaseModel):
 
 
 class EmailStatsBySendingIpResponse(BaseModel):
+    "Per-sending-IP breakdown for the requested period, ranked by the `sort` metric (default `delivered`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -14741,6 +15611,7 @@ class EmailStatsBySendingIpResponse(BaseModel):
 
 
 class EmailSendingDomainStatsPoint(BaseModel):
+    "Aggregate delivery, engagement, and latency stats for messages sent from a single sending domain over the requested period."
     model_config = ConfigDict(extra="allow")
     sending_domain: Annotated[str, Field(
         description="The sending domain (the portion of the `From` address after the `@`), normalized to lowercase.",
@@ -14756,6 +15627,7 @@ class EmailSendingDomainStatsPoint(BaseModel):
 
 
 class EmailStatsBySendingDomainResponse(BaseModel):
+    "Per-sending-domain breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -14783,6 +15655,7 @@ class EmailStatsBySendingDomainResponse(BaseModel):
 
 
 class EmailCategoryStatsPoint(BaseModel):
+    "Aggregate delivery and engagement stats for a single category over the requested period."
     model_config = ConfigDict(extra="allow")
     category: Annotated[str, Field(
         description="The category this row aggregates, as set at send time. `transactional` is one-to-one mail triggered by a user action. `marketing` is bulk sending. New categories may be added over time.",
@@ -14798,6 +15671,7 @@ class EmailCategoryStatsPoint(BaseModel):
 
 
 class EmailStatsByCategoryResponse(BaseModel):
+    "Per-category breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -14855,6 +15729,7 @@ class EmailMailboxProviderSortMetric(str, Enum):
 
 
 class EmailMailboxProviderDeliveryStats(BaseModel):
+    "Delivery counts and rates for messages attributed to a single recipient mailbox provider. Per-provider results do not include `accepted` or `processed` counts, because we only learn the recipient's mailbox provider once the receiving mail server reports delivery, a bounce, a deferral, or a late bounce. Earlier lifecycle states (accepted, processed) cannot be attributed to a specific provider."
     model_config = ConfigDict(extra="allow")
     delivered: Annotated[int, Field(
         description="Distinct recipients whose message the receiving mail server accepted.",
@@ -14898,6 +15773,7 @@ class EmailMailboxProviderDeliveryStats(BaseModel):
 
 
 class EmailMailboxProviderStatsPoint(BaseModel):
+    "Delivery, engagement, and deliverability stats for messages grouped by a single recipient mailbox provider (`gmail`, `microsoft`, `yahoo`, `apple`, ...) over the requested period. We learn a recipient's mailbox provider from the receiving mail server. Per-provider rows therefore cover the delivery stage onward. They omit the `accepted` and `processed` counts and the `processing` latency family. These fields are absent rather than null. Engagement (opens and clicks, and their rates) is included because those events happen after delivery, once the mailbox provider is already known."
     model_config = ConfigDict(extra="allow")
     mailbox_provider: Annotated[str, Field(
         description="The recipient mailbox provider this row aggregates, as a lowercase classifier such as `gmail`, `yahoo`, `microsoft`, or `apple`. New classifiers may be added over time.",
@@ -14913,6 +15789,7 @@ class EmailMailboxProviderStatsPoint(BaseModel):
 
 
 class EmailStatsByMailboxProviderResponse(BaseModel):
+    "Per-mailbox-provider breakdown for the requested period, ranked by the `sort` metric (default `delivered`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -14940,6 +15817,7 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
 
 
 class EmailMailboxProviderRegionStatsPoint(BaseModel):
+    "Delivery, engagement, and deliverability stats for messages grouped by a single mailbox provider and provider region pair over the requested period, for example `gmail` in `NA` or `microsoft` in `EU`. The provider region is the regional pod the receiving mail system reports for the recipient's provider; pairing it with the provider disambiguates a region label that several providers share. Like the mailbox-provider breakdown, rows cover the delivery stage onward: the `accepted` and `processed` counts and the `processing` latency family are omitted (a provider region cannot be attributed before delivery)."
     model_config = ConfigDict(extra="allow")
     mailbox_provider: Annotated[str, Field(
         description="The recipient mailbox provider this row aggregates, as a lowercase classifier such as `gmail`, `yahoo`, `microsoft`, or `apple`.",
@@ -14960,6 +15838,7 @@ class EmailMailboxProviderRegionStatsPoint(BaseModel):
 
 
 class EmailStatsByMailboxProviderRegionResponse(BaseModel):
+    "Per-(mailbox provider, provider region) breakdown for the requested period, ranked by the `sort` metric (default `delivered`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -14987,6 +15866,7 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
 
 
 class EmailRecipientDomainStatsPoint(BaseModel):
+    "Aggregate delivery, engagement, and latency stats for messages sent to a single recipient mailbox domain over the requested period."
     model_config = ConfigDict(extra="allow")
     recipient_domain: Annotated[str, Field(
         description="The recipient mailbox domain this row aggregates (the part of the recipient address after the `@`), normalized to lowercase.",
@@ -15002,6 +15882,7 @@ class EmailRecipientDomainStatsPoint(BaseModel):
 
 
 class EmailStatsByRecipientDomainResponse(BaseModel):
+    "Per-recipient-domain breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15029,6 +15910,7 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
 
 
 class EmailTemplateStatsPoint(BaseModel):
+    "Delivery, engagement, and latency numbers for every message sent with one template over the requested period."
     model_config = ConfigDict(extra="allow")
     template_id: Annotated[str, Field(
         description="The template this row is about, using the same `id` the email template endpoints return. Only messages sent with a template appear in this breakdown at all. If the template was deleted after it was used to send, this row still appears, keyed by that same `id`.",
@@ -15045,6 +15927,7 @@ class EmailTemplateStatsPoint(BaseModel):
 
 
 class EmailStatsByTemplateResponse(BaseModel):
+    "Per-template breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15081,6 +15964,7 @@ class EmailEngagementSortMetric(str, Enum):
 
 
 class EmailEngagementCounts(BaseModel):
+    "Open and click counts for a breakdown row whose dimension is resolved from engagement events only. `opens`, `opens_non_prefetched`, and `clicks` count each event. The same recipient opening or clicking more than once counts each time. The `unique_*` fields count distinct recipients instead, so a recipient who opened five times only counts once there. Rates and unsubscribe counts are not included here. A per-dimension delivered count is unavailable as a rate's denominator, and an unsubscribe event has none of the information this breakdown is grouped by, so it cannot be placed on a row."
     model_config = ConfigDict(extra="allow")
     opens: Annotated[int, Field(
         description="Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).",
@@ -15115,6 +15999,7 @@ class EmailEngagementCounts(BaseModel):
 
 
 class EmailLocationStatsPoint(BaseModel):
+    "Open and click counts for messages engaged with from a single location over the requested period. Location is resolved from open and click events only, so this breakdown reports engagement activity: opens, clicks, and the recipients behind them. It has no delivery counts and no open or click rates, because the receiving mail server reports delivery without a recipient location, preventing a per-location delivered denominator and rates. Each row always includes all three of `country`, `region`, and `city`; the levels below the requested `group_by` are null."
     model_config = ConfigDict(extra="allow")
     country: Annotated[str, Field(
         description="The country this row aggregates, as a two-letter country code (ISO 3166-1 alpha-2) resolved from the open or click event. Always present.",
@@ -15133,6 +16018,7 @@ class EmailLocationStatsPoint(BaseModel):
 
 
 class EmailStatsByLocationResponse(BaseModel):
+    "Per-location engagement breakdown for the requested period, grouped at the requested `group_by` granularity, ranked by the `sort` metric (default `unique_opens`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15160,6 +16046,7 @@ class EmailStatsByLocationResponse(BaseModel):
 
 
 class EmailClientStatsPoint(BaseModel):
+    "Engagement counts for messages opened or clicked from a single email client, operating system, or device type over the requested period. The reading environment is resolved from open and click events only, so this breakdown reports engagement activity: opens, clicks, and the recipients behind them. It has no delivery counts and no open or click rates, because the receiving mail server reports delivery without a client or device, preventing a per-client delivered denominator and rates. Exactly one of `email_client`, `os`, and `device_type` is populated, selected by the request's `group_by`. The other two are null. Inbox-privacy prefetching also affects the detected client. As with open counts, `opens_non_prefetched` excludes opens auto-fetched by an inbox privacy feature. It includes opens caused by a person opening the message."
     model_config = ConfigDict(extra="allow")
     email_client: Annotated[Optional[str], Field(
         description="The mail client this row aggregates (for example `Gmail`, `Apple Mail`, `Outlook`). Populated only when `group_by=email_client`. Null otherwise.",
@@ -15177,6 +16064,7 @@ class EmailClientStatsPoint(BaseModel):
 
 
 class EmailStatsByClientResponse(BaseModel):
+    "Per-client engagement breakdown for the requested period, grouped by the requested `group_by` facet, ranked by the `sort` metric (default `unique_opens`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15204,6 +16092,7 @@ class EmailStatsByClientResponse(BaseModel):
 
 
 class EmailBounceStats(BaseModel):
+    "Breakdown of `bounced` by failure type. Each field counts distinct bounced recipients of that type in this row's scope; the five types approximately partition `bounced`."
     model_config = ConfigDict(extra="allow")
     hard: Annotated[int, Field(
         description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain). The address is automatically added to the suppression list.",
@@ -15233,6 +16122,7 @@ class EmailBounceStats(BaseModel):
 
 
 class EmailBounceCodeStatsPoint(BaseModel):
+    "Bounce counts for a single SMTP status code over the requested period, with the per-type breakdown. This is a deliverability-debugging view keyed on what the receiving mail server returned, so it only reports the failure side: bounced recipients, and their `hard`, `soft`, `admin`, `block`, and `undetermined` split. It has no delivered, open, or rate fields."
     model_config = ConfigDict(extra="allow")
     smtp_error_code: Annotated[str, Field(
         description="The SMTP error code the receiving mail server returned for these bounces, as reported by that server (for example `5.1.1` for an unknown recipient, `4.2.2` for a full mailbox). The form varies by server, and the set of codes is open.",
@@ -15248,6 +16138,7 @@ class EmailBounceCodeStatsPoint(BaseModel):
 
 
 class EmailStatsByBounceCodeResponse(BaseModel):
+    "Per-SMTP-code bounce breakdown for the requested period, ranked by the `sort` metric (default `bounced`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15275,6 +16166,7 @@ class EmailStatsByBounceCodeResponse(BaseModel):
 
 
 class EmailComplaintTypeStatsPoint(BaseModel):
+    "Complaint counts for a single feedback-loop complaint type over the requested period. A complaint type is recorded only on spam-complaint events, so this breakdown reports the complained count for each type and nothing else. A complaint event has no delivery or engagement information attached to it, so no other count applies."
     model_config = ConfigDict(extra="allow")
     feedback_type: Annotated[str, Field(
         description="The complaint classification reported by the mailbox provider's feedback loop, in the abuse-reporting-format vocabulary (for example `abuse`, `fraud`, `virus`, `other`). The set is open.",
@@ -15289,6 +16181,7 @@ class EmailComplaintTypeStatsPoint(BaseModel):
 
 
 class EmailStatsByComplaintTypeResponse(BaseModel):
+    "Per-complaint-type breakdown for the requested period, ranked by `complained` descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15316,6 +16209,7 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
 
 
 class EmailBroadcastStatsPoint(BaseModel):
+    "Delivery, engagement and latency figures for one broadcast's messages over the period you asked for."
     model_config = ConfigDict(extra="allow")
     broadcast_id: Annotated[str, Field(
         description="The broadcast this row covers, the same ID the broadcast endpoints return. Only mail sent as part of a broadcast has a broadcast ID, so one-off and transactional sends do not appear in this breakdown at all.",
@@ -15329,6 +16223,7 @@ class EmailBroadcastStatsPoint(BaseModel):
 
 
 class EmailStatsByBroadcastResponse(BaseModel):
+    "Per-broadcast breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15361,6 +16256,7 @@ class EmailHealthSignalThresholdsDirection(str, Enum):
 
 
 class EmailHealthSignalThresholds(BaseModel):
+    "The boundaries this signal's status was judged against. Use them to classify your own slices, such as per-domain or per-tag rates, against the same bands. The `direction` field identifies the risky side of the boundaries: `above` means the status degrades as the value rises past a boundary, as with bounce and complaint rates, and `below` means it degrades as the value falls, as with delivery rate. The boundaries are exclusive, so a value exactly on one keeps the better status. Omitted for a metric with no risk boundaries, such as open rate."
     model_config = ConfigDict(extra="allow")
     direction: Annotated[EmailHealthSignalThresholdsDirection, Field(
         description="Which side of the boundaries is at risk. `above` for higher-is-worse rates (bounce, complaint), `below` for lower-is-worse rates (delivery).",
@@ -15396,6 +16292,7 @@ class EmailHealthSignalStatus(str, Enum):
 
 
 class EmailHealthSignal(BaseModel):
+    "The current value and verdict for a single sending-health metric over the window."
     model_config = ConfigDict(extra="allow")
     metric: Annotated[EmailHealthSignalMetric, Field(
         description="Which rate this signal reports.",
@@ -15429,6 +16326,7 @@ class EmailHealthStatus(str, Enum):
 
 
 class EmailHealth(BaseModel):
+    "The workspace's current sending-health verdict over the requested window, plus reference deliverability limits and classification boundaries. Use it to render a health badge, the bounce-rate and complaint-rate limit labels, and the risk lines on deliverability charts without hard-coding any thresholds of your own."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsPeriod, Field(
         description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
@@ -15445,6 +16343,7 @@ class EmailHealth(BaseModel):
 
 
 class DomainSettings(BaseModel):
+    "Per-domain behavior toggles. Changes apply immediately to new sends."
     model_config = ConfigDict(extra="allow")
     click_tracking: Annotated[Optional[bool], Field(
         description="Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified; it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.",
@@ -15460,6 +16359,7 @@ class DomainDKIMMode(str, Enum):
 
 
 class DomainDKIM(BaseModel):
+    "Active DKIM signing configuration for the domain."
     model_config = ConfigDict(extra="allow")
     mode: Annotated[DomainDKIMMode, Field(
         description="How the DKIM public key is published in your DNS. `txt`: you publish the key as a TXT record. `delegated`: you publish a single CNAME and we host and rotate the key.",
@@ -15483,6 +16383,7 @@ class DomainCapabilityPendingStatus(str, Enum):
 
 
 class DomainCapabilityPending(BaseModel):
+    "A staged configuration change awaiting DNS verification. The currently active configuration keeps serving until the staged one verifies, at which point it is promoted automatically. Submitting another change for the same capability replaces the staged value."
     model_config = ConfigDict(extra="allow")
     domain: Annotated[str, Field(
         description="Hostname the capability uses after the staged change verifies.",
@@ -15540,6 +16441,7 @@ class DomainReceivingState(str, Enum):
 
 
 class DomainReceiving(BaseModel):
+    "Receiving state and whether it is managed from another workspace."
     model_config = ConfigDict(extra="allow")
     state: Annotated[DomainReceivingState, Field(
         description="Receiving control state, separate from DNS verification. `enabled` means receiving is configured; check `capabilities.inbound.status` for readiness. `disabling` means a request to turn off receiving is in progress. `disable_failed` means the latest attempt failed and can be retried. `disabled` means receiving is off and no longer blocks deletion.",
@@ -15718,6 +16620,7 @@ class DomainList(BaseModel):
 
 
 class DomainReturnPathConfig(BaseModel):
+    "Return-path (bounce) domain configuration. The return-path domain receives bounce and complaint notifications for mail sent from this domain and is what mailbox providers check for SPF. Provide only the name part; we add the sending domain automatically."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
         description="Name part to use for the return-path domain. For example, `send` on `mail.acme.com` becomes `send.mail.acme.com`. Defaults to `send` when omitted at creation.",
@@ -15729,6 +16632,7 @@ class DomainReturnPathConfig(BaseModel):
 
 
 class DomainTrackingConfig(BaseModel):
+    "Tracking domain configuration for branded open and click tracking URLs. Provide only the name part; we add the sending domain automatically. A domain created with no tracking configuration defaults to `links`. Tracked links are served over HTTPS after the tracking record verifies."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
         description="Name part to use for branded open and click tracking URLs. For example, `links` on `mail.acme.com` becomes `links.mail.acme.com`.",
@@ -15745,6 +16649,7 @@ class DomainDKIMConfigMode(str, Enum):
 
 
 class DomainDKIMConfig(BaseModel):
+    "DKIM signing configuration."
     model_config = ConfigDict(extra="allow")
     mode: Annotated[Optional[DomainDKIMConfigMode], Field(
         description="How the DKIM public key is published in your DNS.\n\n- `txt` (default): you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated`: you publish a CNAME that points to a DKIM key we host and\n  rotate. This mode is unavailable for new configurations; supplying it\n  returns `422`.",
@@ -15773,6 +16678,7 @@ class DomainCreate(BaseModel):
 
 
 class DomainInboundConfig(BaseModel):
+    "Inbound (receiving) configuration. Enable inbound to receive email addressed to this domain. We return MX records to publish. After they verify, mail to any local-part at this domain is delivered as an inbound message and triggers the `email.received` webhook. Use a dedicated subdomain, such as `inbound.acme.com`, because using your apex domain would capture your corporate mail."
     model_config = ConfigDict(extra="allow")
     enabled: Annotated[bool, Field(
         description="Set `true` to enable receiving on this domain, `false` to disable it. Read `receiving.state` to follow the request: `disabling` while receiving is turning off, `disable_failed` if the latest attempt failed, and `disabled` when it is off. Retry a failed request with `false`. Before deleting the domain or workspace, poll the domain until `capabilities.inbound.status` is `not_configured`. Its MX records remain in `dns_records` as optional. Receiving with an assigned workspace is managed there. Disabling from a sibling workspace returns `403`; re-enabling does not move the assigned receiver. A sibling also receives `403` if it re-enables while a request to turn off receiving is pending or has failed. `receiving.managed_elsewhere` identifies this restriction before a request. Older setups without a recorded receiver can be disabled from an authorized workspace sharing the domain; re-enabling records that workspace as the receiver.",
@@ -15781,6 +16687,7 @@ class DomainInboundConfig(BaseModel):
 
 
 class DomainUpdate(BaseModel):
+    "Partial update. `settings` changes apply immediately. Changes to `return_path`, `tracking`, or `dkim` on a verified capability are staged. The current configuration keeps serving until the new DNS records verify. The change is then promoted automatically and the old records are marked `deprecated`. The staged value is visible under `capabilities.*.pending` and can be replaced by submitting another change."
     model_config = ConfigDict(extra="allow")
     settings: Annotated[Optional[DomainSettings], Field(
         description="Per-domain behavior toggles. Changes apply immediately to new sends.",
@@ -15934,6 +16841,7 @@ class SuppressionCreate(BaseModel):
 
 
 class EmailCompetitivePeriod(BaseModel):
+    "The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness."
     model_config = ConfigDict(extra="allow")
     days: Annotated[int, Field(
         description="Length of the period in days.",
@@ -15953,6 +16861,7 @@ class EmailCompetitivePeriod(BaseModel):
 
 
 class EmailCompetitiveWatchlistSummary(BaseModel):
+    "Where your sending sits against the brands you watch, over the same period as the\nrows.\n\nEvery figure here is derived from those rows rather than measured separately, so\nthe two always agree. As on a row, each is present and `null` when the rows cannot\nsupport it: the peer medians need at least one watched brand the panel reported\non, and the share figures need sending of your own to compare."
     model_config = ConfigDict(extra="allow")
     share_of_volume_percent: Annotated[Optional[float], Field(
         description="Your share of everything the watched set sent over the period, your own sending included in the total. Your half of the ratio is an exact count of your own sending while the rest is the panel's estimate, so the two sides are measured differently.",
@@ -15992,6 +16901,7 @@ class EmailCompetitivePanelStatus(str, Enum):
 
 
 class EmailCompetitiveCampaignSummary(BaseModel):
+    "The most recent campaign observed for a brand in the period."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="The identifier for this campaign. Use it to fetch this one campaign on its own.\n\nIt is a string, and it needs to stay one. The values are long enough that\nJavaScript, and any other language that stores every number as a floating point\nvalue, will round them, and a rounded identifier matches no campaign at all.\nCompare it and pass it back as text.",
@@ -16021,6 +16931,7 @@ class EmailCompetitiveFieldSource(str, Enum):
 
 
 class EmailCompetitiveWatchlistRowProvenance(BaseModel):
+    "Where each figure on the row came from, so a comparison can be labelled\nhonestly. Every field on a competitor's row is a panel estimate. On your own\nrow the source varies by field: what is counted directly is reported as measured,\nfalls back to the panel for what is not, and reports `none` for a field this row\nnever carries at all.\n\nRead rate is a panel estimate even on your own row. Comparing a measured rate\nagainst a panel estimate of the same rate is not a like for like\ncomparison, because the two count an open differently, so both sides of the\ncomparison come from the panel."
     model_config = ConfigDict(extra="allow")
     sends: Annotated[EmailCompetitiveFieldSource, Field(
         description="Where a figure came from. `measured` means it is counted from your own\nsending. `panel` means it is an estimate from an email panel, which observes a\nsample of real inboxes and scales what it sees up to a whole audience. `none`\nmeans there is no figure for this field on this row, so there is nothing to\nattribute a source to.\n\nOnly your own row carries `measured` figures, and only where the metric is counted\nrather than estimated. Everything about a competitor is a panel estimate.",
@@ -16043,6 +16954,7 @@ class EmailCompetitiveWatchlistRowProvenance(BaseModel):
 
 
 class EmailCompetitiveWatchlistRow(BaseModel):
+    "One brand on the watchlist, with its figures for the requested period. Your own\nworkspace appears as a row too, so the table can be read as a single ranking.\n\nMetrics are present on every row. Interpret `null` using each field's\ndescription: it can mean unavailable, no observed campaign, or no overlap\nreturned by the panel. A `0` is a measurement rather than a gap.\n\nYour measured sends and cadence cover the workspace. Your panel rates and\noverlap describe only its highest-volume sending domain.\n\n`esp` and `list_size` are the exception. They are populated only when you read a\nsingle brand, and are always `null` on the watchlist whatever `panel_status`\nreports."
     model_config = ConfigDict(extra="allow")
     watchlist_brand_id: Annotated[Optional[str], Field(
         examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -16110,6 +17022,7 @@ class EmailCompetitiveWatchlistRow(BaseModel):
 
 
 class EmailCompetitiveWatchlist(BaseModel):
+    "The workspace's competitor watchlist with its figures for the requested period.\n\nThe list is capped by the organization's competitor limit and is returned whole,\nso it is not paginated. Your own row is included and is always first."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
         description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
@@ -16129,6 +17042,7 @@ class EmailCompetitiveCampaignSignal(str, Enum):
 
 
 class EmailCompetitiveNotableClaim(BaseModel):
+    "What the panel itself asserts about a campaign, in its own words. Present only on the campaigns the panel chose to make a claim about, which is a minority of them: a campaign can be surfaced as notable without the panel putting a headline on it, and that is an ordinary outcome rather than missing data."
     model_config = ConfigDict(extra="allow")
     text: Annotated[str, Field(
         description="The panel's own phrasing, which may name the window the claim was measured over (\"Biggest send in 7 days\") or not (\"Best-read campaign\"). Show it as written rather than rebuilding it from the signal, and do not parse a window out of it.",
@@ -16138,6 +17052,7 @@ class EmailCompetitiveNotableClaim(BaseModel):
 
 
 class EmailCompetitiveNotableEvidence(BaseModel):
+    "The figures behind a campaign's signal, for ordering or filtering the list yourself. Which field carries a value depends on the signal, and each is null both on the signals it does not describe and on a campaign of its own signal the panel published no figure for."
     model_config = ConfigDict(extra="allow")
     ratio_to_median: Annotated[Optional[float], Field(
         description="How many times the brand's own median volume this send was. A value of 29 means the send was twenty-nine times the brand's typical volume for the period. Null on every signal other than `biggest_send`, and on a `biggest_send` campaign the panel published no ratio for.",
@@ -16162,6 +17077,7 @@ class EmailCompetitivePanelMailboxProvider(RootModel[str]):
 
 
 class EmailCompetitiveCampaign(BaseModel):
+    "The most recent campaign observed for a brand in the period."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="The identifier for this campaign. Use it to fetch this one campaign on its own.\n\nIt is a string, and it needs to stay one. The values are long enough that\nJavaScript, and any other language that stores every number as a floating point\nvalue, will round them, and a rounded identifier matches no campaign at all.\nCompare it and pass it back as text.",
@@ -16209,6 +17125,7 @@ class EmailCompetitiveCampaign(BaseModel):
 
 
 class EmailCompetitiveNotableCampaign(BaseModel):
+    "A campaign the panel surfaced, and the reason it did."
     model_config = ConfigDict(extra="allow")
     watchlist_brand_id: Annotated[str, Field(
         examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -16240,6 +17157,7 @@ class EmailCompetitiveNotableCampaign(BaseModel):
 
 
 class EmailCompetitiveNotableFeed(BaseModel):
+    "Campaigns worth a second look across the brands a workspace watches."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
         description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
@@ -16262,6 +17180,7 @@ class EmailCompetitiveBrandID(RootModel[str]):
 
 
 class EmailCompetitiveWatchlistBrandCreate(BaseModel):
+    "The brand to add to the watchlist. Obtained from a brand search, which only returns brands that can be watched."
     model_config = ConfigDict(extra="allow")
     brand_id: Annotated[str, Field(
         description="Identifier of the brand in the panel's catalog, used to add it to the watchlist. It is a string for the same reason a campaign id is: the values are wide enough that a client storing every number as a floating point value would round them, and a rounded identifier matches no brand at all.",
@@ -16273,6 +17192,7 @@ class EmailCompetitiveWatchlistBrandCreate(BaseModel):
 
 
 class EmailCompetitiveWatchlistBrand(BaseModel):
+    "A brand on the workspace's watchlist. This is the watchlist entry itself, with no figures on it; read the watchlist to get those."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -16303,6 +17223,7 @@ class EmailCompetitiveWatchlistBrand(BaseModel):
 
 
 class EmailCompetitiveProviderPlacement(BaseModel):
+    "How one mailbox provider treated a brand's mail, beside your own."
     model_config = ConfigDict(extra="allow")
     mailbox_provider: Annotated[str, Field(
         description="A mailbox provider, as the email panel identifies it. A lowercase identifier rather than a\ndisplay name, so pick your own label for it, and treat the set as open: the panel reports\nwhichever providers it observed, and `gmail`, `hotmail`, `yahoo`, `aol` and `comcast` are the\nones it returns most. Apple never appears, because the panel does not measure it, so a surface\noffering an Apple row has no measurement behind it.\n\nThe panel's buckets are not the same as the ones the [mailbox-provider stats\nbreakdown](/docs/api/reference/get-email-stats-by-mailbox-provider) reports: Microsoft's\nproperties appear here as `hotmail` rather than `microsoft`, and Apple is absent, so the two\nare not a joinable dimension.",
@@ -16324,6 +17245,7 @@ class EmailCompetitiveProviderPlacement(BaseModel):
 
 
 class EmailCompetitiveBrandProfile(BaseModel):
+    "One watched brand's figures for the period, with its placement broken out by mailbox provider."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
         description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
@@ -16337,6 +17259,7 @@ class EmailCompetitiveBrandProfile(BaseModel):
 
 
 class EmailCompetitiveCampaignFeed(BaseModel):
+    "A page of campaigns returned for a watched brand over the period."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
         description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
@@ -16384,6 +17307,7 @@ class EmailCompetitiveWeekday(str, Enum):
 
 
 class EmailCompetitiveSendTimeCell(BaseModel):
+    "One weekday and hour of a brand's sending week."
     model_config = ConfigDict(extra="allow")
     weekday: Annotated[EmailCompetitiveWeekday, Field(
         description="A day of the week. Named rather than numbered because the two common numberings disagree about which day the week starts on.",
@@ -16411,6 +17335,7 @@ class EmailCompetitiveSendTimeCell(BaseModel):
 
 
 class EmailCompetitiveSendTimePeak(BaseModel):
+    "The hour of the day a brand sends most of its mail in."
     model_config = ConfigDict(extra="allow")
     start_hour: Annotated[int, Field(
         description="The first hour of the window, in the timezone the response reports.",
@@ -16431,6 +17356,7 @@ class EmailCompetitiveSendTimePeak(BaseModel):
 
 
 class EmailCompetitiveSendTimeGrid(BaseModel):
+    "When a watched brand sends, by weekday and hour of the day."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
         description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
@@ -16452,6 +17378,7 @@ class EmailCompetitiveSendTimeGrid(BaseModel):
 
 
 class EmailCompetitiveBrandMatch(BaseModel):
+    "A brand matching a search, ready to be added to the watchlist."
     model_config = ConfigDict(extra="allow")
     brand_id: Annotated[str, Field(
         examples=[81531],
@@ -16471,6 +17398,7 @@ class EmailCompetitiveBrandMatch(BaseModel):
 
 
 class EmailCompetitiveBrandSearchResults(BaseModel):
+    "Brands matching the search. Ranked by how well they match, best first, and capped at 8 results because this backs a type-ahead. The panel's own answer is often shorter than the cap, in which case the cap was never the reason the list is short."
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[EmailCompetitiveBrandMatch], Field(
         description="Watchable matches returned for this query. A capped search or an unresolved sending domain can omit a brand; an empty result does not establish that the panel has never observed it.",
@@ -16478,6 +17406,7 @@ class EmailCompetitiveBrandSearchResults(BaseModel):
 
 
 class EmailCompetitiveVolumePoint(BaseModel):
+    "One day of one line on the volume chart."
     model_config = ConfigDict(extra="allow")
     date: Annotated[str, Field(
         description="The UTC day this point covers.",
@@ -16491,6 +17420,7 @@ class EmailCompetitiveVolumePoint(BaseModel):
 
 
 class EmailCompetitiveBrandSeries(BaseModel):
+    "One line on the volume chart: a watched brand's sending over time, or your own."
     model_config = ConfigDict(extra="allow")
     watchlist_brand_id: Annotated[Optional[str], Field(
         examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -16522,6 +17452,7 @@ class EmailCompetitiveBrandSeries(BaseModel):
 
 
 class EmailCompetitiveVolumeSeries(BaseModel):
+    "Volume over time for the requested watched brands, plus your own sending, on one shared daily axis."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailCompetitivePeriod, Field(
         description="The period the response describes. Most reports resolve a rolling window when\nrequested; send-time and notable reports can carry the panel's own window.\nThese bounds describe coverage, not a guarantee of measurement freshness.",
@@ -16557,6 +17488,7 @@ class EmailTemplateTheme(str, Enum):
 
 
 class EmailTemplateLanguageState(BaseModel):
+    "Where one of the template's languages stands: whether sends are using it, and whether its draft contains an unpublished edit."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Annotated[Union[TemplateLanguageStatus, str], Field(union_mode="left_to_right")], Field(
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
@@ -16676,6 +17608,7 @@ class EmailTemplateList(BaseModel):
 
 
 class EmailTemplateLanguageContent(BaseModel):
+    "One language's content for an email template. Each language carries its own subject, preview text and bodies, so a translation can differ in wording and length from every other language without affecting them."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
         description="The email subject line for this language.",
@@ -16699,6 +17632,7 @@ class EmailTemplateLanguageContent(BaseModel):
 
 
 class EmailTemplateCreate(BaseModel):
+    "Parameters for creating an email template and its initial draft."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
         description="The template's workspace-unique handle, and a stable alternative to the template ID when sending by template. It can contain lowercase letters, numbers, hyphens, and underscores. It is fixed at creation, so pick it deliberately. Two prefixes are rejected: `bird_`, reserved for our built-in templates, and `emt_`, the template ID format, which a slug could never be distinguished from.",
@@ -16840,6 +17774,7 @@ class EmailTemplate(BaseModel):
 
 
 class EmailTemplatePreviewContent(BaseModel):
+    "Unsaved email template content. Preview renders these fields instead of a stored draft; input analysis identifies their references without rendering."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
         description="The subject line, including any template expressions.",
@@ -16867,6 +17802,7 @@ class EmailTemplateDraftRevision(RootModel[int]):
 
 
 class EmailTemplateUpdate(BaseModel):
+    "Partial update of a template's metadata and draft settings. Only the fields you send are changed. The rest are left as-is. Include the draft `revision` you last read so concurrent edits are detected. Content is not here: save a language on the draft version to change what the template says."
     model_config = ConfigDict(extra="allow")
     revision: Annotated[int, Field(
         description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.",
@@ -16896,6 +17832,7 @@ class EmailTemplateUpdate(BaseModel):
 
 
 class EmailTemplateDuplicate(BaseModel):
+    "Optional parameters when duplicating an email template. The body may be omitted entirely to accept the defaults."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[Optional[str], Field(
         description="The copy's workspace-unique handle, and the stable alternative to the template ID when sending by template. It can contain lowercase letters, numbers, hyphens, and underscores. Omit it to derive one from the source (for example, `welcome-email-copy`), with a numeric suffix if that slug is already taken. Two prefixes are rejected: `bird_`, reserved for our built-in templates, and `emt_`, the template ID format, which a slug could never be distinguished from. If you supply a slug that is already in use in the workspace, the request returns a conflict.",
@@ -16906,7 +17843,138 @@ class EmailTemplateDuplicate(BaseModel):
     )] = None
 
 
+class EmailTemplateParameterType(str, Enum):
+    text = "text"
+    code = "code"
+    ttl = "ttl"
+    count = "count"
+    ref = "ref"
+    date = "date"
+    date_time = "date_time"
+    amount = "amount"
+    currency = "currency"
+
+
+class EmailTemplateParameterValueDomain(str, Enum):
+    scalar = "scalar"
+
+
+class EmailTemplateUseKind(str, Enum):
+    value = "value"
+    iterable = "iterable"
+
+
+class EmailTemplateUseSite(str, Enum):
+    subject = "subject"
+    html = "html"
+    text = "text"
+
+
+class EmailTemplateUseConstraint(BaseModel):
+    "One place in the published content that uses a parameter or variable, and how it is used there."
+    model_config = ConfigDict(extra="allow")
+    kind: Annotated[Annotated[Union[EmailTemplateUseKind, str], Field(union_mode="left_to_right")], Field(
+        description="How the template uses a parameter or variable at one place in its content.\n\n- `value`: the template outputs or compares the value.\n- `iterable`: the template loops over the value.",
+    )]
+    site: Annotated[Annotated[Union[EmailTemplateUseSite, str], Field(union_mode="left_to_right")], Field(
+        description="The part of the published content where a parameter or variable is used.\n\n- `subject`: the subject line.\n- `html`: the HTML body, including its inbox preview text.\n- `text`: the plain-text body.",
+    )]
+    path: Annotated[Optional[str], Field(
+        description="The parameter or variable path the template reads at this place, such as `offer` or `bird.contact.first_name`.",
+    )] = None
+    operation: Annotated[Optional[str], Field(
+        description="How the template uses the parameter or variable here, passed through from the template. `output` means it writes the value; other values name the Liquid tag that reads it, such as `if`, `case`, `for` or `assign`.",
+    )] = None
+
+
+class EmailTemplateParameter(BaseModel):
+    "A parameter the published content uses that the broadcast supplies in `template.parameters`, with what the template declares about it."
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="The parameter name to use as a key in `template.parameters`.",
+        examples=["offer"],
+        min_length=1,
+    )]
+    type: Annotated[Annotated[Union[EmailTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
+        description="The value type the template declares for a parameter. A broadcast can still supply any scalar value; see `value_domain`.\n\n- `text`: any value. A parameter the template uses without declaring it is reported as a required `text` parameter.\n- `code`: 4 to 8 digits.\n- `ttl`: a whole number from 1 to 999.\n- `count`: a whole number from 1 to 999.\n- `ref`: up to 16 uppercase letters, digits or hyphens.\n- `date`: an ISO 8601 date (YYYY-MM-DD).\n- `date_time`: an ISO 8601 date and time, with an optional offset.\n- `amount`: a decimal amount in major units, with up to 4 decimal places.\n- `currency`: an ISO 4217 currency code of 3 uppercase letters.",
+    )]
+    value_domain: Annotated[Annotated[Union[EmailTemplateParameterValueDomain, str], Field(union_mode="left_to_right")], Field(
+        description="The shape of value a broadcast may supply for a parameter, independent of the declared `type`.\n\n- `scalar`: a string, number, boolean or null, used as given.",
+    )]
+    required: Annotated[bool, Field(
+        description="Whether the template declares the parameter required.",
+    )]
+    sensitive: Annotated[Optional[bool], Field(
+        description="Whether the template marks the parameter sensitive. A broadcast cannot supply a sensitive parameter that its content uses.",
+    )] = None
+    use_constraints: Annotated[List[EmailTemplateUseConstraint], Field(
+        description="Each place the content uses the parameter.",
+    )]
+
+
+class EmailTemplateVariableSource(str, Enum):
+    contact = "contact"
+    bird = "bird"
+
+
+class EmailTemplateVariable(BaseModel):
+    "A `bird.` variable the published content uses, which Bird fills in for each recipient. The broadcast does not supply it, and no contact value is returned."
+    model_config = ConfigDict(extra="allow")
+    path: Annotated[str, Field(
+        description="The variable as the template writes it, such as `bird.contact.first_name`.",
+        examples=["bird.contact.first_name"],
+        min_length=1,
+    )]
+    source: Annotated[Annotated[Union[EmailTemplateVariableSource, str], Field(union_mode="left_to_right")], Field(
+        description="Where Bird takes the value of a `bird.` variable from.\n\n- `contact`: a property of the recipient contact, read from `bird.contact.`.\n- `bird`: another value Bird fills in when it sends, such as `bird.unsubscribe_url`.",
+    )]
+    source_type: Annotated[Optional[str], Field(
+        description="The type of the contact property, from this workspace's current contact property definitions, such as `string`. Absent when the variable is not a defined contact property.",
+    )] = None
+    use_constraints: Annotated[Optional[List[EmailTemplateUseConstraint]], Field(
+        description="Each place the content uses the variable.",
+    )] = None
+
+
+class EmailTemplateParameters(BaseModel):
+    "The parameters and variables a template's current published content uses in one exact language, across its subject, HTML and plain-text body. The HTML includes its inbox preview text. This describes the template and holds no parameter or contact values."
+    model_config = ConfigDict(extra="allow")
+    template_id: Annotated[str, Field(
+        examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    observed_version_id: Annotated[str, Field(
+        examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    requested_language: Annotated[Optional[str], Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    effective_language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    requirements_fingerprint: Annotated[str, Field(
+        description="An opaque value that changes when this content or the parameters and variables it uses change, including for built-in templates whose version ID stays the same. Compare it with an earlier value to tell whether they are still the same. Do not parse it.",
+        min_length=1,
+    )]
+    parameters: Annotated[List[EmailTemplateParameter], Field(
+        description="The parameters the broadcast supplies, sorted by name.",
+    )]
+    variables: Annotated[List[EmailTemplateVariable], Field(
+        description="The `bird.` variables Bird fills in, sorted by path.",
+    )]
+
+
 class EmailTemplatePreviewRequest(BaseModel):
+    "Sample values and options for rendering a template preview. Omit the body entirely to preview the current draft: `bird.contact.` tokens then fill from stand-in values, and a parameter you give no value for renders as empty."
     model_config = ConfigDict(extra="allow")
     content: Annotated[Optional[EmailTemplatePreviewContent], Field(
         description="Render this content rather than the template's stored draft. It is what an editor uses to show a change as it is made, since nothing has to be saved first.\n\nThe content is treated exactly as a draft would be: personalization is filled in the same way, a plain-text body is derived from the HTML when you omit it, and content that could not be published is refused with the same error. `version` asks for a published version's own content, so the two cannot be combined.",
@@ -16997,6 +18065,7 @@ class EmailClientPlatform(str, Enum):
 
 
 class EmailClientSupport(BaseModel):
+    "One mail client family a finding applies to, and which of that family's platforms."
     model_config = ConfigDict(extra="allow")
     family: Annotated[Annotated[Union[EmailClientFamily, str], Field(union_mode="left_to_right")], Field(
         description="Which mail client a finding applies to. A finding's `message` names at most\nApple Mail, Gmail, Outlook, and Yahoo; its `unsupported_clients` and\n`partial_clients` name every client affected.\n\n- `gmail`: Gmail\n- `outlook`: Outlook\n- `yahoo`: Yahoo\n- `apple_mail`: Apple Mail\n- `aol`: AOL\n- `thunderbird`: Mozilla Thunderbird\n- `samsung_email`: Samsung Email\n- `sfr`: SFR\n- `orange`: Orange\n- `protonmail`: ProtonMail\n- `hey`: HEY\n- `mail_ru`: Mail.ru\n- `fastmail`: Fastmail\n- `laposte`: LaPoste.net\n- `gmx`: GMX\n- `web_de`: WEB.DE\n- `ionos_1and1`: 1&1\n- `wp_pl`: WP.pl",
@@ -17008,6 +18077,7 @@ class EmailClientSupport(BaseModel):
 
 
 class EmailCompatibilityFinding(BaseModel):
+    "One pattern in the HTML that mail clients remove, ignore, or render inconsistently."
     model_config = ConfigDict(extra="allow")
     rule_id: Annotated[Annotated[Union[EmailCompatibilityRuleID, str], Field(union_mode="left_to_right")], Field(
         description="Which rule produced a finding.\n\n- `html_script`: a `<script>` tag.\n- `html_event_handlers`: a JavaScript event-handler attribute such as `onclick`.\n- `html_embedded_content`: an `<iframe>`, `<embed>`, or `<object>`.\n- `html_linked_stylesheet`: a `<link rel=\"stylesheet\">`.\n- `css_at_import`: an `@import` rule.\n- `html_form`: a `<form>`, `<input>`, `<select>`, or `<textarea>`.\n- `html_svg`: an inline `<svg>`.\n- `html_media`: a `<video>` or `<audio>` element.\n- `css_display_flex_grid`: `display: flex` or `display: grid`, and their `inline-` forms.\n- `css_position_fixed_sticky`: `position: fixed` or `position: sticky`.\n- `css_variables_no_fallback`: a `var()` with no fallback value.\n- `css_viewport_units`: a `vh` or `vw` length.\n- `html_button`: a `<button>` element.\n- `css_math_functions`: `clamp()`, `min()`, or `max()`.\n- `css_modern_color`: `oklch()`, `oklab()`, `lch()`, or `lab()`.\n- `html_web_page_markup`: markup a web framework left behind, such as a `data-reactroot` attribute or a `__next` element id.",
@@ -17066,6 +18136,7 @@ class EmailCompatibilityFinding(BaseModel):
 
 
 class EmailTemplatePreview(BaseModel):
+    "A rendered preview of an email template: its subject, HTML, and plain-text bodies with the supplied sample values filled in, ready to display."
     model_config = ConfigDict(extra="allow")
     editor_url: Annotated[Optional[str], Field(
         description="Optional link to open the saved draft in the browser editor, in the language this preview rendered. Absent for built-in templates, published-version previews, and previews of unsaved `content`.",
@@ -17104,6 +18175,7 @@ class EmailTemplateVersionStatus(str, Enum):
 
 
 class EmailTemplateVersionSummary(BaseModel):
+    "One version of a template, without its content. Version history lists every version a template has ever had, and each one has a full copy of the content in every language it was published with. The listing describes the versions; read a single version to get what it holds."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -17167,6 +18239,7 @@ class EmailTemplateVersionList(BaseModel):
 
 
 class EmailTemplateBroadcastSummary(BaseModel):
+    "One broadcast that blocks deleting this template."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -17252,6 +18325,7 @@ class EmailTemplateVersion(BaseModel):
 
 
 class EmailTemplateLanguageSummary(BaseModel):
+    "One language of a template version, without its content: enough to list what a version holds and how big each language is. Read a single language to get its content and its compatibility report."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -17286,6 +18360,7 @@ class EmailTemplateLanguageList(BaseModel):
 
 
 class EmailTemplateLanguage(BaseModel):
+    "One language of a template version: its content plus the identity a concurrent-edit check needs. Reading a language returns everything you need to edit it and save it back."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -17317,6 +18392,7 @@ class EmailTemplateLanguage(BaseModel):
 
 
 class EmailTemplateLanguageUpsert(BaseModel):
+    "Content to save for one language, replacing whatever that language held. Send every field you want the language to keep: a field you omit is cleared, which is what makes saving the same content twice land the same way every time."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[str, Field(
         description="The email subject line. It may be empty in a draft but is required to publish.",
@@ -17349,6 +18425,7 @@ class EmailTemplateRef(RootModel[str]):
 
 
 class EmailTemplateLanguageSaved(BaseModel):
+    "The identity, revision counters, and fingerprint of a saved language. The response does not include its content; read the language to retrieve it."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -17394,6 +18471,7 @@ class EmailTemplateLanguageSaved(BaseModel):
 
 
 class EmailTemplateLanguageUpdate(BaseModel):
+    "A partial edit to one language: send only the fields you are changing, and the rest keep their current values. The language must already exist. Create it by saving its full content instead."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
         description="The email subject line. It may be empty in a draft but is required to publish.",
@@ -17421,6 +18499,7 @@ class EmailTemplateLanguageUpdate(BaseModel):
 
 
 class EmailTemplateRollback(BaseModel):
+    "Parameters for rolling a template back to an earlier published version. Rolling back also replaces the draft with that version's content, so you have to pass `revision`, the revision number of the draft you last read. If the draft has changed since you read it, that revision number is now stale, and the rollback fails with a conflict instead of overwriting the newer draft. Read the draft again to get its current revision, and try the rollback again."
     model_config = ConfigDict(extra="allow")
     revision: Annotated[int, Field(
         description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.",
@@ -17430,6 +18509,7 @@ class EmailTemplateRollback(BaseModel):
 
 
 class EmailTemplateSubmit(BaseModel):
+    "Options for a submit. Every field here is optional, so an empty request body submits the draft exactly as it stands."
     model_config = ConfigDict(extra="allow")
     validate_only: Annotated[Optional[bool], Field(
         description="Check the draft without actually submitting it. Every language gets checked and every problem gets reported back to you, but nothing is frozen and no new version gets created. Give a validation run its own `Idempotency-Key`, separate from the real submit that follows it. You can also send no key. The validation request and real submit have different bodies, so using the same key for both is rejected as key reuse.",
@@ -17447,6 +18527,7 @@ class EmailTemplateSubmit(BaseModel):
 
 
 class EmailTemplateSubmitProblem(BaseModel):
+    "One problem found while checking whether a version can be submitted."
     model_config = ConfigDict(extra="allow")
     language: Annotated[Optional[str], Field(
         description="The language this problem is about. Null when the problem is about the whole version rather than one language, for example an empty draft, or a default language the draft does not have.",
@@ -17473,6 +18554,7 @@ class EmailTemplateSubmitProblem(BaseModel):
 
 
 class EmailTemplateSubmitResult(BaseModel):
+    "The outcome of a submit. This has the same shape whether the submit was a validation run or a real one, so you can read `valid` and `version` the same way either time to see what happened."
     model_config = ConfigDict(extra="allow")
     valid: Annotated[bool, Field(description="Whether the version passed every check.")]
     errors: Annotated[List[EmailTemplateSubmitProblem], Field(
@@ -17504,15 +18586,16 @@ class InboundAddressID(RootModel[str]):
     root: str
 
 
-class InboundEmailMessageID(RootModel[str]):
-    root: str
-
-
 class MailboxID(RootModel[str]):
     root: str
 
 
+class InboundEmailMessageID(RootModel[str]):
+    root: str
+
+
 class MailboxOwner(BaseModel):
+    "The principal that owns the mailbox. Always the workspace."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["workspace"], Field(
         description="Owner principal type.",
@@ -17544,6 +18627,7 @@ class MailboxRetentionTier(str, Enum):
 
 
 class Mailbox(BaseModel):
+    "A durable mailbox identity for an agent. A mailbox owns an email address, groups mail into threads, applies receive policy, and remembers message metadata, extracted text, and attachments for its retention tier. The body and raw MIME of each message remain available for 30 days."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -17654,6 +18738,7 @@ class MailboxCreateRetentionTier(str, Enum):
 
 
 class MailboxCreate(BaseModel):
+    "Parameters for creating a mailbox."
     model_config = ConfigDict(extra="allow")
     local_part: Annotated[Optional[str], Field(
         description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens. Stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits. Leading, trailing, and repeated separators are not allowed. Reserved names such as `postmaster` and `abuse` are unavailable. Choosing your own local part uses one of your plan's custom-handle allowance slots; generated addresses remain available. Omit this field to generate a random local part.",
@@ -17703,6 +18788,7 @@ class MailboxUpdateRetentionTier(str, Enum):
 
 
 class MailboxUpdate(BaseModel):
+    "Fields to update on a mailbox. Omitted fields are unchanged. Fields set to `null` are cleared. The address and domain are immutable."
     model_config = ConfigDict(extra="allow")
     display_name: Annotated[Optional[str], Field(
         description="Display name used as the sender name on mail from this mailbox. `null` clears it.",
@@ -17723,6 +18809,7 @@ class MailboxUpdate(BaseModel):
 
 
 class MailboxStatsSummary(BaseModel):
+    "Single-row aggregate of the mailbox's email activity across the full requested period. Counts use each field's message, recipient, or event identity across the whole window. Repeat opens, clicks, and unsubscribes from the same recipient contribute as separate events; unique engagement fields count distinct recipients. Adding per-bucket distinct counts can overstate the summary. Latency percentiles are computed across the whole period. Rates are `null` when their denominator is zero."
     model_config = ConfigDict(extra="allow")
     sends_accepted: Annotated[int, Field(
         description="Distinct email messages the mailbox sent that were accepted, counted once at the message level across the period.",
@@ -17740,6 +18827,7 @@ class MailboxStatsSummary(BaseModel):
 
 
 class MailboxStatsPoint(BaseModel):
+    "Per-mailbox email activity for one time bucket, bucketed by event time. Sent-mail metrics use the same delivery, engagement, and latency breakdowns as the email stats endpoints. `received` counts mail that arrived at the mailbox. Buckets with no activity are included with zero counts and `null` latency percentiles."
     model_config = ConfigDict(extra="allow")
     bucket: Annotated[str, Field(
         description="The day (`YYYY-MM-DD`) or instant (RFC 3339, on the bucket boundary) this point covers, matching the period's grain.",
@@ -17762,6 +18850,7 @@ class MailboxStatsPoint(BaseModel):
 
 
 class MailboxStatsResponse(BaseModel):
+    "A mailbox's sent and received email statistics: a period-wide summary plus a bucketed time series. `period` echoes the range and grain actually used. `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
     period: Annotated[EmailStatsSeriesPeriod, Field(
         description="The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to.",
@@ -17789,6 +18878,7 @@ class ReceiveRuleEntryType(str, Enum):
 
 
 class ReceiveRule(BaseModel):
+    "An allow or block entry on a mailbox, evaluated when inbound mail arrives. Matching is against the message's envelope sender; domain entries also match subdomains. A given entry can be allow or block, never both."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["erl_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -17847,6 +18937,7 @@ class ReceiveRuleCreateAction(str, Enum):
 
 
 class ReceiveRuleCreate(BaseModel):
+    "Parameters for adding a receive rule to a mailbox."
     model_config = ConfigDict(extra="allow")
     action: Annotated[ReceiveRuleCreateAction, Field(
         description="What the rule does when it matches. Block rules always win. To flip an entry's action, delete the existing rule and re-create it.",
@@ -17870,6 +18961,7 @@ class ThreadID(RootModel[str]):
 
 
 class EmailThreadHighlights(BaseModel):
+    "Matched search fragments for a thread, one array per field the query matched, with the matched terms wrapped in `**`. A field is present only when the query matched it, so the keys that are present tell you which fields produced the hit. Returned only on thread search results."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[List[str]], Field(
         description="Matched fragments from the conversation's subject.",
@@ -17885,6 +18977,7 @@ class EmailThreadLastDirection(str, Enum):
 
 
 class EmailThread(BaseModel):
+    "A conversation in a mailbox. It groups every message in both directions, the mail the mailbox received and the replies it sent, and it holds the conversation's read state, labels, and participant list. A message is retained until it is trashed or ages past the mailbox's retention tier. Only retained messages count toward the totals below."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -17965,6 +19058,7 @@ class EmailThreadList(BaseModel):
 
 
 class EmailLabelsUpdate(BaseModel):
+    "Label changes to apply. Labels in `add` are applied and labels in `remove` are taken off; other labels are left untouched. Adding a label that is already present, or removing one that is not, has no effect. System labels express state changes. On a conversation, adding `spam` files it as spam. Adding `archive` files it away without deleting it. Adding `inbox`, or removing `spam`, `blocked`, or `archive`, returns it to the inbox. Removing `unread` marks all retained received messages as read in one call. On a message, adding or removing `unread` flips read state. Adding or removing `trash` moves it to or out of the trash. The API rejects changes that contradict this model. A request cannot add more than one placement label. It cannot add `blocked`, because blocking a sender is a receive-rule decision. Removing `inbox` requires adding a destination. A conversation cannot add `trash` or `unread`; removing `unread` is the mark-all-read shortcut, and `trash` uses the `DELETE` verb. A message cannot use placement labels; move its conversation instead. A sent message cannot use `unread`. Custom labels are 1-64 characters with no commas, control characters, or leading or trailing whitespace. System label names and a small reserved set (`all`, `archived`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `junk`, `muted`, `none`, `outbox`, `pinned`, `read`, `scheduled`, `snoozed`, `starred`) cannot be used as custom labels, in any casing. A conversation or message has at most 20 labels, system labels included."
     model_config = ConfigDict(extra="allow")
     add: Annotated[Optional[List[str]], Field(
         description="Labels to apply.",
@@ -17977,6 +19071,7 @@ class EmailLabelsUpdate(BaseModel):
 
 
 class EmailThreadUpdateRequest(BaseModel):
+    "Changes to apply to a thread. Omitted fields are left unchanged."
     model_config = ConfigDict(extra="allow")
     labels: Annotated[Optional[EmailLabelsUpdate], Field(
         description="Label changes to apply. Labels in `add` are applied and labels in `remove` are taken off; other labels are left untouched. Adding a label that is already present, or removing one that is not, has no effect. System labels express state changes. On a conversation, adding `spam` files it as spam. Adding `archive` files it away without deleting it. Adding `inbox`, or removing `spam`, `blocked`, or `archive`, returns it to the inbox. Removing `unread` marks all retained received messages as read in one call. On a message, adding or removing `unread` flips read state. Adding or removing `trash` moves it to or out of the trash. The API rejects changes that contradict this model. A request cannot add more than one placement label. It cannot add `blocked`, because blocking a sender is a receive-rule decision. Removing `inbox` requires adding a destination. A conversation cannot add `trash` or `unread`; removing `unread` is the mark-all-read shortcut, and `trash` uses the `DELETE` verb. A message cannot use placement labels; move its conversation instead. A sent message cannot use `unread`. Custom labels are 1-64 characters with no commas, control characters, or leading or trailing whitespace. System label names and a small reserved set (`all`, `archived`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `junk`, `muted`, `none`, `outbox`, `pinned`, `read`, `scheduled`, `snoozed`, `starred`) cannot be used as custom labels, in any casing. A conversation or message has at most 20 labels, system labels included.",
@@ -17995,6 +19090,7 @@ class EmailThreadMessageRecipientStatus(str, Enum):
 
 
 class EmailThreadMessageRecipient(BaseModel):
+    "One recipient's terminal delivery outcome on a sent conversation message, recorded once the outcome becomes known."
     model_config = ConfigDict(extra="allow")
     address: Annotated[str, Field(description="Recipient address.", min_length=1)]
     status: Annotated[EmailThreadMessageRecipientStatus, Field(
@@ -18004,6 +19100,7 @@ class EmailThreadMessageRecipient(BaseModel):
 
 
 class EmailThreadMessageAttachment(BaseModel):
+    "Attachment metadata on a conversation message. Both the metadata and the attachment bytes stay available for the mailbox's retention tier."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="Attachment ID, used to download the attachment bytes.",
@@ -18022,6 +19119,7 @@ class EmailThreadMessageAttachment(BaseModel):
 
 
 class EmailThreadMessageSource(BaseModel):
+    "Link to the message's entry in the received-message or sent-message log, which has delivery analytics such as per-recipient events. Log entries expire 30 days after the message occurred."
     model_config = ConfigDict(extra="allow")
     resource: Annotated[str, Field(
         description="API path of the log entry for this message.",
@@ -18046,6 +19144,7 @@ class EmailThreadMessageAuthentication(str, Enum):
 
 
 class EmailThreadMessage(BaseModel):
+    "A message in a mailbox conversation, either direction. Message metadata, extracted text, and attachment bytes stay readable for the mailbox's retention tier. The body and raw MIME are available through the body and raw endpoints for 30 days after the message occurred."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="Message ID. Received messages have a `rem_` ID, sent messages an `em_` ID: the same IDs used by the received-message and sent-message logs.",
@@ -18158,6 +19257,7 @@ class EmailThreadMessageList(BaseModel):
 
 
 class EmailThreadMessageBody(BaseModel):
+    "The original rendered body of a conversation message. Available for 30 days after the message occurred. After that, the endpoint returns `410 Gone`, but the message's extracted text stays readable on the message itself."
     model_config = ConfigDict(extra="allow")
     html: Annotated[Optional[str], Field(
         description="The HTML body of the message, or null when the message had no HTML part.",
@@ -18168,11 +19268,13 @@ class EmailThreadMessageBody(BaseModel):
 
 
 class EmailThreadMessageAttachmentList(BaseModel):
+    "The attachments on a conversation message."
     model_config = ConfigDict(extra="allow")
     data: List[EmailThreadMessageAttachment]
 
 
 class EmailThreadMessageReplyRequest(BaseModel):
+    "A reply to a conversation message. Recipients are derived from the message being replied to: its Reply-To address when present, otherwise its From address. Set `reply_all` to also include the original To and Cc recipients (minus the mailbox's own address). The subject and threading headers are set automatically. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
     html: Annotated[Optional[str], Field(
         description="HTML body of the reply. At least one of html or text must be provided.",
@@ -18202,6 +19304,7 @@ class EmailThreadMessageReplyRequest(BaseModel):
 
 
 class EmailMailboxComposeRequest(BaseModel):
+    "A new message sent from a mailbox, starting a new conversation. Mirrors the plain send request without `from`, because the mailbox is who the message comes from, and without `scheduled_at`, because a mailbox sends immediately. We set the RFC 5322 Message-ID so replies thread back into this conversation. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
     to: Annotated[List[EmailAddressInput], Field(
         description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
@@ -18256,6 +19359,7 @@ class EmailMailboxLabelType(str, Enum):
 
 
 class EmailMailboxLabel(BaseModel):
+    "One label available in a mailbox."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
         description="The label name, as it appears on conversations and messages.",
@@ -18270,6 +19374,7 @@ class EmailMailboxLabel(BaseModel):
 
 
 class EmailMailboxLabelList(BaseModel):
+    "The labels available in a mailbox."
     model_config = ConfigDict(extra="allow")
     data: List[EmailMailboxLabel]
 
@@ -18284,6 +19389,7 @@ class WebhookEndpointID(RootModel[str]):
 
 
 class WebhookFilter(BaseModel):
+    "Exact match on `mailbox_id`, for `email_mailbox.*` events only; the mailbox must belong to this workspace. Cannot be combined with Realtime app scope. Omit on create for all resources; on update omit to keep, send `null` to clear."
     model_config = ConfigDict(extra="allow")
     mailbox_id: Annotated[str, Field(
         description="Mailbox to receive events for. Must belong to this workspace; a mailbox outside it returns `422`.",
@@ -18294,6 +19400,7 @@ class WebhookFilter(BaseModel):
 
 
 class WebhookRawDestination(BaseModel):
+    "Posts the signed event to the endpoint's `url` unchanged."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["webhook"], Field(min_length=1)]
 
@@ -18304,6 +19411,10 @@ class ConnectorID(RootModel[str]):
 
 class ConnectorActionID(RootModel[str]):
     root: str
+
+
+class ConnectionConfig(RootModel[Dict[str, str]]):
+    root: Dict[str, str]
 
 
 class WebhookConnectorBinding(BaseModel):
@@ -18327,9 +19438,13 @@ class WebhookConnectorBinding(BaseModel):
         examples=["Support triage agent"],
         min_length=1,
     )]
+    config: Annotated[Optional[Dict[str, str]], Field(
+        description="The connector's nonsecret fields as the endpoint delivers with them. Secret fields are never returned.",
+    )] = None
 
 
 class WebhookConnectorDestination(BaseModel):
+    "Sends the request a connector action builds, with the credentials stored for this endpoint. The endpoint's URL comes from its connector setup, so updating the endpoint with a `url` returns a `422`."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["connector"], Field(min_length=1)]
     connector: WebhookConnectorBinding
@@ -18473,7 +19588,12 @@ class WebhookConnectorID(RootModel[str]):
     root: str
 
 
+class ConnectionCredentials(RootModel[Dict[str, str]]):
+    root: Dict[str, str]
+
+
 class WebhookConnectorSetup(BaseModel):
+    "The connector to deliver through and the values it needs. Omit the endpoint's `url`: Bird builds it from the connector's URL and these `config` values, and a URL given anyway must equal that. The credentials belong to this endpoint alone, and deleting the endpoint erases them."
     model_config = ConfigDict(extra="allow")
     connector_id: Annotated[str, Field(
         description="The connector to deliver through. Each connector, its fields and the setup to do on its\nplatform first:\n\n- `claude_managed_agents`: Claude Managed Agents. Send each message you receive to your Claude managed agent.\n  - `agent_id` (`config`, required): Returned when you create the agent. Sessions use its latest version.\n  - `environment_id` (`config`, required): Returned when you create the environment.\n  - `vault_id` (`config`, optional): A credential vault the agent uses, such as the one holding its Bird MCP credential, so it can reply through Bird.\n  - `api_key` (secret, in `credentials`, required): From the Claude workspace your agent runs in.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, set up your agent in Claude. In the Claude Console, create the agent, its environment and an API key in the same workspace, then come back here with their IDs and the key. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 2: Create an API key. In the Claude workspace your agent runs in. See https://platform.claude.com/settings/keys.\n  - Setup 3: Copy the agent and environment IDs. Each create returns its ID. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 4: Optionally, add a credential vault. To let the agent reply through Bird, store its Bird MCP credential in a Claude credential vault and give the vault ID here. Each session gets that vault. See https://platform.claude.com/docs/en/managed-agents/vaults.\n- `grok_bot`: Grok Bot. Send each message you receive to a Grok Bot routine.\n  - `webhook_url` (`config`, required): The routine's webhook URL.\n  - `sender_key` (secret, in `credentials`, required): The routine's sender key. Bird sends it only as the Bearer token.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, ask Grok Bot to create a routine. Ask Grok Bot to create a routine with a webhook trigger, then paste the webhook URL and sender key it gives you below. See https://cursor.com/docs/cloud-agent/automations#webhook-triggers.",
@@ -18498,6 +19618,7 @@ class WebhookConnectorSetup(BaseModel):
 
 
 class WebhookConnectorDestinationCreate(BaseModel):
+    "Sends the request a connector action builds, with credentials stored for this endpoint."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["connector"], Field(min_length=1)]
     connector: WebhookConnectorSetup
@@ -18575,6 +19696,49 @@ class WebhookEndpointCreated(BaseModel):
     )] = None
 
 
+class WebhookDestinationType(str, Enum):
+    webhook = "webhook"
+    connector = "connector"
+
+
+class ConnectionConfigPatch(RootModel[Dict[str, Optional[str]]]):
+    root: Dict[str, Optional[str]]
+
+
+class WebhookConnectorSetupUpdate(BaseModel):
+    "Changes to the endpoint's connector, nested as on creation. A field the endpoint's URL is built from moves the URL with it. New deliveries are prepared with the current config. Queued deliveries keep their prepared body, but every send attempt, including retries, uses the current destination URL and credentials."
+    model_config = ConfigDict(extra="allow")
+    connector_id: Annotated[Optional[str], Field(
+        description="The endpoint's connector. It cannot change, so a different value returns a `422`.",
+        examples=["claude_managed_agents"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )] = None
+    action: Annotated[Optional[str], Field(
+        description="The endpoint's action. It cannot change, so a different value returns a `422`.",
+        examples=["trigger_run"],
+        max_length=64,
+        min_length=1,
+        pattern="^[a-z][a-z0-9_]{0,63}$",
+    )] = None
+    credentials: Annotated[Optional[Dict[str, str]], Field(
+        description="New values for the connector's secret fields, merged over the stored ones: a key given replaces that field and an omitted key keeps its value. The next delivery, retries included, uses them.",
+    )] = None
+    config: Annotated[Optional[Dict[str, Optional[str]]], Field(
+        description="Changes to the connector's nonsecret fields, keyed by field `name`. A key given replaces that field, `null` clears an optional one, and a key left out keeps its stored value. A required field cannot be cleared, and the result is checked as at creation.",
+    )] = None
+
+
+class WebhookDestinationUpdate(BaseModel):
+    "Changes to how deliveries are built, shaped as at creation. Only a `connector` destination takes `connector`; on any other endpoint it returns a `422`. Omit to keep the destination."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Optional[WebhookDestinationType], Field(
+        description="How deliveries to the webhook endpoint are built: `webhook` posts the signed event unchanged to the endpoint URL; `connector` builds the delivery using the configured connector action. An existing endpoint's type cannot change; a different value returns a `422`.",
+    )] = None
+    connector: Optional[WebhookConnectorSetupUpdate] = None
+
+
 class WebhookEndpointUpdateStatus(str, Enum):
     active = "active"
     paused = "paused"
@@ -18599,8 +19763,8 @@ class WebhookEndpointUpdate(BaseModel):
         description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`.",
         min_length=1,
     )] = None
-    credentials: Annotated[Optional[Dict[str, str]], Field(
-        description="New values for a `connector` destination's secret fields, merged over the stored ones: a key given replaces that field and an omitted key keeps its value. The merged set is checked as at creation, and the next delivery, retries included, uses it. On an endpoint without a `connector` destination this returns a `422`. Omit to keep the current credentials.",
+    destination: Annotated[Optional[WebhookDestinationUpdate], Field(
+        description="Changes to how deliveries are built, shaped as at creation. Only a `connector` destination takes `connector`; on any other endpoint it returns a `422`. Omit to keep the destination.",
     )] = None
     status: Annotated[Optional[WebhookEndpointUpdateStatus], Field(
         description="`paused` stops all deliveries; `active` re-enables a paused endpoint. Omit to leave the status unchanged. Events that fire while paused are not delivered and a replay cannot recover them, because they were never attempted; after re-enabling, [Replay failed deliveries](/docs/api/reference/create-webhook-replay) reaches only the deliveries that failed before the pause. A `degraded` endpoint cannot be reset through this field: it returns to `active` automatically once deliveries succeed again.",
@@ -18625,6 +19789,7 @@ class WebhookTestRequest(BaseModel):
 
 
 class EventAMBMessageData(BaseModel):
+    "The workspace and message snapshot at the time of the lifecycle event."
     model_config = ConfigDict(extra="allow")
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -18635,6 +19800,7 @@ class EventAMBMessageData(BaseModel):
 
 
 class EventAMBAccepted(BaseModel):
+    "An outbound message was accepted for processing after confirming billing coverage. This does not confirm receipt by Apple."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.accepted"], Field(
         description="Always `amb.accepted` for this event.",
@@ -18650,6 +19816,7 @@ class EventAMBAccepted(BaseModel):
 
 
 class EventAMBConversationData(BaseModel):
+    "Conversation identity and routing context when a lifecycle event occurred."
     model_config = ConfigDict(extra="allow")
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -18689,6 +19856,7 @@ class EventAMBConversationData(BaseModel):
 
 
 class EventAMBConversationClosed(BaseModel):
+    "A customer conversation closed. Closing a conversation is not a message."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.conversation_closed"], Field(
         description="Always `amb.conversation_closed` for this event.",
@@ -18704,6 +19872,7 @@ class EventAMBConversationClosed(BaseModel):
 
 
 class EventAMBConversationReopened(BaseModel):
+    "An existing customer conversation reopened after it had closed."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.conversation_reopened"], Field(
         description="Always `amb.conversation_reopened` for this event.",
@@ -18719,6 +19888,7 @@ class EventAMBConversationReopened(BaseModel):
 
 
 class EventAMBConversationStarted(BaseModel):
+    "A customer conversation opened for the first time."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.conversation_started"], Field(
         description="Always `amb.conversation_started` for this event.",
@@ -18734,6 +19904,7 @@ class EventAMBConversationStarted(BaseModel):
 
 
 class EventAMBReceived(BaseModel):
+    "Bird received an ordinary customer message from Apple. Invitation responses are excluded."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.received"], Field(
         description="Always `amb.received` for this event.",
@@ -18749,6 +19920,7 @@ class EventAMBReceived(BaseModel):
 
 
 class EventAMBRejected(BaseModel):
+    "Bird refused an outbound message before acceptance. This message has no accepted event."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.rejected"], Field(
         description="Always `amb.rejected` for this event.",
@@ -18764,6 +19936,7 @@ class EventAMBRejected(BaseModel):
 
 
 class EventAMBSendFailed(BaseModel):
+    "An accepted outbound message could not be handed to Apple. The message snapshot carries the failure detail."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.send_failed"], Field(
         description="Always `amb.send_failed` for this event.",
@@ -18779,6 +19952,7 @@ class EventAMBSendFailed(BaseModel):
 
 
 class EventAMBSent(BaseModel):
+    "Apple accepted an outbound message from Bird. This does not establish delivery to the customer or a read receipt."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb.sent"], Field(
         description="Always `amb.sent` for this event.",
@@ -18794,6 +19968,7 @@ class EventAMBSent(BaseModel):
 
 
 class EventAMBSuppressionCreatedData(BaseModel):
+    "Payload of the amb_suppression.created event."
     model_config = ConfigDict(extra="allow")
     suppression_id: Annotated[str, Field(
         examples=["asp_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -18829,6 +20004,7 @@ class EventAMBSuppressionCreatedData(BaseModel):
 
 
 class EventAMBSuppressionCreated(BaseModel):
+    "An address was added to the workspace's Apple Messages for Business suppression ledger."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["amb_suppression.created"], Field(
         description="Always `amb_suppression.created` for this event.",
@@ -18844,6 +20020,7 @@ class EventAMBSuppressionCreated(BaseModel):
 
 
 class EventDomainFailedData(BaseModel):
+    "Payload of the domain.failed event."
     model_config = ConfigDict(extra="allow")
     domain_id: Annotated[str, Field(
         examples=["dom_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -18867,6 +20044,7 @@ class EventDomainFailedData(BaseModel):
 
 
 class EventDomainFailed(BaseModel):
+    "A sending domain failed DNS verification."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["domain.failed"], Field(
         description="Event type.",
@@ -18884,6 +20062,7 @@ class EventDomainFailed(BaseModel):
 
 
 class EventDomainVerifiedData(BaseModel):
+    "Payload of the domain.verified event."
     model_config = ConfigDict(extra="allow")
     domain_id: Annotated[str, Field(
         examples=["dom_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -18903,6 +20082,7 @@ class EventDomainVerifiedData(BaseModel):
 
 
 class EventDomainVerified(BaseModel):
+    "A sending domain completed DNS verification successfully."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["domain.verified"], Field(
         description="Event type.",
@@ -18920,6 +20100,7 @@ class EventDomainVerified(BaseModel):
 
 
 class EventEmailAcceptedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -18959,6 +20140,7 @@ class EventEmailAcceptedData(BaseModel):
 
 
 class EventEmailAccepted(BaseModel):
+    "The API accepted the email send and is preparing it for delivery. Fires once per requested recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.accepted"], Field(
         description="Event type.",
@@ -18984,6 +20166,7 @@ class EmailBounceType(str, Enum):
 
 
 class EventEmailBouncedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19044,6 +20227,7 @@ class EventEmailBouncedData(BaseModel):
 
 
 class EventEmailBounced(BaseModel):
+    "An outbound email permanently failed at the recipient's mail server. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.bounced"], Field(
         description="Event type.",
@@ -19061,6 +20245,7 @@ class EventEmailBounced(BaseModel):
 
 
 class EventEmailCanceledData(BaseModel):
+    "Identity fields shared by the message-level email lifecycle events (scheduled, canceled), which are not tied to a single recipient."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19081,6 +20266,7 @@ class EventEmailCanceledData(BaseModel):
 
 
 class EventEmailCanceled(BaseModel):
+    "A scheduled send was canceled before it fired. Fires once for each message regardless of its recipient count."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.canceled"], Field(
         description="Event type.",
@@ -19098,6 +20284,7 @@ class EventEmailCanceled(BaseModel):
 
 
 class EventEmailClickedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19150,6 +20337,7 @@ class EventEmailClickedData(BaseModel):
 
 
 class EventEmailClicked(BaseModel):
+    "The recipient clicked a tracked link in the email. May fire more than once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.clicked"], Field(
         description="Event type.",
@@ -19167,6 +20355,7 @@ class EventEmailClicked(BaseModel):
 
 
 class EventEmailComplainedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19210,6 +20399,7 @@ class EventEmailComplainedData(BaseModel):
 
 
 class EventEmailComplained(BaseModel):
+    "The recipient marked the email as spam through their mailbox provider's feedback loop. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.complained"], Field(
         description="Event type.",
@@ -19227,6 +20417,7 @@ class EventEmailComplained(BaseModel):
 
 
 class EventEmailDeferredData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19283,6 +20474,7 @@ class EventEmailDeferredData(BaseModel):
 
 
 class EventEmailDeferred(BaseModel):
+    "The recipient's mail server temporarily refused the email. Delivery remains pending and is retried. May fire more than once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.deferred"], Field(
         description="Event type.",
@@ -19300,6 +20492,7 @@ class EventEmailDeferred(BaseModel):
 
 
 class EventEmailDeliveredData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19339,6 +20532,7 @@ class EventEmailDeliveredData(BaseModel):
 
 
 class EventEmailDelivered(BaseModel):
+    "An outbound email reached the recipient's mail server and was accepted."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.delivered"], Field(
         description="Event type.",
@@ -19356,6 +20550,7 @@ class EventEmailDelivered(BaseModel):
 
 
 class EventEmailListUnsubscribedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19395,6 +20590,7 @@ class EventEmailListUnsubscribedData(BaseModel):
 
 
 class EventEmailListUnsubscribed(BaseModel):
+    "Recipient unsubscribed via the RFC 8058 one-click List-Unsubscribe mechanism. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.list_unsubscribed"], Field(
         description="Event type.",
@@ -19412,6 +20608,7 @@ class EventEmailListUnsubscribed(BaseModel):
 
 
 class EventEmailOpenedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19459,6 +20656,7 @@ class EventEmailOpenedData(BaseModel):
 
 
 class EventEmailOpened(BaseModel):
+    "The recipient opened the email (the tracking pixel was loaded). May fire more than once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.opened"], Field(
         description="Event type.",
@@ -19476,6 +20674,7 @@ class EventEmailOpened(BaseModel):
 
 
 class EventEmailOutOfBandBounceData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19536,6 +20735,7 @@ class EventEmailOutOfBandBounceData(BaseModel):
 
 
 class EventEmailOutOfBandBounce(BaseModel):
+    "A bounce notification arrived after the message had already been accepted for delivery. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.out_of_band_bounce"], Field(
         description="Event type.",
@@ -19553,6 +20753,7 @@ class EventEmailOutOfBandBounce(BaseModel):
 
 
 class EventEmailProcessedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19592,6 +20793,7 @@ class EventEmailProcessedData(BaseModel):
 
 
 class EventEmailProcessed(BaseModel):
+    "The API prepared the message for delivery to the recipient's mail server. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.processed"], Field(
         description="Event type.",
@@ -19615,6 +20817,7 @@ class EventEmailReceivedDataAuthentication(str, Enum):
 
 
 class EventEmailReceivedData(BaseModel):
+    "Payload of the email.received event."
     model_config = ConfigDict(extra="allow")
     inbound_message_id: Annotated[str, Field(
         examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19665,6 +20868,7 @@ class EventEmailReceivedData(BaseModel):
 
 
 class EventEmailReceived(BaseModel):
+    "The API received and parsed an inbound email. The payload carries the message's identifiers, sender and recipients, subject, threading reference, and authentication results, which is enough to route and triage without a fetch. Fetch content separately. Get the parsed body with `GET /v1/email/inbound-messages/{id}/body`. Get the original MIME with `GET /v1/email/inbound-messages/{id}/raw`. Get attachment bytes with `GET /v1/email/inbound-messages/{id}/attachments/{attachment_id}`."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.received"], Field(
         description="Event type.",
@@ -19692,6 +20896,7 @@ class EmailRejectionReason(str, Enum):
 
 
 class EventEmailRejectedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19734,6 +20939,7 @@ class EventEmailRejectedData(BaseModel):
 
 
 class EventEmailRejected(BaseModel):
+    "The API rejected the email before delivery because of suppression, transmission failure, content, or policy. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.rejected"], Field(
         description="Event type.",
@@ -19751,6 +20957,7 @@ class EventEmailRejected(BaseModel):
 
 
 class EventEmailScheduledData(BaseModel):
+    "Identity fields shared by the message-level email lifecycle events (scheduled, canceled), which are not tied to a single recipient."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19776,6 +20983,7 @@ class EventEmailScheduledData(BaseModel):
 
 
 class EventEmailScheduled(BaseModel):
+    "The API accepted an email scheduled for a future time. Fires once per message when the schedule is created."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.scheduled"], Field(
         description="Event type.",
@@ -19793,6 +21001,7 @@ class EventEmailScheduled(BaseModel):
 
 
 class EventEmailUnsubscribedData(BaseModel):
+    "Identity fields shared by every email lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     email_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19832,6 +21041,7 @@ class EventEmailUnsubscribedData(BaseModel):
 
 
 class EventEmailUnsubscribed(BaseModel):
+    "Recipient unsubscribed by clicking a tracked unsubscribe link in the email. Fires once per recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email.unsubscribed"], Field(
         description="Event type.",
@@ -19849,6 +21059,7 @@ class EventEmailUnsubscribed(BaseModel):
 
 
 class EventEmailMailboxMessageDeliveredData(BaseModel):
+    "Payload of the email_mailbox.message_delivered event."
     model_config = ConfigDict(extra="allow")
     message_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19868,6 +21079,7 @@ class EventEmailMailboxMessageDeliveredData(BaseModel):
 
 
 class EventEmailMailboxMessageDelivered(BaseModel):
+    "Every recipient of a mailbox message reached a delivered state. This event fires once per message. The same send also emits one `email.delivered` event for each recipient. Choose one event family for each automation and deduplicate mailbox events by `message_id`."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_mailbox.message_delivered"], Field(
         description="Event type.",
@@ -19885,6 +21097,7 @@ class EventEmailMailboxMessageDelivered(BaseModel):
 
 
 class EventEmailMailboxMessageFailedData(BaseModel):
+    "Payload of the email_mailbox.message_failed event."
     model_config = ConfigDict(extra="allow")
     message_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19909,6 +21122,7 @@ class EventEmailMailboxMessageFailedData(BaseModel):
 
 
 class EventEmailMailboxMessageFailed(BaseModel):
+    "A mailbox message reached a terminal delivery failure. This event fires once per message. The same send also emits per-recipient `email.*` events. Choose one event family for each automation and deduplicate mailbox events by `message_id`."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_mailbox.message_failed"], Field(
         description="Event type.",
@@ -19932,6 +21146,7 @@ class EventEmailMailboxMessageReceivedDataAuthentication(str, Enum):
 
 
 class EventEmailMailboxMessageReceivedData(BaseModel):
+    "Identifiers, threading details, authentication results, and extracted text for a received mailbox message. The thread-message endpoints provide the original source during its 30-day retention window."
     model_config = ConfigDict(extra="allow")
     message_id: Annotated[str, Field(
         examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -19992,6 +21207,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
 
 
 class EventEmailMailboxMessageReceived(BaseModel):
+    "An email arrived in a mailbox. The same message also emits an `email.received` event. The two events can arrive in either order. Choose one event family for each automation and deduplicate mailbox events by `message_id`."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_mailbox.message_received"], Field(
         description="Event type.",
@@ -20009,6 +21225,7 @@ class EventEmailMailboxMessageReceived(BaseModel):
 
 
 class EventEmailMailboxMessageSentData(BaseModel):
+    "Payload of the email_mailbox.message_sent event."
     model_config = ConfigDict(extra="allow")
     message_id: Annotated[str, Field(
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20028,6 +21245,7 @@ class EventEmailMailboxMessageSentData(BaseModel):
 
 
 class EventEmailMailboxMessageSent(BaseModel):
+    "A mailbox message was handed off for delivery. This event fires once per message. The same send also emits per-recipient `email.*` events. Choose one event family for each automation and deduplicate mailbox events by `message_id`."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_mailbox.message_sent"], Field(
         description="Event type.",
@@ -20045,6 +21263,7 @@ class EventEmailMailboxMessageSent(BaseModel):
 
 
 class EventEmailMailboxSuspendedData(BaseModel):
+    "Payload of the email_mailbox.suspended event."
     model_config = ConfigDict(extra="allow")
     mailbox_id: Annotated[str, Field(
         examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20059,6 +21278,7 @@ class EventEmailMailboxSuspendedData(BaseModel):
 
 
 class EventEmailMailboxSuspended(BaseModel):
+    "This mailbox-suspension event is reserved and is not currently emitted."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_mailbox.suspended"], Field(
         description="Event type.",
@@ -20081,6 +21301,7 @@ class EventEmailMailboxThreadCreatedDataInitiatedBy(str, Enum):
 
 
 class EventEmailMailboxThreadCreatedData(BaseModel):
+    "Payload of the email_mailbox.thread_created event."
     model_config = ConfigDict(extra="allow")
     thread_id: Annotated[str, Field(
         examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20104,6 +21325,7 @@ class EventEmailMailboxThreadCreatedData(BaseModel):
 
 
 class EventEmailMailboxThreadCreated(BaseModel):
+    "A new thread was created in a mailbox, from either direction."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_mailbox.thread_created"], Field(
         description="Event type.",
@@ -20128,6 +21350,7 @@ class EventEmailSuppressionCreatedDataReason(str, Enum):
 
 
 class EventEmailSuppressionCreatedData(BaseModel):
+    "Payload of the email_suppression.created event."
     model_config = ConfigDict(extra="allow")
     suppression_id: Annotated[str, Field(
         examples=["sup_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20152,6 +21375,7 @@ class EventEmailSuppressionCreatedData(BaseModel):
 
 
 class EventEmailSuppressionCreated(BaseModel):
+    "An email address was added to the workspace's suppression list (manually, via complaint, or via hard bounce)."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["email_suppression.created"], Field(
         description="Event type.",
@@ -20206,6 +21430,7 @@ class EsimRecurringStopReason(str, Enum):
 
 
 class EventPreferenceDeletedData(BaseModel):
+    "Identity fields shared by every preference lifecycle event: the key plus the ledger entry the write appended. `effective_at` is not repeated here: it is the envelope `timestamp`."
     model_config = ConfigDict(extra="allow")
     preference_id: Annotated[str, Field(
         examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20242,6 +21467,7 @@ class EventPreferenceDeletedData(BaseModel):
 
 
 class EventPreferenceDeleted(BaseModel):
+    "A stated preference was deleted, superseding it in the ledger without erasing its history."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["preference.deleted"], Field(
         description="Always `preference.deleted` for this event.",
@@ -20257,6 +21483,7 @@ class EventPreferenceDeleted(BaseModel):
 
 
 class EventPreferenceGrantedData(BaseModel):
+    "Identity fields shared by every preference lifecycle event: the key plus the ledger entry the write appended. `effective_at` is not repeated here: it is the envelope `timestamp`."
     model_config = ConfigDict(extra="allow")
     preference_id: Annotated[str, Field(
         examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20293,6 +21520,7 @@ class EventPreferenceGrantedData(BaseModel):
 
 
 class EventPreferenceGranted(BaseModel):
+    "A stated preference was granted (a person consented, or a customer wrote a grant) and became the key's live statement."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["preference.granted"], Field(
         description="Always `preference.granted` for this event.",
@@ -20308,6 +21536,7 @@ class EventPreferenceGranted(BaseModel):
 
 
 class EventPreferenceRevokedData(BaseModel):
+    "Identity fields shared by every preference lifecycle event: the key plus the ledger entry the write appended. `effective_at` is not repeated here: it is the envelope `timestamp`."
     model_config = ConfigDict(extra="allow")
     preference_id: Annotated[str, Field(
         examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20344,6 +21573,7 @@ class EventPreferenceRevokedData(BaseModel):
 
 
 class EventPreferenceRevoked(BaseModel):
+    "A stated preference was revoked (a person opted out, or a customer wrote a revoke) and became the key's live statement."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["preference.revoked"], Field(
         description="Always `preference.revoked` for this event.",
@@ -20359,6 +21589,7 @@ class EventPreferenceRevoked(BaseModel):
 
 
 class EventSMSAcceptedData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20425,6 +21656,7 @@ class EventSMSAcceptedData(BaseModel):
 
 
 class EventSMSAccepted(BaseModel):
+    "The API accepted the SMS send request and queued it for processing."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.accepted"], Field(
         description="Event type.",
@@ -20442,6 +21674,7 @@ class EventSMSAccepted(BaseModel):
 
 
 class EventSMSDeliveredData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20513,6 +21746,7 @@ class EventSMSDeliveredData(BaseModel):
 
 
 class EventSMSDelivered(BaseModel):
+    "The carrier confirmed delivery of the message to the recipient handset."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.delivered"], Field(
         description="Event type.",
@@ -20530,6 +21764,7 @@ class EventSMSDelivered(BaseModel):
 
 
 class EventSMSExpiredData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20596,6 +21831,7 @@ class EventSMSExpiredData(BaseModel):
 
 
 class EventSMSExpired(BaseModel):
+    "The message's validity period elapsed before it could be delivered."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.expired"], Field(
         description="Event type.",
@@ -20613,6 +21849,7 @@ class EventSMSExpired(BaseModel):
 
 
 class EventSMSFailedData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20679,6 +21916,7 @@ class EventSMSFailedData(BaseModel):
 
 
 class EventSMSFailed(BaseModel):
+    "Message delivery failed permanently."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.failed"], Field(
         description="Event type.",
@@ -20696,6 +21934,7 @@ class EventSMSFailed(BaseModel):
 
 
 class EventSMSReceivedData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20778,6 +22017,7 @@ class EventSMSReceivedData(BaseModel):
 
 
 class EventSMSReceived(BaseModel):
+    "A message was received on one of your numbers."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.received"], Field(
         description="Always `sms.received` for this event.",
@@ -20793,6 +22033,7 @@ class EventSMSReceived(BaseModel):
 
 
 class EventSMSRejectedData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20859,6 +22100,7 @@ class EventSMSRejectedData(BaseModel):
 
 
 class EventSMSRejected(BaseModel):
+    "The API rejected the message before sending it to the carrier because of an invalid destination, suppression, or content or policy restriction."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.rejected"], Field(
         description="Event type.",
@@ -20876,6 +22118,7 @@ class EventSMSRejected(BaseModel):
 
 
 class EventSMSSentData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20947,6 +22190,7 @@ class EventSMSSentData(BaseModel):
 
 
 class EventSMSSent(BaseModel):
+    "The API handed the message to the carrier for delivery."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.sent"], Field(
         description="Event type.",
@@ -20964,6 +22208,7 @@ class EventSMSSent(BaseModel):
 
 
 class EventSMSUndeliveredData(BaseModel):
+    "Identity fields shared by every SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21030,6 +22275,7 @@ class EventSMSUndeliveredData(BaseModel):
 
 
 class EventSMSUndelivered(BaseModel):
+    "The carrier reported a non-permanent failure to deliver the message."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.undelivered"], Field(
         description="Event type.",
@@ -21047,6 +22293,7 @@ class EventSMSUndelivered(BaseModel):
 
 
 class EventSMSSuppressionCreatedData(BaseModel):
+    "Payload of the sms_suppression.created event."
     model_config = ConfigDict(extra="allow")
     suppression_id: Annotated[str, Field(
         examples=["ssu_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21074,6 +22321,7 @@ class EventSMSSuppressionCreatedData(BaseModel):
 
 
 class EventSMSSuppressionCreated(BaseModel):
+    "A destination was added to the workspace's SMS suppression ledger: a subscriber's STOP, a carrier opt-out, or a manual add."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms_suppression.created"], Field(
         description="Always `sms_suppression.created` for this event.",
@@ -21089,6 +22337,7 @@ class EventSMSSuppressionCreated(BaseModel):
 
 
 class EventVerifyAttemptDeliveredData(BaseModel):
+    "Identity fields shared by every Verify lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
         examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21130,6 +22379,7 @@ class EventVerifyAttemptDeliveredData(BaseModel):
 
 
 class EventVerifyAttemptDelivered(BaseModel):
+    "The channel confirmed delivery of a one-time passcode to the recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.attempt.delivered"], Field(
         description="Event type.",
@@ -21147,6 +22397,7 @@ class EventVerifyAttemptDelivered(BaseModel):
 
 
 class EventVerifyAttemptSentData(BaseModel):
+    "Identity fields shared by every Verify lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
         examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21185,6 +22436,7 @@ class EventVerifyAttemptSentData(BaseModel):
 
 
 class EventVerifyAttemptSent(BaseModel):
+    "A one-time passcode was dispatched to the recipient on a channel."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.attempt.sent"], Field(
         description="Event type.",
@@ -21202,6 +22454,7 @@ class EventVerifyAttemptSent(BaseModel):
 
 
 class EventVerifyAttemptUndeliveredData(BaseModel):
+    "Identity fields shared by every Verify lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
         examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21242,6 +22495,7 @@ class EventVerifyAttemptUndeliveredData(BaseModel):
 
 
 class EventVerifyAttemptUndelivered(BaseModel):
+    "A one-time passcode failed to deliver to the recipient."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.attempt.undelivered"], Field(
         description="Event type.",
@@ -21263,6 +22517,7 @@ class EventVerifyVerificationCreatedDataStatus(str, Enum):
 
 
 class EventVerifyVerificationCreatedData(BaseModel):
+    "Identity fields shared by every Verify lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
         examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21296,6 +22551,7 @@ class EventVerifyVerificationCreatedData(BaseModel):
 
 
 class EventVerifyVerificationCreated(BaseModel):
+    "A verification session was created and its first one-time passcode is being sent."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.verification.created"], Field(
         description="Event type.",
@@ -21317,6 +22573,7 @@ class EventVerifyVerificationFailedDataStatus(str, Enum):
 
 
 class EventVerifyVerificationFailedData(BaseModel):
+    "Identity fields shared by every Verify lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
         examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21357,6 +22614,7 @@ class EventVerifyVerificationFailedData(BaseModel):
 
 
 class EventVerifyVerificationFailed(BaseModel):
+    "The verification ended without the recipient receiving a passcode: every planned channel reported that its send would not arrive."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.verification.failed"], Field(
         description="Always `verify.verification.failed` for this event.",
@@ -21376,6 +22634,7 @@ class EventVerifyVerificationVerifiedDataStatus(str, Enum):
 
 
 class EventVerifyVerificationVerifiedData(BaseModel):
+    "Identity fields shared by every Verify lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     verification_id: Annotated[str, Field(
         examples=["vrf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21410,6 +22669,7 @@ class EventVerifyVerificationVerifiedData(BaseModel):
 
 
 class EventVerifyVerificationVerified(BaseModel):
+    "The verification was successfully resolved: the recipient confirmed the correct code."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.verification.verified"], Field(
         description="Event type.",
@@ -21440,6 +22700,7 @@ class VoiceCallDirection(str, Enum):
 
 
 class EventVoiceCallAnsweredData(BaseModel):
+    "Identity fields shared by every voice call lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     call_id: Annotated[str, Field(
         examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21474,6 +22735,7 @@ class EventVoiceCallAnsweredData(BaseModel):
 
 
 class EventVoiceCallAnswered(BaseModel):
+    "The called party answered and media began flowing."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["voice_call.answered"], Field(
         description="Event type.",
@@ -21503,6 +22765,7 @@ class VoiceCallStatus(str, Enum):
 
 
 class EventVoiceCallEndedData(BaseModel):
+    "Identity fields shared by every voice call lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     call_id: Annotated[str, Field(
         examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21555,6 +22818,7 @@ class EventVoiceCallEndedData(BaseModel):
 
 
 class EventVoiceCallEnded(BaseModel):
+    "The call ended after either party hung up or call setup failed."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["voice_call.ended"], Field(
         description="Event type.",
@@ -21572,6 +22836,7 @@ class EventVoiceCallEnded(BaseModel):
 
 
 class EventVoiceCallInitiatedData(BaseModel):
+    "Identity fields shared by every voice call lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     call_id: Annotated[str, Field(
         examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21606,6 +22871,7 @@ class EventVoiceCallInitiatedData(BaseModel):
 
 
 class EventVoiceCallInitiated(BaseModel):
+    "Call routing began."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["voice_call.initiated"], Field(
         description="Event type.",
@@ -21628,6 +22894,7 @@ class EventWhatsAppBaseDirection(str, Enum):
 
 
 class EventWhatsAppAcceptedData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21668,6 +22935,7 @@ class EventWhatsAppAcceptedData(BaseModel):
 
 
 class EventWhatsAppAccepted(BaseModel):
+    "The API accepted and charged the send request."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.accepted"], Field(
         description="Event type.",
@@ -21685,6 +22953,7 @@ class EventWhatsAppAccepted(BaseModel):
 
 
 class EventWhatsAppDeliveredData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21728,6 +22997,7 @@ class EventWhatsAppDeliveredData(BaseModel):
 
 
 class EventWhatsAppDelivered(BaseModel):
+    "The message was delivered to the recipient's device."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.delivered"], Field(
         description="Event type.",
@@ -21745,6 +23015,7 @@ class EventWhatsAppDelivered(BaseModel):
 
 
 class EventWhatsAppFailedData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21788,6 +23059,7 @@ class EventWhatsAppFailedData(BaseModel):
 
 
 class EventWhatsAppFailed(BaseModel):
+    "Message delivery failed permanently."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.failed"], Field(
         description="Event type.",
@@ -21805,6 +23077,7 @@ class EventWhatsAppFailed(BaseModel):
 
 
 class WhatsAppGroupJoinRequestSummary(BaseModel):
+    "Someone who asked to be let into a group, as named by a join-request webhook event."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="Unique identifier for the join request. Pass it to the batch-approve and batch-reject operations.",
@@ -21830,6 +23103,7 @@ class WhatsAppGroupJoinRequestSummary(BaseModel):
 
 
 class EventWhatsAppGroupJoinRequestData(BaseModel):
+    "Payload shared by the whatsapp.group.join_request_created and whatsapp.group.join_request_revoked events. Everything about the person who asked is nested under `join_request`; the sibling identifiers name the business side."
     model_config = ConfigDict(extra="allow")
     group_id: Annotated[str, Field(
         description="The group the person asked to join.",
@@ -21855,6 +23129,7 @@ class EventWhatsAppGroupJoinRequestData(BaseModel):
 
 
 class EventWhatsAppGroupJoinRequestCreated(BaseModel):
+    "Someone asked to join a group that requires approval."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.group.join_request_created"], Field(
         description="Always `whatsapp.group.join_request_created` for this event.",
@@ -21870,6 +23145,7 @@ class EventWhatsAppGroupJoinRequestCreated(BaseModel):
 
 
 class EventWhatsAppGroupJoinRequestRevoked(BaseModel):
+    "Someone withdrew their request to join a group before it was decided."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.group.join_request_revoked"], Field(
         description="Always `whatsapp.group.join_request_revoked` for this event.",
@@ -21885,6 +23161,7 @@ class EventWhatsAppGroupJoinRequestRevoked(BaseModel):
 
 
 class EventWhatsAppReactedData(BaseModel):
+    "Payload of the whatsapp.reacted event. Names the message the contact reacted to, not the reaction, because a reaction is an annotation on a message rather than a message of its own."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21910,6 +23187,7 @@ class EventWhatsAppReactedData(BaseModel):
 
 
 class EventWhatsAppReacted(BaseModel):
+    "A contact placed, changed or took back a reaction on a message."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.reacted"], Field(
         description="Always `whatsapp.reacted` for this event.",
@@ -21925,6 +23203,7 @@ class EventWhatsAppReacted(BaseModel):
 
 
 class EventWhatsAppReadData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -21968,6 +23247,7 @@ class EventWhatsAppReadData(BaseModel):
 
 
 class EventWhatsAppRead(BaseModel):
+    "The recipient read the message."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.read"], Field(
         description="Event type.",
@@ -21985,6 +23265,7 @@ class EventWhatsAppRead(BaseModel):
 
 
 class EventWhatsAppReceivedData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22053,6 +23334,7 @@ class EventWhatsAppReceivedData(BaseModel):
 
 
 class EventWhatsAppReceived(BaseModel):
+    "A contact sent the business a WhatsApp message. Not raised while the Meta Business Agent holds the conversation; the message is still stored and returned by the message reads."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.received"], Field(description="Event type.")]
     timestamp: Annotated[str, Field(
@@ -22066,6 +23348,7 @@ class EventWhatsAppReceived(BaseModel):
 
 
 class EventWhatsAppRejectedData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22109,6 +23392,7 @@ class EventWhatsAppRejectedData(BaseModel):
 
 
 class EventWhatsAppRejected(BaseModel):
+    "The API rejected the message before sending it to WhatsApp because the recipient is on the workspace suppression list, the wallet has insufficient balance, or the destination is unpriced. The message is not sent or charged."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.rejected"], Field(
         description="Event type.",
@@ -22126,6 +23410,7 @@ class EventWhatsAppRejected(BaseModel):
 
 
 class EventWhatsAppSentData(BaseModel):
+    "Identity fields shared by every WhatsApp lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22166,6 +23451,7 @@ class EventWhatsAppSentData(BaseModel):
 
 
 class EventWhatsAppSent(BaseModel):
+    "The message was handed to Meta for delivery. Raised for a message your workspace sent through Bird, for one sent from the WhatsApp Business app on a number shared with it (`origin: business_app_echo`), and for one the Meta Business Agent sent on your number (`origin: business_agent_echo`)."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp.sent"], Field(
         description="Event type.",
@@ -22187,6 +23473,7 @@ class EventWhatsAppSuppressionCreatedDataReason(str, Enum):
 
 
 class EventWhatsAppSuppressionCreatedData(BaseModel):
+    "Payload of the whatsapp_suppression.created event."
     model_config = ConfigDict(extra="allow")
     suppression_id: Annotated[str, Field(
         examples=["was_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22214,6 +23501,7 @@ class EventWhatsAppSuppressionCreatedData(BaseModel):
 
 
 class EventWhatsAppSuppressionCreated(BaseModel):
+    "An address was added to the workspace's WhatsApp suppression ledger."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["whatsapp_suppression.created"], Field(
         description="Always `whatsapp_suppression.created` for this event.",
@@ -22425,6 +23713,7 @@ class VoiceParty(BaseModel):
 
 
 class VoiceSessionCredential(BaseModel):
+    "A short-lived SIP digest credential for a calling client. The `password` is returned once and cannot be recovered. Create a new credential if you lose it."
     model_config = ConfigDict(extra="allow")
     username: Annotated[str, Field(
         description="SIP digest username. Always `bird`. The credential identifies the workspace through `realm`. The username does not identify the workspace.",
@@ -22564,6 +23853,7 @@ class VoiceMediaQuality(BaseModel):
 
 
 class VoiceLegCost(BaseModel):
+    "What was charged for a leg, split into the components that make it up."
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
         description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
@@ -22724,6 +24014,7 @@ class NumberOwnershipStatus(str, Enum):
 
 
 class NumberOwnership(BaseModel):
+    "Ownership paperwork and registration approval progress for this number. Reported when ownership requirements or a recorded ownership block or decision apply. If requirements or progress cannot be read, a recorded block or decision preserves this object; without either, the object is absent. Other sending requirements can apply even when ownership is approved."
     model_config = ConfigDict(extra="allow")
     submission_id: Annotated[Optional[str], Field(
         description="The most recent ownership submission for this number, including after approval. Users with compliance read access can view the filed answers and their review status from the number's details in the dashboard. This may be a newer filing than the one that cleared the number for use. Absent when no submission was found or submission progress could not be read.",
@@ -23017,6 +24308,7 @@ class VoiceSIPDigestAlgorithm(str, Enum):
 
 
 class VoiceTrunk(BaseModel):
+    "A SIP trunk's identity and access-control settings."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23128,6 +24420,7 @@ class VoiceTrunkIPACLCreate(BaseModel):
 
 
 class VoiceTrunkUpdate(BaseModel):
+    "A change to the trunk's directions, name, access control, and Digest algorithm\noffer. Every field is optional. An omitted field is left unchanged. The\n`ip_acls`, `allowed_api_key_ids`, and `digest_algorithms` fields each replace\ntheir whole list when present. Send an empty array to clear one. This lets you\ncommit the trunk's entire access configuration in one update.\n\nA direction has to be enabled before its settings can be set, but one update\ncan do both: enable a direction and send its configuration together."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
         description="A human-readable label for this SIP trunk. Mutable, and distinct from the generated wire domain.",
@@ -23166,6 +24459,7 @@ class VoiceTrunkGatewayID(RootModel[str]):
 
 
 class VoiceTrunkGateway(BaseModel):
+    "One address an inbound call to this trunk is forwarded to, and how that peer wants the call's two numbers spelled. A trunk can have several, tried in priority order until one answers."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["vtg_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23205,6 +24499,7 @@ class VoiceTrunkGateway(BaseModel):
 
 
 class VoiceTrunkGatewayList(BaseModel):
+    "The trunk's gateways. Not paginated: a trunk holds a small, hand-managed set of dial targets, and the order across the whole set is what decides hunt order, so a partial page would misrepresent it."
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[VoiceTrunkGateway], Field(
         description="The trunk's gateways, in priority order.",
@@ -23238,6 +24533,7 @@ class VoiceTrunkGatewayCreate(BaseModel):
 
 
 class VoiceTrunkGatewayUpdate(BaseModel):
+    "A change to the gateway's address, its place in the order, or how it wants numbers spelled. Every field is optional; an omitted field is left unchanged."
     model_config = ConfigDict(extra="allow")
     sip_uri: Annotated[Optional[str], Field(
         description="SIP URI an inbound call to this trunk should be forwarded to. Give the host only, with an optional port: which number is dialed there comes from `destination_format`, so a URI carrying a user part is rejected.",
@@ -23468,6 +24764,7 @@ class VoiceNumberUpdate(BaseModel):
 
 
 class VoiceSettingsInboundConfiguration(BaseModel):
+    "What happens to a call arriving for any of your Bird numbers that has no inbound route of its own."
     model_config = ConfigDict(extra="allow")
     route: Annotated[VoiceCallRoute, Field(
         description="What happens to a call arriving for this number, as it is configured now. Its `type` selects the shape, and each answer carries its own fields. Setting a route is a separate shape, and it does not offer every variant reported here.",
@@ -23508,6 +24805,7 @@ class VoiceDailySpendLimit(BaseModel):
 
 
 class VoiceSettings(BaseModel):
+    "The voice settings your workspace controls. Every field carries its effective value, whether or not the workspace has ever changed it."
     model_config = ConfigDict(extra="allow")
     inbound_configuration: Annotated[VoiceSettingsInboundConfiguration, Field(
         description="What happens to a call arriving for any of your Bird numbers that has no inbound route of its own.",
@@ -23518,6 +24816,7 @@ class VoiceSettings(BaseModel):
 
 
 class VoiceSettingsInboundConfigurationPut(BaseModel):
+    "The route for calls arriving on any of your Bird numbers that has no inbound route of its own; verified caller IDs receive no calls. It takes effect on the next call to each of those numbers. Numbers with their own route keep it."
     model_config = ConfigDict(extra="allow")
     route: Annotated[VoiceCallRouteWritable, Field(
         description="What happens to a call arriving for this number. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can set.",
@@ -23532,6 +24831,7 @@ class VoiceDailySpendLimitUpdate(BaseModel):
 
 
 class VoiceSettingsUpdate(BaseModel):
+    "Changes to your workspace's voice settings. Omit a field to leave it as it is."
     model_config = ConfigDict(extra="allow")
     inbound_configuration: Annotated[Optional[VoiceSettingsInboundConfigurationPut], Field(
         description="The route for calls arriving on any of your Bird numbers that has no inbound route of its own; verified caller IDs receive no calls. It takes effect on the next call to each of those numbers. Numbers with their own route keep it.",
@@ -23612,6 +24912,7 @@ class VoiceVerifiedNumberCreate(BaseModel):
 
 
 class VoiceVerifiedNumberUpdate(BaseModel):
+    "A change to the verified number's label. Every field is optional; an omitted field is left unchanged."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
         description="Your new label for this verified number. Send `null` to clear it and go back to identifying the verified number by its number alone. It is yours to choose and appears nowhere on a call, so renaming never affects what the person you are calling sees, and it leaves the number and its verification untouched.",
@@ -23641,6 +24942,7 @@ class EsimSchemaRevision(RootModel[str]):
 
 
 class EsimIdentificationSchema(BaseModel):
+    "Complete JSON Schema draft 2020-12 document for customer-side identification validation. It declares $schema, type, title, description, properties, required, and additionalProperties. Property definitions use string or object types, standard format, pattern, minLength, maxLength, enum, and nested object keywords. Enable format assertions in your validator for email addresses and dates. Every country requires first_name, last_name, and email. Other customer-owned properties are allowed, so one details object can satisfy several countries. Bird does not receive or verify the values. Document references are opaque identifiers in customer-managed storage, not Bird upload IDs or required URLs."
     model_config = ConfigDict(extra="allow")
     pass
 
@@ -23663,6 +24965,7 @@ class EsimOfferStatus(str, Enum):
 
 
 class EsimZone(BaseModel):
+    "A group of countries covered by an offer. Use `countries` to check a destination rather than inferring coverage from the zone name. Purchased packages retain their coverage details from the time of purchase."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23716,6 +25019,7 @@ class EsimServiceCapability(str, Enum):
 
 
 class EsimServiceCapabilities(BaseModel):
+    "Supported services for the eSIM. These values describe capabilities; package balances and current eSIM status determine whether service can be used now. Optional phone service can remain `unknown` until a number is assigned. Data packages do not establish call or SMS allowances."
     model_config = ConfigDict(extra="allow")
     data: Annotated[EsimServiceCapability, Field(
         description="Whether a service is supported. `yes` confirms support, `no` confirms it is not supported, and `unknown` means support has not been established.",
@@ -23743,6 +25047,7 @@ class EsimInstallationState(str, Enum):
 
 
 class EsimInstallation(BaseModel):
+    "Device-side installation state of the eSIM profile."
     model_config = ConfigDict(extra="allow")
     state: Annotated[Annotated[Union[EsimInstallationState, str], Field(union_mode="left_to_right")], Field(
         description="pending: not yet downloaded by a device; downloaded: downloaded but not installed; installed: installed on the device; removed: deleted from the device; whether the profile can be installed again depends on the carrier profile, so treat removal as final; error: download or installation failed, see error_reason. Open enum: installation state is reported by the device, so additional states may be added over time. Treat an unrecognized value as a future state, not an error.",
@@ -23768,6 +25073,7 @@ class EsimPackageStatus(str, Enum):
 
 
 class EsimPackageBalance(BaseModel):
+    "Package allowance and reported consumption. `total_bytes` is the purchased allowance. `used_bytes`, `remaining_bytes`, and `used_percent` are null until usage is reported. Reports can lag device usage; use `as_of` to show when the balance was updated."
     model_config = ConfigDict(extra="allow")
     total_bytes: Annotated[int, Field(
         description="Total data in bytes, as purchased. Known from the order, so never null.",
@@ -23796,6 +25102,7 @@ class EsimPackageBalance(BaseModel):
 
 
 class EsimPackage(BaseModel):
+    "One data package held by an eSIM: a single purchase with its own balance, validity, and coverage zone. Every order that completes creates exactly one package, so a package is always traceable to the order that bought it. An eSIM can hold several packages per zone; the right one is consumed automatically based on the device's location, and zone_balances on the eSIM carries the combined remainder per zone."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["epk_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23844,6 +25151,7 @@ class EsimPackage(BaseModel):
 
 
 class EsimZoneBalance(BaseModel):
+    "Reported balance across packages in one coverage zone. Zones can overlap; check each package’s countries before using these totals to estimate allowance for a destination. The mobile network selects which eligible package serves a connection."
     model_config = ConfigDict(extra="allow")
     zone_id: Annotated[str, Field(
         examples=["ezn_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23891,6 +25199,7 @@ class EsimActionUnavailableReason(str, Enum):
 
 
 class EsimAvailableAction(BaseModel):
+    "One action, and whether this eSIM permits it for you right now."
     model_config = ConfigDict(extra="allow")
     action: Annotated[Union[EsimActionName, str], Field(union_mode="left_to_right")]
     operation: Annotated[str, Field(
@@ -23915,6 +25224,7 @@ class EsimBalanceReporting(str, Enum):
 
 
 class EsimNetworkAttachment(BaseModel):
+    "The most recent mobile network the device attached to."
     model_config = ConfigDict(extra="allow")
     country_code: Annotated[str, Field(
         description="Country of the network.",
@@ -24026,6 +25336,7 @@ class EsimOrderStatus(str, Enum):
 
 
 class EsimDelivery(BaseModel):
+    "Where and how install credentials reach the traveler. The recipient is a raw address, so delivery works for travelers who are not stored anywhere: an email address for email, an E.164 phone number for sms."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
         description="Recipient address. An email address for the email channel, an E.164 phone number for the sms channel.",
@@ -24044,6 +25355,7 @@ class EsimDelivery(BaseModel):
 
 
 class EsimOrderFunding(BaseModel):
+    "Funding needed for an order in `charging`. Add funds to the wallet and retry the existing order. One-time orders also retry automatically. A funded order proceeds to delivery; a failed order receives an automatic credit for any charge."
     model_config = ConfigDict(extra="allow")
     required_amount: Annotated[Money, Field(
         description="Total wallet balance required for the charge, including tax. This is the required balance rather than the amount to add. Compare it with your current wallet balance.",
@@ -24068,6 +25380,7 @@ class EsimOrderFailureCode(str, Enum):
 
 
 class EsimOrder(BaseModel):
+    "One purchase: a new eSIM with its first package, or an additional package on an existing eSIM. The order locks the quote at creation (the offer revision and the exact price) and is the durable record of the purchase: poll it until a terminal status when it does not complete inline. Orders that can be served immediately complete within the request."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -24171,6 +25484,7 @@ class VoiceLegList(BaseModel):
 
 
 class VoiceSequenceDefinitionNode(BaseModel):
+    "An authored node object. Drafts retain incomplete configuration, input and connections for later validation. Connections map output port names to objects with explicit node_id and port fields; validation reports incomplete or invalid targets. Omitted connections or an empty map leaves every output unconnected, with behavior determined by the node contract."
     model_config = ConfigDict(extra="allow")
     pass
 
@@ -24220,12 +25534,14 @@ class VoiceSequenceSavedExecutionEndpoint(BaseModel):
 
 
 class VoiceSequenceSavedExecutionParty(BaseModel):
+    "Saved hypothetical party, or null for an absent observation. Strings may be stale; explicit preview and evaluation validate endpoint types and telephone addresses."
     model_config = ConfigDict(extra="allow")
     endpoint: VoiceSequenceSavedExecutionEndpoint
     address: Annotated[Optional[str], Field(max_length=128, min_length=1)] = None
 
 
 class VoiceSequenceSavedExecutionCallSample(BaseModel):
+    "Saved hypothetical root call identities. Strings may be stale; explicit preview and evaluation require valid typed identifiers."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(max_length=128, min_length=1)]
     session_id: Annotated[str, Field(max_length=128, min_length=1)]
@@ -24238,6 +25554,7 @@ class VoiceSequenceSavedExecutionCallSample(BaseModel):
 
 
 class VoiceSequenceSavedExecutionSample(BaseModel):
+    "Saved hypothetical values, which may be stale or incomplete in meaning. Each string is nonempty and limited to 128 bytes. Explicit preview and evaluation require valid typed identifiers and a timestamp."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(max_length=128, min_length=1)]
     started_at: Annotated[str, Field(max_length=128, min_length=1)]
@@ -24247,6 +25564,7 @@ class VoiceSequenceSavedExecutionSample(BaseModel):
 
 
 class VoiceSequenceSavedPreview(BaseModel):
+    "Saved authoring scenario. Values are checked against node contracts only when explicitly submitted to preview or evaluation."
     model_config = ConfigDict(extra="allow")
     trigger_node_id: Annotated[str, Field(
         description="Stable identifier for a node within one sequence definition.",
@@ -24264,6 +25582,7 @@ class VoiceSequenceSavedPreview(BaseModel):
 
 
 class VoiceSequencePresentation(BaseModel):
+    "Optional editor layout, labels and saved authoring samples. These fields do not drive execution. Their bytes still count toward definition and execution size limits."
     model_config = ConfigDict(extra="allow")
     preview: Annotated[Optional[VoiceSequenceSavedPreview], Field(
         description="Saved authoring scenario. Values are checked against node contracts only when explicitly submitted to preview or evaluation.",
@@ -24314,6 +25633,7 @@ class VoiceCallSequence(BaseModel):
 
 
 class VoiceCall(BaseModel):
+    "A call summary. Call reads report observed state. Call creation returns an immutable acceptance snapshot: `started_at` and `ended_at` are `null`, the boolean observation fields are `false`, and `parties` is empty. Replays return that same snapshot after the call progresses."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24360,6 +25680,7 @@ class VoiceCall(BaseModel):
 
 
 class CreateVoiceCallSequenceRequest(BaseModel):
+    "Supply exactly one of `id`, to run a saved sequence's active publication, or `definition`, to run a sequence once without saving it."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24471,6 +25792,7 @@ class VoiceDestinationList(BaseModel):
 
 
 class VoiceDestinationDailySpendLimitUpdate(BaseModel):
+    "Sets or removes this country's daily spend limit; omit it to leave the limit unchanged. Once today's spend reaches the limit, new calls to the country are refused, verification calls included, whether or not it is enabled; a call already in progress is not cut off, so spend can pass the limit by what that call costs."
     model_config = ConfigDict(extra="allow")
     limit: Annotated[Optional[Money], Field(
         description="The daily spend limit for calls to this country, in your organization's wallet currency, from zero up to the workspace's `max_limit` in Voice settings, with at most six decimal places. Setting an amount needs an organization wallet; removing one does not. Null removes it, so only the workspace's daily limit applies.",
@@ -24529,6 +25851,7 @@ class EsimOfferPhoneInclusion(str, Enum):
 
 
 class EsimOfferPhone(BaseModel):
+    "Phone service included with the plan. Every eSIM sold from the offer gets its own phone number; each flag states one direction of service on that number. A false flag means the plan does not include that service."
     model_config = ConfigDict(extra="allow")
     included: Annotated[EsimOfferPhoneInclusion, Field(
         description="How the plan provides a phone number.\n\n- `always`: a phone number is included with each eSIM purchased from the offer.\n- `on_request`: reserved for offers with an optional phone number; currently unavailable.",
@@ -24552,6 +25875,7 @@ class EsimOfferPhone(BaseModel):
 
 
 class EsimOfferData(BaseModel):
+    "Data allowance of a bundle."
     model_config = ConfigDict(extra="allow")
     amount_bytes: Annotated[int, Field(
         description="Total data allowance in bytes.",
@@ -24575,6 +25899,7 @@ class EsimOfferValidityUnit(str, Enum):
 
 
 class EsimOfferValidity(BaseModel):
+    "How long a package from this offer stays usable. one_time offers run once for the given period after activation; recurring offers renew for a further period each time it lapses. Match on type and treat an unrecognized value as an offer your integration cannot order."
     model_config = ConfigDict(extra="allow")
     type: EsimOfferValidityType
     unit: EsimOfferValidityUnit
@@ -24590,6 +25915,7 @@ class EsimOfferValidity(BaseModel):
 
 
 class EsimOfferBundlePricing(BaseModel):
+    "Fixed-allowance terms: a data allowance with a validity period, charged once per provisioned package."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["bundle"], Field(description="Pricing type.", min_length=1)]
     data: EsimOfferData
@@ -24602,6 +25928,7 @@ class EsimOfferBundlePricing(BaseModel):
 
 
 class EsimOfferSummary(BaseModel):
+    "Compact offer row for lists: the full offer minus the embedded zone. Fetch the offer or its zone for the country list."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24667,6 +25994,7 @@ class EsimOfferList(BaseModel):
 
 
 class EsimOffer(BaseModel):
+    "A purchasable offer from the curated catalog: the commercial terms for prepaid data in one coverage zone, priced as your workspace is billed. The coverage itself lives on the referenced zone, shared by every offer selling the same footprint."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24714,6 +26042,7 @@ class EsimOffer(BaseModel):
 
 
 class EsimCountryRequirements(BaseModel):
+    "Complete identification schema for one covered country. A country without maintained extra requirements returns the baseline schema requiring first_name, last_name, and email. Customers handle collection, validation, and compliance; Bird does not receive or verify these values."
     model_config = ConfigDict(extra="allow")
     country_code: Annotated[str, Field(
         description="ISO 3166-1 alpha-2 country code.",
@@ -24734,6 +26063,7 @@ class EsimCountryRequirements(BaseModel):
 
 
 class EsimOfferRequirements(BaseModel):
+    "Identification guidance for the countries covered by the offer. You collect and validate the information; this response does not verify a person or authorize a purchase."
     model_config = ConfigDict(extra="allow")
     countries: List[EsimCountryRequirements]
 
@@ -24756,6 +26086,7 @@ class EsimOrderList(BaseModel):
 
 
 class EsimOrderRecurrence(BaseModel):
+    "Buy the first package and enable automatic renewal in one purchase. Requires subscriber_id, offer_revision and Idempotency-Key. Omit esim_id and expected_price."
     model_config = ConfigDict(extra="allow")
     recurrence_revision: Annotated[int, Field(
         description="The accepted recurring configuration revision.",
@@ -24765,6 +26096,7 @@ class EsimOrderRecurrence(BaseModel):
 
 
 class EsimOrderCreate(BaseModel):
+    "Request to purchase a data package. Without esim_id, a new eSIM is provisioned carrying the package. With esim_id, the package is added to that eSIM: a new coverage zone stacks alongside existing packages, the same zone adds a further package for it, subject to the eSIM's package_limit and speed class."
     model_config = ConfigDict(extra="allow")
     offer_id: Annotated[str, Field(
         description="Offer to purchase.",
@@ -24822,6 +26154,7 @@ class EsimRecurrenceModel(str, Enum):
 
 
 class EsimCheckoutFunding(BaseModel):
+    "Current funding needed for this purchase, including tax and approved credit. The quoted price excludes tax; `total` includes tax for this purchase. This read reserves no funds; payment checks funding again. Test purchases have zero tax and total and are always covered."
     model_config = ConfigDict(extra="allow")
     tax_amount: Money
     total: Money
@@ -24834,6 +26167,7 @@ class EsimCheckoutFunding(BaseModel):
 
 
 class EsimCheckoutOneTime(BaseModel):
+    "Published one-time price and current funding requirement. The `price` excludes tax; `funding.total` includes tax."
     model_config = ConfigDict(extra="allow")
     funding: Annotated[EsimCheckoutFunding, Field(
         description="Current funding needed for this purchase, including tax and approved credit. The quoted price excludes tax; `total` includes tax for this purchase. This read reserves no funds; payment checks funding again. Test purchases have zero tax and total and are always covered.",
@@ -24846,6 +26180,7 @@ class EsimCheckoutOneTime(BaseModel):
 
 
 class EsimCheckoutRecurringQuote(BaseModel):
+    "Published recurring terms and current funding requirement. The `price` excludes tax; `funding.total` includes tax for the first period. The first period starts when payment is funded, and cancellation stops future renewal while preserving paid packages."
     model_config = ConfigDict(extra="allow")
     funding: Annotated[EsimCheckoutFunding, Field(
         description="Current funding needed for this purchase, including tax and approved credit. The quoted price excludes tax; `total` includes tax for this purchase. This read reserves no funds; payment checks funding again. Test purchases have zero tax and total and are always covered.",
@@ -24901,6 +26236,7 @@ class EsimCheckoutRecurrence(RootModel[EsimCheckoutRecurrence1 | EsimCheckoutRec
 
 
 class EsimCheckoutOptions(BaseModel):
+    "Published purchase terms. Renewal availability is a preview and does not reserve stock."
     model_config = ConfigDict(extra="allow")
     offer_id: Annotated[str, Field(
         examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24916,6 +26252,7 @@ class EsimCheckoutOptions(BaseModel):
 
 
 class EsimRecurringOffer(BaseModel):
+    "The published recurring package price and cadence. Calendar months follow the billing anchor; fixed days use the stated number of 24-hour days."
     model_config = ConfigDict(extra="allow")
     delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
         description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
@@ -25127,6 +26464,7 @@ class EsimRecurringSubscriptionList(BaseModel):
 
 
 class EsimRecurringSubscriptionCreate(BaseModel):
+    "Starts a new paid package period on an existing assigned eSIM. The workspace organization pays; the subscriber has no personal wallet."
     model_config = ConfigDict(extra="allow")
     esim_id: Annotated[str, Field(
         examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25159,6 +26497,7 @@ class EsimRecurringPeriodStatus(str, Enum):
 
 
 class EsimRecurringPeriod(BaseModel):
+    "A funded period and its delivery outcome. Amounts retain the original charged currency and tax; free periods have no wallet transaction."
     model_config = ConfigDict(extra="allow")
     delivery_mode: Annotated[EsimRecurrenceDeliveryMode, Field(
         description="Relationship between the paid period and package delivery.\n\n- `exact_period`: the package covers the accepted paid interval.\n- `recurring_top_up`: each funded period purchases a standard package. Activation, expiry, and accumulation follow that package’s terms.",
@@ -25218,6 +26557,7 @@ class EsimRecurringPeriodList(BaseModel):
 
 
 class EsimSubscriber(BaseModel):
+    "A stable person reference for eSIM service in this workspace. Editing contact details does not change this identity."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25253,6 +26593,7 @@ class EsimSubscriberList(BaseModel):
 
 
 class EsimSubscriberCreate(BaseModel):
+    "Select an existing contact in this workspace. One subscriber is kept per contact. Creating the link requires Contacts read permission and prevents Contact deletion, including after any assigned eSIM ends. Subscriber links cannot currently be removed."
     model_config = ConfigDict(extra="allow")
     contact_id: Annotated[str, Field(
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25266,6 +26607,7 @@ class EsimAssignmentID(RootModel[str]):
 
 
 class EsimAssignment(BaseModel):
+    "The person assigned to one eSIM. Assignment grants no workspace membership or permission to read installation credentials."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["eas_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25287,6 +26629,7 @@ class EsimAssignment(BaseModel):
 
 
 class EsimAssignmentCreate(BaseModel):
+    "Assign an unassigned eSIM to this person. The profile must be allocated and ready, active, or suspended. Customers handle identification collection and compliance."
     model_config = ConfigDict(extra="allow")
     subscriber_id: Annotated[str, Field(
         examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25296,6 +26639,7 @@ class EsimAssignmentCreate(BaseModel):
 
 
 class EsimSummary(BaseModel):
+    "Compact eSIM representation used in lists. Fetch the eSIM by id for the full aggregate with packages, balances, and installation state."
     model_config = ConfigDict(extra="allow")
     subscriber_id: Annotated[Optional[str], Field(
         description="The assigned service user, or null when the eSIM has no person assignment.",
@@ -25345,6 +26689,7 @@ class EsimList(BaseModel):
 
 
 class EsimUpdate(BaseModel):
+    "Fields that can be updated on an eSIM."
     model_config = ConfigDict(extra="allow")
     display_name: Annotated[Optional[str], Field(
         description="Free-text label for your own reference. Null clears it.",
@@ -25360,6 +26705,7 @@ class EsimUpdate(BaseModel):
 
 
 class EsimInstallationInstructions(BaseModel):
+    "Device installation steps based on the available credentials. Follow the list for the recipient’s device."
     model_config = ConfigDict(extra="allow")
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
@@ -25378,6 +26724,7 @@ class EsimInstallationInstructions(BaseModel):
 
 
 class EsimCredentials(BaseModel):
+    "Installation details for an eSIM. Keep activation codes, installation links, QR images, and manual setup credentials private because they can grant access to the profile. Use fields with a value and follow the returned device instructions."
     model_config = ConfigDict(extra="allow")
     esim_id: Annotated[str, Field(
         examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25433,6 +26780,7 @@ class EsimInstallLinkID(RootModel[str]):
 
 
 class EsimInstallLinkMetadata(BaseModel):
+    "Non-secret link details for identifying and revoking a delivered installation link. Contains no token or installation credentials."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["eil_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25458,6 +26806,7 @@ class EsimCredentialsDeliveryFailureCode(str, Enum):
 
 
 class EsimCredentialsDelivery(BaseModel):
+    "One credential delivery to a traveler. Returned when a delivery is accepted and listed on the eSIM's delivery history; the id reappears on the event that settles it."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["edv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25487,11 +26836,13 @@ class EsimCredentialsDelivery(BaseModel):
 
 
 class EsimDeliveryList(BaseModel):
+    "The eSIM's credential deliveries, newest first, most recent 50."
     model_config = ConfigDict(extra="allow")
     data: List[EsimCredentialsDelivery]
 
 
 class EsimInstallLink(BaseModel):
+    "A hosted installation page for one eSIM. The recipient does not need a Bird account. The secret URL is returned at creation and cannot be retrieved through later reads."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["eil_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25518,11 +26869,13 @@ class EsimInstallLink(BaseModel):
 
 
 class EsimPackageList(BaseModel):
+    "The eSIM's data packages. Bounded: an eSIM holds at most package_limit concurrent packages, so the list is returned in full."
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[EsimPackage], Field(description="Packages, newest first.")]
 
 
 class EsimCompatibleOfferList(BaseModel):
+    "Offers this eSIM can take as a top-up right now, given its mobile network, current packages, and package_limit. A point-in-time answer; re-fetch rather than caching."
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[EsimOfferSummary], Field(
         description="Orderable top-up offers for this eSIM.",
@@ -25534,6 +26887,7 @@ class EsimCompatibleOfferList(BaseModel):
 
 
 class EsimSettings(BaseModel):
+    "The eSIM settings your workspace controls. Every field carries its effective value, whether or not the workspace has ever changed it."
     model_config = ConfigDict(extra="allow")
     credential_delivery_enabled: Annotated[bool, Field(
         description="Whether Bird automatically sends an install link after a new eSIM purchase with a linked contact. Uses the contact's email address, or SMS when only a phone number is available. Defaults to `false`. Manual install-link sends remain available regardless of this setting.",
@@ -25542,6 +26896,7 @@ class EsimSettings(BaseModel):
 
 
 class EsimSettingsUpdate(BaseModel):
+    "Changes to your workspace's eSIM settings. Omit a field to leave it as it is."
     model_config = ConfigDict(extra="allow")
     credential_delivery_enabled: Annotated[Optional[bool], Field(
         description="Whether Bird automatically sends an install link after a new eSIM purchase with a linked contact. Uses the contact's email address, or SMS when only a phone number is available. Omit this field to retain the current value; a workspace without saved settings starts with `false`. Manual install-link sends remain available regardless of this setting.",

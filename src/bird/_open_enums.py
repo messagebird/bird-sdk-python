@@ -136,6 +136,57 @@ class DestinationSuperRegion:
     MIDDLE_EAST_AFRICA: Final = "middle_east_africa"
 
 
+class EmailBroadcastParameterProblemCode:
+    """Values of EmailBroadcastParameterProblemCode known at this SDK version (open enum)."""
+
+    AUDIENCE_UNAVAILABLE: Final = "audience_unavailable"
+    CONTACT_PROPERTY_UNKNOWN: Final = "contact_property_unknown"
+    LANGUAGE_UNAVAILABLE: Final = "language_unavailable"
+    PARAMETER_BYTES_EXCEEDED: Final = "parameter_bytes_exceeded"
+    PARAMETER_DEPTH_EXCEEDED: Final = "parameter_depth_exceeded"
+    PARAMETER_DUPLICATE_KEY: Final = "parameter_duplicate_key"
+    PARAMETER_JSON_INVALID: Final = "parameter_json_invalid"
+    PARAMETER_LANGUAGE_INVALID: Final = "parameter_language_invalid"
+    PARAMETER_MAP_INVALID: Final = "parameter_map_invalid"
+    PARAMETER_NAME_INVALID: Final = "parameter_name_invalid"
+    PARAMETER_NAMES_EXCEEDED: Final = "parameter_names_exceeded"
+    PARAMETER_REQUIRED: Final = "parameter_required"
+    PARAMETER_VALUE_UNSUPPORTED: Final = "parameter_value_unsupported"
+    RECIPIENT_RENDER_FAILED: Final = "recipient_render_failed"
+    RENDER_BUDGET_EXCEEDED: Final = "render_budget_exceeded"
+    RENDER_PROFILE_UNSUPPORTED: Final = "render_profile_unsupported"
+    RENDERED_ENVELOPE_INVALID: Final = "rendered_envelope_invalid"
+    SENDER_UNAVAILABLE: Final = "sender_unavailable"
+    SENSITIVE_INPUT_UNSUPPORTED: Final = "sensitive_input_unsupported"
+    TEMPLATE_UNAVAILABLE: Final = "template_unavailable"
+    TRANSPORT_INVALID: Final = "transport_invalid"
+    TRANSPORT_MISSING: Final = "transport_missing"
+
+
+class EmailBroadcastParameterProblemPhase:
+    """Values of EmailBroadcastParameterProblemPhase known at this SDK version (open enum)."""
+
+    EXECUTION: Final = "execution"
+    REQUEST: Final = "request"
+    VALIDATION: Final = "validation"
+
+
+class EmailBroadcastParameterProblemSeverity:
+    """Values of EmailBroadcastParameterProblemSeverity known at this SDK version (open enum)."""
+
+    ERROR: Final = "error"
+
+
+class EmailBroadcastParameterProblemSite:
+    """Values of EmailBroadcastParameterProblemSite known at this SDK version (open enum)."""
+
+    FROM_NAME: Final = "from_name"
+    HTML: Final = "html"
+    REPLY_TO: Final = "reply_to"
+    SUBJECT: Final = "subject"
+    TEXT: Final = "text"
+
+
 class EmailClientFamily:
     """Values of EmailClientFamily known at this SDK version (open enum)."""
 
@@ -309,6 +360,26 @@ class EmailLookupResult:
     VALID: Final = "valid"
 
 
+class EmailTemplateParameterType:
+    """Values of EmailTemplateParameterType known at this SDK version (open enum)."""
+
+    AMOUNT: Final = "amount"
+    CODE: Final = "code"
+    COUNT: Final = "count"
+    CURRENCY: Final = "currency"
+    DATE: Final = "date"
+    DATE_TIME: Final = "date_time"
+    REF: Final = "ref"
+    TEXT: Final = "text"
+    TTL: Final = "ttl"
+
+
+class EmailTemplateParameterValueDomain:
+    """Values of EmailTemplateParameterValueDomain known at this SDK version (open enum)."""
+
+    SCALAR: Final = "scalar"
+
+
 class EmailTemplateSource:
     """Values of EmailTemplateSource known at this SDK version (open enum)."""
 
@@ -323,6 +394,28 @@ class EmailTemplateTheme:
     MATTE: Final = "matte"
     PROTOCOL: Final = "protocol"
     STUDIO: Final = "studio"
+
+
+class EmailTemplateUseKind:
+    """Values of EmailTemplateUseKind known at this SDK version (open enum)."""
+
+    ITERABLE: Final = "iterable"
+    VALUE: Final = "value"
+
+
+class EmailTemplateUseSite:
+    """Values of EmailTemplateUseSite known at this SDK version (open enum)."""
+
+    HTML: Final = "html"
+    SUBJECT: Final = "subject"
+    TEXT: Final = "text"
+
+
+class EmailTemplateVariableSource:
+    """Values of EmailTemplateVariableSource known at this SDK version (open enum)."""
+
+    BIRD: Final = "bird"
+    CONTACT: Final = "contact"
 
 
 class EsimActionName:
@@ -836,6 +929,10 @@ __all__ = [
     "AssetReferenceUsage",
     "DestinationRegion",
     "DestinationSuperRegion",
+    "EmailBroadcastParameterProblemCode",
+    "EmailBroadcastParameterProblemPhase",
+    "EmailBroadcastParameterProblemSeverity",
+    "EmailBroadcastParameterProblemSite",
     "EmailClientFamily",
     "EmailClientPlatform",
     "EmailCompatibilityRuleID",
@@ -851,8 +948,13 @@ __all__ = [
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",
+    "EmailTemplateParameterType",
+    "EmailTemplateParameterValueDomain",
     "EmailTemplateSource",
     "EmailTemplateTheme",
+    "EmailTemplateUseKind",
+    "EmailTemplateUseSite",
+    "EmailTemplateVariableSource",
     "EsimActionName",
     "EsimActionUnavailableReason",
     "LookupFlag",

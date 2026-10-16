@@ -98,6 +98,27 @@ def collect_refs(spec: dict) -> set[str]:
     return reached
 
 
+def prune(spec: dict) -> None:
+    """Keep only the KEEP operations and the components they reach, in place."""
+    kept_paths = {}
+    for path, methods in KEEP.items():
+        item = spec["paths"].get(path)
+        if item is None:
+            sys.exit(f"path not in bundle: {path}")
+        kept_paths[path] = {k: v for k, v in item.items() if k not in HTTP_METHODS or k in methods}
+    spec["paths"] = kept_paths
+
+    reached = collect_refs(spec)
+    for section, entries in list(spec.get("components", {}).items()):
+        if section == "securitySchemes" or not isinstance(entries, dict):
+            continue  # securitySchemes is referenced by the global `security` by name, not $ref
+        kept = {name: val for name, val in entries.items() if f"#/components/{section}/{name}" in reached}
+        if kept:
+            spec["components"][section] = kept
+        else:
+            del spec["components"][section]
+
+
 def find_open_enums(schemas: dict) -> set[str]:
     """Names of the string schemas carrying ``x-extensible-enum`` values."""
     return {
@@ -250,25 +271,7 @@ def main() -> None:
     if not find_open_enums(spec.get("components", {}).get("schemas", {})):
         sys.exit("no x-extensible-enum schemas in the bundle; the convention changed")
 
-    # Prune paths to the kept (path, method) pairs.
-    kept_paths = {}
-    for path, methods in KEEP.items():
-        item = spec["paths"].get(path)
-        if item is None:
-            sys.exit(f"path not in bundle: {path}")
-        kept_paths[path] = {k: v for k, v in item.items() if k not in HTTP_METHODS or k in methods}
-    spec["paths"] = kept_paths
-
-    # Prune component schemas to those reachable from the kept paths.
-    reached = collect_refs(spec)
-    for section, entries in list(spec.get("components", {}).items()):
-        if section == "securitySchemes" or not isinstance(entries, dict):
-            continue  # securitySchemes is referenced by the global `security` by name, not $ref
-        kept = {name: val for name, val in entries.items() if f"#/components/{section}/{name}" in reached}
-        if kept:
-            spec["components"][section] = kept
-        else:
-            del spec["components"][section]
+    prune(spec)
 
     # `--collapse-root-models` rewrites a referenced root-model union into its use
     # site and drops the named class, so the first `$ref` to WebhookEvent

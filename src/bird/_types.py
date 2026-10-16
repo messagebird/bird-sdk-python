@@ -278,6 +278,8 @@ class BroadcastCreateParams(TypedDict, total=False):
     audience_id: str
     template: str
     language: str
+    parameters: Mapping[str, Any] | None | Omit
+    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit
     reply_to: Sequence[EmailAddressInput]
     headers: Mapping[str, str]
     tags: Sequence[Mapping[str, str]]
@@ -301,6 +303,8 @@ class BroadcastUpdateParams(TypedDict, total=False):
     audience_id: str
     template: str | None
     language: str | None
+    parameters: Mapping[str, Any] | None | Omit
+    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit
     reply_to: Sequence[EmailAddressInput] | None
     headers: Mapping[str, str]
     tags: Sequence[Mapping[str, str]]
