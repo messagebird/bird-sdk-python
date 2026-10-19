@@ -1346,7 +1346,6 @@ async def _ex_193() -> None:
 
 async def _ex_194() -> None:
     for allocated in client.numbers.list(country_code="GB"):
-        # kind distinguishes a number you bought from one Bird manages.
         print(allocated.number, allocated.kind, allocated.status)
 
 
@@ -1373,7 +1372,7 @@ async def _ex_197() -> None:
 
 
 async def _ex_198() -> None:
-    # Releasing stops the monthly charge and the number stops working for you.
+    # Releasing stops the recurring charge and the number stops working for you.
     # Only a dedicated number can be released; a shared one answers E14002.
     client.numbers.release("nda_01krdgeqcxet5s7t44vh8rt9mg")
 

@@ -23984,6 +23984,26 @@ class WalletTransactionID(RootModel[str]):
     root: str
 
 
+class BillingInterval(str, Enum):
+    day = "day"
+    month = "month"
+    year = "year"
+
+
+class BillingPricingInterval(BaseModel):
+    "A period: a unit and a count. A day is a fixed 24-hour UTC period. A larger `count` lengthens the period without multiplying the amount quoted for it."
+    model_config = ConfigDict(extra="allow")
+    unit: Annotated[BillingInterval, Field(
+        description="The recurring interval one subscription charge covers.",
+    )]
+    count: Annotated[int, Field(
+        description="Number of units in the period.",
+        examples=[3],
+        ge=1,
+        le=366,
+    )]
+
+
 class BillingProductSlug(RootModel[str]):
     root: str
 
@@ -24033,6 +24053,26 @@ class NumberOwnership(BaseModel):
     )] = None
     next: Annotated[List[NextAction], Field(
         description="Actions that advance ownership registration or activation, in order. Empty when neither needs further action. A `wait` step means no customer action is needed now, including while accepted paperwork awaits activation. Read this list again after each change.",
+    )]
+
+
+class NumberPricing(BaseModel):
+    "What your organization pays for a number it holds, net of tax."
+    model_config = ConfigDict(extra="allow")
+    recurring_price: Annotated[Optional[Money], Field(
+        description="What your organization is charged for this number per `recurring_period`, net of tax, in the currency this number is charged in: your billing currency, unless this number's subscription predates a change of your billing currency, in which case its own currency is returned. `null` when no price applies.",
+    )]
+    recurring_period: Annotated[Optional[BillingPricingInterval], Field(
+        description="The rate's interval, or a fixed price's whole renewal period. `null` when `recurring_price` is `null`.",
+    )]
+    intervals_per_charge: Annotated[Optional[int], Field(
+        description="How many `recurring_period`s one renewal charges. When `releases_at` is set no renewal follows, and the value still describes the subscription's cadence until the release. `1` for a fixed price. `null` when `recurring_price` is `null`.",
+        examples=[12],
+        ge=1,
+    )]
+    error: Annotated[Optional[ErrorBody], Field(
+        description="A retryable failure to read the price. Retry a GET of the number; do not repeat a completed write. `null` when the price was read or no price applies.",
+        examples=["null"],
     )]
 
 
@@ -24102,6 +24142,9 @@ class Number(BaseModel):
     ownership: Annotated[Optional[NumberOwnership], Field(
         description="Ownership paperwork and activation progress. `null` when no ownership requirements, recorded block, or recorded decision apply, or when requirements or progress cannot be read and no ownership block or decision has been recorded. A recorded block still returns an ownership object with `status: unknown` when progress cannot be read; retry the read. We manage the paperwork for shared short codes, so this field is always `null` for them. Other sending requirements can apply even when ownership registration is complete.",
     )] = None
+    pricing: Annotated[Optional[NumberPricing], Field(
+        description="What your organization pays for this number. `null` for a `shared` number, and, when the price was read, for a number with no live subscription. Otherwise its prices are `null` when no price applies. When the price could not be read, every dedicated number carries this object with `error` set, whether or not it has a live subscription.",
+    )]
 
 
 class NumberList(BaseModel):
@@ -24118,6 +24161,25 @@ class NumberList(BaseModel):
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class AvailableNumberPricing(BaseModel):
+    "What your organization pays for an available number, net of tax, in your billing currency."
+    model_config = ConfigDict(extra="allow")
+    setup_price: Annotated[Optional[Money], Field(
+        description="One-off setup fee for your organization, net of tax, in your billing currency. Its `amount` is `\"0\"` when the published fee is zero. `null` when no setup fee applies to this country and number type, and whenever `recurring_price` is `null`.",
+    )]
+    recurring_price: Annotated[Optional[Money], Field(
+        description="What your organization is charged for this number per `recurring_period`, net of tax, in your billing currency, after your agreed prices are applied. `null` when the number cannot be priced for your organization, because its recurring price or a required setup fee has no price; it cannot be ordered then.",
+    )]
+    recurring_period: Annotated[Optional[BillingPricingInterval], Field(
+        description="The period `recurring_price` covers. `null` when `recurring_price` is `null`.",
+    )]
+    intervals_per_charge: Annotated[Optional[int], Field(
+        description="How many `recurring_period`s one charge bills at once. Your organization is charged `recurring_price` multiplied by this at purchase and at each renewal. `null` when `recurring_price` is `null`.",
+        examples=[12],
+        ge=1,
     )]
 
 
@@ -24147,10 +24209,13 @@ class AvailableNumber(BaseModel):
         description="Capabilities supported by this number.",
     )]
     ownership_registration_required: Annotated[bool, Field(
-        description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any setup fee is charged during purchase. Monthly billing starts at assignment even while approval is pending; assignment may follow completion of a pending supplier order.",
+        description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any `pricing.setup_price` is charged during purchase, plus any tax. The recurring charge, net of tax `pricing.recurring_price` multiplied by `pricing.intervals_per_charge`, is taken with any tax at assignment and at each renewal, even while approval is pending; assignment may follow completion of a pending supplier order.",
     )]
     ownership_address_scope: Annotated[Optional[Annotated[Union[AvailableNumberOwnershipAddressScope, str], Field(union_mode="left_to_right")]], Field(
         description="Where the carrier requires the business address on this number's ownership registration\nto be. Present only when the carrier itself registers the number before it carries\ntraffic and states a rule; omitted otherwise. An address that does not meet the rule\nis refused after purchase, and only an address that meets it can fix the registration.\n\n- `anywhere`: any business address.\n- `country`: a business address in the number's country.\n- `number_area`: a business address inside the number's own area code, for example in\n  Amsterdam for an Amsterdam (020) number.",
+    )] = None
+    pricing: Annotated[Optional[AvailableNumberPricing], Field(
+        description="What your organization pays for this number. Omitted on admin supplier searches, which have no organization to price for.",
     )] = None
 
 

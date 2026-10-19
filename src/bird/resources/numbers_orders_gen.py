@@ -42,7 +42,7 @@ class NumbersOrders(Resource):
         reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
-        """Buys a number and starts its monthly charge. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
+        """Buys a number and starts its recurring charge. The available number's `pricing` is a current price, not a quote: the order resolves the price again when it charges. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
 
         ```python
         order = client.numbers.orders.create(number="+447700900201")
@@ -124,7 +124,7 @@ class AsyncNumbersOrders(AsyncResource):
         reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
-        """Buys a number and starts its monthly charge. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
+        """Buys a number and starts its recurring charge. The available number's `pricing` is a current price, not a quote: the order resolves the price again when it charges. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
 
         ```python
         order = await client.numbers.orders.create(number="+447700900201")
