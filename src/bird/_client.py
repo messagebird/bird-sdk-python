@@ -43,7 +43,7 @@ from bird.resources.numbers import AsyncNumbers, Numbers
 from bird.resources.broadcasts import AsyncBroadcasts, Broadcasts
 from bird.resources.assets import Assets, AsyncAssets
 from bird.resources.preferences import AsyncPreferences, Preferences
-from bird.resources.workspace_gen import AsyncWorkspaceResource, WorkspaceResource
+from bird.resources.workspace import AsyncWorkspaceResource, WorkspaceResource
 from bird.resources.realtime import AsyncRealtime, Realtime
 from bird.resources.amb import AsyncAmb, Amb
 from bird.resources.esim import AsyncEsim, Esim

@@ -66,6 +66,16 @@ class NextAction:
     url: str | None = None
 
 
+@dataclass(frozen=True)
+class QuotaContext:
+    """The quota limit that refused a resource change. ``scope`` is ``organization``
+    for the limit shared by every workspace in the organization, or ``workspace``
+    for a limit set on the workspace itself."""
+
+    quota_key: str
+    scope: str
+
+
 
 
 class BirdError(Exception):
@@ -128,6 +138,7 @@ class APIStatusError(APIError):
         vendor_code: str | None = None,
         remediation: str | None = None,
         next: list[NextAction] | None = None,
+        quota: QuotaContext | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -140,6 +151,7 @@ class APIStatusError(APIError):
         self.vendor_code = vendor_code
         self.remediation = remediation
         self.next = next or []
+        self.quota = quota
 
     def __str__(self) -> str:
         return f"{self.message} (status {self.status_code}, type {self.type}, request_id {self.request_id})"
@@ -237,6 +249,7 @@ def from_response(status_code: int, body: bytes | str, headers: Mapping[str, str
             for n in (data.get("next") or [])  # `or []` handles both an absent key and an explicit null
             if isinstance(n, dict)
         ],
+        "quota": _quota(data.get("quota")),
     }
 
     if type_ == ErrorType.rate_limit:
@@ -266,3 +279,14 @@ def parse_retry_after(headers: Mapping[str, str]) -> float | None:
             return None
         seconds = (when - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
     return seconds if seconds >= 0 else None
+
+
+def _quota(raw: Any) -> QuotaContext | None:
+    """The refusing quota limit, or ``None``. A malformed context is dropped rather
+    than raised: an error response must always arrive as its own error."""
+    if not isinstance(raw, dict):
+        return None
+    quota_key, scope = raw.get("quota_key"), raw.get("scope")
+    if not (isinstance(quota_key, str) and isinstance(scope, str)):
+        return None
+    return QuotaContext(quota_key=quota_key, scope=scope)

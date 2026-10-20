@@ -258,6 +258,7 @@ def test_surface_conformance() -> None:
     assert callable(client.webhooks.rotate_secret)
     assert callable(client.webhooks.update)
     assert callable(client.workspace.get)
+    assert callable(client.workspace.quotas.list)
     assert callable(client.webhooks.unwrap)
     assert callable(client.preferences.list)
     assert callable(client.preferences.get)

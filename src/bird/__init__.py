@@ -234,6 +234,8 @@ from bird._generated import (
     WhatsAppTemplateList,
     WhatsAppTemplateVersion,
     WhatsAppTemplateVersionSummary,
+    WorkspaceQuota,
+    WorkspaceQuotaList,
 )
 from bird.resources.audiences_gen import (
     AudienceAddContactsParams,
@@ -570,6 +572,7 @@ from bird._open_enums import (
     NumbersOrderStatus,
     PreferenceChannel,
     PreferenceOrigin,
+    QuotaSource,
     SMSErrorCode,
     SMSKeywordOperation,
     SMSSuppressionCoverage,
@@ -622,6 +625,7 @@ from bird._exceptions import (
     ErrorType,
     MissingAPIKeyError,
     NextAction,
+    QuotaContext,
     RateLimitError,
     ValidationError,
     WebhookVerificationError,
@@ -1146,6 +1150,8 @@ __all__ = [
     "WhatsAppTemplateVersionSummary",
     "WhatsAppTemplateLanguage",
     "WhatsAppTemplateLanguageList",
+    "WorkspaceQuota",
+    "WorkspaceQuotaList",
     "VerifyVerificationsCreateParams",
     "VerifyVerificationsCheckParams",
     "VerifyVerificationsNextChannelParams",
@@ -1213,6 +1219,7 @@ __all__ = [
     "NumbersOrderStatus",
     "PreferenceChannel",
     "PreferenceOrigin",
+    "QuotaSource",
     "SMSErrorCode",
     "SMSKeywordOperation",
     "SMSSuppressionCoverage",
@@ -1265,5 +1272,6 @@ __all__ = [
     "ErrorDetail",
     "ErrorType",
     "NextAction",
+    "QuotaContext",
     "__version__",
 ]

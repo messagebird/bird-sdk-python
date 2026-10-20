@@ -2489,3 +2489,9 @@ async def _ex_370() -> None:
 async def _ex_371() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)
+
+
+async def _ex_372() -> None:
+    quotas = client.workspace.quotas.list()
+    for quota in quotas.data:
+        print(quota.key, quota.limit, quota.organization_limit)

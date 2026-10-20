@@ -9,7 +9,7 @@ from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 
 
-class WorkspaceResource(Resource):
+class WorkspaceBase(Resource):
     def get(
         self,
         *,
@@ -30,7 +30,7 @@ class WorkspaceResource(Resource):
         )
 
 
-class AsyncWorkspaceResource(AsyncResource):
+class AsyncWorkspaceBase(AsyncResource):
     async def get(
         self,
         *,

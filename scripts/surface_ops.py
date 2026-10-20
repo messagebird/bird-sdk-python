@@ -198,6 +198,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/webhooks/{webhook_id}/replay": {"post"},
     "/v1/webhooks/{webhook_id}/rotate-secret": {"post"},
     "/v1/workspace": {"get"},
+    "/v1/workspace/quotas": {"get"},
     "/v1/preferences": {"get", "post"},
     "/v1/preferences/{preference_id}": {"delete", "get"},
     "/v1/contacts": {"get", "post"},

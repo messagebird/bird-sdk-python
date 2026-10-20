@@ -549,6 +549,14 @@ class PreferenceOrigin:
     USER: Final = "user"
 
 
+class QuotaSource:
+    """Values of QuotaSource known at this SDK version (open enum)."""
+
+    DEFAULT: Final = "default"
+    OVERRIDE: Final = "override"
+    PLAN: Final = "plan"
+
+
 class SMSErrorCode:
     """Values of SMSErrorCode known at this SDK version (open enum)."""
 
@@ -1054,6 +1062,7 @@ __all__ = [
     "NumbersOrderStatus",
     "PreferenceChannel",
     "PreferenceOrigin",
+    "QuotaSource",
     "SMSErrorCode",
     "SMSKeywordOperation",
     "SMSRegistrationProgram",

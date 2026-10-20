@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from bird._exceptions import NextAction, ValidationError, from_response
+from bird._exceptions import NextAction, QuotaContext, ValidationError, from_response
 from bird._generated import ErrorBody
 from bird._generated import NextAction as WireNextAction
 
@@ -29,6 +29,7 @@ WIRE_TO_ATTR = {
     "details": "details",
     "remediation": "remediation",
     "next": "next",
+    "quota": "quota",
 }
 
 
@@ -122,3 +123,15 @@ def test_from_response_tolerates_null_or_absent_next(next_value: str) -> None:
     err = from_response(409, body, {})
     assert err.next == []
     assert err.remediation == "r"
+
+
+def test_from_response_surfaces_quota_context() -> None:
+    """The refusing quota limit is read from the body and is absent when the API
+    sent none."""
+    body = {"error": {"type": "validation_error", "code": "E06009", "message": "x", "quota": {"quota_key": "webhook_subscriptions_max", "scope": "workspace"}}}
+    err = from_response(422, json.dumps(body), {})
+    assert isinstance(err, ValidationError)
+    assert err.quota == QuotaContext(quota_key="webhook_subscriptions_max", scope="workspace")
+    bare = from_response(422, json.dumps({"error": {"type": "validation_error", "code": "E06009", "message": "x"}}), {})
+    assert isinstance(bare, ValidationError)
+    assert bare.quota is None

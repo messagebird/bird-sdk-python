@@ -49,6 +49,24 @@ class NextAction(BaseModel):
     )] = None
 
 
+class QuotaScope(str, Enum):
+    organization = "organization"
+    workspace = "workspace"
+
+
+class QuotaErrorContext(BaseModel):
+    "The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can raise or remove the workspace ceiling; the shared organization limit still applies."
+    model_config = ConfigDict(extra="allow")
+    quota_key: Annotated[str, Field(
+        description="Stable key of the quota that refused the change.",
+        examples=["email_mailboxes_max"],
+        min_length=1,
+    )]
+    scope: Annotated[QuotaScope, Field(
+        description="Which limit refused the request.\n\n- `organization`: the limit shared by every workspace in the organization.\n- `workspace`: the limit set for this workspace.",
+    )]
+
+
 class ErrorBodyType(str, Enum):
     auth_error = "auth_error"
     bad_request_error = "bad_request_error"
@@ -113,6 +131,9 @@ class ErrorBody(BaseModel):
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
         description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.",
+    )] = None
+    quota: Annotated[Optional[QuotaErrorContext], Field(
+        description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can raise or remove the workspace ceiling; the shared organization limit still applies.",
     )] = None
 
 
@@ -220,6 +241,142 @@ class Workspace(BaseModel):
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class WorkspaceQuotaKind(str, Enum):
+    counted = "counted"
+    value = "value"
+
+
+class WorkspaceQuotaEnforcement(str, Enum):
+    create = "create"
+    outbound_send = "outbound_send"
+    value = "value"
+
+
+class QuotaSource(str, Enum):
+    default = "default"
+    plan = "plan"
+    override = "override"
+
+
+class WorkspaceQuotaCeilingStatus(str, Enum):
+    active = "active"
+    expired = "expired"
+
+
+class WorkspaceQuotaCeiling(BaseModel):
+    "A workspace's own limit for a quota. It is a ceiling, not reserved capacity; the organization limit still applies."
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[int, Field(
+        description="The workspace limit, in the quota's unit. It can exceed the organization limit. Zero allows nothing more.",
+        ge=0,
+    )]
+    status: Annotated[WorkspaceQuotaCeilingStatus, Field(
+        description="Whether the workspace limit applies.\n\n- `active`: the limit applies alongside the organization limit.\n- `expired`: the limit passed its expiry and no longer applies. It stays visible until it is replaced or removed.",
+    )]
+    expires_at: Annotated[Optional[str], Field(
+        description="When the workspace limit stops applying. `null` means it has no expiry.",
+    )]
+    updated_at: Annotated[str, Field(
+        description="When the workspace limit was last set.",
+        min_length=1,
+    )]
+
+
+class WorkspaceQuotaUsageStatus(str, Enum):
+    available = "available"
+    unavailable = "unavailable"
+
+
+class WorkspaceQuotaUsage(BaseModel):
+    "Current usage, measured against the organization limit that requests were checked against when it was read. That limit can briefly differ from the configured `organization_limit` after it changes."
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[WorkspaceQuotaUsageStatus, Field(
+        description="Whether current usage could be read.\n\n- `available`: the counts reflect usage at `observed_at`.\n- `unavailable`: usage could not be read. The counts are unknown, not zero.",
+    )]
+    observed_at: Annotated[str, Field(description="When usage was read.", min_length=1)]
+    organization_limit: Annotated[int, Field(
+        description="The organization limit requests were checked against when usage was read.",
+        ge=0,
+    )]
+    organization_used: Annotated[Optional[int], Field(
+        description="The organization's total usage across all its workspaces. `null` on the current-workspace endpoint or when usage is unavailable.",
+        ge=0,
+    )]
+    workspace_used: Annotated[Optional[int], Field(
+        description="This workspace's usage. `null` when usage is unavailable.",
+        ge=0,
+    )]
+    organization_remaining: Annotated[Optional[int], Field(
+        description="How much more the whole organization can add, shared by all its workspaces. `null` on the current-workspace endpoint or when usage is unavailable.",
+        ge=0,
+    )]
+    workspace_remaining: Annotated[Optional[int], Field(
+        description="How much more this workspace can add under its own limit. `null` when no workspace limit applies or usage is unavailable.",
+        ge=0,
+    )]
+    remaining: Annotated[Optional[int], Field(
+        description="How much more this workspace can add now, the lower of `organization_remaining` and any `workspace_remaining`. `null` on the current-workspace endpoint or when usage is unavailable.",
+        ge=0,
+    )]
+
+
+class WorkspaceQuota(BaseModel):
+    "A resource or value quota as it applies to one workspace."
+    model_config = ConfigDict(extra="allow")
+    key: Annotated[str, Field(
+        description="Stable key of the quota.",
+        examples=["email_mailboxes_max"],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(min_length=1)]
+    description: Annotated[str, Field(min_length=1)]
+    unit: Annotated[str, Field(
+        description="What the limit counts, such as `mailboxes`, `bytes` or `days`.",
+        examples=["mailboxes"],
+        min_length=1,
+    )]
+    kind: Annotated[WorkspaceQuotaKind, Field(
+        description="What the quota limits.\n\n- `counted`: an amount the workspace accumulates, such as mailboxes or stored bytes. Usage is reported.\n- `value`: the largest setting a resource may be given, such as a retention period. No usage is counted.",
+    )]
+    enforcement: Annotated[WorkspaceQuotaEnforcement, Field(
+        description="When the limits are applied.\n\n- `create`: a request that would add more than the limits allow is refused, and nothing is created.\n- `outbound_send`: sending is refused once the bytes already stored reach a limit. The size of the message being sent is not counted in advance, and incoming mail is still accepted.\n- `value`: a setting above the limit is refused when it is chosen. Existing resources keep their settings.",
+    )]
+    maximum_value: Annotated[int, Field(
+        description="The largest workspace limit this quota accepts, in its unit.",
+        ge=0,
+    )]
+    organization_limit: Annotated[int, Field(
+        description="The organization's limit, shared by all its workspaces.",
+        ge=0,
+    )]
+    organization_source: Annotated[Annotated[Union[QuotaSource, str], Field(union_mode="left_to_right")], Field(
+        description="Where the organization limit comes from.\n\n- `default`: Bird's standard limit.\n- `plan`: the organization's plan.\n- `override`: a limit Bird set for the organization.",
+    )]
+    workspace_limit: Annotated[Optional[WorkspaceQuotaCeiling], Field(
+        description="The workspace's own limit. `null` when the workspace has none and uses only the shared organization limit.",
+    )]
+    limit: Annotated[int, Field(
+        description="The lower of the organization limit currently applied to requests and any active workspace limit. The applied organization limit can briefly differ from the configured `organization_limit` after a change. A request can still be refused below this value when other workspaces use the shared organization limit.",
+        ge=0,
+    )]
+    usage: Annotated[Optional[WorkspaceQuotaUsage], Field(
+        description="Current usage. `null` for a `value` quota, which counts nothing.",
+    )]
+
+
+class WorkspaceQuotaConfigurationStatus(str, Enum):
+    available = "available"
+    unavailable = "unavailable"
+
+
+class WorkspaceQuotaList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[WorkspaceQuota]
+    configuration: Annotated[WorkspaceQuotaConfigurationStatus, Field(
+        description="Whether workspace limits can be set.\n\n- `available`: workspace limits can be set and changed.\n- `unavailable`: new workspace limits cannot be set in this region yet. Existing workspace limits still apply and can be removed.",
+    )]
 
 
 class ComplianceIdentityID(RootModel[str]):
@@ -25245,6 +25402,10 @@ class AutomationPortKey(RootModel[str]):
     root: str
 
 
+class VoiceNumberID(RootModel[str]):
+    root: str
+
+
 class BillingResolvedPrice(BaseModel):
     model_config = ConfigDict(extra="allow")
     unit_price: Money
@@ -25672,10 +25833,6 @@ class VoiceCallRouteType(str, Enum):
     trunk = "trunk"
     forward = "forward"
     sequence = "sequence"
-
-
-class VoiceNumberID(RootModel[str]):
-    root: str
 
 
 class VoiceNumberProviderAllocation(BaseModel):
