@@ -138,6 +138,10 @@ class UserID(RootModel[str]):
     root: str
 
 
+class ProductID(RootModel[str]):
+    root: str
+
+
 class OrganizationID(RootModel[str]):
     root: str
 
@@ -164,6 +168,26 @@ class DestinationRegion(str, Enum):
     south_east_asia = "south_east_asia"
     east_asia = "east_asia"
     oceania = "oceania"
+
+
+class SMSRegistrationMode(str, Enum):
+    none = "none"
+    optional = "optional"
+    required = "required"
+
+
+class SMSSenderIDBehavior(str, Enum):
+    unknown = "unknown"
+    preserved = "preserved"
+    overwritten = "overwritten"
+
+
+class SMSRegistrationProgram(str, Enum):
+    _10dlc = "10dlc"
+    tfn = "tfn"
+    alpha = "alpha"
+    numeric = "numeric"
+    short_code = "short_code"
 
 
 class CountryCode(RootModel[str]):
@@ -196,6 +220,10 @@ class Workspace(BaseModel):
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class ComplianceIdentityID(RootModel[str]):
+    root: str
 
 
 class RealtimeEventName(RootModel[str]):
@@ -3997,8 +4025,136 @@ class SMSKeywordRuleUpdate(BaseModel):
     )] = None
 
 
+class ComplianceDataType(str, Enum):
+    string = "string"
+    text = "text"
+    enum = "enum"
+    number = "number"
+    boolean = "boolean"
+    date = "date"
+    url = "url"
+    country = "country"
+    document = "document"
+
+
+class ComplianceRequirementFieldOption(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[str, Field(description="What to send.", min_length=1)]
+    label: Annotated[str, Field(description="What to show.", min_length=1)]
+
+
+class ComplianceFieldValidation(BaseModel):
+    "Constraints a value must satisfy, where the requirement sets any. Which of these apply follows from its data type: `pattern`, `min_length` and `max_length` constrain `string` and `text` values, `minimum` and `maximum` constrain `number` values, and everything else is `null`. Check these before submitting and you avoid a round trip."
+    model_config = ConfigDict(extra="allow")
+    pattern: Annotated[Optional[str], Field(
+        description="A regular expression the value must match. `null` when the requirement takes neither `string` nor `text`, or sets no pattern.",
+    )] = None
+    min_length: Annotated[Optional[int], Field(
+        description="Shortest accepted value. `null` when the requirement takes neither `string` nor `text`, or sets no minimum length.",
+    )] = None
+    max_length: Annotated[Optional[int], Field(
+        description="Longest accepted value. `null` when the requirement takes neither `string` nor `text`, or sets no maximum length.",
+    )] = None
+    minimum: Annotated[Optional[float], Field(
+        description="Smallest accepted number. `null` when the requirement does not take `number`, or sets no minimum.",
+    )] = None
+    maximum: Annotated[Optional[float], Field(
+        description="Largest accepted number. `null` when the requirement does not take `number`, or sets no maximum.",
+    )] = None
+
+
 class AttachmentID(RootModel[str]):
     root: str
+
+
+class ComplianceItemState(str, Enum):
+    not_supplied = "not_supplied"
+    supplied = "supplied"
+    in_review = "in_review"
+    approved = "approved"
+    rejected = "rejected"
+    not_applicable = "not_applicable"
+    expired = "expired"
+
+
+class ComplianceRequirementField(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    parent_key: Annotated[Optional[str], Field(
+        description="Parent field grouping this named document. Absent for an ordinary field.",
+    )] = None
+    document_key: Annotated[Optional[str], Field(
+        description="Stable document key within the parent field. Absent for an ordinary field.",
+    )] = None
+    parent_label: Annotated[Optional[str], Field(
+        description="Display name of the parent field grouping this document. Absent for an ordinary field.",
+    )] = None
+    parent_help_text: Annotated[Optional[str], Field(
+        description="The parent field's own description, shared by every document in the group. Each document's `help_text` describes that document alone. Absent for an ordinary field and when the parent has no description.",
+    )] = None
+    key: Annotated[str, Field(
+        description="Identifies this requirement. Use it as the key when you submit a value.",
+        min_length=1,
+    )]
+    label: Annotated[str, Field(
+        description="What to call this requirement when you ask someone for it.",
+        min_length=1,
+    )]
+    help_text: Annotated[Optional[str], Field(
+        description="Guidance on what a good answer looks like, including anything the destination country expects. `null` when the label speaks for itself.",
+    )]
+    data_type: ComplianceDataType
+    required: Annotated[bool, Field(
+        description="Whether an answer is needed before the registration can be approved. Optional requirements are still reviewed when you supply them.",
+    )]
+    section: Annotated[str, Field(
+        description="A stable key grouping related requirements together. Use it to keep your own grouping consistent across requests; use section_label for what to show someone.",
+        min_length=1,
+    )]
+    section_label: Annotated[str, Field(
+        description="What to call this requirement's group when you present it.",
+        min_length=1,
+    )]
+    options: Annotated[List[ComplianceRequirementFieldOption], Field(
+        description="The accepted values, already resolved, when the data type is `enum`. Empty for every other type.",
+    )]
+    validation: ComplianceFieldValidation
+    template_url: Annotated[Optional[str], Field(
+        description="A blank form to download, complete and upload back, for requirements that need a signed document. `null` when the requirement has no form to download.",
+    )]
+    max_items: Annotated[Optional[int], Field(
+        description="How many answers this requirement takes, when it takes more than one. `null` for a requirement answered once, which is most of them. Where it is set, answer with `values` or `attachment_ids` and read your answer back from the same pair; `value` and `attachment_id` stay `null`. Order is kept as you send it, and it is part of the answer: a keyword list beginning with `STOP` is not the same declaration as one ending with it.",
+    )]
+    value: Annotated[Optional[str], Field(
+        description="Your answer, for a requirement answered inline. Every answer travels as a string whatever its data type, so a number reads back as `\"1500\"` and a yes-or-no as `\"true\"`. Use the data type to parse it. `null` for a requirement that takes a document, and before you have answered.",
+    )]
+    prefilled: Annotated[bool, Field(
+        description="`true` when `value` comes from the party this registration is for. Accept it as it stands or replace it; either way it becomes your answer when you submit. Only a requirement that asks about the party is ever prefilled.",
+    )]
+    attachment_id: Annotated[Optional[str], Field(
+        description="The document you supplied, for a requirement that takes one. `null` otherwise.",
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    values: Annotated[Optional[List[str]], Field(
+        description="Your answers, for a requirement that takes several and is answered inline. Set only when `max_items` is, and `null` otherwise, including before you have answered. Each answer travels as a string whatever the data type, the same as `value`.",
+    )]
+    attachment_ids: Annotated[Optional[List[str]], Field(
+        description="The documents you supplied, for a requirement that takes several. Set only when `max_items` is and the requirement takes documents, and `null` otherwise.",
+    )]
+    state: Annotated[Union[ComplianceItemState, str], Field(union_mode="left_to_right")]
+    decided_at: Annotated[Optional[str], Field(
+        description="When this was decided. `null` while no decision has been made.",
+    )]
+    expires_at: Annotated[Optional[str], Field(
+        description="When this answer goes stale and must be supplied again. `null` when it does not expire.",
+    )]
+    editable_for_verifier_repair: Annotated[bool, Field(
+        description="Whether you may replace this accepted answer to correct the submission after external verification. This permission does not change its `state` or `reason`. Submit only answers whose content or attachment identity you change.",
+    )]
+    reason: Annotated[Optional[str], Field(
+        description="Why this requirement was rejected, when it was. `null` otherwise.",
+    )]
 
 
 class AttachmentStatus(str, Enum):
@@ -4007,7 +4163,7 @@ class AttachmentStatus(str, Enum):
 
 
 class Attachment(BaseModel):
-    "A supporting document uploaded for an SMS registration (10DLC campaign evidence, toll-free verification opt-in screenshots). Reference it from the registration's own attachment-id field to submit it as evidence."
+    "A supporting document uploaded for compliance answers or SMS registrations, including number ownership evidence, 10DLC campaign evidence and toll-free verification opt-in screenshots. Reference its ID from the relevant answer or registration attachment field to submit it as evidence."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -4046,6 +4202,138 @@ class Attachment(BaseModel):
     expires_at: Annotated[Optional[str], Field(
         description="When this attachment is discarded if nothing is registered or submitted with it. Null once its status is `attached`.",
     )]
+
+
+class SMSSenderID(RootModel[str]):
+    root: str
+
+
+class ComplianceIdentitySortField(str, Enum):
+    created_at = "created_at"
+    name = "name"
+
+
+class ComplianceIdentityAnswer(BaseModel):
+    "One business detail this party last submitted, and when it was filed."
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[str, Field(
+        description="The detail as last submitted. Every value travels as a string whatever the requirement's data type, so a number reads back as `\"1500\"`.",
+        min_length=1,
+    )]
+    submitted_at: Annotated[Optional[str], Field(
+        description="When this party last filed the detail. Filing it is what records it here, so it is never a statement that a reviewer agreed with the value. Filing the same value again can carry a previous approval of it forward instead of putting it in front of a reviewer. `null` for a detail recorded before the container began tracking submissions.",
+    )]
+    state: Annotated[Optional[Annotated[Union[ComplianceItemState, str], Field(union_mode="left_to_right")]], Field(
+        description="Where review has got to on this exact value. Absent when no registration has ruled on it, which covers a detail nobody has reached yet and one filed before the container recorded which submission it came from.\nOne value can be filed on several registrations and decided differently on each, and one verdict is reported for it. A live approval wins, because it is proof the value is acceptable. Failing that a refusal wins over a registration still waiting, since waiting is nobody having looked yet rather than evidence against a refusal. An approval past its validity period is neither: it reads as `expired` and ranks below a refusal, above anything still waiting. `not_applicable` is reported last, because it is a statement about a requirement rather than about the value.",
+    )] = None
+    reason: Annotated[Optional[str], Field(
+        description="What has to change, when `state` is one a reviewer refused. `null` otherwise, and `null` on a refusal recorded without one.",
+    )] = None
+    decided_at: Annotated[Optional[str], Field(
+        description="When the verdict in `state` was reached. `null` while nobody has decided, and on a state no reviewer set.",
+    )] = None
+
+
+class ComplianceIdentity(BaseModel):
+    "A party you register on behalf of: your own business, or one of your clients. Reusing an identity across registrations is what stops you retyping the same business details for every country, and lets a fact reviewed once stand for the registrations that follow."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="What you call this party. Yours to choose; it is never sent to a carrier.",
+        examples=["Goldcrest Communications SAS"],
+        min_length=1,
+    )]
+    answers: Annotated[Dict[str, ComplianceIdentityAnswer], Field(
+        description="The business details this party has supplied, keyed by requirement. Filled in for you: a single-value detail lands here the moment you file it on one of your registrations, so the next one prefills it rather than asking again. Only requirements a country marks as being about the party appear; anything about a specific sender is asked fresh each time.",
+    )]
+    created_at: Annotated[str, Field(min_length=1)]
+    updated_at: Annotated[str, Field(min_length=1)]
+
+
+class ComplianceIdentityList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[ComplianceIdentity]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class ComplianceIdentityCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="What you call this party. Yours to choose; it is never sent to a carrier.",
+        examples=["Goldcrest Communications SAS"],
+        max_length=200,
+        min_length=1,
+    )]
+
+
+class ValidationError(BaseModel):
+    "Field validation error. Uses the standard error envelope with `type` set to `validation_error` and `details` always present."
+    model_config = ConfigDict(extra="allow")
+    error: ErrorBody
+
+
+class ComplianceIdentityUpdate(BaseModel):
+    "Renames the party. Single-value identity answers are filled in when you submit or resupply a registration, regardless of its review outcome. Edit those answers through the registration."
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="What you call this party. Yours to choose; it is never sent to a carrier.",
+        examples=["Goldcrest Communications SAS"],
+        max_length=200,
+        min_length=1,
+    )]
+
+
+class AttachmentList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[Attachment]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class AttachmentUpload(BaseModel):
+    "The file to upload, sent as a `multipart/form-data` body."
+    model_config = ConfigDict(extra="allow")
+    file: Annotated[str, Field(
+        description="The file to attach. PNG, JPEG, or PDF, up to 10 MB. The file's contents determine its type; a declared content type is ignored.",
+        min_length=1,
+    )]
+    description: Annotated[Optional[str], Field(
+        description="A short note describing what the file shows.",
+        max_length=255,
+    )] = None
 
 
 class AssetKindFilter(str, Enum):
@@ -4303,8 +4591,295 @@ class AssetFolderUpdate(BaseModel):
     )] = None
 
 
+class ComplianceSubjectKind(str, Enum):
+    sms_sender = "sms_sender"
+    number = "number"
+    identity = "identity"
+
+
+class ComplianceSubjectID(RootModel[str]):
+    root: str
+
+
+class ComplianceProgram(str, Enum):
+    alpha = "alpha"
+    numeric = "numeric"
+    mobile = "mobile"
+    local = "local"
+    national = "national"
+    short_code = "short_code"
+    short_code_fteu = "short_code_fteu"
+    toll_free = "toll_free"
+    business = "business"
+
+
 class ComplianceSubmissionID(RootModel[str]):
     root: str
+
+
+class ComplianceObligationReason(str, Enum):
+    policy_change = "policy_change"
+    evidence_expiry = "evidence_expiry"
+    verdict_withdrawn = "verdict_withdrawn"
+    verifier_rejected = "verifier_rejected"
+
+
+class ComplianceObligationState(str, Enum):
+    open = "open"
+    satisfied = "satisfied"
+    lapsed = "lapsed"
+    extended = "extended"
+
+
+class ComplianceObligation(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    reason: Annotated[Union[ComplianceObligationReason, str], Field(union_mode="left_to_right")]
+    state: Annotated[Union[ComplianceObligationState, str], Field(union_mode="left_to_right")]
+    due_at: Annotated[str, Field(
+        description="The date to supply this by. Where more time has been given, this is the later date rather than the one first asked for.",
+        min_length=1,
+    )]
+    target_version: Annotated[int, Field(
+        description="The version of the country's form your answers have to reach. For an expiry it is the version you already answered, filled in again.",
+        ge=1,
+    )]
+
+
+class ComplianceGeneralReasons(RootModel[List[str]]):
+    root: List[str]
+
+
+class ComplianceRequirement(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this country's requirements, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nWhether anything is asked of you is `needs_input`, and this says what to do about it: send your\nanswers where none have been filed, or replace the ones that were refused. Which items those\nare, and why each was refused, is on the item in `fields`. For feedback about the\nwhole submission, read `reason` and `general_reasons` and update the details that need correction.",
+    )] = None
+    subject_kind: ComplianceSubjectKind
+    subject_id: Annotated[Optional[str], Field(
+        description="The registration these requirements are for, the same one you asked about. `null` when you asked without one, which is how a form read on its own says it is answering for nothing yet.",
+        examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(scr|nda|cid)_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    program: Annotated[Optional[Annotated[Union[ComplianceProgram, str], Field(union_mode="left_to_right")]], Field(
+        description="The registration program these requirements belong to. `null` when the country runs no registration program at all, in which case nothing is required and the field list is empty.",
+    )]
+    country_code: Annotated[str, Field(
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    satisfied: Annotated[bool, Field(
+        description="Whether this country's requirements are met. `true` when no requirements apply, or once the submission is approved and every required requirement is approved or marked not applicable. This can remain true when an external verifier requests a correction. Once you submit that correction, it must pass review before this becomes true again, including any optional answers you change.",
+    )]
+    needs_input: Annotated[bool, Field(
+        description="Whether anything is waiting on you. True when a required requirement has no answer, its answer was refused or has gone stale, or the registration needs correction as described by `reason`. False does not imply that review is pending: a closed verifier correction can leave the requirements unsatisfied with no editable answers. Read `review_pending` to determine whether an answer is awaiting review. Read this independently of `satisfied`, which reports whether your paperwork is accepted. An unresolved verifier correction also sets it while the matching grant is live and the correction deadline has not passed, until you supply updated details. At the deadline or after grant withdrawal, an unresolved rejection alone does not set it because accepted answers can no longer be replaced. A corrected optional answer that is rejected or expires still needs your input through ordinary resupply, including after that deadline.",
+    )]
+    review_pending: Annotated[bool, Field(
+        description="Whether any submitted answer is awaiting or undergoing review. False after all answers have received verdicts. A closed verifier correction can remain unsatisfied with no review pending and no editable answers.",
+    )]
+    reason: Annotated[Optional[str], Field(
+        description="What to correct about the registration as a whole, or null when no registration-wide correction is requested. Reasons about individual answers are on the entries in fields.",
+    )]
+    guidance: Annotated[Optional[str], Field(
+        description="What this country expects of you before and while you fill in the form, written by Bird's compliance team. It may point you to a registration you must complete elsewhere first. `null` when the form needs no introduction, or when no program applies.",
+    )]
+    submission_id: Annotated[Optional[str], Field(
+        description="The submission carrying your answers, once you have made one. `null` before that.",
+        examples=["csb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^csb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    obligation: Annotated[Optional[ComplianceObligation], Field(
+        description="What this registration has to do to keep sending, and by when. Null when nothing is outstanding. An obligation does not stop you sending: the registration stays authorised until the date passes, and supplying what is asked for before then closes it with no interruption.",
+    )]
+    general_reasons: Annotated[List[str], Field(
+        description="Feedback about the submission as a whole from an external verifier. It can remain visible while corrections are under review. Empty when no unresolved verifier feedback applies. On requirements responses, read `needs_input` to determine whether action is needed and `editable_for_verifier_repair` on each field to determine whether an approved or not-applicable answer can be replaced.",
+    )]
+    fields: Annotated[List[ComplianceRequirementField], Field(
+        description="Every requirement for this country, in the order to present them.",
+    )]
+    closed_at: Annotated[Optional[str], Field(
+        description="When the submission for these requirements was closed. Null while open or not yet submitted.",
+    )] = None
+
+
+class ComplianceSubmissionIdentity(BaseModel):
+    "Registers this on behalf of a party you have not stored yet, creating it as part\nof the submission so you do not need a separate call. Exclusive with\n`identity_id`.\n\nEach time you send this you get a new party. Single-value identity answers filed for one\nare reused by registrations naming the same party. Documents and lists are\nsupplied separately for each registration. Send this once and use the\n`identity_id` from the response for the countries that follow."
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="What to call the party. Optional: left out, it takes the legal entity name you supplied. If this country's form does not ask for one, send a name here.",
+        examples=["Goldcrest Communications SAS"],
+        max_length=200,
+        min_length=1,
+    )] = None
+
+
+class ComplianceAnswer(BaseModel):
+    "One answer. Which field carries it follows from the requirement, as the\nrequirements read reports it:\n\n- answered once, inline: `value`\n- answered once, with a document: `attachment_id`\n- `max_items` set, inline: `values`\n- `max_items` set, with documents: `attachment_ids`\n\nSend exactly one of the four. Order in a list is preserved and is part of the\nanswer."
+    model_config = ConfigDict(extra="allow")
+    key: Annotated[str, Field(
+        description="The requirement this answers, as given by its key in the requirements read.",
+        examples=["business_registration_number"],
+        min_length=1,
+    )]
+    value: Annotated[Optional[str], Field(
+        description="The answer, for a requirement answered inline. Send every answer as a string whatever its data type, so a number goes as `\"1500\"` and a yes-or-no as `\"true\"`.",
+        examples=[90012768],
+        min_length=1,
+    )] = None
+    attachment_id: Annotated[Optional[str], Field(
+        description="The uploaded document, for a requirement that takes one. Upload the file as an attachment first, then send the id it returns.",
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    values: Annotated[Optional[List[str]], Field(
+        description="The answers, for a requirement whose `max_items` is set and which is answered inline. Send each as a string whatever its data type, and send them in the order you mean them to be read. At most `max_items` of them.",
+        max_length=50,
+        min_length=1,
+    )] = None
+    attachment_ids: Annotated[Optional[List[str]], Field(
+        description="The uploaded documents, for a requirement whose `max_items` is set and which takes documents. Upload each file first and send the ids it returns, in order. At most `max_items` of them.",
+        max_length=50,
+        min_length=1,
+    )] = None
+
+
+class ComplianceSubmissionCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    subject_kind: Annotated[ComplianceSubjectKind, Field(
+        description="What is being registered.\n\n- `sms_sender`: a sender registered to send to one country.\n- `number`: a phone number you hold that needs ownership paperwork before it\n  can carry traffic.\n- `identity`: a business you operate as, registered once and reused by\n  later registrations that name it.",
+    )]
+    subject_id: Annotated[str, Field(
+        description="What is being registered. For `sms_sender` this is the `scr_` id returned when you register a sender for a country. For `number` it is the `nda_` id of a dedicated number you hold, as returned by `GET /v1/numbers`. A shared short code (`nal_`) is not accepted: it is shared, so its ownership paperwork is not yours to file. For `identity` it is the `cid_` id of the party being registered, picked from the parties your workspace holds, as returned by `GET /v1/compliance/identities`.",
+        examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(scr|nda|cid)_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    program: Annotated[Annotated[Union[ComplianceProgram, str], Field(union_mode="left_to_right")], Field(
+        description="The registration program a country runs. Available programs depend on the registered resource. An SMS sender registers under an authority regime (`alpha` or `numeric`). A phone number proves ownership under its number type (`mobile`, `local`, `national`, `short_code`, `short_code_fteu`, or `toll_free`), matching the values of `NumberType`. An identity registers your business itself under `business`, internationally: its coordinate's country is always `ZZ`. A value is therefore only meaningful alongside the subject it describes. More are added as coverage grows, so treat this as an open set rather than a fixed list.",
+    )]
+    country_code: Annotated[str, Field(
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    identity_id: Annotated[Optional[str], Field(
+        description="An existing party this registration is for. It fills in the business details you left out from what that party already holds, and each single-value answer you file about the party is written back onto it for next time, whatever the verdict. Documents and multi-value answers are asked fresh each time. Send this or `identity`, never both. An id belonging to another organization is rejected; nothing is created here. When `subject_kind` is `identity`, send neither: `subject_id` already names the party.",
+        examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    identity: Annotated[Optional[ComplianceSubmissionIdentity], Field(
+        description="Registers this on behalf of a party you have not stored yet, creating it as part\nof the submission so you do not need a separate call. Exclusive with\n`identity_id`.\n\nEach time you send this you get a new party. Single-value identity answers filed for one\nare reused by registrations naming the same party. Documents and lists are\nsupplied separately for each registration. Send this once and use the\n`identity_id` from the response for the countries that follow.",
+    )] = None
+    answers: Annotated[List[ComplianceAnswer], Field(
+        description="Every answer at once. Because submissions have no multi-call draft, send a complete set. Anything missing or malformed comes back named. A requirement the named party already answers may be left out; one you send anyway wins over what the party holds.",
+        min_length=1,
+    )]
+
+
+class ComplianceItemID(RootModel[str]):
+    root: str
+
+
+class ComplianceSubmissionItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    inherited: Annotated[bool, Field(
+        description="`true` when this answer was accepted without a fresh review, because the same answer to the same requirement had already been approved for this party in this country. It carries the original verdict, including when that verdict expires.",
+    )]
+    id: Annotated[str, Field(
+        examples=["cit_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cit_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    key: Annotated[str, Field(
+        description="The requirement this answers.",
+        min_length=1,
+    )]
+    state: Annotated[Union[ComplianceItemState, str], Field(union_mode="left_to_right")]
+    value: Annotated[Optional[str], Field(
+        description="Your answer, for a requirement answered inline. Every answer travels as a string whatever its data type, so a number reads back as `\"1500\"` and a yes-or-no as `\"true\"`. Use the data type to parse it. `null` for a requirement that takes a document.",
+    )]
+    attachment_id: Annotated[Optional[str], Field(
+        description="The document you supplied, for a requirement that takes one. `null` otherwise.",
+        examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    values: Annotated[Optional[List[str]], Field(
+        description="Your answers, for a requirement that takes several and is answered inline. `null` for one answered once. Order is as you sent it.",
+    )]
+    attachment_ids: Annotated[Optional[List[str]], Field(
+        description="The documents you supplied, for a requirement that takes several. `null` otherwise.",
+    )]
+    reason: Annotated[Optional[str], Field(
+        description="Why this was rejected, when it was. `null` otherwise.",
+    )]
+    decided_at: Annotated[Optional[str], Field(
+        description="When this was decided. `null` while no decision has been made.",
+    )]
+    expires_at: Annotated[Optional[str], Field(
+        description="When this answer goes stale and must be supplied again. `null` when it does not expire.",
+    )]
+
+
+class ComplianceSubmission(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this submission, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nA submission reports the answers you filed; whether the country's requirements are met is\nreported by the requirements read. So this points there rather than repeating a verdict it\ndoes not own.",
+    )] = None
+    id: Annotated[str, Field(
+        examples=["csb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^csb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    subject_kind: ComplianceSubjectKind
+    subject_id: Annotated[str, Field(
+        examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(scr|nda|cid)_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    program: Annotated[Union[ComplianceProgram, str], Field(union_mode="left_to_right")]
+    country_code: Annotated[str, Field(
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    identity_id: Annotated[Optional[str], Field(
+        description="The party this registration was filed for, or `null` if none was named.",
+        examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    satisfied: Annotated[bool, Field(
+        description="Whether this country's requirements are met. `true` once the submission is approved and every required requirement is approved or marked not applicable. This can remain true when an external verifier requests a correction. Once you submit that correction, it must pass review before this becomes true again, including any optional answers you change.",
+    )]
+    items: Annotated[List[ComplianceSubmissionItem], Field(
+        description="Every answer and where it stands. Each is decided on its own.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When this was submitted.",
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(description="When it last changed.", min_length=1)]
+    closed_at: Annotated[Optional[str], Field(
+        description="When this submission was closed. Null while it remains open.",
+    )] = None
+    closure_reason: Annotated[Optional[str], Field(
+        description="The decline reason for a closed submission, or null while open.",
+    )] = None
+
+
+class ComplianceSubmissionResupply(BaseModel):
+    "Replacement answers for an existing submission. Rejected, expired, or missing answers can\nbe supplied again; accepted answers normally cannot be changed.\n\nWhen the requirements response marks an accepted answer as `editable_for_verifier_repair`,\nyou can replace it during that open correction and before its deadline. Accepted-answer\nrepairs must change content; unchanged accepted entries are ignored. Rejected, expired,\nor missing answers follow the ordinary resupply rules, including same-value retries\nafter a grant is withdrawn. Supplied replacements are reviewed again."
+    model_config = ConfigDict(extra="allow")
+    answers: Annotated[List[ComplianceAnswer], Field(min_length=1)]
 
 
 class SMSStatsSummaryPeriod(BaseModel):
@@ -4987,8 +5562,310 @@ class DestinationSuperRegion(str, Enum):
     asia_pacific = "asia_pacific"
 
 
+class SMSSenderSourceKind(str, Enum):
+    number = "number"
+    shared_number = "shared_number"
+    alpha = "alpha"
+
+
 class AllocatedNumberID(RootModel[str]):
     root: str
+
+
+class SMSSenderSortField(str, Enum):
+    created_at = "created_at"
+    sender = "sender"
+
+
+class SMSSenderType(str, Enum):
+    long_code = "long_code"
+    short_code = "short_code"
+    alphanumeric = "alphanumeric"
+    toll_free = "toll_free"
+
+
+class SMSSenderStatus(str, Enum):
+    active = "active"
+    pending_number_ownership = "pending_number_ownership"
+    pending_registrations = "pending_registrations"
+
+
+class SMSSenderDestinations(BaseModel):
+    "Where this sender stands with the destinations it is set up for, grouped by whose move is\nnext.\n\nThese are not every country the sender could reach. `pending` and `needs_attention` cover\nonly countries you hold a registration for, so a country you could register for but have not,\nor one you have simply not switched on, appears in none of the three: there is nothing\noutstanding there. To see everything reachable and what each country would take, read\n[Get sender requirements](/docs/api/reference/list-workspace-sms-sender-requirements)."
+    model_config = ConfigDict(extra="allow")
+    active: Annotated[List[str], Field(
+        description="Countries you can send to today: switched on in your SMS destination settings, and either asking for no registration or holding an approved one. A country counts here however it became usable, including one enabled for you automatically when your organization set its business address.",
+    )]
+    pending: Annotated[List[str], Field(
+        description="Countries whose registration is under way and waiting on us or on a carrier. Nothing is asked of you for these; they move to `active` when the registration is approved.",
+    )]
+    needs_attention: Annotated[List[str], Field(
+        description="Countries you have registered for that are not working, and so are waiting on you: the registration was refused or withdrawn, or it is approved but the destination is switched off in your SMS destination settings. While this sender's number is missing the paperwork proving you own it, every country you have registered for is listed here, because none of them can carry a message until that is settled.",
+    )]
+
+
+class SMSSender(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["snd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^snd_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    sender: Annotated[str, Field(
+        description="The value messages are sent from: a number in E.164 format, a shortcode, or an alphanumeric sender string.",
+        min_length=1,
+    )]
+    source_kind: Annotated[Union[SMSSenderSourceKind, str], Field(union_mode="left_to_right")]
+    sender_type: Annotated[Optional[SMSSenderType], Field(
+        description="The kind of sender identity this is, which decides what each destination country asks of it. It is finer than source_kind: a short code and an ordinary long code are both numbers but follow different rules.",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="The country of the number this sender sends from. Null for an alphanumeric sender.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
+    number_id: Annotated[Optional[str], Field(
+        description="The number this sender sends from, as returned in the `id` field of `GET /v1/numbers`. Present only when `source_kind` is `number` or `shared_number`; an alphanumeric sender has no number behind it. Exactly one sender exists per number, so this is also how you go the other way: `GET /v1/sms/senders?number_id={id}` returns this sender.",
+        examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    status: SMSSenderStatus
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this sender, given the state it is in. Present on reads that\ncompute it: an empty list means there is nothing to do, and the field is absent entirely\non responses that do not report next actions.\n\nThis routes rather than advises. A sender only knows about itself, so where the work is\nper-country it names the requirements read rather than guessing which country you meant.",
+    )] = None
+    destinations: SMSSenderDestinations
+    created_at: Annotated[str, Field(min_length=1)]
+    updated_at: Annotated[str, Field(min_length=1)]
+
+
+class SMSSenderList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[SMSSender], Field(
+        description="Your workspace's dedicated numbers and alphanumeric senders, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        ge=0,
+    )] = None
+
+
+class SMSSenderCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["alpha"], Field(
+        description="The kind of sender to create. Only `alpha` (an alphanumeric sender string) is customer-creatable. Dedicated numbers become senders when you allocate them from inventory. This endpoint cannot create their senders.",
+        min_length=1,
+    )]
+    sender: Annotated[str, Field(
+        description="The alphanumeric sender string to create, for example \"BIRD\". 3–11 letters, digits, spaces, dashes, underscores, or dots, at least one of them a letter, and no separator at either end.",
+        examples=["BIRD"],
+        max_length=11,
+        min_length=3,
+    )]
+
+
+class SMSRegistrationStatus(str, Enum):
+    pending = "pending"
+    under_review = "under_review"
+    bird_approved = "bird_approved"
+    carrier_pending = "carrier_pending"
+    approved = "approved"
+    rejected = "rejected"
+    suspended = "suspended"
+    registration_required = "registration_required"
+    not_required = "not_required"
+
+
+class SMSCountryRegistrationID(RootModel[str]):
+    root: str
+
+
+class SMSSenderProgramEntry(str, Enum):
+    none = "none"
+    _10dlc_brand = "10dlc_brand"
+    _10dlc_campaign = "10dlc_campaign"
+    _10dlc_campaign_number_link = "10dlc_campaign_number_link"
+    tfn_verification = "tfn_verification"
+    compliance_submission = "compliance_submission"
+
+
+class SMSSenderRequirementCategory(str, Enum):
+    transactional = "transactional"
+    marketing = "marketing"
+    authentication = "authentication"
+    service = "service"
+
+
+class SMSSenderRequirement(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sender_id: Annotated[str, Field(
+        description="The sender these requirements are for, the same one you asked about. It is repeated on every row so a row is complete on its own: what a country needs is addressed by the sender and the country together, and a step that registers this sender needs both.",
+        examples=["snd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^snd_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    country_code: Annotated[str, Field(
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    registration_mode: Annotated[SMSRegistrationMode, Field(
+        description="Whether country registration is absent, optional, or required before sending.",
+    )]
+    sender_id_behavior: Annotated[SMSSenderIDBehavior, Field(
+        description="The effective sender ID behavior for this sender and destination. An approved optional registration changes `overwritten` to `preserved` for its permitted message categories. Required registration does not change the configured sender ID behavior after approval. `unknown` means no behavior is published. This is expected behavior, not confirmation of what a recipient saw. Overwrite details are published in the country messaging context.",
+    )]
+    program: Annotated[Optional[Annotated[Union[SMSRegistrationProgram, str], Field(union_mode="left_to_right")]], Field(
+        description="The registration program available for this destination, including optional registration. An existing registration retains its own program.",
+    )] = None
+    status: Annotated[Annotated[Union[SMSRegistrationStatus, str], Field(union_mode="left_to_right")], Field(
+        description="Where this sender stands with this country's registration programme. The `approved` and `not_required` statuses satisfy it. Every other status leaves it unsatisfied: the `registration_required` status means the required registration has not started, the `pending` status means something required is still owed by you, and `under_review` means it is all with us. Read `next` for what to do about any of it.\n\nRegistration blocks sending when `registration_mode` is `required`. Optional registration can be pending while sending remains available with `sender_id_behavior` set to `overwritten`. Check `destination_enabled` too, which is independent of registration progress.",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this country, given the state it is in. Each entry names one action\nand says why it is worth taking, so you can act on this response without working out the\norder yourself. Present on reads that compute it: an empty list means there is nothing to\ndo, and the field is absent entirely on responses that do not report next actions.\n\nThis routes rather than advises: it names where to go to act on this country, and the\nresource it names carries what to do there. So a country under carrier review names the\nverification to read, rather than restating a verdict that resource owns.",
+    )] = None
+    destination_enabled: Annotated[bool, Field(
+        description="Whether your workspace has this destination country turned on. This is a workspace setting rather than anything about this sender, and it is checked before the sender is even considered, so a country can be fully registered and still refuse your messages because it is switched off here. Turn it on with [Update SMS destinations](/docs/api/reference/update-workspace-sms-destinations).",
+    )]
+    has_compliance_requirements: Annotated[bool, Field(
+        description="Whether registering this sender for this country continues at compliance requirements you answer with a submission. When true, read them with [Get what a registration needs](/docs/api/reference/get-workspace-compliance-requirements) once the registration exists; the one-off setup fee is charged when you submit, and the monthly charge starts once the registration is approved. False in three cases: the country takes no registration (`registration_mode` is `none`); its programme runs its own flow, such as US 10DLC, toll-free, and short codes, which `next` routes to; or the registration goes to review with nothing to submit, and both charges are made once it is approved.",
+    )]
+    category: Annotated[Optional[Annotated[Union[SMSSenderRequirementCategory, str], Field(union_mode="left_to_right")]], Field(
+        description="Message category the registration covering this country is approved for. Null when the registration admits any category, and null before you register.",
+        min_length=1,
+    )] = None
+    registration_id: Annotated[Optional[str], Field(
+        description="The registration covering this country, once one exists. Null before you register. Where the country's requirements are collected as a form, this is the `subject_id` to pass to `GET /v1/compliance/requirements`.",
+        examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^scr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    program_entry: Annotated[Annotated[Union[SMSSenderProgramEntry, str], Field(union_mode="left_to_right")], Field(
+        description="The resource this country's walk continues at. `none` means the first one is still to be\ncreated; every other value names what to read next, whose id is `program_entry_ref`.\n\nEvery programme names its entry. US 10DLC enters at a `10dlc_brand` or a `10dlc_campaign` and\ncontinues at the `10dlc_campaign_number_link` a number hangs off. US toll-free both enters and\ncontinues at its `tfn_verification`. A programme answered by filling in a form enters at the\n`compliance_submission` holding your answers, the only entry that names something you filled in\nrather than something a carrier holds. Read the entry whenever you need the detail behind a\ncountry: it carries why a registration was refused, which this row reports only as a status.\n\nThe values are programme-prefixed where a programme owns them, so one vocabulary reads the same\nwherever an entry is reported. Tolerate a value you do not recognize: read `program_entry_ref`\nas the id of a resource to fetch, and read `next` for what to do about the country.\n\nComputed on this read, so it is never stale and never absent. That matters most where a row\ncannot answer for itself: a toll-free verification you have started but not submitted is named\nhere even though no registration exists for it yet, which is what tells you to finish that one\nrather than start a second.",
+    )]
+    program_entry_ref: Annotated[Optional[str], Field(
+        description="The id of the resource `program_entry` names, or null when it names none. Where the workspace holds several to choose from, this is the one to start from: the only brand or campaign if there is one, otherwise the most recently approved, and otherwise the most recent.",
+        min_length=1,
+    )] = None
+    rejection_reason: Annotated[Optional[str], Field(
+        description="Why the registration was rejected, when it was. Null otherwise.",
+        min_length=1,
+    )] = None
+    obligation_due_at: Annotated[Optional[str], Field(
+        description="When this country's registration must be brought up to date by, if it must. Null when nothing is outstanding, which is the ordinary case. The sender keeps sending until the date passes; `GET /v1/compliance/requirements` says what is being asked for.",
+    )] = None
+    timeline_min_days: Annotated[Optional[int], Field(
+        description="Shortest time approval usually takes, in business days. Null when the country publishes no estimate.",
+    )] = None
+    timeline_max_days: Annotated[Optional[int], Field(
+        description="Longest time approval usually takes, in business days. Null when the country publishes no estimate.",
+    )] = None
+    registration_types: Annotated[Optional[List[str]], Field(
+        description="Registration categories this country's program accepts.",
+    )] = None
+
+
+class SMSSenderProgram(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    program: Annotated[Optional[Annotated[Union[SMSRegistrationProgram, str], Field(union_mode="left_to_right")]], Field(
+        description="The program this registration runs. Null for the countries that asked for no registration at all, which are grouped together because the only thing they have in common is that you registered nothing for them.",
+    )]
+    program_ref: Annotated[Optional[str], Field(
+        description="The resource this registration produced, which `program` tells you how to read: a toll-free verification for `tfn`, or a campaign number link for `10dlc`. The link connects this number to its campaign. Get the campaign from `GET /v1/sms/10dlc/campaign-number-links/{link_id}`. Null for a program that issues none, and for one you have not registered yet. Follow it when the status is under_review, because only that resource distinguishes a carrier still reviewing from one waiting on more information from you.",
+        min_length=1,
+    )]
+    countries: Annotated[List[str], Field(
+        description="Every country this one registration covers. Some programs open several at once, so a single toll-free verification or campaign registration can be what permits four destinations.",
+        min_length=1,
+    )]
+    status: Annotated[Optional[Annotated[Union[SMSRegistrationStatus, str], Field(union_mode="left_to_right")]], Field(
+        description="Where this registration stands, for all of the countries it covers. `registration_required` means you have not made it yet and every country listed is waiting on it. Null in the one case where the countries have diverged and no single answer is true: read those countries individually.",
+    )]
+
+
+class SMSSenderRequirementList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[SMSSenderRequirement], Field(
+        description="One entry per destination country this sender can reach, which is the level the decision to carry your message is made at. Ask this list whether you can send somewhere, and what it takes first. A country missing from it is one this sender has no route to at all, so no registration would open it.",
+    )]
+    programs: Annotated[List[SMSSenderProgram], Field(
+        description="The same countries seen as the registrations they belong to, one entry per registration, with the countries each one covers. Ask this list what to do next: an entry whose status is `registration_required` is a registration you still have to make, and its countries are the ones it would open. Every other entry is a registration you have already made, so this list is the whole picture rather than only the part you have finished.",
+    )]
+
+
+class SMSCountryRegistrationCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    country_code: Annotated[str, Field(
+        description="ISO 3166-1 alpha-2 country code.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    category: Annotated[Optional[SMSMessageCategory], Field(
+        description="Message category to register the sender for. Omit to register the sender for all categories.",
+    )] = None
+
+
+class SMSCountryRegistrationCategory(str, Enum):
+    transactional = "transactional"
+    marketing = "marketing"
+    authentication = "authentication"
+    service = "service"
+
+
+class SMSCountryRegistration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^scr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    country_code: Annotated[str, Field(
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    registration_mode: Annotated[Optional[SMSRegistrationMode], Field(
+        description="Current registration policy for this destination and sender type. Omitted if the policy or sender is no longer available.",
+    )] = None
+    sender_id_behavior: Annotated[Optional[SMSSenderIDBehavior], Field(
+        description="Expected sender ID behavior for this registration's message categories. Optional registration preserves the sender ID once approved. Required registration can still use an overwritten sender ID after approval. Omitted if the policy or sender is no longer available.",
+    )] = None
+    program: Annotated[Optional[Annotated[Union[SMSRegistrationProgram, str], Field(union_mode="left_to_right")]], Field(
+        description="The registration program behind this row. Null for a country that required none, which is the state a row records rather than a program called \"none\".",
+    )] = None
+    category: Annotated[Optional[Annotated[Union[SMSCountryRegistrationCategory, str], Field(union_mode="left_to_right")]], Field(
+        description="Message category this registration is approved for. Null means the registration is unrestricted and admits any category.",
+        min_length=1,
+    )] = None
+    status: Annotated[Union[SMSRegistrationStatus, str], Field(union_mode="left_to_right")]
+    program_ref: Annotated[Optional[str], Field(
+        description="The program artifact that decided this registration, null where none produced it. Which resource it names follows from `program`, and its id prefix tells you too: a toll-free verification for `tfn`, or a campaign number link for `10dlc`. The link connects this number to its campaign. Get the campaign from [Get a 10DLC campaign number link](/docs/api/reference/get-tcr-campaign-number-link). Worth following when the status is `under_review`, because that value covers both the carrier still reviewing and the carrier waiting on more information from you, and only the program's own resource tells those apart.",
+        min_length=1,
+    )] = None
+    rejection_reason: Annotated[Optional[str], Field(
+        description="Reason the registration was rejected, shown when the status is `rejected`. Null for registrations that were never rejected.",
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(min_length=1)]
+    updated_at: Annotated[str, Field(min_length=1)]
 
 
 class LookupProperty(str, Enum):
@@ -7715,7 +8592,6 @@ class WhatsAppTemplateLanguageStatus(str, Enum):
     archived = "archived"
     deleted = "deleted"
     submit_failed = "submit_failed"
-    outcome_unknown = "outcome_unknown"
 
 
 class WhatsAppTemplateRejectionCategory(str, Enum):
@@ -7774,7 +8650,7 @@ class WhatsAppTemplateLanguageState(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete, present when `status` is `submit_failed` or `outcome_unknown`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete, present when `status` is `submit_failed`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
 
@@ -7965,7 +8841,7 @@ class WhatsAppTemplateVersionLanguage(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete, present when `status` is `submit_failed` or `outcome_unknown`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete, present when `status` is `submit_failed`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
 
@@ -8010,7 +8886,7 @@ class WhatsAppTemplateLanguageSummary(BaseModel):
         min_length=2,
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
-        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n- `outcome_unknown`: A create or an edit reached WhatsApp but no response came back, so the outcome is still being resolved against WhatsApp. An unanswered deletion is retried instead of landing here. `error.description` says so, and `error.meta_error_code` is absent, since nothing was refused.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review, or submitted while Bird confirms the result with WhatsApp.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -8074,7 +8950,7 @@ class WhatsAppTemplateLanguage(BaseModel):
         description="This language's content blocks, in display order, exactly as submitted or as they stand in the draft.",
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
-        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n- `outcome_unknown`: A create or an edit reached WhatsApp but no response came back, so the outcome is still being resolved against WhatsApp. An unanswered deletion is retried instead of landing here. `error.description` says so, and `error.meta_error_code` is absent, since nothing was refused.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review, or submitted while Bird confirms the result with WhatsApp.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -8098,7 +8974,7 @@ class WhatsAppTemplateLanguage(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete, present when `status` is `submit_failed` or `outcome_unknown`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete, present when `status` is `submit_failed`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
         description="When this content was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, which Bird ships already approved rather than submitting on your behalf.",
@@ -22364,11 +23240,11 @@ class EventVerifyAttemptDeliveredData(BaseModel):
         min_length=1,
     )]
     carrier: Annotated[Optional[str], Field(
-        description="Carrier that delivered the message, when the carrier network reports it. Always null for email, WhatsApp, and Telegram.",
+        description="Carrier that delivered the message, when the carrier network reports it. Always null for email, WhatsApp, Telegram, and voice.",
         examples=["Verizon"],
     )]
     mcc_mnc: Annotated[Optional[str], Field(
-        description="Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email, WhatsApp, and Telegram.",
+        description="Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email, WhatsApp, Telegram, and voice.",
         examples=[311480],
     )]
     delivered_at: Annotated[str, Field(
@@ -23980,6 +24856,10 @@ class VoiceLeg(BaseModel):
     )] = None
 
 
+class WalletID(RootModel[str]):
+    root: str
+
+
 class WalletTransactionID(RootModel[str]):
     root: str
 
@@ -24006,6 +24886,15 @@ class BillingPricingInterval(BaseModel):
 
 class BillingProductSlug(RootModel[str]):
     root: str
+
+
+class BillingPricingModel(str, Enum):
+    plan = "plan"
+    metered = "metered"
+    rate_card = "rate_card"
+    unit_subscription = "unit_subscription"
+    custom = "custom"
+    counter = "counter"
 
 
 class NumberType(str, Enum):
@@ -24303,6 +25192,21 @@ class NumbersOrderList(BaseModel):
     )]
 
 
+class NumbersOrderCompliance(BaseModel):
+    "Ownership paperwork for a number being ordered, where its country requires any. Optional always: the order completes and the number is yours either way, and supplying this only decides whether it can carry traffic sooner. Read `GET /v1/compliance/requirements` for the number to learn what is asked for, or file it after the order with `POST /v1/compliance/submissions`. Filing this cannot fail your order: if it is refused, the number is still yours and you can file again. The answers are a legal representation filed under the name of the business they describe. Sending this block uses the order's existing `numbers` scope at write level."
+    model_config = ConfigDict(extra="allow")
+    answers: Annotated[List[ComplianceAnswer], Field(
+        description="Every answer at once, in the same shape `POST /v1/compliance/submissions` takes. There is no draft to fill in over several calls, so send a complete set.",
+        min_length=1,
+    )]
+    identity_id: Annotated[Optional[str], Field(
+        description="An existing party this number is held for. It fills in the business details you left out from what that party already holds, and each single-value answer you file about the party is written back onto it for next time, whatever the verdict. Documents and multi-value answers are asked fresh each time. An id belonging to another organization is rejected.",
+        examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
 class NumbersOrderCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     number: Annotated[str, Field(
@@ -24315,6 +25219,9 @@ class NumbersOrderCreate(BaseModel):
         examples=["STORE-042"],
         max_length=100,
         min_length=1,
+    )] = None
+    compliance: Annotated[Optional[NumbersOrderCompliance], Field(
+        description="Ownership paperwork for a number being ordered, where its country requires any. Optional always: the order completes and the number is yours either way, and supplying this only decides whether it can carry traffic sooner. Read `GET /v1/compliance/requirements` for the number to learn what is asked for, or file it after the order with `POST /v1/compliance/submissions`. Filing this cannot fail your order: if it is refused, the number is still yours and you can file again. The answers are a legal representation filed under the name of the business they describe. Sending this block uses the order's existing `numbers` scope at write level.",
     )] = None
 
 
@@ -24336,6 +25243,137 @@ class NumberUpdate(BaseModel):
 
 class AutomationPortKey(RootModel[str]):
     root: str
+
+
+class BillingResolvedPrice(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    unit_price: Money
+    tax_rate: Annotated[str, Field(
+        description="The tax rate applied to this price for your organization, as a decimal (for example `0.21` for 21%). `0` if your organization is tax-exempt or no tax applies.",
+        examples=[0.21],
+        min_length=1,
+    )]
+    tax_amount: Money
+    gross_price: Money
+    billing_unit_size: Annotated[int, Field(
+        description="Number of units that form one chargeable block. Overage usage is ceiling-rounded to the nearest multiple of this value before the unit price is applied. A value of 1 charges per individual unit.",
+        examples=[1000],
+        ge=1,
+    )]
+    increment: Annotated[Optional[str], Field(
+        description="The billing rounding window for time-based products, expressed as `{initial_seconds}/{continuation_seconds}`. For example, `60/60` means each unit covers 60 seconds. `null` for per-unit products.",
+        examples=["60/60"],
+    )] = None
+    dimensions: Annotated[Dict[str, str], Field(
+        description="Pricing dimensions that determined this price (for example, `country_code`, `sender_type`).",
+    )]
+    name: Annotated[str, Field(
+        description="Display name of the product this price was resolved for.",
+        examples=["10DLC Brand Registration"],
+        min_length=1,
+    )]
+    external_description: Annotated[Optional[str], Field(
+        description="Customer-facing description of the product this price was resolved for, when set.",
+    )] = None
+    pricing_model: Annotated[BillingPricingModel, Field(
+        description="How this product is priced.\n\n- `plan`: it comes with the organization's subscribed plan, with usage tracked\n  against that plan's included allowance.\n- `metered`: it is billed per unit beyond any included allowance.\n- `rate_card`: the per-unit price varies by attributes of the usage, such as\n  destination, instead of being flat.\n- `unit_subscription`: it is a standalone add-on billed as its own recurring\n  subscription, independent of the plan.\n- `custom`: a pricing arrangement that does not fit the other models.\n- `counter`: usage is recorded without enforcing a spending cap or blocking\n  requests.",
+    )]
+    billing_interval: Annotated[Optional[BillingInterval], Field(
+        description="The recurring interval one subscription charge covers.",
+    )] = None
+    billing_interval_count: Annotated[Optional[int], Field(
+        description="Compatibility alias for `intervals_per_charge`. Only present when `pricing_model` is `unit_subscription`, or `plan` with configured recurring terms. Omitted for other pricing models and plans without configured terms.",
+        examples=[1],
+        ge=1,
+    )] = None
+    pricing_interval: Annotated[Optional[BillingPricingInterval], Field(
+        description="A period: a unit and a count. A day is a fixed 24-hour UTC period. A larger `count` lengthens the period without multiplying the amount quoted for it.",
+    )] = None
+    intervals_per_charge: Annotated[Optional[int], Field(
+        description="Number of complete pricing intervals bought by each recurring charge. Renewal duration is `pricing_interval.count` multiplied by this value. Present alongside `pricing_interval` for `unit_subscription` products and plans with configured recurring terms; omitted otherwise.",
+        examples=[1],
+        ge=1,
+    )] = None
+
+
+class BillingWalletCollectionStatus(str, Enum):
+    none = "none"
+    in_progress = "in_progress"
+    exhausted = "exhausted"
+
+
+class BillingWallet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wal_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wal_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    currency_code: Annotated[str, Field(
+        description="ISO 4217 three-letter currency code.",
+        examples=["EUR"],
+        max_length=3,
+        min_length=3,
+        pattern="^[A-Z]{3}$",
+    )]
+    balance: Annotated[str, Field(
+        description="Balance you can spend, in currency units. Usage is charged as it happens, so this drops within seconds of sending and can be lower than the balance the wallet transactions add up to, which only reflects charges that have settled. Funds held for upcoming renewals are also excluded. Credit headroom is reported separately in `credit_limit`, and postpaid accounts can keep spending past a zero balance up to that limit.",
+        examples=[118.00],
+        min_length=1,
+    )]
+    settled_balance: Annotated[str, Field(
+        description="Settled wallet balance in currency units, before active reservations are deducted.",
+        examples=[150.00],
+        min_length=1,
+    )]
+    renewal_reserved: Annotated[str, Field(
+        description="Amount currently held for prepared subscription renewals and scheduled plan changes, in currency units.",
+        examples=[25.00],
+        min_length=1,
+    )]
+    renewal_required: Annotated[str, Field(
+        description="Total amount required for prepared subscription renewals and scheduled plan changes, including tax, in currency units.",
+        examples=[30.00],
+        min_length=1,
+    )]
+    collection_status: Annotated[BillingWalletCollectionStatus, Field(
+        description="Automatic collection state:\n- `none`: No retained collection run.\n- `in_progress`: Collection is active, though payment may still require customer action.\n- `exhausted`: Automatic retries have stopped and customer action is needed.",
+    )]
+    collection_renewal: Annotated[str, Field(
+        description="Part of collection_required needed for unfunded renewal fees, in exact currency units.",
+        examples=[30.004],
+        min_length=1,
+    )]
+    collection_required: Annotated[str, Field(
+        description="Total wallet funding still required by the current automatic collection run, in exact currency units.",
+        examples=[42.00],
+        min_length=1,
+    )]
+    collection_usage_buffer: Annotated[str, Field(
+        description="Part of collection_required needed for the configured auto-topup amount, in currency units.",
+        examples=[10.00],
+        min_length=1,
+    )]
+    collection_deficit: Annotated[str, Field(
+        description="Part of collection_required needed to cover the wallet shortfall after reservations and approved credit, in currency units.",
+        examples=[2.00],
+        min_length=1,
+    )]
+    credit_limit: Annotated[str, Field(
+        description="Credit limit in currency units. `0.00` for prepaid wallets.",
+        examples=[0.00],
+        min_length=1,
+    )]
+    provisional: Annotated[bool, Field(
+        description="When `true`, the wallet currency has not yet been committed and can be changed once. When `false`, the currency is permanent.",
+    )]
+    created_at: Annotated[str, Field(min_length=1)]
+    updated_at: Annotated[str, Field(min_length=1)]
+
+
+class BillingWalletList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[BillingWallet]
 
 
 class SIPTrunkACLID(RootModel[str]):
@@ -26703,6 +27741,26 @@ class EsimAssignmentCreate(BaseModel):
     )]
 
 
+class EsimRenewalState(str, Enum):
+    pending = "pending"
+    active = "active"
+    needs_attention = "needs_attention"
+    none = "none"
+
+
+class EsimRecurringSubscriptionSummary(BaseModel):
+    "The eSIM's recurring subscription that has not ended. Fetch the subscription by id for its price, cadence, next charge and period history."
+    model_config = ConfigDict(extra="allow")
+    subscription_id: Annotated[str, Field(
+        examples=["ers_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ers_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[EsimRecurringSubscriptionStatus, Field(
+        description="Delivery state of the recurring service. Check payment and renewal fields separately.\n\n- `pending`: enrollment or the initial purchase is still being processed.\n- `active`: the service has delivered a package and remains active.\n- `needs_attention`: delivery or a related credit remains unresolved. Check period history and the associated order before purchasing a replacement.\n- `ended`: recurrence has ended. Previously delivered packages keep their own validity.",
+    )]
+
+
 class EsimSummary(BaseModel):
     "Compact eSIM representation used in lists. Fetch the eSIM by id for the full aggregate with packages, balances, and installation state."
     model_config = ConfigDict(extra="allow")
@@ -26730,6 +27788,9 @@ class EsimSummary(BaseModel):
     display_name: Annotated[Optional[str], Field(
         description="Free-text label for your own reference.",
         max_length=120,
+    )]
+    renewal: Annotated[Optional[EsimRecurringSubscriptionSummary], Field(
+        description="The eSIM's recurring subscription that has not ended, or null when it has none. The single-eSIM read does not carry it; list the eSIM's subscriptions with `esim_id` for the full renewal history.",
     )]
     created_at: Annotated[str, Field(min_length=1)]
 

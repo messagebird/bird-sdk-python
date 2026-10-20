@@ -26,6 +26,19 @@ from bird.resources.contacts import AsyncContacts, Contacts
 from bird.resources.domains_gen import AsyncDomains, Domains
 from bird.resources.email import AsyncEmail, Email
 from bird.resources.lookup_gen import AsyncLookup, Lookup
+from bird.resources.sms_senders_gen import SmsSenders, AsyncSmsSenders
+from bird.resources.sms_sender_requirements_gen import SmsSenderRequirements, AsyncSmsSenderRequirements
+from bird.resources.sms_sender_registrations_gen import SmsSenderRegistrations, AsyncSmsSenderRegistrations
+from bird.resources.billing_prices_gen import BillingPrices, AsyncBillingPrices
+from bird.resources.billing_wallets_gen import BillingWallets, AsyncBillingWallets
+from bird.resources.compliance_attachments import AsyncComplianceAttachments, ComplianceAttachments
+from bird.resources.compliance_document_templates import (
+    AsyncComplianceDocumentTemplates,
+    ComplianceDocumentTemplates,
+)
+from bird.resources.compliance_identities_gen import AsyncComplianceIdentities, ComplianceIdentities
+from bird.resources.compliance_requirements_gen import AsyncComplianceRequirements, ComplianceRequirements
+from bird.resources.compliance_submissions_gen import AsyncComplianceSubmissions, ComplianceSubmissions
 from bird.resources.numbers import AsyncNumbers, Numbers
 from bird.resources.broadcasts import AsyncBroadcasts, Broadcasts
 from bird.resources.assets import Assets, AsyncAssets
@@ -198,6 +211,16 @@ class Bird(SyncAPIClient):
         self.lookup = Lookup(self)
         self.numbers = Numbers(self)
         self.assets = Assets(self)
+        self.compliance_requirements = ComplianceRequirements(self)
+        self.compliance_submissions = ComplianceSubmissions(self)
+        self.compliance_attachments = ComplianceAttachments(self)
+        self.compliance_identities = ComplianceIdentities(self)
+        self.billing_wallets = BillingWallets(self)
+        self.billing_prices = BillingPrices(self)
+        self.sms_sender_registrations = SmsSenderRegistrations(self)
+        self.sms_sender_requirements = SmsSenderRequirements(self)
+        self.sms_senders = SmsSenders(self)
+        self.compliance_document_templates = ComplianceDocumentTemplates(self)
         self.preferences = Preferences(self)
         self.broadcasts = Broadcasts(self, email_defaults)
         self.workspace = WorkspaceResource(self)
@@ -335,6 +358,16 @@ class AsyncBird(AsyncAPIClient):
         self.lookup = AsyncLookup(self)
         self.numbers = AsyncNumbers(self)
         self.assets = AsyncAssets(self)
+        self.compliance_requirements = AsyncComplianceRequirements(self)
+        self.compliance_submissions = AsyncComplianceSubmissions(self)
+        self.compliance_attachments = AsyncComplianceAttachments(self)
+        self.compliance_identities = AsyncComplianceIdentities(self)
+        self.billing_wallets = AsyncBillingWallets(self)
+        self.billing_prices = AsyncBillingPrices(self)
+        self.sms_sender_registrations = AsyncSmsSenderRegistrations(self)
+        self.sms_sender_requirements = AsyncSmsSenderRequirements(self)
+        self.sms_senders = AsyncSmsSenders(self)
+        self.compliance_document_templates = AsyncComplianceDocumentTemplates(self)
         self.preferences = AsyncPreferences(self)
         self.broadcasts = AsyncBroadcasts(self, email_defaults)
         self.workspace = AsyncWorkspaceResource(self)

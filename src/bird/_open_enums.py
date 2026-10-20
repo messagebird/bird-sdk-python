@@ -109,6 +109,50 @@ class AssetReferenceUsage:
     PUBLISHED: Final = "published"
 
 
+class ComplianceItemState:
+    """Values of ComplianceItemState known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    EXPIRED: Final = "expired"
+    IN_REVIEW: Final = "in_review"
+    NOT_APPLICABLE: Final = "not_applicable"
+    NOT_SUPPLIED: Final = "not_supplied"
+    REJECTED: Final = "rejected"
+    SUPPLIED: Final = "supplied"
+
+
+class ComplianceObligationReason:
+    """Values of ComplianceObligationReason known at this SDK version (open enum)."""
+
+    EVIDENCE_EXPIRY: Final = "evidence_expiry"
+    POLICY_CHANGE: Final = "policy_change"
+    VERDICT_WITHDRAWN: Final = "verdict_withdrawn"
+    VERIFIER_REJECTED: Final = "verifier_rejected"
+
+
+class ComplianceObligationState:
+    """Values of ComplianceObligationState known at this SDK version (open enum)."""
+
+    EXTENDED: Final = "extended"
+    LAPSED: Final = "lapsed"
+    OPEN: Final = "open"
+    SATISFIED: Final = "satisfied"
+
+
+class ComplianceProgram:
+    """Values of ComplianceProgram known at this SDK version (open enum)."""
+
+    ALPHA: Final = "alpha"
+    BUSINESS: Final = "business"
+    LOCAL: Final = "local"
+    MOBILE: Final = "mobile"
+    NATIONAL: Final = "national"
+    NUMERIC: Final = "numeric"
+    SHORT_CODE: Final = "short_code"
+    SHORT_CODE_FTEU: Final = "short_code_fteu"
+    TOLL_FREE: Final = "toll_free"
+
+
 class DestinationRegion:
     """Values of DestinationRegion known at this SDK version (open enum)."""
 
@@ -533,6 +577,49 @@ class SMSKeywordOperation:
     STOP: Final = "stop"
 
 
+class SMSRegistrationProgram:
+    """Values of SMSRegistrationProgram known at this SDK version (open enum)."""
+
+    VALUE_10DLC: Final = "10dlc"
+    ALPHA: Final = "alpha"
+    NUMERIC: Final = "numeric"
+    SHORT_CODE: Final = "short_code"
+    TFN: Final = "tfn"
+
+
+class SMSRegistrationStatus:
+    """Values of SMSRegistrationStatus known at this SDK version (open enum)."""
+
+    APPROVED: Final = "approved"
+    BIRD_APPROVED: Final = "bird_approved"
+    CARRIER_PENDING: Final = "carrier_pending"
+    NOT_REQUIRED: Final = "not_required"
+    PENDING: Final = "pending"
+    REGISTRATION_REQUIRED: Final = "registration_required"
+    REJECTED: Final = "rejected"
+    SUSPENDED: Final = "suspended"
+    UNDER_REVIEW: Final = "under_review"
+
+
+class SMSSenderProgramEntry:
+    """Values of SMSSenderProgramEntry known at this SDK version (open enum)."""
+
+    VALUE_10DLC_BRAND: Final = "10dlc_brand"
+    VALUE_10DLC_CAMPAIGN: Final = "10dlc_campaign"
+    VALUE_10DLC_CAMPAIGN_NUMBER_LINK: Final = "10dlc_campaign_number_link"
+    COMPLIANCE_SUBMISSION: Final = "compliance_submission"
+    NONE: Final = "none"
+    TFN_VERIFICATION: Final = "tfn_verification"
+
+
+class SMSSenderSourceKind:
+    """Values of SMSSenderSourceKind known at this SDK version (open enum)."""
+
+    ALPHA: Final = "alpha"
+    NUMBER: Final = "number"
+    SHARED_NUMBER: Final = "shared_number"
+
+
 class SMSSuppressionCoverage:
     """Values of SMSSuppressionCoverage known at this SDK version (open enum)."""
 
@@ -872,7 +959,6 @@ class WhatsAppTemplateLanguageStatus:
     DISABLED: Final = "disabled"
     IN_APPEAL: Final = "in_appeal"
     LIMIT_EXCEEDED: Final = "limit_exceeded"
-    OUTCOME_UNKNOWN: Final = "outcome_unknown"
     PAUSED: Final = "paused"
     PENDING: Final = "pending"
     PENDING_DELETION: Final = "pending_deletion"
@@ -927,6 +1013,10 @@ __all__ = [
     "AMBSuppressionReason",
     "AssetKind",
     "AssetReferenceUsage",
+    "ComplianceItemState",
+    "ComplianceObligationReason",
+    "ComplianceObligationState",
+    "ComplianceProgram",
     "DestinationRegion",
     "DestinationSuperRegion",
     "EmailBroadcastParameterProblemCode",
@@ -966,6 +1056,10 @@ __all__ = [
     "PreferenceOrigin",
     "SMSErrorCode",
     "SMSKeywordOperation",
+    "SMSRegistrationProgram",
+    "SMSRegistrationStatus",
+    "SMSSenderProgramEntry",
+    "SMSSenderSourceKind",
     "SMSSuppressionCoverage",
     "SMSSuppressionEndReason",
     "SMSSuppressionOrigin",

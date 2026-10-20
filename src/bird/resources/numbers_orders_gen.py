@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TypedDict
 from urllib.parse import quote
 
@@ -15,6 +16,25 @@ from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
 
 
+class _ComplianceAnswerRequired(TypedDict):
+    key: str
+
+
+class ComplianceAnswer(_ComplianceAnswerRequired, total=False):
+    value: str
+    attachment_id: str
+    values: Sequence[str]
+    attachment_ids: Sequence[str]
+
+
+class _NumbersOrderComplianceRequired(TypedDict):
+    answers: Sequence[ComplianceAnswer]
+
+
+class NumbersOrderCompliance(_NumbersOrderComplianceRequired, total=False):
+    identity_id: str
+
+
 class _NumbersOrdersCreateRequired(TypedDict):
     number: str
 
@@ -23,6 +43,7 @@ class NumbersOrdersCreateParams(_NumbersOrdersCreateRequired, total=False):
     """Params for ``client.numbers.orders.create``. ``number`` is required."""
 
     reference: str
+    compliance: NumbersOrderCompliance
 
 
 class NumbersOrdersListParams(TypedDict, total=False):
@@ -40,6 +61,7 @@ class NumbersOrders(Resource):
         *,
         number: str,
         reference: str | None = None,
+        compliance: NumbersOrderCompliance | None = None,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
         """Buys a number and starts its recurring charge. The available number's `pricing` is a current price, not a quote: the order resolves the price again when it charges. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
@@ -59,6 +81,7 @@ class NumbersOrders(Resource):
             {
                 "number": number,
                 "reference": reference,
+                "compliance": compliance,
             },
         )
         return self._write(
@@ -122,6 +145,7 @@ class AsyncNumbersOrders(AsyncResource):
         *,
         number: str,
         reference: str | None = None,
+        compliance: NumbersOrderCompliance | None = None,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
         """Buys a number and starts its recurring charge. The available number's `pricing` is a current price, not a quote: the order resolves the price again when it charges. Most orders settle inline; one waiting on a carrier comes back pending and is followed with `numbers.orders.get`. A setup fee already taken is not refunded if the order then fails.
@@ -141,6 +165,7 @@ class AsyncNumbersOrders(AsyncResource):
             {
                 "number": number,
                 "reference": reference,
+                "compliance": compliance,
             },
         )
         return await self._write(

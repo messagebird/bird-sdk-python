@@ -178,6 +178,7 @@ class BaseClient:
         extra_body: Mapping[str, Any] | None,
         timeout: httpx.Timeout | float | None | Omit,
         idempotency_key: str | None,
+        files: Mapping[str, tuple[str, bytes]] | None = None,
     ) -> httpx.Request:
         # A keyless (receiver-only) client also carries no base URL; the missing
         # API key is the caller's actionable error, so it is raised first.
@@ -191,10 +192,13 @@ class BaseClient:
             body = {**(body or {}), **extra_body}
         query = {**self._default_query, **(extra_query or {})}
         query = {key: value for key, value in query.items() if not isinstance(value, Omit)}
+        # The request is built once, so every attempt resends one boundary and
+        # the same bytes.
+        encoded: dict[str, Any] = {"files": files, "data": body} if files else {"json": body}
         return client.build_request(
             method,
             self.base_url + path,
-            json=body,
+            **encoded,
             params=query or None,
             headers=self._headers(extra_headers, idempotency_key),
             timeout=self.timeout if isinstance(timeout, Omit) else timeout,
@@ -204,7 +208,7 @@ class BaseClient:
     def _should_retry(response: httpx.Response) -> bool:
         # 409 is a semantic conflict a retry cannot resolve; 501 is not implemented.
         code = response.status_code
-        return code == 429 or (500 <= code < 600 and code != 501)
+        return code in (408, 429) or (500 <= code < 600 and code != 501)
 
     def _retry_delay(self, attempt: int, response: httpx.Response | None) -> float:
         if response is not None:
@@ -270,10 +274,14 @@ class SyncAPIClient(BaseClient):
         idempotency_key: str | None = None,
         max_retries: int | None = None,
         success_status: int | None = None,
+        files: Mapping[str, tuple[str, bytes]] | None = None,
     ) -> httpx.Response:
         """``success_status`` is a 3xx an operation answers on success. Set only
         where the contract is a redirect the caller must take itself, because the
-        target is pre-authorized and must not receive this client's credentials."""
+        target is pre-authorized and must not receive this client's credentials.
+
+        ``files`` sends the body as ``multipart/form-data``: each entry is a
+        ``(filename, content)`` part, and ``body`` holds the text fields."""
         request = self._build_request(
             self._client,
             method,
@@ -284,6 +292,7 @@ class SyncAPIClient(BaseClient):
             extra_body=extra_body,
             timeout=timeout,
             idempotency_key=self._idempotency_key(method, idempotency_key),
+            files=files,
         )
         retries_left = self.max_retries if max_retries is None else max_retries
         attempt = 0
@@ -340,10 +349,14 @@ class AsyncAPIClient(BaseClient):
         idempotency_key: str | None = None,
         max_retries: int | None = None,
         success_status: int | None = None,
+        files: Mapping[str, tuple[str, bytes]] | None = None,
     ) -> httpx.Response:
         """``success_status`` is a 3xx an operation answers on success. Set only
         where the contract is a redirect the caller must take itself, because the
-        target is pre-authorized and must not receive this client's credentials."""
+        target is pre-authorized and must not receive this client's credentials.
+
+        ``files`` sends the body as ``multipart/form-data``: each entry is a
+        ``(filename, content)`` part, and ``body`` holds the text fields."""
         request = self._build_request(
             self._client,
             method,
@@ -354,6 +367,7 @@ class AsyncAPIClient(BaseClient):
             extra_body=extra_body,
             timeout=timeout,
             idempotency_key=self._idempotency_key(method, idempotency_key),
+            files=files,
         )
         retries_left = self.max_retries if max_retries is None else max_retries
         attempt = 0

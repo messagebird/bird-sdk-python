@@ -39,6 +39,7 @@ class EsimListParams(TypedDict, total=False):
     status: Sequence[str]
     iccid: str
     mode: str
+    renewal: Sequence[str]
     tag: Sequence[str]
     iccid_prefix: str
     display_name: str
@@ -78,13 +79,14 @@ class EsimBase(Resource):
         status: Sequence[str] | None = None,
         iccid: str | None = None,
         mode: str | None = None,
+        renewal: Sequence[str] | None = None,
         tag: Sequence[str] | None = None,
         iccid_prefix: str | None = None,
         display_name: str | None = None,
         phone_number: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EsimSummary]:
-        """List the workspace's eSIMs, newest first, as a cursor page ({data, next_cursor, ...}). Filter by status, iccid, or tag, or search by iccid_prefix, display_name, or phone_number. Each row is a compact summary; fetch a single eSIM for its packages and balances."""
+        """List the workspace's eSIMs, newest first, as a cursor page ({data, next_cursor, ...}). Filter by status, renewal, iccid, or tag, or search by iccid_prefix, display_name, or phone_number. Each row is a compact summary carrying its live recurring subscription, if any; fetch a single eSIM for its packages and balances."""
         query = {
             "limit": limit,
             "starting_after": starting_after,
@@ -95,6 +97,7 @@ class EsimBase(Resource):
             "status": status,
             "iccid": iccid,
             "mode": mode,
+            "renewal": renewal,
             "tag": tag,
             "iccid_prefix": iccid_prefix,
             "display_name": display_name,
@@ -217,13 +220,14 @@ class AsyncEsimBase(AsyncResource):
         status: Sequence[str] | None = None,
         iccid: str | None = None,
         mode: str | None = None,
+        renewal: Sequence[str] | None = None,
         tag: Sequence[str] | None = None,
         iccid_prefix: str | None = None,
         display_name: str | None = None,
         phone_number: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EsimSummary]:
-        """List the workspace's eSIMs, newest first, as a cursor page ({data, next_cursor, ...}). Filter by status, iccid, or tag, or search by iccid_prefix, display_name, or phone_number. Each row is a compact summary; fetch a single eSIM for its packages and balances."""
+        """List the workspace's eSIMs, newest first, as a cursor page ({data, next_cursor, ...}). Filter by status, renewal, iccid, or tag, or search by iccid_prefix, display_name, or phone_number. Each row is a compact summary carrying its live recurring subscription, if any; fetch a single eSIM for its packages and balances."""
         query = {
             "limit": limit,
             "starting_after": starting_after,
@@ -234,6 +238,7 @@ class AsyncEsimBase(AsyncResource):
             "status": status,
             "iccid": iccid,
             "mode": mode,
+            "renewal": renewal,
             "tag": tag,
             "iccid_prefix": iccid_prefix,
             "display_name": display_name,

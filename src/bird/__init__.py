@@ -34,6 +34,7 @@ from bird._types import (
     WhatsappSendParams,
 )
 from bird.resources.webhooks import WebhooksCreateParams
+from bird.resources.compliance_attachments import ComplianceAttachment, ComplianceFile
 from bird.resources.whatsapp_messages import WhatsappMedia
 from bird.resources.whatsapp_business_accounts_gen import (
     WhatsappBusinessAccountsListParams,
@@ -171,6 +172,20 @@ from bird._generated import (
     PhoneNumberLookup,
     Verification,
     VerificationCheckResult,
+    BillingResolvedPrice,
+    BillingWalletList,
+    ComplianceIdentity,
+    ComplianceIdentityCreate,
+    ComplianceIdentityUpdate,
+    ComplianceRequirement,
+    ComplianceSubmission,
+    ComplianceSubmissionCreate,
+    ComplianceSubmissionResupply,
+    SMSCountryRegistration,
+    SMSCountryRegistrationCreate,
+    SMSSender,
+    SMSSenderCreate,
+    SMSSenderRequirementList,
     VoiceCall,
     VoiceLeg,
     VoiceTrunk,
@@ -312,6 +327,24 @@ from bird.resources.voice_verified_numbers_gen import (
 from bird.resources.voice_destinations_gen import (
     DestinationSetting,
     VoiceDestinationsUpdateParams,
+)
+from bird.resources.billing_prices_gen import BillingPricesResolveParams
+from bird.resources.compliance_attachments_gen import ComplianceAttachmentsListParams
+from bird.resources.compliance_identities_gen import (
+    ComplianceIdentitiesCreateParams,
+    ComplianceIdentitiesListParams,
+    ComplianceIdentitiesUpdateParams,
+)
+from bird.resources.compliance_requirements_gen import ComplianceRequirementsGetParams
+from bird.resources.compliance_submissions_gen import (
+    ComplianceSubmissionsCreateParams,
+    ComplianceSubmissionsResupplyParams,
+)
+from bird.resources.sms_sender_registrations_gen import SmsSenderRegistrationsCreateParams
+from bird.resources.sms_sender_requirements_gen import SmsSenderRequirementsListParams
+from bird.resources.sms_senders_gen import (
+    SmsSendersCreateParams,
+    SmsSendersListParams,
 )
 from bird.resources.voice_numbers_gen import (
     VoiceNumbersListParams,
@@ -493,6 +526,14 @@ from bird._open_enums import (
     AMBFormTextContentType,
     AMBSuppressionOrigin,
     AMBSuppressionReason,
+    ComplianceItemState,
+    ComplianceObligationReason,
+    ComplianceObligationState,
+    ComplianceProgram,
+    SMSSenderProgramEntry,
+    SMSRegistrationStatus,
+    SMSSenderSourceKind,
+    SMSRegistrationProgram,
     DestinationRegion,
     DestinationSuperRegion,
     EmailClientFamily,
@@ -738,6 +779,23 @@ __all__ = [
     "AmbSuppressionsListParams",
 
     "AmbSendParams",
+    "BillingPricesResolveParams",
+    "BillingResolvedPrice",
+    "BillingWalletList",
+    "ComplianceAttachmentsListParams",
+    "ComplianceIdentitiesCreateParams",
+    "ComplianceIdentitiesListParams",
+    "ComplianceIdentitiesUpdateParams",
+    "ComplianceIdentity",
+    "ComplianceIdentityCreate",
+    "ComplianceIdentityUpdate",
+    "ComplianceRequirement",
+    "ComplianceRequirementsGetParams",
+    "ComplianceSubmission",
+    "ComplianceSubmissionCreate",
+    "ComplianceSubmissionResupply",
+    "ComplianceSubmissionsCreateParams",
+    "ComplianceSubmissionsResupplyParams",
     "Esim",
     "EsimAssignment",
     "EsimAssignmentCreateParams",
@@ -783,6 +841,19 @@ __all__ = [
     "AMBFormTextContentType",
     "AMBSuppressionOrigin",
     "AMBSuppressionReason",
+    "ComplianceItemState",
+    "ComplianceObligationReason",
+    "ComplianceObligationState",
+    "ComplianceProgram",
+    "SMSCountryRegistration",
+    "SMSCountryRegistrationCreate",
+    "SMSSender",
+    "SMSSenderCreate",
+    "SMSSenderProgramEntry",
+    "SMSRegistrationStatus",
+    "SMSSenderRequirementList",
+    "SMSSenderSourceKind",
+    "SMSRegistrationProgram",
 
     "EmailInboxInsightsGmailTab",
     "EmailInboxInsightsDmarcReadinessReason",
@@ -839,6 +910,10 @@ __all__ = [
     "AsyncBird",
     "RequestOptions",
     "Omit",
+    "SmsSenderRegistrationsCreateParams",
+    "SmsSenderRequirementsListParams",
+    "SmsSendersCreateParams",
+    "SmsSendersListParams",
     "omit",
     "EmailDefaults",
     "Attachment",
@@ -1024,6 +1099,8 @@ __all__ = [
     "EmailTemplatesVersionsListParams",
     "EmailTemplatesVersionsRollbackParams",
     "EmailTemplatesVersionsSubmitParams",
+    "ComplianceAttachment",
+    "ComplianceFile",
     "WhatsappMedia",
     "WhatsappSendParams",
     "WhatsAppMessage",
