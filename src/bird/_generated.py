@@ -20081,6 +20081,13 @@ class EmailThread(BaseModel):
     highlights: Annotated[Optional[EmailThreadHighlights], Field(
         description="Matched search fragments for a thread, one array per field the query matched, with the matched terms wrapped in `**`. A field is present only when the query matched it, so the keys that are present tell you which fields produced the hit. Returned only on thread search results.",
     )] = None
+    scheduled_count: Annotated[Optional[int], Field(
+        description="Scheduled or dispatching sends targeting this conversation. Returned by conversation get and list, including zero when none remain. Omitted by search.",
+        ge=0,
+    )] = None
+    next_scheduled_at: Annotated[Optional[str], Field(
+        description="Earliest due time among scheduled or dispatching sends. Returned by conversation get and list only when scheduled_count is positive. Omitted by search and when no sends remain.",
+    )] = None
 
 
 class EmailThreadList(BaseModel):
@@ -20127,6 +20134,10 @@ class EmailThreadUpdateRequest(BaseModel):
     )] = None
 
 
+class MailboxScheduledMessageID(RootModel[str]):
+    root: str
+
+
 class EmailThreadMessageRecipientStatus(str, Enum):
     delivered = "delivered"
     failed = "failed"
@@ -20170,7 +20181,7 @@ class EmailThreadMessageSource(BaseModel):
         min_length=1,
     )]
     available_until: Annotated[str, Field(
-        description="When the log entry (and the message's body and raw MIME) expires.",
+        description="When the log entry (and the message's body and raw MIME) expires. For a scheduled acknowledgement, calculated from the due time and replaced by the actual dispatch-based deadline once dispatched.",
         min_length=1,
     )]
 
@@ -20187,8 +20198,24 @@ class EmailThreadMessageAuthentication(str, Enum):
 
 
 class EmailThreadMessage(BaseModel):
-    "A message in a mailbox conversation, either direction. Message metadata, extracted text, and attachment bytes stay readable for the mailbox's retention tier. The body and raw MIME are available through the body and raw endpoints for 30 days after the message occurred."
+    "A message in a mailbox conversation, either direction. Message metadata, extracted text, and attachment bytes stay readable for the mailbox's retention tier. The body and raw MIME are available through the body and raw endpoints for 30 days after the message occurred.\nA scheduled acknowledgement reserves the message and thread IDs but is not stored in the conversation until dispatch. Use its scheduled_message_id and mailbox_id to inspect or cancel the separate schedule; body and raw reads are unavailable before dispatch."
     model_config = ConfigDict(extra="allow")
+    scheduled_message_id: Annotated[Optional[str], Field(
+        examples=["msm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^msm_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    scheduled_at: Annotated[Optional[str], Field(
+        description="Planned send time on a scheduled acknowledgement.",
+    )] = None
+    mailbox_id: Annotated[Optional[str], Field(
+        examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    notice: Annotated[Optional[str], Field(
+        description="Informational notice when conversation retention expires before dispatch; the reserved thread is recreated without expired messages.",
+    )] = None
     id: Annotated[str, Field(
         description="Message ID. Received messages have a `rem_` ID, sent messages an `em_` ID: the same IDs used by the received-message and sent-message logs.",
         examples=["rem_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -20236,7 +20263,7 @@ class EmailThreadMessage(BaseModel):
         max_length=20,
     )]
     status: Annotated[Optional[str], Field(
-        description="Aggregate delivery status of a sent message:\n\n- `accepted`: Accepted for sending.\n- `sent`: Handed off to the provider.\n- `delivered`: All attempted recipients delivered.\n- `failed`: Terminal failure.\n\nNull for received messages.",
+        description="Aggregate delivery status of a sent message:\n\n- `scheduled`: Acknowledgement only; the separate schedule is linked by scheduled_message_id.\n- `accepted`: Accepted for sending.\n- `sent`: Handed off to the provider.\n- `delivered`: All attempted recipients delivered.\n- `failed`: Terminal failure.\n\nNull for received messages.",
     )]
     recipients: Annotated[Optional[List[EmailThreadMessageRecipient]], Field(
         description="Terminal per-recipient delivery outcomes of a sent message, filled in as each one becomes known and kept for the mailbox's full retention tier. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.",
@@ -20254,7 +20281,7 @@ class EmailThreadMessage(BaseModel):
         description="Whether SPF or DKIM passed and aligned with the domain in the message's `From` header. The receiving provider currently supplies no DMARC result, so this is `null`. Sent messages have `null` results. Kept for the mailbox retention tier.",
     )]
     purge_at: Annotated[str, Field(
-        description="Scheduled permanent-deletion time. This is the end of the mailbox's retention tier, moved to no more than 30 days in the future while the message is in the trash. Restore a trashed message before then with `PATCH {\"labels\": {\"remove\": [\"trash\"]}}`.",
+        description="Scheduled permanent-deletion time. For a scheduled acknowledgement, this is based on the due time and replaced with actual dispatch-based retention once it sends. This is the end of the mailbox's retention tier, moved to no more than 30 days in the future while the message is in the trash. Restore a trashed message before then with `PATCH {\"labels\": {\"remove\": [\"trash\"]}}`.",
         min_length=1,
     )]
     attachment_count: Annotated[int, Field(
@@ -20277,7 +20304,7 @@ class EmailThreadMessage(BaseModel):
         description="Link to the message's entry in the received-message or sent-message log, which has delivery analytics such as per-recipient events. Log entries expire 30 days after the message occurred.",
     )]
     occurred_at: Annotated[str, Field(
-        description="When the message was received or accepted for sending.",
+        description="When the message was received or accepted for sending. For a scheduled acknowledgement, the time it is due to send, replaced by the actual send time once it sends.",
         min_length=1,
     )]
 
@@ -20319,6 +20346,9 @@ class EmailThreadMessageAttachmentList(BaseModel):
 class EmailThreadMessageReplyRequest(BaseModel):
     "A reply to a conversation message. Recipients are derived from the message being replied to: its Reply-To address when present, otherwise its From address. Set `reply_all` to also include the original To and Cc recipients (minus the mailbox's own address). The subject and threading headers are set automatically. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
+    scheduled_at: Annotated[Optional[str], Field(
+        description="Send between 30 seconds and 30 days ahead, sharing the scheduled-email allowance. The scheduled send is listed separately and enters the conversation only at dispatch. Sender, mailbox and send-volume eligibility are rechecked then; refusal fails the schedule record without adding a conversation message. Retention starts at dispatch. Attachments are not supported on scheduled messages; send now or schedule without attachments.",
+    )] = None
     html: Annotated[Optional[str], Field(
         description="HTML body of the reply. At least one of html or text must be provided.",
         max_length=524288,
@@ -20344,11 +20374,89 @@ class EmailThreadMessageReplyRequest(BaseModel):
         description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for the mailbox's retention tier.",
         max_length=20,
     )] = None
+    cancel_on_reply: Annotated[Optional[bool], Field(
+        description="When scheduled_at is set, cancel if an inbound message arrives in the conversation before dispatch is claimed. Defaults to false: the frozen parent, recipients and content are sent unchanged even if new mail arrives.",
+    )] = None
+
+
+class EmailMailboxScheduledMessageStatus(str, Enum):
+    scheduled = "scheduled"
+    sending = "sending"
+    sent = "sent"
+    failed = "failed"
+    canceled = "canceled"
+
+
+class EmailMailboxScheduledMessage(BaseModel):
+    "A mailbox-owned scheduled send, separate from conversation messages. Sent means handed to the ordinary send pipeline, not delivered; follow message_id for delivery status. Frozen recipients and reply headers do not change when new mail arrives. Terminal records remain until the mailbox is permanently erased."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["msm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^msm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    mailbox_id: Annotated[str, Field(
+        examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    thread_id: Annotated[str, Field(
+        examples=["thr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    message_id: Annotated[Optional[str], Field(
+        examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    status: Annotated[EmailMailboxScheduledMessageStatus, Field(
+        description="- `scheduled`: Waiting for its due time; cancellation is still possible.\n- `sending`: Dispatch has been claimed; cancellation is no longer possible.\n- `sent`: Handed to the ordinary send pipeline, not necessarily delivered. Follow message_id for delivery status.\n- `failed`: Terminal dispatch refusal or failure; see failure_reason. The schedule will not retry.\n- `canceled`: Terminal cancellation before dispatch; see cancellation_reason. The message will not send.",
+    )]
+    scheduled_at: Annotated[str, Field(description="Scheduled at.", min_length=1)]
+    cancel_on_reply: Annotated[bool, Field(
+        description="Whether an inbound message cancels this send before dispatch is claimed.",
+    )]
+    failure_reason: Annotated[Optional[str], Field(description="Why dispatch failed.")] = None
+    cancellation_reason: Annotated[Optional[str], Field(
+        description="Why canceled; replied means new inbound mail canceled an opted-in schedule.",
+    )] = None
+    subject: Annotated[str, Field(description="Frozen subject.", min_length=0)]
+    snippet: Annotated[str, Field(
+        description="Plain-text preview of the frozen message.",
+        min_length=0,
+    )]
+    recipients: Annotated[List[str], Field(
+        description="Visible recipients (To and Cc). Bcc addresses remain only in the frozen send payload.",
+    )]
+    created_by: Actor
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class EmailMailboxScheduledMessageList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[EmailMailboxScheduledMessage]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
 
 
 class EmailMailboxComposeRequest(BaseModel):
-    "A new message sent from a mailbox, starting a new conversation. Mirrors the plain send request without `from`, because the mailbox is who the message comes from, and without `scheduled_at`, because a mailbox sends immediately. We set the RFC 5322 Message-ID so replies thread back into this conversation. At least one of `html` or `text` must be provided."
+    "A new message sent from a mailbox, starting a new conversation. Mirrors the plain send request without `from`, because the mailbox is who the message comes from, and accepts `scheduled_at` to send later. Omit it to send immediately. We set the RFC 5322 Message-ID so replies thread back into this conversation. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
+    scheduled_at: Annotated[Optional[str], Field(
+        description="Send between 30 seconds and 30 days ahead, sharing the scheduled-email allowance. The scheduled send is listed separately and enters the conversation only at dispatch. Sender, mailbox and send-volume eligibility are rechecked then; refusal fails the schedule record without adding a conversation message. Retention starts at dispatch. Attachments are not supported on scheduled messages; send now or schedule without attachments.",
+    )] = None
     to: Annotated[List[EmailAddressInput], Field(
         description="Primary recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
         max_length=50,
@@ -20393,6 +20501,9 @@ class EmailMailboxComposeRequest(BaseModel):
     )] = None
     category: Annotated[Optional[EmailMessageCategory], Field(
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
+    )] = None
+    cancel_on_reply: Annotated[Optional[bool], Field(
+        description="When scheduled_at is set, cancel if an inbound message arrives in the conversation before dispatch is claimed. Defaults to false: the frozen parent, recipients and content are sent unchanged even if new mail arrives.",
     )] = None
 
 

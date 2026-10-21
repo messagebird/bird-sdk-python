@@ -51,6 +51,7 @@ class EmailThreadsMessagesListParams(TypedDict, total=False):
 class EmailThreadsMessagesReplyParams(TypedDict, total=False):
     """Params for ``client.email.threads.messages.reply``. Every key is optional."""
 
+    scheduled_at: str
     html: str
     text: str
     reply_all: bool
@@ -58,6 +59,7 @@ class EmailThreadsMessagesReplyParams(TypedDict, total=False):
     metadata: Mapping[str, Any]
     category: str
     attachments: Sequence[EmailAttachment]
+    cancel_on_reply: bool
 
 
 class EmailThreadsMessages(Resource):
@@ -141,6 +143,7 @@ class EmailThreadsMessages(Resource):
         thread_id: str,
         message_id: str,
         *,
+        scheduled_at: str | None = None,
         html: str | None = None,
         text: str | None = None,
         reply_all: bool | None = None,
@@ -148,6 +151,7 @@ class EmailThreadsMessages(Resource):
         metadata: Mapping[str, Any] | None = None,
         category: str | None = None,
         attachments: Sequence[EmailAttachment] | None = None,
+        cancel_on_reply: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
         """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically.
@@ -163,6 +167,7 @@ class EmailThreadsMessages(Resource):
         body = to_wire(
             EmailThreadMessageReplyRequest,
             {
+                "scheduled_at": scheduled_at,
                 "html": html,
                 "text": text,
                 "reply_all": reply_all,
@@ -170,6 +175,7 @@ class EmailThreadsMessages(Resource):
                 "metadata": metadata,
                 "category": category,
                 "attachments": attachments,
+                "cancel_on_reply": cancel_on_reply,
             },
         )
         return self._write(
@@ -286,6 +292,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         thread_id: str,
         message_id: str,
         *,
+        scheduled_at: str | None = None,
         html: str | None = None,
         text: str | None = None,
         reply_all: bool | None = None,
@@ -293,6 +300,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         metadata: Mapping[str, Any] | None = None,
         category: str | None = None,
         attachments: Sequence[EmailAttachment] | None = None,
+        cancel_on_reply: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
         """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically.
@@ -308,6 +316,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         body = to_wire(
             EmailThreadMessageReplyRequest,
             {
+                "scheduled_at": scheduled_at,
                 "html": html,
                 "text": text,
                 "reply_all": reply_all,
@@ -315,6 +324,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
                 "metadata": metadata,
                 "category": category,
                 "attachments": attachments,
+                "cancel_on_reply": cancel_on_reply,
             },
         )
         return await self._write(

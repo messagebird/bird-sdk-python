@@ -61,6 +61,10 @@ from bird.resources.assets_folders_gen import (
     AssetsFoldersUpdateParams,
 )
 from bird._generated import (
+    Actor,
+    ActorType,
+    EmailMailboxScheduledMessage,
+    EmailMailboxScheduledMessageStatus,
     Asset,
     AssetList,
     AssetFolder,
@@ -698,6 +702,10 @@ from bird._generated import (
 )
 
 __all__ = [
+    "Actor",
+    "ActorType",
+    "EmailMailboxScheduledMessage",
+    "EmailMailboxScheduledMessageStatus",
     "Asset",
     "AssetList",
     "AssetFolder",

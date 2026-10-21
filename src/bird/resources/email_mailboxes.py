@@ -19,12 +19,18 @@ from bird.resources.email_mailboxes_receive_rules_gen import (
 )
 
 
+from bird.resources.email_mailboxes_scheduled_messages_gen import (
+    AsyncEmailMailboxesScheduledMessages,
+    EmailMailboxesScheduledMessages,
+)
+
 class EmailMailboxes(EmailMailboxesBase):
     """Manage the workspace's mailboxes. Reach it via ``client.email.mailboxes``."""
 
     def __init__(self, client: SyncAPIClient, defaults: EmailDefaults | None = None) -> None:
         super().__init__(client)
         self.messages = EmailMailboxesMessages(client, defaults)
+        self.scheduled_messages = EmailMailboxesScheduledMessages(client)
         self.receive_rules = EmailMailboxesReceiveRules(client)
 
 
@@ -34,4 +40,5 @@ class AsyncEmailMailboxes(AsyncEmailMailboxesBase):
     def __init__(self, client: AsyncAPIClient, defaults: EmailDefaults | None = None) -> None:
         super().__init__(client)
         self.messages = AsyncEmailMailboxesMessages(client, defaults)
+        self.scheduled_messages = AsyncEmailMailboxesScheduledMessages(client)
         self.receive_rules = AsyncEmailMailboxesReceiveRules(client)
