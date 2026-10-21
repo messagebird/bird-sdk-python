@@ -6647,6 +6647,12 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
         examples=["https://cdn.example.com/receipts/a1b2c3.png"],
         min_length=1,
     )] = None
+    filename: Annotated[Optional[str], Field(
+        description="Name the recipient sees on the document, including the extension. Without it, the document arrives untitled. Send it only on a `document` parameter; Bird rejects it on any other kind.",
+        examples=["invoice-a1b2c3.pdf"],
+        max_length=100,
+        min_length=1,
+    )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
         description="The point on the map a location header opens. Send it on a `location` parameter.",
     )] = None
