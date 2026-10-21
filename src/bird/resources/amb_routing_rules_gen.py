@@ -56,7 +56,7 @@ class AmbRoutingRules(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRule:
-        """Returns one routing rule by ID.
+        """Returns a single routing rule by ID, including its `business_account_id`, match condition (`match_kind`, `match_intent_id`, `match_group_id`), target `queue`, `precedence`, and `is_default` status. Returns a `404` if the rule does not exist in the workspace.
 
         ```python
         result = client.amb.routing_rules.get('arr_01krdgeqcxet5s7t44vh8rt9mg')
@@ -195,7 +195,7 @@ class AsyncAmbRoutingRules(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> AMBRoutingRule:
-        """Returns one routing rule by ID.
+        """Returns a single routing rule by ID, including its `business_account_id`, match condition (`match_kind`, `match_intent_id`, `match_group_id`), target `queue`, `precedence`, and `is_default` status. Returns a `404` if the rule does not exist in the workspace.
 
         ```python
         result = await client.amb.routing_rules.get('arr_01krdgeqcxet5s7t44vh8rt9mg')

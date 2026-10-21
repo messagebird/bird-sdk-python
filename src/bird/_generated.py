@@ -4381,7 +4381,7 @@ class ComplianceIdentityAnswer(BaseModel):
         description="When this party last filed the detail. Filing it is what records it here, so it is never a statement that a reviewer agreed with the value. Filing the same value again can carry a previous approval of it forward instead of putting it in front of a reviewer. `null` for a detail recorded before the container began tracking submissions.",
     )]
     state: Annotated[Optional[Annotated[Union[ComplianceItemState, str], Field(union_mode="left_to_right")]], Field(
-        description="Where review has got to on this exact value. Absent when no registration has ruled on it, which covers a detail nobody has reached yet and one filed before the container recorded which submission it came from.\nOne value can be filed on several registrations and decided differently on each, and one verdict is reported for it. A live approval wins, because it is proof the value is acceptable. Failing that a refusal wins over a registration still waiting, since waiting is nobody having looked yet rather than evidence against a refusal. An approval past its validity period is neither: it reads as `expired` and ranks below a refusal, above anything still waiting. `not_applicable` is reported last, because it is a statement about a requirement rather than about the value.",
+        description="Where review has got to on this exact value. Absent when no registration has ruled on it, which covers a detail nobody has reached yet and one filed before the container recorded which submission it came from.\n\nOne value can be filed on several registrations and decided differently on each, and one verdict is reported for it. A live approval wins, because it is proof the value is acceptable. Failing that a refusal wins over a registration still waiting, since waiting is nobody having looked yet rather than evidence against a refusal. An approval past its validity period is neither: it reads as `expired` and ranks below a refusal, above anything still waiting. `not_applicable` is reported last, because it is a statement about a requirement rather than about the value.",
     )] = None
     reason: Annotated[Optional[str], Field(
         description="What has to change, when `state` is one a reviewer refused. `null` otherwise, and `null` on a refusal recorded without one.",
@@ -6970,7 +6970,7 @@ class WhatsAppContactCardOrigin(str, Enum):
 
 
 class WhatsAppContactCard(BaseModel):
-    "A contact card on this message: one the contact shared, or one this workspace sent.\nNothing here is required. WhatsApp sends the parts the card holds and omits the rest, and a card that arrives with only an `origin` is still meaningful, so an empty card reads back empty rather than being dropped."
+    "A contact card on this message: one the contact shared, or one this workspace sent.\n\nNothing here is required. WhatsApp sends the parts the card holds and omits the rest, and a card that arrives with only an `origin` is still meaningful, so an empty card reads back empty rather than being dropped."
     model_config = ConfigDict(extra="allow")
     origin: Annotated[Optional[Annotated[Union[WhatsAppContactCardOrigin, str], Field(union_mode="left_to_right")]], Field(
         description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since. Set on a card the contact shared; absent on one this workspace sent.",
@@ -7964,7 +7964,7 @@ class WhatsAppContactAddressSend(BaseModel):
 
 
 class WhatsAppContactCardSend(BaseModel):
-    "A contact card to send. WhatsApp shows the name on the card and the rest in a profile view the recipient opens from it.\nA card carrying a phone number renders buttons that message or save the contact; a card without one can only be added to an address book."
+    "A contact card to send. WhatsApp shows the name on the card and the rest in a profile view the recipient opens from it.\n\nA card carrying a phone number renders buttons that message or save the contact; a card without one can only be added to an address book."
     model_config = ConfigDict(extra="allow")
     name: WhatsAppContactNameSend
     org: Annotated[Optional[WhatsAppContactOrgSend], Field(
@@ -10975,7 +10975,9 @@ class AMBNativeAttachment(BaseModel):
 
 class AMBNativeTextContent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["text"], Field(description="Apple message family.")]
+    type: Annotated[Literal["text"], Field(
+        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
+    )]
     body: Annotated[Optional[str], Field(
         description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
@@ -11084,7 +11086,9 @@ class AMBRichLinkConstruct(BaseModel):
 
 class AMBNativeRichLinkContent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["rich_link"], Field(description="Apple message family.")]
+    type: Annotated[Literal["rich_link"], Field(
+        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
+    )]
     body: Annotated[Optional[str], Field(
         description="Automatic introductions for rich links are enabled regionally in stages. When enabled for a new send, a nonblank body is sent as a separate text before the link. All parts belong to one message, which becomes sent after Apple accepts all parts. Before activation, and for retries retaining legacy behavior, body is included in the rich link request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the rich link. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
@@ -11642,7 +11646,9 @@ class AMBNativeInteractiveData(BaseModel):
 
 class AMBNativeInteractiveContent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["interactive"], Field(description="Apple message family.")]
+    type: Annotated[Literal["interactive"], Field(
+        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
+    )]
     body: Annotated[Optional[str], Field(
         description="Automatic introductions for inline quick replies are enabled regionally in stages. When enabled for a new send containing `interactive_data.data.quick_reply`, a nonblank body is sent as separate text before the choices. Messages using `interactive_data_ref` do not receive this automatic introduction, even after activation. All parts belong to one message, which becomes sent after Apple accepts all parts. For referenced interactions, before activation, and for retries retaining legacy behavior, body is included in the interactive request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the quick reply. Omit body to send choices only. For list pickers, time pickers and forms, use interactive_data.received_message for the visible introduction. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
@@ -11735,7 +11741,9 @@ class AMBFormPageType(str, Enum):
 class AMBInboundFormItem(BaseModel):
     model_config = ConfigDict(extra="allow")
     identifier: Annotated[str, Field(min_length=1)]
-    type: AMBFormPageType
+    type: Annotated[AMBFormPageType, Field(
+        description="Type of form page in an Apple Messages for Business interactive form:\n\n- `select` means a single-choice or multiple-choice selection list.\n- `picker` means a wheel picker over a list of items.\n- `date_picker` means a date selector.\n- `input` means a single-line or multi-line text field.",
+    )]
     title: Annotated[str, Field(
         description="Display value Apple returned, including any input prefix. May be empty for an optional input.",
         min_length=0,
@@ -11837,7 +11845,9 @@ class AMBNativeInboundInteractiveData(BaseModel):
 
 class AMBNativeInboundInteractiveContent(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["interactive"], Field(description="Apple message family.")]
+    type: Annotated[Literal["interactive"], Field(
+        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
+    )]
     body: Annotated[Optional[str], Field(description="Message body supplied by Apple.")] = None
     subject: Annotated[Optional[str], Field(
         description="Message subject supplied by Apple.",
@@ -13906,7 +13916,7 @@ class WhatsAppKeywordRule(BaseModel):
         description="The keywords this rule adds. For one of Bird's own rules this is the full set Bird ships. For a rule you created it is only what you added on top: it never restates or removes Bird's keywords, so `effective_keywords` is what actually matches.",
     )]
     effective_keywords: Annotated[List[str], Field(
-        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so a sender in a country Bird ships a rule for is answered by that rule and your reply is not used. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
+        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\n\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so a sender in a country Bird ships a rule for is answered by that rule and your reply is not used. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
     )]
     reply: Annotated[Optional[str], Field(
         description="The message sent back when one of the keywords matches, or null when no reply is sent. The reply goes out on the conversation the inbound message opened.",
@@ -24731,7 +24741,7 @@ class VoicePartyEndpoint(BaseModel):
 class VoiceParty(BaseModel):
     model_config = ConfigDict(extra="allow")
     endpoint: Annotated[Optional[VoicePartyEndpoint], Field(
-        description="What kind of participant sat on this side of a leg, and the coordinate that kind carries: a telephone endpoint off the platform, a SIP or WebRTC endpoint, Bird answering, or the platform placing a leg onward. It does not name a person.\n`null` on an observation this API could not read. The entry stays, because the call counted it when it deduplicated, and dropping it here would report fewer participants than were observed.",
+        description="What kind of participant sat on this side of a leg, and the coordinate that kind carries: a telephone endpoint off the platform, a SIP or WebRTC endpoint, Bird answering, or the platform placing a leg onward. It does not name a person.\n\n`null` on an observation this API could not read. The entry stays, because the call counted it when it deduplicated, and dropping it here would report fewer participants than were observed.",
     )] = None
     address: Annotated[Optional[str], Field(
         description="This side's own address, in E.164 or as a `sip:` URI. `null` when the observation carried none, which does not say whether one was withheld, missing, or nonexistent.",
