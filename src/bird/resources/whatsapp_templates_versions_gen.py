@@ -6,9 +6,12 @@ from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
+    WhatsAppTemplateSubmit,
+    WhatsAppTemplateSubmitResult,
     WhatsAppTemplateVersion,
     WhatsAppTemplateVersionSummary,
 )
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
@@ -22,7 +25,33 @@ class WhatsappTemplatesVersionsListParams(TypedDict, total=False):
     ending_before: str
 
 
+class WhatsappTemplatesVersionsSubmitParams(TypedDict, total=False):
+    """Params for ``client.whatsapp.templates.versions.submit``. Every key is optional."""
+
+    validate_only: bool
+
+
 class WhatsappTemplatesVersionsBase(Resource):
+    def create(
+        self,
+        template_ref: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateVersion:
+        """Opens the template's editable draft, seeded from the newest submitted version. A template has at most one open draft, so this is safe to call when you are unsure: it returns the existing draft rather than opening a second one. Read the template's `draft_version_id` first to skip the call. The draft is where every content edit lands, and nothing reaches WhatsApp until the draft is submitted.
+
+        ```python
+        draft = client.whatsapp.templates.versions.create("order_update")
+        print(draft.id)
+        ```
+        """
+        return self._action(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions",
+            WhatsAppTemplateVersion,
+            options,
+        )
+
     def list(
         self,
         template_ref: str,
@@ -67,8 +96,77 @@ class WhatsappTemplatesVersionsBase(Resource):
             options,
         )
 
+    def delete(
+        self,
+        template_ref: str,
+        version_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Deletes the open draft and every unsubmitted edit in it, leaving the template with no draft until `whatsapp.templates.versions.create` opens another. What sends resolve is unaffected, because a submitted version is immutable and keeps serving. To revert one language instead of discarding all of them, use `whatsapp.templates.versions.languages.discard`.
+
+        ```python
+        client.whatsapp.templates.versions.delete("order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg")
+        ```
+        """
+        self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}", options)
+
+    def submit(
+        self,
+        template_ref: str,
+        version_id: str,
+        *,
+        validate_only: bool | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateSubmitResult:
+        """Checks the draft and, unless `validate_only` is set, freezes it as an immutable version and sends each changed language to WhatsApp for review. Call it once with `validate_only: true` first: that reports every problem across every language in one round trip and freezes nothing, which is cheaper than finding the problems one submit at a time. A real submit answers `202`, and only the languages whose content changed go to WhatsApp as `pending`: one whose content already matches its approved copy is carried forward still `approved` and is never sent. A submit where every language is unchanged is therefore settled the moment it returns, with nothing to poll for. A language an earlier version carried but the draft dropped is deleted at WhatsApp in the background; it is absent from the new version, so it has no `pending` state to poll. Read the version's languages to see which are which, and where any is `pending`, read the template's `pending_version_id` and those languages until they settle. A clean check does not guarantee WhatsApp approves, because WhatsApp offers no way to ask in advance. Use a different idempotency key for the check and the submit.
+
+        ```python
+        draft_id = "wav_01krdgeqcxet5s7t44vh8rt9mg"
+        check = client.whatsapp.templates.versions.submit("order_update", draft_id, validate_only=True)
+        for problem in check.errors:
+            print(problem.language, problem.field, problem.message)
+        if check.valid:
+            submitted = client.whatsapp.templates.versions.submit("order_update", draft_id)
+            print(submitted.version.id if submitted.version else None)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateSubmit,
+            {
+                "validate_only": validate_only,
+            },
+        )
+        return self._write(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/submit",
+            body,
+            WhatsAppTemplateSubmitResult,
+            options,
+        )
+
 
 class AsyncWhatsappTemplatesVersionsBase(AsyncResource):
+    async def create(
+        self,
+        template_ref: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateVersion:
+        """Opens the template's editable draft, seeded from the newest submitted version. A template has at most one open draft, so this is safe to call when you are unsure: it returns the existing draft rather than opening a second one. Read the template's `draft_version_id` first to skip the call. The draft is where every content edit lands, and nothing reaches WhatsApp until the draft is submitted.
+
+        ```python
+        draft = await client.whatsapp.templates.versions.create("order_update")
+        print(draft.id)
+        ```
+        """
+        return await self._action(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions",
+            WhatsAppTemplateVersion,
+            options,
+        )
+
     def list(
         self,
         template_ref: str,
@@ -110,5 +208,54 @@ class AsyncWhatsappTemplatesVersionsBase(AsyncResource):
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},
             WhatsAppTemplateVersion,
+            options,
+        )
+
+    async def delete(
+        self,
+        template_ref: str,
+        version_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Deletes the open draft and every unsubmitted edit in it, leaving the template with no draft until `whatsapp.templates.versions.create` opens another. What sends resolve is unaffected, because a submitted version is immutable and keeps serving. To revert one language instead of discarding all of them, use `whatsapp.templates.versions.languages.discard`.
+
+        ```python
+        await client.whatsapp.templates.versions.delete("order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg")
+        ```
+        """
+        await self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}", options)
+
+    async def submit(
+        self,
+        template_ref: str,
+        version_id: str,
+        *,
+        validate_only: bool | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateSubmitResult:
+        """Checks the draft and, unless `validate_only` is set, freezes it as an immutable version and sends each changed language to WhatsApp for review. Call it once with `validate_only: true` first: that reports every problem across every language in one round trip and freezes nothing, which is cheaper than finding the problems one submit at a time. A real submit answers `202`, and only the languages whose content changed go to WhatsApp as `pending`: one whose content already matches its approved copy is carried forward still `approved` and is never sent. A submit where every language is unchanged is therefore settled the moment it returns, with nothing to poll for. A language an earlier version carried but the draft dropped is deleted at WhatsApp in the background; it is absent from the new version, so it has no `pending` state to poll. Read the version's languages to see which are which, and where any is `pending`, read the template's `pending_version_id` and those languages until they settle. A clean check does not guarantee WhatsApp approves, because WhatsApp offers no way to ask in advance. Use a different idempotency key for the check and the submit.
+
+        ```python
+        draft_id = "wav_01krdgeqcxet5s7t44vh8rt9mg"
+        check = await client.whatsapp.templates.versions.submit("order_update", draft_id, validate_only=True)
+        for problem in check.errors:
+            print(problem.language, problem.field, problem.message)
+        if check.valid:
+            submitted = await client.whatsapp.templates.versions.submit("order_update", draft_id)
+            print(submitted.version.id if submitted.version else None)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateSubmit,
+            {
+                "validate_only": validate_only,
+            },
+        )
+        return await self._write(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/submit",
+            body,
+            WhatsAppTemplateSubmitResult,
             options,
         )

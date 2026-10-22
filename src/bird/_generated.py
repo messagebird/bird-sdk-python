@@ -2387,7 +2387,7 @@ class ContactList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -4427,7 +4427,7 @@ class ComplianceIdentityList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -4475,7 +4475,7 @@ class AttachmentList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -4604,7 +4604,7 @@ class AssetList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -4711,7 +4711,7 @@ class AssetFolderList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -4831,10 +4831,16 @@ class ComplianceRequirement(BaseModel):
         description="Whether this country's requirements are met. `true` when no requirements apply, or once the submission is approved and every required requirement is approved or marked not applicable. This can remain true when an external verifier requests a correction. Once you submit that correction, it must pass review before this becomes true again, including any optional answers you change.",
     )]
     needs_input: Annotated[bool, Field(
-        description="Whether anything is waiting on you. True when a required requirement has no answer, its answer was refused or has gone stale, or the registration needs correction as described by `reason`. False does not imply that review is pending: a closed verifier correction can leave the requirements unsatisfied with no editable answers. Read `review_pending` to determine whether an answer is awaiting review. Read this independently of `satisfied`, which reports whether your paperwork is accepted. An unresolved verifier correction also sets it while the matching grant is live and the correction deadline has not passed, until you supply updated details. At the deadline or after grant withdrawal, an unresolved rejection alone does not set it because accepted answers can no longer be replaced. A corrected optional answer that is rejected or expires still needs your input through ordinary resupply, including after that deadline.",
+        description="Whether anything is waiting on you. True when a required requirement has no answer, its answer was refused or has gone stale, the registration needs correction as described by `reason`, or a closed submission accepts corrected details (`resubmission_allowed`). False does not imply that review is pending: a closed verifier correction can leave the requirements unsatisfied with no editable answers. Read `review_pending` to determine whether an answer is awaiting review. Read this independently of `satisfied`, which reports whether your paperwork is accepted. An unresolved verifier correction also sets it while the matching grant is live and the correction deadline has not passed, until you supply updated details. At the deadline or after grant withdrawal, an unresolved rejection alone does not set it because accepted answers can no longer be replaced. A corrected optional answer that is rejected or expires still needs your input through ordinary resupply, including after that deadline.",
     )]
     review_pending: Annotated[bool, Field(
         description="Whether any submitted answer is awaiting or undergoing review. False after all answers have received verdicts. A closed verifier correction can remain unsatisfied with no review pending and no editable answers.",
+    )]
+    answers_editable: Annotated[bool, Field(
+        description="Whether you may change any answer, not only one that was refused or has gone stale. True for a number, business identity or SMS sender registration whose submission has not been approved yet, including answers awaiting review or already accepted, and for a closed submission when `resubmission_allowed` is true. An SMS sender registration goes to the carrier or registry when it is approved, so it stays editable only until then. A changed answer loses its verdict and is reviewed again. Send only the answers you change. False once the submission is approved: replace only answers in `fields` whose state is `not_supplied`, `rejected` or `expired`, or those marked `editable_for_verifier_repair`.",
+    )]
+    resubmission_allowed: Annotated[bool, Field(
+        description="Whether Bird closed the previous submission but accepts corrected details for this registration. When `submission_id` is set, update that submission with your corrected answers and it is reviewed again. When `submission_id` is `null`, the form has changed since: create a new submission. `reason` says why the previous one was closed. False when nothing was closed, and when a closed submission cannot be sent again; contact support then.",
     )]
     reason: Annotated[Optional[str], Field(
         description="What to correct about the registration as a whole, or null when no registration-wide correction is requested. Reasons about individual answers are on the entries in fields.",
@@ -5034,7 +5040,7 @@ class ComplianceSubmission(BaseModel):
 
 
 class ComplianceSubmissionResupply(BaseModel):
-    "Replacement answers for an existing submission. Rejected, expired, or missing answers can\nbe supplied again; accepted answers normally cannot be changed.\n\nWhen the requirements response marks an accepted answer as `editable_for_verifier_repair`,\nyou can replace it during that open correction and before its deadline. Accepted-answer\nrepairs must change content; unchanged accepted entries are ignored. Rejected, expired,\nor missing answers follow the ordinary resupply rules, including same-value retries\nafter a grant is withdrawn. Supplied replacements are reviewed again."
+    "Replacement answers for an existing submission. Rejected, expired, or missing answers can\nbe supplied again; accepted answers normally cannot be changed. While the requirements\nresponse reports `answers_editable` with a `submission_id`, you can change any answer on that\nsubmission; send only the ones you change. With `submission_id` null, create a new submission instead.\n\nWhen the requirements response marks an accepted answer as `editable_for_verifier_repair`,\nyou can replace it during that open correction and before its deadline. Accepted-answer\nrepairs must change content; unchanged accepted entries are ignored. Rejected, expired,\nor missing answers follow the ordinary resupply rules, including same-value retries\nafter a grant is withdrawn. Supplied replacements are reviewed again."
     model_config = ConfigDict(extra="allow")
     answers: Annotated[List[ComplianceAnswer], Field(min_length=1)]
 
@@ -5816,7 +5822,7 @@ class SMSSenderList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -6760,7 +6766,7 @@ class WhatsAppImage(BaseModel):
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
@@ -6783,7 +6789,7 @@ class WhatsAppVideo(BaseModel):
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
@@ -6806,7 +6812,7 @@ class WhatsAppAudio(BaseModel):
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
@@ -6829,7 +6835,7 @@ class WhatsAppSticker(BaseModel):
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
@@ -6852,7 +6858,7 @@ class WhatsAppDocument(BaseModel):
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key; it is absent when the file could not be retrieved from WhatsApp. It stays populated after the stored bytes expire, and the link returns `410` from then on. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
+        description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
@@ -6925,7 +6931,7 @@ class WhatsAppContactPhone(BaseModel):
     )] = None
     type: Annotated[Optional[str], Field(
         description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
-        examples=["CELL"],
+        examples=["cell"],
     )] = None
 
 
@@ -7200,7 +7206,6 @@ class WhatsAppInteractiveReply(BaseModel):
 class WhatsAppUnsupportedType(str, Enum):
     reaction = "reaction"
     interactive = "interactive"
-    button = "button"
     order = "order"
     system = "system"
     unsupported = "unsupported"
@@ -8201,8 +8206,222 @@ class ConversationInboxStatus(str, Enum):
     resolved = "resolved"
 
 
+class WhatsAppConversationControl(str, Enum):
+    bird = "bird"
+    meta_business_agent = "meta_business_agent"
+
+
+class WhatsAppConversationServiceWindowStatus(str, Enum):
+    open = "open"
+    closed = "closed"
+
+
+class WhatsAppConversationID(RootModel[str]):
+    root: str
+
+
+class WhatsAppConversationRecipient(BaseModel):
+    "The contact or group on the other side of this conversation. Profile fields are null when unknown and on group conversations."
+    model_config = ConfigDict(extra="allow")
+    bsuid: Annotated[Optional[str], Field(
+        description="Meta's business-scoped user ID for the contact, or null when unknown.",
+        examples=["US.13491208655302741918"],
+        min_length=1,
+    )]
+    phone_number: Annotated[Optional[str], Field(
+        description="Contact phone number in E.164 format, or null when unknown.",
+        examples=[+15550001111],
+        min_length=1,
+    )]
+    display_name: Annotated[Optional[str], Field(
+        description="Display name from the contact's WhatsApp profile, or null when none has been recorded.",
+        min_length=1,
+    )]
+    username: Annotated[Optional[str], Field(
+        description="Contact's WhatsApp username without a leading `@`, or null when none has been recorded. Messages cannot be addressed by username.",
+        min_length=1,
+    )]
+    group_id: Annotated[Optional[str], Field(
+        examples=["wag_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wag_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class WhatsAppConversationServiceWindow(BaseModel):
+    "The 24-hour customer-service window, measured from the most recent message this contact sent. Free-form messages are accepted while it is open; once it closes, only a template can start the conversation again.\n\nThis is what Bird observed, not a promise about what WhatsApp will accept: a message Bird never received leaves the window looking shorter than it is, and WhatsApp decides each send on its own."
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[WhatsAppConversationServiceWindowStatus, Field(
+        description="Whether the customer-service window is open right now.\n\n- `open`: the contact wrote within the last 24 hours, so free-form messages are accepted.\n- `closed`: the window has passed, or the contact has never written, so only a template can be sent.",
+    )]
+    ends_at: Annotated[Optional[str], Field(
+        description="When the window closes, or closed. Null when no inbound message has been recorded, in which case `status` is `closed`.",
+        examples=["2026-09-23T10:35:00Z"],
+    )]
+
+
+class WhatsAppConversationLastMessage(BaseModel):
+    "A pointer to the most recent message in this conversation, in either direction. It names the message rather than copying it: read the message itself, with its content and delivery status, through the conversation's message list."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    direction: Annotated[MessageDirection, Field(
+        description="Whether a message was sent from the workspace (`outbound`) or received by it (`inbound`).",
+    )]
+    created_at: Annotated[str, Field(
+        description="The message's `created_at`: when it was accepted (outbound) or received (inbound). The conversation list is ordered by it. It only moves forward: a message that arrives late and belongs earlier in the conversation does not pull it back.",
+        min_length=1,
+    )]
+
+
 class ConversationLabels(RootModel[List[str]]):
     root: List[str]
+
+
+class WhatsAppConversation(BaseModel):
+    "One WhatsApp conversation between a number you have connected and a single contact, or a group it belongs to. It holds who answers the conversation right now, its read state and labels, when its service window closes, and the most recent message. Resolving the inbox work preserves the conversation's ID and history. A new inbound message reopens it. Messages are retained for 30 days, and the conversation is deleted when its last message expires."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wacv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wacv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_phone_number: Annotated[Optional[str], Field(
+        description="Your WhatsApp business phone number this conversation runs on, in E.164 format. It stays the same when you remove the number and connect it again. Null when Bird holds no phone number for it.",
+        examples=[+15550001234],
+        min_length=1,
+    )]
+    recipient: Annotated[WhatsAppConversationRecipient, Field(
+        description="The other side of the conversation: the contact, or the group it takes place in. A group conversation carries `group_id` and null contact identity fields.",
+    )]
+    inbox_status: Annotated[ConversationInboxStatus, Field(
+        description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
+    )]
+    control: Annotated[Annotated[Union[WhatsAppConversationControl, str], Field(union_mode="left_to_right")], Field(
+        description="Who answers this conversation right now. You take and release control in the dashboard inbox.",
+    )]
+    assigned_to: Annotated[Optional[str], Field(
+        description="The user this conversation is assigned to. Null when unassigned. Assignment is not rechecked against workspace membership on read, so it can still name a user whose access was removed.",
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    service_window: Annotated[Optional[WhatsAppConversationServiceWindow], Field(
+        description="Customer-service window for a contact. Null for group conversations.",
+    )]
+    last_message: Annotated[Optional[WhatsAppConversationLastMessage], Field(
+        description="A pointer to the most recent message in this conversation. It names the message; read its content through the conversation's message list. Null when the conversation has no message yet.",
+    )]
+    unread_count: Annotated[int, Field(
+        description="Number of inbound messages the workspace has not acknowledged. Shared across the workspace. Sending a reply does not mark messages read.",
+        ge=0,
+    )]
+    labels: Annotated[List[str], Field(
+        description="Workspace labels on this conversation. Labels do not change read state or inbox status.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When Bird opened this conversation.",
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When this conversation last changed.",
+        min_length=1,
+    )]
+
+
+class WhatsAppConversationList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppConversation], Field(
+        description="A page of conversations, most recently active first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class WhatsAppConversationUpdateRequest(BaseModel):
+    "Changes to apply to a conversation. Every field is optional; omit one to leave it unchanged. Control moves in the dashboard inbox instead, because WhatsApp has to accept that change and can refuse it."
+    model_config = ConfigDict(extra="allow")
+    assigned_to: Annotated[Optional[str], Field(
+        description="User to assign this conversation to. Pass a workspace member's user ID, `me` for the signed-in user, or null to unassign it. An API key cannot use `me` and receives a `422` response.",
+        examples=["me"],
+        pattern="^(me|usr_[0-9a-hjkmnp-tv-z]{26})$",
+    )] = None
+    inbox_status: Annotated[Optional[ConversationInboxStatus], Field(
+        description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
+    )] = None
+    labels: Annotated[Optional[List[str]], Field(
+        description="Labels chosen by your workspace. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nEach label must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace. Duplicate labels are rejected. The names `all`, `archived`, `assigned`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `pinned`, `read`, `snoozed`, `spam`, `starred`, `trash`, and `unread` are reserved in every casing.",
+        max_length=20,
+    )] = None
+    read: Annotated[Optional[str], Field(
+        description="Mark received inbound messages with created_at at or before this timestamp as read in the shared workspace inbox. Messages sharing the timestamp are included together. Later arrivals remain unread until another read update. This does not send a read receipt to the customer or change inbox status. Omit to leave read state unchanged.",
+    )] = None
+
+
+class WhatsAppConversationEventType(str, Enum):
+    whatsapp_conversation_control_changed = "whatsapp_conversation.control_changed"
+    whatsapp_conversation_assigned = "whatsapp_conversation.assigned"
+    whatsapp_conversation_agent_notified = "whatsapp_conversation.agent_notified"
+
+
+class WhatsAppConversationEventID(RootModel[str]):
+    root: str
+
+
+class WhatsAppConversationEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wace_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wace_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    type: Annotated[Annotated[Union[WhatsAppConversationEventType, str], Field(union_mode="left_to_right")], Field(
+        description="Type of conversation event. `whatsapp_conversation.control_changed` records the conversation moving between the Meta Business Agent and your application, `whatsapp_conversation.assigned` records it being assigned, reassigned or unassigned, and `whatsapp_conversation.agent_notified` records a notification sent to the agent about this contact. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error. The values below are the types known at this version.",
+    )]
+    summary: Annotated[str, Field(
+        description="Human-readable summary of what happened.",
+        examples=["Handed to your application by the agent."],
+        min_length=1,
+    )]
+    metadata: Annotated[Dict[str, Any], Field(
+        description="Structured details for the event. `from` and `to` carry the values that changed: the holder (`meta_business_agent` or `bird`) for a control change, the assigned user ID for an assignment, null for no assignee. A control change also carries the `initiator` and, when one was left, the `reason`. An assignment carries `assigned_by`, the actor who made it. An agent notification carries the `agent_notification_id` and its `name`.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the event happened.",
+        min_length=1,
+    )]
+
+
+class WhatsAppConversationEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppConversationEvent], Field(
+        description="Page of conversation events, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
 
 
 class WhatsAppGroupStatus(str, Enum):
@@ -8813,7 +9032,7 @@ class WhatsAppTemplateLanguageState(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete, present when `status` is `submit_failed`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec`; the language keeps sending on the maximum price WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
 
@@ -8934,8 +9153,267 @@ class WhatsAppTemplateList(BaseModel):
     )]
 
 
+class WhatsAppTemplateCategoryWrite(str, Enum):
+    authentication = "authentication"
+    utility = "utility"
+    marketing = "marketing"
+
+
+class WhatsAppTemplateComponentTypeWrite(str, Enum):
+    header = "header"
+    body = "body"
+    footer = "footer"
+    buttons = "buttons"
+    carousel = "carousel"
+
+
+class WhatsAppTemplateHeaderFormatWrite(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    gif = "gif"
+    document = "document"
+    location = "location"
+
+
+class WhatsAppTemplateParameterTypeWrite(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    gif = "gif"
+    document = "document"
+
+
+class WhatsAppTemplateExampleParameterWrite(BaseModel):
+    "One example value for one variable, as written to a draft."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[WhatsAppTemplateParameterTypeWrite, Field(
+        description="The kind of value a template parameter accepts. `text` is an example filling a `{{n}}` placeholder. The other four are the sample file a media header shows, and each matches its header's `format`. Any other value is rejected.",
+    )]
+    text: Annotated[Optional[str], Field(
+        description="The example value. Send it when `type` is `text`. May be empty on a draft; required before submission.",
+        examples=[123456],
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The address of the file a media header shows. Send it when `type` is `image`, `video`, `gif` or `document`. We fetch the file when the language is submitted and hand Meta our own copy, so the address only has to be reachable at submission. WhatsApp reviews the template with this file, and the message each recipient receives carries the file named on the send. May be empty on a draft, for a file not yet chosen; a reachable address is required before submission.",
+        examples=["https://www.example.com/holiday/banner.jpg"],
+        max_length=2000,
+    )] = None
+    name: Annotated[Optional[str], Field(
+        description="The named placeholder this example fills. Send it only for a template written against named parameters rather than positional `{{n}}` ones. May be empty on a draft; required before submission.",
+        examples=["first_name"],
+    )] = None
+
+
+class WhatsAppTemplateButtonTypeWrite(str, Enum):
+    url = "url"
+    quick_reply = "quick_reply"
+    phone_number = "phone_number"
+    otp = "otp"
+    copy_code = "copy_code"
+    request_contact_info = "request_contact_info"
+
+
+class WhatsAppTemplateButtonWrite(BaseModel):
+    "One button, as written to a draft."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[WhatsAppTemplateButtonTypeWrite, Field(
+        description="A button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It belongs\n  only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number their\n  WhatsApp account carries. It belongs only on a utility or marketing\n  template, as that template's only button.\n\nAny other value is rejected.",
+    )]
+    otp_type: Annotated[Optional[Literal["copy_code"]], Field(
+        description="How the recipient receives the passcode. Send it only on an `otp` button.",
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The button's label, which each button type treats differently.\n\n- `url`, `quick_reply`, `phone_number`: your own label. Required.\n- `otp`: omit it. WhatsApp writes this label itself and reveals it only\n  once the language has been submitted.\n- `copy_code`: omit it. WhatsApp fixes this label and does not let you\n  change it.\n- `request_contact_info`: omit it. WhatsApp fixes this label too and\n  writes `Share Contact Info`, which is also what a submitted button\n  reads back as, so a read button can be written back unchanged.\n\nA draft takes any label, so this may be empty on a draft and is required\nonly before submission. A label a fixed-label button may not carry is\nrefused rather than silently replaced: the submit comes back as\n`valid: false` with an `errors` entry naming this field, in every\nlanguage.",
+        examples=["Track order"],
+        max_length=25,
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The address a `url` button opens. An address with a placeholder is personalized per recipient, and one without is the same for everyone. At most one variable, and it must sit at the end of the address, written as `{{1}}`. A button address is numbered this way even on a template whose text uses named variables. A variable needs its example value in `example_parameters`. May be empty on a draft; required before submission.",
+        examples=["https://www.example.com/orders/{{1}}"],
+        max_length=2000,
+    )] = None
+    phone_number: Annotated[Optional[str], Field(
+        description="The number a `phone_number` button dials, in international format. Some countries publish numbers with a leading zero after the country calling code; WhatsApp strips that zero, so give a number that dials without it. May be empty on a draft; required before submission.",
+        examples=[+14155550100],
+        max_length=20,
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
+        description="The value that fills the variable in `url`, which WhatsApp reviews in the filled address. Send only the value, so a `{{1}}` standing for an order number takes `A-4192`. Required whenever `url` carries a variable. Also required on a `copy_code` button as one `text` entry. The entry carries a sample coupon code of at most 20 characters for WhatsApp to review. Each recipient copies the code you provide when sending the message.",
+    )] = None
+
+
+class WhatsAppTemplateCardComponentTypeWrite(str, Enum):
+    header = "header"
+    body = "body"
+    buttons = "buttons"
+
+
+class WhatsAppTemplateCardHeaderFormatWrite(str, Enum):
+    image = "image"
+    video = "video"
+
+
+class WhatsAppTemplateCardComponentWrite(BaseModel):
+    "One content block inside a carousel card, as written to a draft. A card carries a narrower set of blocks than a template does, so it has its own shape rather than reusing the template's."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[WhatsAppTemplateCardComponentTypeWrite, Field(
+        description="A card block's type. A card carries a `header` showing an image or a video, and optionally a `body` and a `buttons` block. A card has no footer and cannot hold a carousel of its own, which is why a card's blocks are a narrower set than a template's.",
+    )]
+    format: Annotated[Optional[WhatsAppTemplateCardHeaderFormatWrite], Field(
+        description="The card header's kind. Required on a card's `header` block and refused on any other.",
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The card block's text, with each variable written as a placeholder. Send it on a `body` block. If any card carries body text then every card must, so the cards keep an even height. May be empty on a draft; required before submission.",
+        examples=["Chronograph, brown leather"],
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
+        description="An example value per `{{n}}` in `text`, in placeholder order. Meta reviews the filled message rather than the template, so a block with variables and no examples is refused. A card's `header` block carries its file here as a single entry whose `type` matches the header's `format` and whose `url` addresses the file, the same way a template header does.",
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppTemplateButtonWrite]], Field(
+        description="The buttons this card carries, at most two. Send it only on a card's `buttons` block. Every card must carry the same buttons in the same order. A card takes a `quick_reply`, `phone_number` or `url` button; a `copy_code` or `request_contact_info` button belongs on the template itself.",
+        max_length=2,
+    )] = None
+
+
+class WhatsAppTemplateCardWrite(BaseModel):
+    "One card in a carousel, as written to a draft."
+    model_config = ConfigDict(extra="allow")
+    components: Annotated[Optional[List[WhatsAppTemplateCardComponentWrite]], Field(
+        description="This card's content blocks, in display order. A card carries a `header` showing an image or a video, and optionally a `body` and a `buttons` block. Every card in the carousel must carry the same blocks, and the same buttons, in the same order, so a card with body text means every card needs body text. May be omitted or empty on a draft; a header block is required before submission.",
+        max_length=3,
+    )] = None
+
+
+class WhatsAppTemplateComponentWrite(BaseModel):
+    "One content block, as written to a draft."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[WhatsAppTemplateComponentTypeWrite, Field(
+        description="A content block's type. A `body` block is required on every language; `header`, `footer`, `buttons` and `carousel` are optional and appear at most once each. A `carousel` holds the cards a marketing template scrolls through, and is the one block type that nests: its cards carry blocks of their own. Any other value is rejected.",
+    )]
+    format: Annotated[Optional[WhatsAppTemplateHeaderFormatWrite], Field(
+        description="The header's kind. Required on a `header` block and refused on any other.",
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The block's text, with each variable written as a placeholder. Send it on a `body`, a `footer`, and a `text` header. Four blocks refuse it. A `buttons` block carries text on the buttons themselves. A media or `location` header shows a file or map and has nowhere to put copy. A `carousel` carries text on its cards. For an authentication template's body and footer, WhatsApp writes the copy from the two settings below. May be empty on a draft; required before submission.",
+        examples=["Your order {{order_id}} has shipped."],
+    )] = None
+    add_security_recommendation: Annotated[Optional[bool], Field(
+        description="Ends an authentication template's body with WhatsApp's own advice not to share the code. Send it only on an authentication template's body block, whose copy is otherwise WhatsApp's to write.",
+    )] = None
+    code_expiration_minutes: Annotated[Optional[int], Field(
+        description="How long the passcode stays valid. Send it on an authentication template's footer block and WhatsApp writes the footer stating it; omit the footer block entirely to leave it off. WhatsApp enforces the range it accepts and refuses the submission otherwise.",
+        examples=[60],
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
+        description="An example value per `{{n}}` in `text`, in placeholder order. Meta reviews the filled message rather than the template, so a block with variables and no examples is refused. A media header also carries its file here as one entry. Its `type` matches the header's `format`, and its `url` addresses the file. A media header has no placeholder, so this entry is the header's own sample rather than a value that fills one.",
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppTemplateButtonWrite]], Field(
+        description="The buttons this block carries. Send it only on a `buttons` block. Ten in total, of which at most two open a link and at most one dials a number. Quick replies must sit together rather than being interleaved with the other types, so `Quick reply, Quick reply, Link` is accepted where `Quick reply, Link, Quick reply` is refused. A template with four or more buttons, or one that mixes a quick reply with another type, cannot be opened on WhatsApp's desktop clients, and the recipient is asked to switch to their phone. May be omitted or empty on a draft; at least one button is required before submission.",
+        max_length=10,
+    )] = None
+    cards: Annotated[Optional[List[WhatsAppTemplateCardWrite]], Field(
+        description="The cards a `carousel` block scrolls through. Send it only on a `carousel` block, and only on a marketing template. Every card must carry the same blocks in the same order, and a card's header shows an `image` or a `video`. A `document` header works at the top of a template but not on a card. The number of cards is fixed once the language is approved. A template approved with three cards always sends three. Changing the count requires a new template rather than a new version of this one. May be omitted or hold fewer than two on a draft; at least two are required before submission.",
+        max_length=10,
+    )] = None
+
+
 class WhatsAppTemplateRevision(RootModel[int]):
     root: int
+
+
+class WhatsAppTemplateLanguageUpsert(BaseModel):
+    "One language's content, as written to a draft."
+    model_config = ConfigDict(extra="allow")
+    components: Annotated[Optional[List[WhatsAppTemplateComponentWrite]], Field(
+        description="The template's content blocks for this language. Header, footer and buttons are optional. Every variable needs an example value, which is what Meta reviews against. May be omitted or empty on a draft; a body block is required before the language can be submitted.",
+        max_length=10,
+    )] = None
+    revision: Annotated[Optional[int], Field(
+        description="The revision you last read for this language, making the write a compare-and-set: a mismatch is refused with a conflict, leaving an edit you have not seen in place. Omit it for last-write-wins, which is what a single writer wants. Supplying it for a language that does not exist is also refused with a conflict rather than recreating the language. Inside a template's initial languages seed on create, a value here is refused, since no prior revision exists yet to compare against.",
+        examples=[4],
+        ge=1,
+    )] = None
+
+
+class WhatsAppTemplateCreate(BaseModel):
+    "Parameters for creating a WhatsApp template, optionally seeding its first draft."
+    model_config = ConfigDict(extra="allow")
+    waba: Annotated[str, Field(
+        description="The WhatsApp Business Account to author this template on. A template belongs to one account at Meta and is reviewed, approved and sent under it, so every create names the account explicitly. It must be an account connected to this workspace.",
+        examples=[102290129340398],
+        min_length=1,
+    )]
+    slug: Annotated[str, Field(
+        description="The template's workspace-unique handle, and what a send references. Editable only before the first submission. The `bird_` prefix is reserved for our built-in templates and is rejected. Meta's own template name is derived from this handle, so the handle itself is validated against the charset Meta accepts.",
+        examples=["order_update"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )]
+    name: Annotated[Optional[str], Field(
+        description="The template's display name, shown wherever the template is listed. Free text, changeable at any time. Defaults to the slug when omitted.",
+        examples=["Order update"],
+        max_length=255,
+        min_length=1,
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Free text.",
+        examples=["Sent when a customer's order ships."],
+        max_length=1000,
+    )] = None
+    category: Annotated[WhatsAppTemplateCategoryWrite, Field(
+        description="The category Meta reviews the template under. Required, because Meta demands one on every template it holds and it determines what a send costs. There is no default. Meta can recategorize a template after review; the per-language summary reports what it actually holds.",
+    )]
+    default_language: Annotated[str, Field(
+        description="The language a send uses when it names none, and the last resort when a requested language is unavailable. When `languages` is supplied it must be one of its keys.",
+        examples=["en"],
+        max_length=35,
+        min_length=2,
+    )]
+    on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        description="How a send behaves when it asks for a language this template does not carry. Defaults to `fail`: a WhatsApp send that silently fell back would deliver approved copy the recipient did not expect, at a price the sender did not choose.",
+    )] = None
+    language_source_required: Annotated[Optional[bool], Field(
+        description="Whether a send has to name a language. Set it to have a send that names none rejected, leaving the default language for sends that ask for it.",
+    )] = None
+    languages: Annotated[Optional[Dict[str, WhatsAppTemplateLanguageUpsert]], Field(
+        description="Optional seed for the template's first draft, keyed by BCP-47 language\ntag. Supplying it opens the draft and writes every language in one\ntransaction: any invalid entry fails the whole create, leaving no\ntemplate behind. Tags are canonicalised, so `pt-br` lands as `pt-BR`, and\ntwo keys canonicalising to one tag are rejected.\n\nOmit it to create the template with no draft, and add content later\nthrough the version and language paths. Nothing here reaches Meta:\ncontent is submitted, never created.",
+    )] = None
+
+
+class WhatsAppTemplateUpdate(BaseModel):
+    "Partial update of a template's metadata and language policies. Only the fields you send are changed; the rest are left as they stand. The slug can change only before the first submission."
+    model_config = ConfigDict(extra="allow")
+    slug: Annotated[Optional[str], Field(
+        description="A new workspace-unique handle. Editable only before the first submission. After a change, the old slug no longer resolves; the template ID stays the same.",
+        examples=["welcome-email"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )] = None
+    name: Annotated[Optional[str], Field(
+        description="The template's display name. Editable at any time; it is not what a send references.",
+        examples=["Order update"],
+        max_length=255,
+        min_length=1,
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="What the template is for. Send `null` to clear it.",
+        max_length=1000,
+    )] = None
+    default_language: Annotated[Optional[str], Field(
+        description="The language a send falls back to, and the one language the template is required to carry. Repointing it at a language the draft does not hold is refused, the same way removing the current default is: add the language first.",
+        examples=["en"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        description="How a send behaves when it asks for a language this template does not carry. Omitting it leaves the template's current setting alone. The `fail` default belongs to a create, and a partial update never reapplies it.",
+    )] = None
+    language_source_required: Annotated[Optional[bool], Field(
+        description="Whether a send has to name a language.",
+    )] = None
 
 
 class WhatsAppTemplateVersionSummary(BaseModel):
@@ -9004,7 +9482,7 @@ class WhatsAppTemplateVersionLanguage(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete, present when `status` is `submit_failed`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec`; the language keeps sending on the maximum price WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
 
@@ -9037,6 +9515,89 @@ class WhatsAppTemplateVersion(BaseModel):
         description="When the version was opened. Null for a built-in template's version, which Bird ships rather than stores.",
         examples=["2026-07-20T10:31:00Z"],
     )]
+
+
+class WhatsAppTemplateDuplicate(BaseModel):
+    "The account the copy is created on, plus optional overrides. Everything else is inherited from the source."
+    model_config = ConfigDict(extra="allow")
+    waba: Annotated[str, Field(
+        description="The WhatsApp Business Account the copy is created on. A template belongs to one account at Meta. Meta reviews, approves, and sends it under that account. The copy therefore names its account rather than taking the source's. A built-in template's account is not one you can submit against. It must be an account connected to this workspace.",
+        examples=[102290129340398],
+        min_length=1,
+    )]
+    slug: Annotated[Optional[str], Field(
+        description="The copy's handle. The server assigns one when omitted. A `bird_` slug is rejected, and one already in use is a conflict.",
+        examples=["acme_order_update"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )] = None
+    name: Annotated[Optional[str], Field(
+        description="The copy's display name. Inherited from the source when omitted.",
+        max_length=255,
+        min_length=1,
+    )] = None
+    include_languages: Annotated[Optional[List[str]], Field(
+        description="The languages the copy carries, when it should carry only some of them. Every entry must be a language the source holds. A copy narrows the set it inherits, it never adds to it. Omitted, the copy takes all of the source's languages.",
+        max_length=100,
+        min_length=1,
+    )] = None
+    default_language: Annotated[Optional[str], Field(
+        description="The copy's default language, which must be one of the languages the copy carries. Omitted, the copy keeps the source's default when `include_languages` still carries it. Otherwise it takes the first of the copy's languages sorted by canonical tag, which is the order the copy stores them in, not the order `include_languages` listed them.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+
+
+class WhatsAppTemplateSubmit(BaseModel):
+    "Options for a submit. Every field is optional, so an empty body submits the draft as it stands."
+    model_config = ConfigDict(extra="allow")
+    validate_only: Annotated[Optional[bool], Field(
+        description="Check the draft without submitting it. Every language is checked and every problem reported, but nothing is frozen and nothing is sent to WhatsApp. A clean result does not guarantee WhatsApp approval: WhatsApp offers no way to ask in advance, so it can still refuse a submission these checks passed. Use a different idempotency key for the validation and the submission. Reusing one key with different request bodies is rejected.",
+    )] = None
+
+
+class WhatsAppTemplateSubmitProblem(BaseModel):
+    "One problem found while checking a version."
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[Optional[str], Field(
+        description="The language the problem belongs to, or null when it concerns the version as a whole.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    field: Annotated[Optional[str], Field(
+        description="Where the problem sits inside the language's content, as a dotted path with indexes, or null when it is not about one field. The path is rooted at the language you wrote, so `components[0].text` is the first block's text.",
+        examples=["components[2].cards[0].components[1].example_parameters[0].url"],
+        min_length=1,
+    )] = None
+    code: Annotated[str, Field(
+        description="The error code a real submit fails with. Look it up in the error catalog for what to do about it.",
+        examples=["E15025"],
+        min_length=1,
+        pattern="^E\\d{5}$",
+    )]
+    message: Annotated[str, Field(
+        description="What is wrong, in a form you can show the author.",
+        examples=["A body block needs text."],
+        min_length=1,
+    )]
+
+
+class WhatsAppTemplateSubmitResult(BaseModel):
+    "The outcome of a submit. The shape is the same whether the submit was a check or a real one: read `valid` and `version` to see what happened."
+    model_config = ConfigDict(extra="allow")
+    valid: Annotated[bool, Field(description="Whether the version passed every check.")]
+    errors: Annotated[List[WhatsAppTemplateSubmitProblem], Field(
+        description="Every problem found across every language. One round trip identifies all problems. Empty when `valid` is true.",
+    )]
+    version: Annotated[Optional[WhatsAppTemplateVersion], Field(
+        description="The version this submit froze, or null when nothing was frozen: a check run, or a submit that found problems.",
+    )] = None
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this outcome. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that do\nnot report next actions.\n\nA failed check routes back to the languages that need an edit; a clean one routes to\nthe real submit, and then to polling the template for WhatsApp's verdicts.",
+    )] = None
 
 
 class WhatsAppTemplateLanguageSummary(BaseModel):
@@ -9100,6 +9661,31 @@ class WhatsAppTemplateQuality(BaseModel):
     )]
 
 
+class WhatsAppTemplatePauseReason(str, Enum):
+    first_pause = "first_pause"
+    second_pause = "second_pause"
+    rate_limiting_pause = "rate_limiting_pause"
+    disabled = "disabled"
+
+
+class WhatsAppTemplatePause(BaseModel):
+    "WhatsApp's record of why it paused or disabled one language. Set when WhatsApp pauses or disables the language and removed once the language can send again. Present only on the version currently in service."
+    model_config = ConfigDict(extra="allow")
+    started_at: Annotated[str, Field(
+        description="When WhatsApp paused or disabled the language.",
+        examples=["2026-07-26T16:41:00Z"],
+        min_length=1,
+    )]
+    reason: Annotated[Optional[Annotated[Union[WhatsAppTemplatePauseReason, str], Field(union_mode="left_to_right")]], Field(
+        description="WhatsApp's label for why it took a language out of service: its `other_info.title`, lowercased. `first_pause` and `second_pause` are the first and second pauses for a low quality rating, which last three and six hours. `rate_limiting_pause` is a pause WhatsApp applied to limit sending. `disabled` means WhatsApp stopped the language from sending after repeated pauses. This is an open enum. Accept unrecognized values.",
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="WhatsApp's explanation of the pause or disablement, passed through unmodified. Absent when WhatsApp sent none.",
+        examples=["Your WhatsApp message template has been paused."],
+        min_length=1,
+    )] = None
+
+
 class WhatsAppTemplateLanguage(BaseModel):
     "One language of one version: its content, what the submission carrying it did with it, and everything Meta holds about it."
     model_config = ConfigDict(extra="allow")
@@ -9133,11 +9719,14 @@ class WhatsAppTemplateLanguage(BaseModel):
     quality: Annotated[Optional[WhatsAppTemplateQuality], Field(
         description="Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating.",
     )] = None
+    pause: Annotated[Optional[WhatsAppTemplatePause], Field(
+        description="WhatsApp's record of why it paused or disabled one language. Set when WhatsApp pauses or disables the language and removed once the language can send again. Present only on the version currently in service.",
+    )] = None
     rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete, present when `status` is `submit_failed`. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec`; the language keeps sending on the maximum price WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
         description="When this content was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, which Bird ships already approved rather than submitting on your behalf.",
@@ -9156,6 +9745,41 @@ class WhatsAppTemplateLanguage(BaseModel):
         examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class WhatsAppTemplateLanguageSaved(BaseModel):
+    "What a language write returns, enough to make the next write without re-reading."
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[str, Field(
+        description="The canonical form of the tag you addressed. Use it in later calls for this language.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    revision: Annotated[int, Field(
+        description="The language's new revision, to pass back on your next write.",
+        examples=[4],
+        ge=1,
+    )]
+    content_hash: Annotated[str, Field(
+        description="A hash over the content as saved, so you can tell whether your next write would change anything without diffing the document.",
+        examples=["sha256:9f2c4e1a7b03d85fbc6e29d417a05e8c3b1d9f76a2e4c018d53b7f9a6c2e18d4"],
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When this language was last written.",
+        min_length=1,
+    )]
+
+
+class WhatsAppTemplateLanguageDiscard(BaseModel):
+    "Parameters for discarding one language's draft edits. Pass `revision` to guard against overwriting an edit you haven't seen."
+    model_config = ConfigDict(extra="allow")
+    revision: Annotated[Optional[int], Field(
+        description="The revision you last read for this language, making the discard a compare-and-set: a mismatch is refused with a conflict, leaving an edit you have not seen in place. Omit it for last-write-wins, which is what a single writer wants. Supplying it for a language the draft no longer holds is also refused with a conflict rather than recreating the language.",
+        examples=[4],
+        ge=1,
     )] = None
 
 
@@ -9953,6 +10577,11 @@ class WhatsAppNumber(BaseModel):
         min_length=1,
         pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    verified_until: Annotated[Optional[str], Field(
+        description="When we expect WhatsApp to release this pre-verified number if you have not finished signup by then. Present only while the number is `awaiting_signup`. Absent for a number pre-verified before we started recording this moment, and for a number you brought yourself.",
+        examples=["2026-11-19T10:22:31Z"],
+        min_length=1,
+    )] = None
     name: Annotated[str, Field(
         description="Your workspace's own label for this number, given when it was connected and changeable afterwards. It has no bearing on what WhatsApp displays to people the number messages; `GET /v1/whatsapp/numbers/{number_id}/profile` returns that as `display_name`. For a number we operate on your behalf, this is our own label instead and cannot be changed.",
         examples=["Sales EU"],
@@ -10029,6 +10658,10 @@ class WhatsAppNumberList(BaseModel):
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
+        ge=0,
+    )] = None
 
 
 class NumbersDedicatedAllocationID(RootModel[str]):
@@ -10300,7 +10933,7 @@ class AMBBusinessAccountEventList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -10429,7 +11062,7 @@ class AMBBusinessAccountList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -10528,7 +11161,7 @@ class AMBBusinessAccountSubmissionList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -17663,7 +18296,7 @@ class DomainList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -20739,7 +21372,7 @@ class WebhookEndpointList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -25219,7 +25852,7 @@ class NumberOwnership(BaseModel):
         description="Whether the ownership paperwork is accepted or is no longer required. This can remain true while an external verifier asks for a correction or activation is pending. Read `status` and `next` for the current step, and `blocked_at` for the ownership block on outbound SMS and inbound and outbound voice.",
     )]
     status: Annotated[NumberOwnershipStatus, Field(
-        description="Current ownership registration approval status. Operational activation is separate:\n`blocked_at` records the ownership block on number use, and `next` describes remaining work.\n\n- `needs_input` means ownership details or a submission correction are needed.\n- `under_review` means your current answers are being reviewed.\n- `approval_pending` means your paperwork is accepted but registration approval is still pending.\n- `approved` means ownership registration is approved. Number activation can still be pending while `blocked_at` is non-null.\n- `not_required` means no active ownership requirement applies, including after a requirement is withdrawn.\n- `rejected` means the submission was closed or the verifier correction deadline passed. Corrections are no longer accepted for this submission.\n- `unknown` means current approval status could not be determined. Read `blocked_at` for any recorded ownership block. Retry the read.",
+        description="Current ownership registration approval status. Operational activation is separate:\n`blocked_at` records the ownership block on number use, and `next` describes remaining work.\n\n- `needs_input` means ownership details or a submission correction are needed, including when Bird closed a submission but accepts corrected details.\n- `under_review` means your current answers are being reviewed. Until the submission is approved, you can still change any answer; a changed answer is reviewed again.\n- `approval_pending` means your paperwork is accepted but registration approval is still pending.\n- `approved` means ownership registration is approved. Number activation can still be pending while `blocked_at` is non-null.\n- `not_required` means no active ownership requirement applies, including after a requirement is withdrawn.\n- `rejected` means the submission was closed without accepting another one, or the verifier correction deadline passed. Corrections are no longer accepted for this submission. Contact support.\n- `unknown` means current approval status could not be determined. Read `blocked_at` for any recorded ownership block. Retry the read.",
     )]
     blocked_at: Annotated[Optional[str], Field(
         description="When ownership requirements began blocking outbound SMS and inbound and outbound voice calls. Null when that block is clear. Accepted paperwork can still await activation with a block in place. A number bought before ownership requirements were introduced can have outstanding paperwork without a block.",
@@ -27227,7 +27860,7 @@ class EsimZoneList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 
@@ -27375,7 +28008,7 @@ class EsimOfferList(BaseModel):
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
     total: Annotated[Optional[int], Field(
-        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed; otherwise `null`.",
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
         ge=0,
     )] = None
 

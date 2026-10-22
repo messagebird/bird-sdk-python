@@ -27,6 +27,7 @@ class WhatsappNumbersListParams(TypedDict, total=False):
     limit: int
     starting_after: str
     ending_before: str
+    include_total: bool
 
 
 class WhatsappNumbersListEventsParams(TypedDict, total=False):
@@ -52,6 +53,7 @@ class WhatsappNumbersBase(Resource):
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
+        include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppNumber]:
         """List the WhatsApp numbers the workspace can send from as a cursor page, with each number's WhatsApp state, quality rating, messaging limit, throughput, and Official Business Account status.
@@ -71,6 +73,7 @@ class WhatsappNumbersBase(Resource):
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
+            "include_total": include_total,
         }
         return SyncPage(self._client, "/v1/whatsapp/numbers", query, WhatsAppNumber, options)
 
@@ -135,6 +138,7 @@ class AsyncWhatsappNumbersBase(AsyncResource):
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
+        include_total: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppNumber]:
         """List the WhatsApp numbers the workspace can send from as a cursor page, with each number's WhatsApp state, quality rating, messaging limit, throughput, and Official Business Account status.
@@ -154,6 +158,7 @@ class AsyncWhatsappNumbersBase(AsyncResource):
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
+            "include_total": include_total,
         }
         return AsyncPage(self._client, "/v1/whatsapp/numbers", query, WhatsAppNumber, options)
 

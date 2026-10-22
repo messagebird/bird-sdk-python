@@ -2,14 +2,84 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
     WhatsAppTemplateLanguage,
+    WhatsAppTemplateLanguageDiscard,
     WhatsAppTemplateLanguageList,
+    WhatsAppTemplateLanguageSaved,
+    WhatsAppTemplateLanguageUpsert,
 )
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
+
+
+class _WhatsAppTemplateExampleParameterWriteRequired(TypedDict):
+    type: str
+
+
+class WhatsAppTemplateExampleParameterWrite(_WhatsAppTemplateExampleParameterWriteRequired, total=False):
+    text: str
+    url: str
+    name: str
+
+
+class _WhatsAppTemplateButtonWriteRequired(TypedDict):
+    type: str
+
+
+class WhatsAppTemplateButtonWrite(_WhatsAppTemplateButtonWriteRequired, total=False):
+    otp_type: str
+    text: str
+    url: str
+    phone_number: str
+    example_parameters: Sequence[WhatsAppTemplateExampleParameterWrite]
+
+
+class _WhatsAppTemplateCardComponentWriteRequired(TypedDict):
+    type: str
+
+
+class WhatsAppTemplateCardComponentWrite(_WhatsAppTemplateCardComponentWriteRequired, total=False):
+    format: str
+    text: str
+    example_parameters: Sequence[WhatsAppTemplateExampleParameterWrite]
+    buttons: Sequence[WhatsAppTemplateButtonWrite]
+
+
+class WhatsAppTemplateCardWrite(TypedDict, total=False):
+    components: Sequence[WhatsAppTemplateCardComponentWrite]
+
+
+class _WhatsAppTemplateComponentWriteRequired(TypedDict):
+    type: str
+
+
+class WhatsAppTemplateComponentWrite(_WhatsAppTemplateComponentWriteRequired, total=False):
+    format: str
+    text: str
+    add_security_recommendation: bool
+    code_expiration_minutes: int
+    example_parameters: Sequence[WhatsAppTemplateExampleParameterWrite]
+    buttons: Sequence[WhatsAppTemplateButtonWrite]
+    cards: Sequence[WhatsAppTemplateCardWrite]
+
+
+class WhatsappTemplatesVersionsLanguagesSetParams(TypedDict, total=False):
+    """Params for ``client.whatsapp.templates.versions.languages.set``. Every key is optional."""
+
+    components: Sequence[WhatsAppTemplateComponentWrite]
+    revision: int
+
+
+class WhatsappTemplatesVersionsLanguagesDiscardParams(TypedDict, total=False):
+    """Params for ``client.whatsapp.templates.versions.languages.discard``. Every key is optional."""
+
+    revision: int
 
 
 class WhatsappTemplatesVersionsLanguages(Resource):
@@ -62,6 +132,99 @@ class WhatsappTemplatesVersionsLanguages(Resource):
             options,
         )
 
+    def set(
+        self,
+        template_ref: str,
+        version_id: str,
+        language: str,
+        *,
+        components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
+        revision: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateLanguageSaved:
+        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
+
+        ```python
+        saved = client.whatsapp.templates.versions.languages.set(
+            "order_update",
+            "wav_01krdgeqcxet5s7t44vh8rt9mg",
+            "es",
+            components=[
+                {
+                    "type": "body",
+                    "text": "Tu pedido {{order_id}} ya fue enviado.",
+                    "example_parameters": [{"type": "text", "name": "order_id", "text": "A-4192"}],
+                }
+            ],
+        )
+        print(saved.language, saved.revision)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateLanguageUpsert,
+            {
+                "components": components,
+                "revision": revision,
+            },
+        )
+        return self._write(
+            "PUT",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
+            body,
+            WhatsAppTemplateLanguageSaved,
+            options,
+        )
+
+    def delete(
+        self,
+        template_ref: str,
+        version_id: str,
+        language: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Removes one language from the draft. The template's default language cannot be removed, and a language under review at WhatsApp refuses removal until that review finishes. WhatsApp is not told until the draft is submitted, and the version a send resolves is unaffected until then.
+
+        ```python
+        client.whatsapp.templates.versions.languages.delete(
+            "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "es"
+        )
+        ```
+        """
+        self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}", options)
+
+    def discard(
+        self,
+        template_ref: str,
+        version_id: str,
+        language: str,
+        *,
+        revision: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateLanguageSaved:
+        """Restores one language of the draft to the copy it was branched from, discarding the edits made to it since. Only that language moves, which is what deleting the whole draft does not give you. A language the draft added, and a template that has never been submitted, have nothing to restore and are refused. Pass `revision` to make the discard a compare-and-set against the copy you read. Nothing reaches WhatsApp until the draft is submitted.
+
+        ```python
+        restored = client.whatsapp.templates.versions.languages.discard(
+            "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "en"
+        )
+        print(restored.language, restored.revision)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateLanguageDiscard,
+            {
+                "revision": revision,
+            },
+        )
+        return self._write(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}/discard",
+            body,
+            WhatsAppTemplateLanguageSaved,
+            options,
+        )
+
 
 class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
     async def list(
@@ -110,5 +273,98 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
             {},
             WhatsAppTemplateLanguage,
+            options,
+        )
+
+    async def set(
+        self,
+        template_ref: str,
+        version_id: str,
+        language: str,
+        *,
+        components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
+        revision: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateLanguageSaved:
+        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
+
+        ```python
+        saved = await client.whatsapp.templates.versions.languages.set(
+            "order_update",
+            "wav_01krdgeqcxet5s7t44vh8rt9mg",
+            "es",
+            components=[
+                {
+                    "type": "body",
+                    "text": "Tu pedido {{order_id}} ya fue enviado.",
+                    "example_parameters": [{"type": "text", "name": "order_id", "text": "A-4192"}],
+                }
+            ],
+        )
+        print(saved.language, saved.revision)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateLanguageUpsert,
+            {
+                "components": components,
+                "revision": revision,
+            },
+        )
+        return await self._write(
+            "PUT",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
+            body,
+            WhatsAppTemplateLanguageSaved,
+            options,
+        )
+
+    async def delete(
+        self,
+        template_ref: str,
+        version_id: str,
+        language: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Removes one language from the draft. The template's default language cannot be removed, and a language under review at WhatsApp refuses removal until that review finishes. WhatsApp is not told until the draft is submitted, and the version a send resolves is unaffected until then.
+
+        ```python
+        await client.whatsapp.templates.versions.languages.delete(
+            "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "es"
+        )
+        ```
+        """
+        await self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}", options)
+
+    async def discard(
+        self,
+        template_ref: str,
+        version_id: str,
+        language: str,
+        *,
+        revision: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplateLanguageSaved:
+        """Restores one language of the draft to the copy it was branched from, discarding the edits made to it since. Only that language moves, which is what deleting the whole draft does not give you. A language the draft added, and a template that has never been submitted, have nothing to restore and are refused. Pass `revision` to make the discard a compare-and-set against the copy you read. Nothing reaches WhatsApp until the draft is submitted.
+
+        ```python
+        restored = await client.whatsapp.templates.versions.languages.discard(
+            "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "en"
+        )
+        print(restored.language, restored.revision)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateLanguageDiscard,
+            {
+                "revision": revision,
+            },
+        )
+        return await self._write(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}/discard",
+            body,
+            WhatsAppTemplateLanguageSaved,
             options,
         )

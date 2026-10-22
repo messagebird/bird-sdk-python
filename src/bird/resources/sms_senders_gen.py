@@ -85,7 +85,7 @@ class SmsSenders(Resource):
         sender: str,
         options: RequestOptions | None = None,
     ) -> SMSSender:
-        """Claims an alphanumeric sender for this workspace. Claiming costs nothing. Countries with registration_mode none or optional allow sending when the destination is enabled, subject to their sender-type rules. Required registration must be approved first. Read `sms_sender_requirements.list` for registration_mode, current registration progress, and expected sender_id_behavior, including whether the sender ID is overwritten."""
+        """Claims an alphanumeric sender for this workspace. The organization's identity verification must be complete first, and only a person can complete it, through a hosted link. The claim itself is free. Countries with registration_mode none or optional allow sending when the destination is enabled, subject to their sender-type rules. Required registration must be approved first. Read `sms_sender_requirements.list` for registration_mode, current registration progress, and expected sender_id_behavior, including whether the sender ID is overwritten."""
         body = to_wire(
             SMSSenderCreate,
             {
@@ -150,7 +150,7 @@ class AsyncSmsSenders(AsyncResource):
         sender: str,
         options: RequestOptions | None = None,
     ) -> SMSSender:
-        """Claims an alphanumeric sender for this workspace. Claiming costs nothing. Countries with registration_mode none or optional allow sending when the destination is enabled, subject to their sender-type rules. Required registration must be approved first. Read `sms_sender_requirements.list` for registration_mode, current registration progress, and expected sender_id_behavior, including whether the sender ID is overwritten."""
+        """Claims an alphanumeric sender for this workspace. The organization's identity verification must be complete first, and only a person can complete it, through a hosted link. The claim itself is free. Countries with registration_mode none or optional allow sending when the destination is enabled, subject to their sender-type rules. Required registration must be approved first. Read `sms_sender_requirements.list` for registration_mode, current registration progress, and expected sender_id_behavior, including whether the sender ID is overwritten."""
         body = to_wire(
             SMSSenderCreate,
             {

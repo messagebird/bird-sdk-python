@@ -109,7 +109,7 @@ class ComplianceSubmissions(Resource):
         answers: Sequence[ComplianceAnswer],
         options: RequestOptions | None = None,
     ) -> ComplianceSubmission:
-        """Replaces rejected, expired, or missing answers on an existing submission. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed. During an open verifier correction and before its deadline, you can replace selected accepted answers. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
+        """Replaces rejected, expired, or missing answers on an existing submission. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed, except while `answers_editable` is true on the requirements: then any changed answer is reviewed again, and a closed submission with `resubmission_allowed` reopens. During an open verifier correction and before its deadline, you can replace selected accepted answers. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
         body = to_wire(
             ComplianceSubmissionResupply,
             {
@@ -180,7 +180,7 @@ class AsyncComplianceSubmissions(AsyncResource):
         answers: Sequence[ComplianceAnswer],
         options: RequestOptions | None = None,
     ) -> ComplianceSubmission:
-        """Replaces rejected, expired, or missing answers on an existing submission. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed. During an open verifier correction and before its deadline, you can replace selected accepted answers. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
+        """Replaces rejected, expired, or missing answers on an existing submission. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed, except while `answers_editable` is true on the requirements: then any changed answer is reviewed again, and a closed submission with `resubmission_allowed` reopens. During an open verifier correction and before its deadline, you can replace selected accepted answers. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
         body = to_wire(
             ComplianceSubmissionResupply,
             {

@@ -86,10 +86,10 @@ class WhatsappMessages(Resource):
         audio clip, sticker or document. ``media_id`` is the ``id`` on the
         message's content object, which ``client.whatsapp.get`` returns.
 
-        Media is kept for 30 days after the message arrives; after that the
-        message still lists the media's ``mime_type`` and ``caption``, and this
-        raises a 410 :class:`APIStatusError`. Outbound messages carry no stored
-        media.
+        Media expires with its message, 30 days after it arrives, and this
+        raises a 404 :class:`APIStatusError` from then on. A 410 means only the
+        file expired: the message still lists the media's ``mime_type`` and
+        ``caption``. Messages sent through Bird carry no stored media.
 
         ```python
         media = client.whatsapp.messages.media(

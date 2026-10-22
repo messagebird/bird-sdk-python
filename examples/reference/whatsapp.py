@@ -83,6 +83,92 @@ def whatsapp_templates_versions_languages_get() -> None:
         print(component.type)
 
 
+def whatsapp_templates_create() -> None:
+    template = client.whatsapp.templates.create(
+        waba="102290129340398",
+        slug="order_update",
+        name="Order update",
+        category="utility",
+        default_language="en",
+        languages={
+            "en": {
+                "components": [
+                    {
+                        "type": "body",
+                        "text": "Your order {{order_id}} has shipped.",
+                        "example_parameters": [
+                            {"type": "text", "name": "order_id", "text": "A-4192"}
+                        ],
+                    }
+                ]
+            }
+        },
+    )
+    print(template.id, template.draft_version_id)
+
+
+def whatsapp_templates_update() -> None:
+    template = client.whatsapp.templates.update("order_update", name="Order shipped")
+    print(template.slug, template.name)
+
+
+def whatsapp_templates_delete() -> None:
+    client.whatsapp.templates.delete("order_update")
+
+
+def whatsapp_templates_duplicate() -> None:
+    copy = client.whatsapp.templates.duplicate("bird_otp", waba="102290129340398", slug="acme_otp")
+    print(copy.slug, copy.draft_version_id)
+
+
+def whatsapp_templates_versions_create() -> None:
+    draft = client.whatsapp.templates.versions.create("order_update")
+    print(draft.id)
+
+
+def whatsapp_templates_versions_delete() -> None:
+    client.whatsapp.templates.versions.delete("order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg")
+
+
+def whatsapp_templates_versions_submit() -> None:
+    draft_id = "wav_01krdgeqcxet5s7t44vh8rt9mg"
+    check = client.whatsapp.templates.versions.submit("order_update", draft_id, validate_only=True)
+    for problem in check.errors:
+        print(problem.language, problem.field, problem.message)
+    if check.valid:
+        submitted = client.whatsapp.templates.versions.submit("order_update", draft_id)
+        print(submitted.version.id if submitted.version else None)
+
+
+def whatsapp_templates_versions_languages_set() -> None:
+    saved = client.whatsapp.templates.versions.languages.set(
+        "order_update",
+        "wav_01krdgeqcxet5s7t44vh8rt9mg",
+        "es",
+        components=[
+            {
+                "type": "body",
+                "text": "Tu pedido {{order_id}} ya fue enviado.",
+                "example_parameters": [{"type": "text", "name": "order_id", "text": "A-4192"}],
+            }
+        ],
+    )
+    print(saved.language, saved.revision)
+
+
+def whatsapp_templates_versions_languages_delete() -> None:
+    client.whatsapp.templates.versions.languages.delete(
+        "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "es"
+    )
+
+
+def whatsapp_templates_versions_languages_discard() -> None:
+    restored = client.whatsapp.templates.versions.languages.discard(
+        "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "en"
+    )
+    print(restored.language, restored.revision)
+
+
 def whatsapp_numbers_list() -> None:
     for number in client.whatsapp.numbers.list(status=["connected"]):
         print(number.id, number.phone_number, number.status)
@@ -111,6 +197,7 @@ def whatsapp_business_accounts_list() -> None:
 def whatsapp_business_accounts_get() -> None:
     account = client.whatsapp.business_accounts.get("waa_01krdgeqcxet5s7t44vh8rt9mg")
     print(account.account_review_status, account.business_verification_status)
+
 
 def whatsapp_stats_summary() -> None:
     summary = client.whatsapp.stats.summary(
@@ -355,7 +442,9 @@ def whatsapp_agents_notifications_create() -> None:
 
 
 def whatsapp_agents_notifications_list() -> None:
-    notifications = client.whatsapp.agents.notifications.list(from_="+13124495648", status="skipped")
+    notifications = client.whatsapp.agents.notifications.list(
+        from_="+13124495648", status="skipped"
+    )
     for notification in notifications.data or []:
         print(notification.name, notification.skipped_reason)
 
@@ -365,3 +454,46 @@ def whatsapp_agents_notifications_get() -> None:
     # straight after create can raise a not-found error.
     notification = client.whatsapp.agents.notifications.get("waan_01krdgeqcxet5s7t44vh8rt9m7")
     print(notification.status, notification.skipped_reason or notification.error)
+
+
+def whatsapp_conversations_list() -> None:
+    conversations = client.whatsapp.conversations.list(
+        inbox_status="open", control="bird", assigned_to="unassigned"
+    )
+    for conversation in conversations.data or []:
+        print(conversation.id, conversation.unread_count)
+
+
+def whatsapp_conversations_get() -> None:
+    conversation = client.whatsapp.conversations.get("wacv_01krdgeqcxet5s7t44vh8rt9mg")
+    print(conversation.control, conversation.assigned_to, conversation.labels)
+
+
+def whatsapp_conversations_update() -> None:
+    # labels replaces the whole set, so send every label to keep.
+    conversation = client.whatsapp.conversations.update(
+        "wacv_01krdgeqcxet5s7t44vh8rt9mg",
+        assigned_to="usr_01krdgeqcxet5s7t44vh8rt9mg",
+        labels=["billing", "vip"],
+        inbox_status="resolved",
+    )
+    print(conversation.inbox_status)
+
+
+def whatsapp_conversations_list_events() -> None:
+    events = client.whatsapp.conversations.list_events("wacv_01krdgeqcxet5s7t44vh8rt9mg")
+    for event in events.data or []:
+        print(event.created_at, event.type, event.summary)
+
+
+def whatsapp_conversations_list_messages() -> None:
+    messages = client.whatsapp.conversations.list_messages("wacv_01krdgeqcxet5s7t44vh8rt9mg", direction="inbound")
+    for message in messages.data or []:
+        print(message.id, message.created_at)
+
+
+def whatsapp_conversations_get_message() -> None:
+    message = client.whatsapp.conversations.get_message(
+        "wacv_01krdgeqcxet5s7t44vh8rt9mg", "wam_01krdgeqcxet5s7t44vh8rt9mg"
+    )
+    print(message.direction, message.status)

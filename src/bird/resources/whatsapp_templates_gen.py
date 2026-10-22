@@ -2,16 +2,40 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TypedDict
+from collections.abc import Mapping, Sequence
+from typing import Any, TYPE_CHECKING, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
     WhatsAppTemplate,
+    WhatsAppTemplateCreate,
+    WhatsAppTemplateDuplicate,
+    WhatsAppTemplateUpdate,
 )
+from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
+
+if TYPE_CHECKING:
+    from bird.resources.whatsapp_templates_versions_languages_gen import WhatsappTemplatesVersionsLanguagesSetParams
+
+
+class _WhatsappTemplatesCreateRequired(TypedDict):
+    waba: str
+    slug: str
+    category: str
+    default_language: str
+
+
+class WhatsappTemplatesCreateParams(_WhatsappTemplatesCreateRequired, total=False):
+    """Params for ``client.whatsapp.templates.create``. ``waba``, ``slug``, ``category``, and ``default_language`` are required."""
+
+    name: str
+    description: str
+    on_missing_language: str
+    language_source_required: bool
+    languages: Mapping[str, WhatsappTemplatesVersionsLanguagesSetParams]
 
 
 class WhatsappTemplatesListParams(TypedDict, total=False):
@@ -27,7 +51,93 @@ class WhatsappTemplatesListParams(TypedDict, total=False):
     ending_before: str
 
 
+class WhatsappTemplatesUpdateParams(TypedDict, total=False):
+    """Params for ``client.whatsapp.templates.update``. Every key is optional."""
+
+    slug: str
+    name: str
+    description: str | None
+    default_language: str
+    on_missing_language: str
+    language_source_required: bool
+
+
+class _WhatsappTemplatesDuplicateRequired(TypedDict):
+    waba: str
+
+
+class WhatsappTemplatesDuplicateParams(_WhatsappTemplatesDuplicateRequired, total=False):
+    """Params for ``client.whatsapp.templates.duplicate``. ``waba`` is required."""
+
+    slug: str
+    name: str
+    include_languages: Sequence[str]
+    default_language: str
+
+
 class WhatsappTemplatesBase(Resource):
+    def create(
+        self,
+        *,
+        waba: str,
+        slug: str,
+        name: str | None = None,
+        description: str | None = None,
+        category: str,
+        default_language: str,
+        on_missing_language: str | None = None,
+        language_source_required: bool | None = None,
+        languages: Mapping[str, WhatsappTemplatesVersionsLanguagesSetParams] | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplate:
+        """Creates a WhatsApp template. Supply `languages` to seed its first draft in the same call, or omit it to create the template alone and add content through `whatsapp.templates.versions.create` and `whatsapp.templates.versions.languages.set`. Nothing here reaches WhatsApp: what comes back is a `draft`, and a draft cannot be sent. Submitting it for review is a separate, explicit step. The slug can change until that first submission. The declared category is fixed at creation, but Meta applies its own category per language and may move one, and the price follows that. Read the language for what a send actually costs.
+
+        ```python
+        template = client.whatsapp.templates.create(
+            waba="102290129340398",
+            slug="order_update",
+            name="Order update",
+            category="utility",
+            default_language="en",
+            languages={
+                "en": {
+                    "components": [
+                        {
+                            "type": "body",
+                            "text": "Your order {{order_id}} has shipped.",
+                            "example_parameters": [
+                                {"type": "text", "name": "order_id", "text": "A-4192"}
+                            ],
+                        }
+                    ]
+                }
+            },
+        )
+        print(template.id, template.draft_version_id)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateCreate,
+            {
+                "waba": waba,
+                "slug": slug,
+                "name": name,
+                "description": description,
+                "category": category,
+                "default_language": default_language,
+                "on_missing_language": on_missing_language,
+                "language_source_required": language_source_required,
+                "languages": languages,
+            },
+        )
+        return self._write(
+            "POST",
+            "/v1/whatsapp/templates",
+            body,
+            WhatsAppTemplate,
+            options,
+        )
+
     def list(
         self,
         *,
@@ -80,8 +190,161 @@ class WhatsappTemplatesBase(Resource):
             options,
         )
 
+    def update(
+        self,
+        template_ref: str,
+        *,
+        slug: str | None = None,
+        name: str | None = None,
+        description: str | None | Omit = omit,
+        default_language: str | None = None,
+        on_missing_language: str | None = None,
+        language_source_required: bool | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplate:
+        """Changes a template's display name, description, and language policies. The slug can change before the first submission; the old slug then stops resolving, while the template ID stays the same. Content is edited separately on a language of the draft.
+
+        ```python
+        template = client.whatsapp.templates.update("order_update", name="Order shipped")
+        print(template.slug, template.name)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if slug is not None:
+            _body["slug"] = slug
+        if name is not None:
+            _body["name"] = name
+        if not isinstance(description, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["description"] = description
+        if default_language is not None:
+            _body["default_language"] = default_language
+        if on_missing_language is not None:
+            _body["on_missing_language"] = on_missing_language
+        if language_source_required is not None:
+            _body["language_source_required"] = language_source_required
+        body = to_wire_exclude_unset(WhatsAppTemplateUpdate, _body)
+        return self._write(
+            "PATCH",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}",
+            body,
+            WhatsAppTemplate,
+            options,
+        )
+
+    def delete(
+        self,
+        template_ref: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Deletes the template and every language it holds, here first and at WhatsApp afterwards. Sends by this slug stop working. Built-in templates cannot be deleted. To discard unsubmitted work while keeping the template, delete its draft with `whatsapp.templates.versions.delete` instead.
+
+        ```python
+        client.whatsapp.templates.delete("order_update")
+        ```
+        """
+        self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}", options)
+
+    def duplicate(
+        self,
+        template_ref: str,
+        *,
+        waba: str,
+        slug: str | None = None,
+        name: str | None = None,
+        include_languages: Sequence[str] | None = None,
+        default_language: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplate:
+        """Copies a template into a new one holding the source's current content as an open draft. It is how a built-in template becomes something a workspace can edit, and how an approved template becomes the basis of a variant. The copy names the account it lands on rather than inheriting the source's, because a built-in template lives on an account you cannot submit against. The copy calls WhatsApp zero times: it is a draft you submit when it is ready.
+
+        ```python
+        copy = client.whatsapp.templates.duplicate("bird_otp", waba="102290129340398", slug="acme_otp")
+        print(copy.slug, copy.draft_version_id)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateDuplicate,
+            {
+                "waba": waba,
+                "slug": slug,
+                "name": name,
+                "include_languages": include_languages,
+                "default_language": default_language,
+            },
+        )
+        return self._write(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/duplicate",
+            body,
+            WhatsAppTemplate,
+            options,
+        )
+
 
 class AsyncWhatsappTemplatesBase(AsyncResource):
+    async def create(
+        self,
+        *,
+        waba: str,
+        slug: str,
+        name: str | None = None,
+        description: str | None = None,
+        category: str,
+        default_language: str,
+        on_missing_language: str | None = None,
+        language_source_required: bool | None = None,
+        languages: Mapping[str, WhatsappTemplatesVersionsLanguagesSetParams] | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplate:
+        """Creates a WhatsApp template. Supply `languages` to seed its first draft in the same call, or omit it to create the template alone and add content through `whatsapp.templates.versions.create` and `whatsapp.templates.versions.languages.set`. Nothing here reaches WhatsApp: what comes back is a `draft`, and a draft cannot be sent. Submitting it for review is a separate, explicit step. The slug can change until that first submission. The declared category is fixed at creation, but Meta applies its own category per language and may move one, and the price follows that. Read the language for what a send actually costs.
+
+        ```python
+        template = await client.whatsapp.templates.create(
+            waba="102290129340398",
+            slug="order_update",
+            name="Order update",
+            category="utility",
+            default_language="en",
+            languages={
+                "en": {
+                    "components": [
+                        {
+                            "type": "body",
+                            "text": "Your order {{order_id}} has shipped.",
+                            "example_parameters": [
+                                {"type": "text", "name": "order_id", "text": "A-4192"}
+                            ],
+                        }
+                    ]
+                }
+            },
+        )
+        print(template.id, template.draft_version_id)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateCreate,
+            {
+                "waba": waba,
+                "slug": slug,
+                "name": name,
+                "description": description,
+                "category": category,
+                "default_language": default_language,
+                "on_missing_language": on_missing_language,
+                "language_source_required": language_source_required,
+                "languages": languages,
+            },
+        )
+        return await self._write(
+            "POST",
+            "/v1/whatsapp/templates",
+            body,
+            WhatsAppTemplate,
+            options,
+        )
+
     def list(
         self,
         *,
@@ -130,6 +393,97 @@ class AsyncWhatsappTemplatesBase(AsyncResource):
         return await self._get(
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}",
             {},
+            WhatsAppTemplate,
+            options,
+        )
+
+    async def update(
+        self,
+        template_ref: str,
+        *,
+        slug: str | None = None,
+        name: str | None = None,
+        description: str | None | Omit = omit,
+        default_language: str | None = None,
+        on_missing_language: str | None = None,
+        language_source_required: bool | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplate:
+        """Changes a template's display name, description, and language policies. The slug can change before the first submission; the old slug then stops resolving, while the template ID stays the same. Content is edited separately on a language of the draft.
+
+        ```python
+        template = await client.whatsapp.templates.update("order_update", name="Order shipped")
+        print(template.slug, template.name)
+        ```
+        """
+        _body: dict[str, Any] = {}
+        if slug is not None:
+            _body["slug"] = slug
+        if name is not None:
+            _body["name"] = name
+        if not isinstance(description, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["description"] = description
+        if default_language is not None:
+            _body["default_language"] = default_language
+        if on_missing_language is not None:
+            _body["on_missing_language"] = on_missing_language
+        if language_source_required is not None:
+            _body["language_source_required"] = language_source_required
+        body = to_wire_exclude_unset(WhatsAppTemplateUpdate, _body)
+        return await self._write(
+            "PATCH",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}",
+            body,
+            WhatsAppTemplate,
+            options,
+        )
+
+    async def delete(
+        self,
+        template_ref: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> None:
+        """Deletes the template and every language it holds, here first and at WhatsApp afterwards. Sends by this slug stop working. Built-in templates cannot be deleted. To discard unsubmitted work while keeping the template, delete its draft with `whatsapp.templates.versions.delete` instead.
+
+        ```python
+        await client.whatsapp.templates.delete("order_update")
+        ```
+        """
+        await self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}", options)
+
+    async def duplicate(
+        self,
+        template_ref: str,
+        *,
+        waba: str,
+        slug: str | None = None,
+        name: str | None = None,
+        include_languages: Sequence[str] | None = None,
+        default_language: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> WhatsAppTemplate:
+        """Copies a template into a new one holding the source's current content as an open draft. It is how a built-in template becomes something a workspace can edit, and how an approved template becomes the basis of a variant. The copy names the account it lands on rather than inheriting the source's, because a built-in template lives on an account you cannot submit against. The copy calls WhatsApp zero times: it is a draft you submit when it is ready.
+
+        ```python
+        copy = await client.whatsapp.templates.duplicate("bird_otp", waba="102290129340398", slug="acme_otp")
+        print(copy.slug, copy.draft_version_id)
+        ```
+        """
+        body = to_wire(
+            WhatsAppTemplateDuplicate,
+            {
+                "waba": waba,
+                "slug": slug,
+                "name": name,
+                "include_languages": include_languages,
+                "default_language": default_language,
+            },
+        )
+        return await self._write(
+            "POST",
+            f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/duplicate",
+            body,
             WhatsAppTemplate,
             options,
         )

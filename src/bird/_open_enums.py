@@ -791,6 +791,21 @@ class WhatsAppBusinessVertical:
     TRAVEL: Final = "travel"
 
 
+class WhatsAppConversationControl:
+    """Values of WhatsAppConversationControl known at this SDK version (open enum)."""
+
+    BIRD: Final = "bird"
+    META_BUSINESS_AGENT: Final = "meta_business_agent"
+
+
+class WhatsAppConversationEventType:
+    """Values of WhatsAppConversationEventType known at this SDK version (open enum)."""
+
+    WHATSAPP_CONVERSATION_AGENT_NOTIFIED: Final = "whatsapp_conversation.agent_notified"
+    WHATSAPP_CONVERSATION_ASSIGNED: Final = "whatsapp_conversation.assigned"
+    WHATSAPP_CONVERSATION_CONTROL_CHANGED: Final = "whatsapp_conversation.control_changed"
+
+
 class WhatsAppDisplayNameStatus:
     """Values of WhatsAppDisplayNameStatus known at this SDK version (open enum)."""
 
@@ -985,6 +1000,15 @@ class WhatsAppTemplateParameterType:
     VIDEO: Final = "video"
 
 
+class WhatsAppTemplatePauseReason:
+    """Values of WhatsAppTemplatePauseReason known at this SDK version (open enum)."""
+
+    DISABLED: Final = "disabled"
+    FIRST_PAUSE: Final = "first_pause"
+    RATE_LIMITING_PAUSE: Final = "rate_limiting_pause"
+    SECOND_PAUSE: Final = "second_pause"
+
+
 class WhatsAppTemplateQualityScore:
     """Values of WhatsAppTemplateQualityScore known at this SDK version (open enum)."""
 
@@ -1085,6 +1109,8 @@ __all__ = [
     "WhatsAppBusinessPortfolioMarketingMessagesStatus",
     "WhatsAppBusinessVerificationStatus",
     "WhatsAppBusinessVertical",
+    "WhatsAppConversationControl",
+    "WhatsAppConversationEventType",
     "WhatsAppDisplayNameStatus",
     "WhatsAppErrorCode",
     "WhatsAppEventType",
@@ -1103,6 +1129,7 @@ __all__ = [
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",
     "WhatsAppTemplateParameterType",
+    "WhatsAppTemplatePauseReason",
     "WhatsAppTemplateQualityScore",
     "WhatsAppTemplateRejectionCategory",
     "WhatsAppUsernameStatus",

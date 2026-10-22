@@ -53,7 +53,9 @@ class WhatsappAgentsNotifications(Resource):
         """List the notifications sent to the agents on your WhatsApp numbers, newest first, each with what came of it, as a cursor page. Filter by `from` for one number's agent.
 
         ```python
-        notifications = client.whatsapp.agents.notifications.list(from_="+13124495648", status="skipped")
+        notifications = client.whatsapp.agents.notifications.list(
+            from_="+13124495648", status="skipped"
+        )
         for notification in notifications.data or []:
             print(notification.name, notification.skipped_reason)
         ```
@@ -149,7 +151,9 @@ class AsyncWhatsappAgentsNotifications(AsyncResource):
         """List the notifications sent to the agents on your WhatsApp numbers, newest first, each with what came of it, as a cursor page. Filter by `from` for one number's agent.
 
         ```python
-        notifications = await client.whatsapp.agents.notifications.list(from_="+13124495648", status="skipped")
+        notifications = await client.whatsapp.agents.notifications.list(
+            from_="+13124495648", status="skipped"
+        )
         for notification in notifications.data or []:
             print(notification.name, notification.skipped_reason)
         ```
