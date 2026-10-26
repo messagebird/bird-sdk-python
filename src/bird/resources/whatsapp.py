@@ -51,6 +51,7 @@ def _send_body(
     template: str | None = None,
     language: str | None = None,
     components: Sequence[Mapping[str, Any]] | None = None,
+    bid_multiplier: float | None = None,
     text: Mapping[str, Any] | None = None,
     image: Mapping[str, Any] | None = None,
     video: Mapping[str, Any] | None = None,
@@ -67,13 +68,17 @@ def _send_body(
     body: dict[str, Any] = {"to": to}
     if from_ is not None:
         body["from"] = from_
-    if template is not None:
-        # A wat_-prefixed value is the id; anything else is the slug handle.
-        tmpl: dict[str, Any] = {"id" if template.startswith("wat_") else "slug": template}
+    if template is not None or language is not None or components is not None or bid_multiplier is not None:
+        tmpl: dict[str, Any] = {}
+        if template is not None:
+            # A wat_-prefixed value is the id; anything else is the slug handle.
+            tmpl["id" if template.startswith("wat_") else "slug"] = template
         if language is not None:
             tmpl["language"] = language
         if components is not None:
             tmpl["components"] = components
+        if bid_multiplier is not None:
+            tmpl["bid_multiplier"] = bid_multiplier
         body["template"] = tmpl
     content: dict[str, Mapping[str, Any] | None] = {
         "text": text,
@@ -124,6 +129,7 @@ class Whatsapp(WhatsappBase):
         template: str | None = None,
         language: str | None = None,
         components: Sequence[Mapping[str, Any]] | None = None,
+        bid_multiplier: float | None = None,
         text: Mapping[str, Any] | None = None,
         image: Mapping[str, Any] | None = None,
         video: Mapping[str, Any] | None = None,
@@ -147,7 +153,8 @@ class Whatsapp(WhatsappBase):
         card's ``name`` needs ``formatted_name`` plus at least one other part, and
         a ``phone_number`` in E.164 earns the card a button that opens a chat.
         Pass ``in_reply_to_message_id`` to quote an earlier message from the same
-        conversation. Every send but a Bird-managed
+        conversation. ``bid_multiplier`` scales a marketing language's maximum
+        price for this message only. Every send but a Bird-managed
         template needs ``from_``. The result is ``accepted``, not yet delivered
         — read it back with ``get`` or follow its timeline with ``list_events``.
 
@@ -167,6 +174,7 @@ class Whatsapp(WhatsappBase):
             template=template,
             language=language,
             components=components,
+            bid_multiplier=bid_multiplier,
             text=text,
             image=image,
             video=video,
@@ -208,6 +216,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
         template: str | None = None,
         language: str | None = None,
         components: Sequence[Mapping[str, Any]] | None = None,
+        bid_multiplier: float | None = None,
         text: Mapping[str, Any] | None = None,
         image: Mapping[str, Any] | None = None,
         video: Mapping[str, Any] | None = None,
@@ -229,6 +238,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
             template=template,
             language=language,
             components=components,
+            bid_multiplier=bid_multiplier,
             text=text,
             image=image,
             video=video,

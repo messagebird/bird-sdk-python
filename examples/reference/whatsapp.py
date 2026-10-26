@@ -199,6 +199,7 @@ def whatsapp_business_accounts_get() -> None:
     print(account.account_review_status, account.business_verification_status)
 
 
+
 def whatsapp_stats_summary() -> None:
     summary = client.whatsapp.stats.summary(
         from_="2026-08-01", to="2026-08-31", timezone="Europe/Amsterdam"

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TypedDict
+from collections.abc import Mapping, Sequence
+from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
@@ -13,9 +13,18 @@ from bird._generated import (
     WhatsAppTemplateLanguageSaved,
     WhatsAppTemplateLanguageUpsert,
 )
-from bird._models import to_wire
+from bird._models import to_wire, to_wire_exclude_unset
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
+
+
+class _WhatsAppTemplateOptimizationSpecWriteRequired(TypedDict):
+    bid_amount: int
+    bid_strategy: str
+
+
+class WhatsAppTemplateOptimizationSpecWrite(_WhatsAppTemplateOptimizationSpecWriteRequired, total=False):
+    bid_country_multiplier_overrides: Mapping[str, Any]
 
 
 class _WhatsAppTemplateExampleParameterWriteRequired(TypedDict):
@@ -72,6 +81,7 @@ class WhatsAppTemplateComponentWrite(_WhatsAppTemplateComponentWriteRequired, to
 class WhatsappTemplatesVersionsLanguagesSetParams(TypedDict, total=False):
     """Params for ``client.whatsapp.templates.versions.languages.set``. Every key is optional."""
 
+    optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None
     components: Sequence[WhatsAppTemplateComponentWrite]
     revision: int
 
@@ -138,11 +148,12 @@ class WhatsappTemplatesVersionsLanguages(Resource):
         version_id: str,
         language: str,
         *,
+        optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None | Omit = omit,
         components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
         revision: int | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppTemplateLanguageSaved:
-        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
+        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. `optimization_spec` is the exception: omit it to keep the language's maximum price, or send `null` to return to Meta's standard rate. A new language written without it uses the standard rate. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
 
         ```python
         saved = client.whatsapp.templates.versions.languages.set(
@@ -160,13 +171,14 @@ class WhatsappTemplatesVersionsLanguages(Resource):
         print(saved.language, saved.revision)
         ```
         """
-        body = to_wire(
-            WhatsAppTemplateLanguageUpsert,
-            {
-                "components": components,
-                "revision": revision,
-            },
-        )
+        _body: dict[str, Any] = {}
+        if not isinstance(optimization_spec, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["optimization_spec"] = optimization_spec
+        if components is not None:
+            _body["components"] = components
+        if revision is not None:
+            _body["revision"] = revision
+        body = to_wire_exclude_unset(WhatsAppTemplateLanguageUpsert, _body)
         return self._write(
             "PUT",
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
@@ -282,11 +294,12 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
         version_id: str,
         language: str,
         *,
+        optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None | Omit = omit,
         components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
         revision: int | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppTemplateLanguageSaved:
-        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
+        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. `optimization_spec` is the exception: omit it to keep the language's maximum price, or send `null` to return to Meta's standard rate. A new language written without it uses the standard rate. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
 
         ```python
         saved = await client.whatsapp.templates.versions.languages.set(
@@ -304,13 +317,14 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
         print(saved.language, saved.revision)
         ```
         """
-        body = to_wire(
-            WhatsAppTemplateLanguageUpsert,
-            {
-                "components": components,
-                "revision": revision,
-            },
-        )
+        _body: dict[str, Any] = {}
+        if not isinstance(optimization_spec, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["optimization_spec"] = optimization_spec
+        if components is not None:
+            _body["components"] = components
+        if revision is not None:
+            _body["revision"] = revision
+        body = to_wire_exclude_unset(WhatsAppTemplateLanguageUpsert, _body)
         return await self._write(
             "PUT",
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",

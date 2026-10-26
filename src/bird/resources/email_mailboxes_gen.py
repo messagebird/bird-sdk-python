@@ -141,7 +141,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Read one mailbox by ID. A mailbox deleted within its 30-day restore window is still returned, with `deleted_at` set. Once that window closes it is gone and this returns `404`.
+        """Read one mailbox by ID or email address in this workspace. A mailbox deleted within its 30-day restore window is still returned, with `deleted_at` set. Once that window closes it is gone and this returns `404`.
 
         ```python
         mailbox = client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -382,7 +382,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> Mailbox:
-        """Read one mailbox by ID. A mailbox deleted within its 30-day restore window is still returned, with `deleted_at` set. Once that window closes it is gone and this returns `404`.
+        """Read one mailbox by ID or email address in this workspace. A mailbox deleted within its 30-day restore window is still returned, with `deleted_at` set. Once that window closes it is gone and this returns `404`.
 
         ```python
         mailbox = await client.email.mailboxes.get("mbx_01krdgeqcxet5s7t44vh8rt9mg")

@@ -29,6 +29,7 @@ class SmsListParams(TypedDict, total=False):
     category: str
     to: str
     from_: str
+    country: str
     tag: Sequence[str]
 
 
@@ -73,10 +74,11 @@ class SmsBase(Resource):
         category: str | None = None,
         to: str | None = None,
         from_: str | None = None,
+        country: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[SMSMessage]:
-        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, or tag.
+        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, country, or tag.
 
         ```python
         for message in client.sms.list(direction="outbound"):
@@ -95,6 +97,7 @@ class SmsBase(Resource):
             "category": category,
             "to": to,
             "from": from_,
+            "country": country,
             "tag": tag,
         }
         return SyncPage(self._client, "/v1/sms/messages", query, SMSMessage, options)
@@ -159,10 +162,11 @@ class AsyncSmsBase(AsyncResource):
         category: str | None = None,
         to: str | None = None,
         from_: str | None = None,
+        country: str | None = None,
         tag: Sequence[str] | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[SMSMessage]:
-        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, or tag.
+        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, country, or tag.
 
         ```python
         async for message in client.sms.list(direction="outbound"):
@@ -181,6 +185,7 @@ class AsyncSmsBase(AsyncResource):
             "category": category,
             "to": to,
             "from": from_,
+            "country": country,
             "tag": tag,
         }
         return AsyncPage(self._client, "/v1/sms/messages", query, SMSMessage, options)

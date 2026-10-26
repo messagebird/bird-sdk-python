@@ -965,6 +965,12 @@ class WhatsAppNumberThroughputLevel:
     STANDARD: Final = "standard"
 
 
+class WhatsAppTemplateBidStrategy:
+    """Values of WhatsAppTemplateBidStrategy known at this SDK version (open enum)."""
+
+    LOWEST_COST_WITH_BID_CAP: Final = "lowest_cost_with_bid_cap"
+
+
 class WhatsAppTemplateCategory:
     """Values of WhatsAppTemplateCategory known at this SDK version (open enum)."""
 
@@ -1126,6 +1132,7 @@ __all__ = [
     "WhatsAppNumberQualityRating",
     "WhatsAppNumberStatus",
     "WhatsAppNumberThroughputLevel",
+    "WhatsAppTemplateBidStrategy",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",
     "WhatsAppTemplateParameterType",

@@ -73,3 +73,13 @@ def test_send_template_still_sugars_the_handle_and_carries_tags() -> None:
     assert body["tags"] == [{"name": "campaign", "value": "spring_sale"}]
     assert body["metadata"] == {"order_id": "A1B2C3"}
     assert "from" not in body
+
+
+@respx.mock
+def test_send_bid_multiplier_without_a_template_still_reaches_the_api() -> None:
+    route = respx.post(f"{BASE}/v1/whatsapp/messages").mock(
+        return_value=httpx.Response(202, json=_message({}))
+    )
+    client().whatsapp.send(to="+14155552671", from_="+14155552672", bid_multiplier=0.8)
+    body = json.loads(route.calls.last.request.content)
+    assert body["template"] == {"bid_multiplier": 0.8}

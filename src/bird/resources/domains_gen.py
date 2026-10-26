@@ -77,6 +77,7 @@ class DomainCreateParams(_DomainCreateRequired, total=False):
 class DomainUpdateParams(TypedDict, total=False):
     """Params for ``client.domains.update``. Every key is optional."""
 
+    default_ip_pool_id: str | None
     settings: DomainSettings
     return_path: DomainReturnPathConfig
     tracking: DomainTrackingConfig | None
@@ -194,6 +195,7 @@ class Domains(Resource):
         self,
         domain_id: str,
         *,
+        default_ip_pool_id: str | None | Omit = omit,
         settings: DomainSettings | None = None,
         return_path: DomainReturnPathConfig | None = None,
         tracking: DomainTrackingConfig | None | Omit = omit,
@@ -213,6 +215,8 @@ class Domains(Resource):
         ```
         """
         _body: dict[str, Any] = {}
+        if not isinstance(default_ip_pool_id, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["default_ip_pool_id"] = default_ip_pool_id
         if settings is not None:
             _body["settings"] = settings
         if return_path is not None:
@@ -357,6 +361,7 @@ class AsyncDomains(AsyncResource):
         self,
         domain_id: str,
         *,
+        default_ip_pool_id: str | None | Omit = omit,
         settings: DomainSettings | None = None,
         return_path: DomainReturnPathConfig | None = None,
         tracking: DomainTrackingConfig | None | Omit = omit,
@@ -376,6 +381,8 @@ class AsyncDomains(AsyncResource):
         ```
         """
         _body: dict[str, Any] = {}
+        if not isinstance(default_ip_pool_id, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["default_ip_pool_id"] = default_ip_pool_id
         if settings is not None:
             _body["settings"] = settings
         if return_path is not None:

@@ -142,17 +142,17 @@ class Error(BaseModel):
     error: ErrorBody
 
 
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
 class APIKeyID(RootModel[str]):
     root: str
 
 
 class WorkspaceID(RootModel[str]):
     root: str
-
-
-class SortOrder(str, Enum):
-    asc = "asc"
-    desc = "desc"
 
 
 class UserID(RootModel[str]):
@@ -383,6 +383,2382 @@ class ComplianceIdentityID(RootModel[str]):
     root: str
 
 
+class EmailStatsSummaryPeriod(BaseModel):
+    "The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted)."
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows. For hour windows, an RFC 3339 UTC instant marking the start of the first hour, which falls on a local hour boundary when `timezone` is set.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows. For hour windows, an RFC 3339 UTC instant marking the start of the last hour, which falls on a local hour boundary when `timezone` is set.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example \"as of 14:03\") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class EmailBounceStatsWithRates(BaseModel):
+    "Breakdown of `bounced` by failure type, with each rate as a fraction of `bounced`. Counts are distinct bounced recipients of that type; the five types approximately partition `bounced`, so the five rates sum to roughly 1.0 when `bounced` is non-zero."
+    model_config = ConfigDict(extra="allow")
+    hard: Annotated[int, Field(
+        description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain).",
+        examples=[12410],
+        ge=0,
+    )]
+    soft: Annotated[int, Field(
+        description="Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable).",
+        examples=[14290],
+        ge=0,
+    )]
+    admin: Annotated[int, Field(
+        description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain.",
+        examples=[410],
+        ge=0,
+    )]
+    block: Annotated[int, Field(
+        description="Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons.",
+        examples=[920],
+        ge=0,
+    )]
+    undetermined: Annotated[int, Field(
+        description="Distinct recipients bounced where the receiving server's response did not allow precise classification.",
+        examples=[80],
+        ge=0,
+    )]
+    hard_rate: Annotated[Optional[float], Field(
+        description="Fraction of bounced recipients that hard bounced, computed as `hard / bounced`. Null when `bounced` is zero.",
+        examples=[0.4540],
+        ge=0,
+        le=1,
+    )]
+    soft_rate: Annotated[Optional[float], Field(
+        description="Fraction of bounced recipients that soft bounced, computed as `soft / bounced`. Null when `bounced` is zero.",
+        examples=[0.5230],
+        ge=0,
+        le=1,
+    )]
+    admin_rate: Annotated[Optional[float], Field(
+        description="Fraction of bounced recipients that admin bounced, computed as `admin / bounced`. Null when `bounced` is zero.",
+        examples=[0.0150],
+        ge=0,
+        le=1,
+    )]
+    block_rate: Annotated[Optional[float], Field(
+        description="Fraction of bounced recipients that block bounced, computed as `block / bounced`. Null when `bounced` is zero.",
+        examples=[0.0337],
+        ge=0,
+        le=1,
+    )]
+    undetermined_rate: Annotated[Optional[float], Field(
+        description="Fraction of bounced recipients with undetermined classification, computed as `undetermined / bounced`. Null when `bounced` is zero.",
+        examples=[0.0029],
+        ge=0,
+        le=1,
+    )]
+
+
+class EmailDeliveryStats(BaseModel):
+    "Delivery counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). Lifecycle counts identify distinct recipients that reached the named stage in scope; `oob_bounces` counts distinct failure events. Period summaries count each identity once per metric across the whole window, so adding time-bucket distinct counts can overstate the summary. Event time determines attribution; send time does not. A recipient delivered on Monday counts in Monday's row. A recipient who bounced and then succeeded on a retry can appear in both `bounced` and `delivered`. Very large counts are close estimates rather than exact tallies.\n\nThese counts are successive lifecycle stages, so a recipient can appear in more than one:\n\n- `rejected`: Happens before any send attempt, from suppression, policy, or a generation failure.\n- `deferred`: A temporary in-flight delay that is still being retried.\n- `bounced`: A delivery failure, with its own hard, soft, admin, block, and undetermined sub-types.\n- `complained`: Post-delivery spam feedback.\n\nEach rate is a fraction in the range 0 to 1 and is null when its denominator is zero. `accepted` is reported only where it can be attributed (time buckets and the period summary). Breakdown rows omit it."
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[Optional[int], Field(
+        description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary. Breakdown rows leave it out, because their rollups do not have it.",
+        examples=[14820],
+        ge=0,
+    )] = None
+    processed: Annotated[int, Field(
+        description="Distinct recipients whose message was processed and handed off for delivery.",
+        examples=[14810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct recipients whose message the receiving mail server accepted.",
+        examples=[14720],
+        ge=0,
+    )]
+    bounced: Annotated[int, Field(
+        description="Distinct recipients whose delivery failed. This is approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined). The two totals are worked out independently, so they can differ slightly.",
+        examples=[90],
+        ge=0,
+    )]
+    bounces: EmailBounceStatsWithRates
+    complained: Annotated[int, Field(
+        description="Distinct recipients who reported the message as spam via a feedback loop.",
+        examples=[3],
+        ge=0,
+    )]
+    deferred: Annotated[int, Field(
+        description="Distinct recipients whose delivery the receiving server temporarily delayed and is still being retried.",
+        examples=[14],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct recipients rejected before any delivery attempt. Includes recipients on the workspace suppression list, transmissions that could not be completed, message-generation failures, and recipients refused by sending policy. The per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` surfaces the specific cause.",
+        examples=[10],
+        ge=0,
+    )]
+    oob_bounces: Annotated[int, Field(
+        description="Out-of-band bounce events: distinct failure notifications received after the receiving server had initially confirmed delivery. The count represents deduplicated events rather than unique recipients.",
+        examples=[2],
+        ge=0,
+    )]
+    effective_delivered: Annotated[int, Field(
+        description="Recipients who remain delivered after all bounce signals resolve, computed as `delivered - oob_bounces`. Use this as the base for engagement-rate denominators. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
+        examples=[14718],
+        ge=0,
+    )]
+    all_bounces: Annotated[int, Field(
+        description="Total recipients in this scope who did not receive the message, computed as `bounced + oob_bounces`.",
+        examples=[92],
+        ge=0,
+    )]
+    oob_rate: Annotated[Optional[float], Field(
+        description="Share of this scope's delivery attempts that resulted in an out-of-band bounce, computed as `oob_bounces / (delivered + bounced)`. Null when there were no attempts.",
+        examples=[0.00014],
+        ge=0,
+        le=1,
+    )]
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Share of this scope's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when there were no attempts.",
+        examples=[0.9939],
+        ge=0,
+        le=1,
+    )]
+    bounce_rate: Annotated[Optional[float], Field(
+        description="Share of this scope's delivery attempts that ultimately failed (inband or out-of-band), computed as `all_bounces / (delivered + bounced)`. Because `oob_bounces` counts events rather than recipients, `all_bounces` can exceed the attempt count. The rate is clamped to 1. Null when there were no attempts.",
+        examples=[0.0061],
+        ge=0,
+        le=1,
+    )]
+    complaint_rate: Annotated[Optional[float], Field(
+        description="Spam complaints in this scope relative to effectively delivered recipients, computed as `complained / effective_delivered`. Complaints are attributed by event time, so a scope can record more of them than it effectively delivered, pushing the rate above 1. Null when `effective_delivered` is zero.",
+        examples=[0.0002],
+        ge=0,
+    )]
+
+
+class EmailEngagementStats(BaseModel):
+    "Engagement counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). `opens`, `opens_non_prefetched` and `clicks` count distinct engagement events (deduplicated occurrences). The `unique_*` fields count distinct recipients. `unsubscribes` counts distinct unsubscribe events. An event counts in the time bucket when it occurs, even if the message was sent in an earlier bucket. Counts are deduplicated with a scalable approximate counting method, so very large counts are close estimates rather than exact tallies. Each rate divides the counts in this scope and is null when its denominator is zero."
+    model_config = ConfigDict(extra="allow")
+    opens: Annotated[int, Field(
+        description="Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).",
+        examples=[5420],
+        ge=0,
+    )]
+    opens_non_prefetched: Annotated[int, Field(
+        description="Distinct open events excluding those auto-fetched by inbox privacy features. Same event-counting semantics as `opens` (repeat opens from the same recipient count separately), with prefetched opens removed.",
+        examples=[3210],
+        ge=0,
+    )]
+    unique_opens: Annotated[int, Field(
+        description="Distinct recipients who opened at least once, including opens auto-fetched by inbox privacy features.",
+        examples=[3640],
+        ge=0,
+    )]
+    unique_opens_non_prefetched: Annotated[int, Field(
+        description="Distinct recipients who opened at least once, excluding opens auto-fetched by inbox privacy features. This is the numerator used for open rate, so iOS-heavy audiences (Apple Mail Privacy Protection and similar) do not inflate it.",
+        examples=[2480],
+        ge=0,
+    )]
+    clicks: Annotated[int, Field(
+        description="Distinct click events, counting repeat clicks from the same recipient.",
+        examples=[924],
+        ge=0,
+    )]
+    unique_clicks: Annotated[int, Field(
+        description="Distinct recipients who clicked at least once.",
+        examples=[621],
+        ge=0,
+    )]
+    unsubscribes: Annotated[int, Field(
+        description="Distinct unsubscribe events, recorded via the list-unsubscribe header or the footer link.",
+        examples=[12],
+        ge=0,
+    )]
+    open_rate: Annotated[Optional[float], Field(
+        description="Distinct non-prefetched openers relative to effectively delivered recipients in the same scope, computed as `unique_opens_non_prefetched / delivery.effective_delivered`; on rows without an `effective_delivered` field (the mailbox-provider breakdowns) the denominator equals `delivery.delivered`. The numerator excludes opens auto-fetched by inbox privacy features. Opens are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.",
+        examples=[0.1683],
+        ge=0,
+    )]
+    click_rate: Annotated[Optional[float], Field(
+        description="Distinct clickers relative to effectively delivered recipients in the same scope, computed as `unique_clicks / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Clicks are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.",
+        examples=[0.0422],
+        ge=0,
+    )]
+    unsubscribe_rate: Annotated[Optional[float], Field(
+        description="Unsubscribe events relative to effectively delivered recipients in the same scope, computed as `unsubscribes / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Unsubscribes are attributed by event time, so the rate can exceed 1. Null when the denominator is zero.",
+        examples=[0.0009],
+        ge=0,
+    )]
+
+
+class EmailLatencyQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement."
+    model_config = ConfigDict(extra="allow")
+    p50_ms: Annotated[Optional[int], Field(
+        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[420],
+        ge=0,
+    )]
+    p95_ms: Annotated[Optional[int], Field(
+        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[1820],
+        ge=0,
+    )]
+    p99_ms: Annotated[Optional[int], Field(
+        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[4920],
+        ge=0,
+    )]
+
+
+class EmailLatencyStats(BaseModel):
+    "Latency percentiles (p50, p95, p99) in milliseconds for the bucket. On the summary endpoint these are computed across the whole period rather than per bucket. Three families are reported:\n\n- `processing`: Time from accepting the send to handing the message off for delivery. Measured per processed recipient; null when no recipient in the bucket has reached the processed stage.\n- `delivery`: Time from handoff to the receiving mail server accepting the message, dominated by recipient-side delivery behavior. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n- `total`: End-to-end time from accepting the send to delivery, and the number most worth watching against your own delivery targets. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n\nEach family is reported independently. A family is omitted when no qualifying\nevent contributed a latency measurement in the bucket. This also applies when\nthe workspace has not recorded latency for that stage yet. The `processing`\nfamily can therefore be present while `delivery` and `total` are absent. A\nclient must handle a missing family, and a null p50/p95/p99 within a present\nfamily, by rendering a placeholder rather than assuming a number."
+    model_config = ConfigDict(extra="allow")
+    processing: Annotated[Optional[EmailLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    delivery: Annotated[Optional[EmailLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    total: Annotated[Optional[EmailLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class EmailStatsComparisonDelta(BaseModel):
+    "The change in each headline metric from the preceding period to the requested one. A `*_pct_change` field is a signed relative change in a count, computed as `(current - previous) / previous`, so `0.5` means 50% higher and `-0.2` means 20% lower. It is null when the previous period's count was zero because a relative change cannot be computed. A `*_rate_pp` field is the signed difference between the two periods' rate values. Each value is expressed as a fraction. A value of `0.012` means the rate rose by 1.2 percentage points. A value of `-0.003` means it fell by 0.3 points. The field is null when either period's rate is undefined, because its denominator was zero. `delivery_rate_pp` and `bounce_rate_pp` range from `-1` to `1`, because the rates behind them cannot exceed 1. The engagement deltas have no fixed bound, because events are counted when they arrive rather than when the message was sent, which can push their rate above 1."
+    model_config = ConfigDict(extra="allow")
+    sends_accepted_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in accepted messages (the `sends_accepted` count) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+        examples=[0.508],
+    )]
+    delivered_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in effectively delivered recipients (`delivery.effective_delivered`, the delivery-rate numerator) versus the previous period, as a signed fraction. Null when the previous period effectively delivered none.",
+        examples=[0.122],
+    )]
+    bounced_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in total bounces including out-of-band (`delivery.all_bounces`, the bounce-rate numerator) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.031],
+    )]
+    complained_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in spam complaints (`delivery.complained`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.018],
+    )]
+    opened_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in unique non-prefetched opens (`engagement.unique_opens_non_prefetched`, the same count the open rate uses) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.046],
+    )]
+    delivery_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
+        examples=[0.004],
+        ge=-1,
+        le=1,
+    )]
+    open_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's open rate, both fractions (multiply by 100 for percentage points). Null when either period's open rate is undefined.",
+        examples=[0.005],
+    )]
+    click_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's click rate, both fractions (multiply by 100 for percentage points). Null when either period's click rate is undefined.",
+        examples=[0.002],
+    )]
+    bounce_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's bounce rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's bounce rate is undefined.",
+        examples=[-0.0008],
+        ge=-1,
+        le=1,
+    )]
+    complaint_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's complaint rate, both fractions (multiply by 100 for percentage points). Null when either period's complaint rate is undefined.",
+        examples=[0.0001],
+    )]
+    unsubscribe_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's unsubscribe rate, both fractions (multiply by 100 for percentage points). Null when either period's unsubscribe rate is undefined.",
+        examples=[-0.0001],
+    )]
+
+
+class EmailStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending the day immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsSummaryPeriod, Field(
+        description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
+    )]
+    sends_accepted: Annotated[int, Field(
+        description="Distinct email messages accepted in the preceding period, counted at the message level.",
+        examples=[8230],
+        ge=0,
+    )]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+    delta: EmailStatsComparisonDelta
+
+
+class EmailStatsSummary(BaseModel):
+    "A single row that aggregates delivery and engagement counts, plus derived\nrates, across the whole requested period. Use this endpoint for KPI\ntiles, campaign reporting, and anywhere you need a rate with a meaningful\ndenominator. The daily and hourly endpoints report the same rates, but\nper bucket, each one dividing that bucket's own counts.\n\nDistinct message, recipient, and event counts are computed across the whole\nrequested period. An identity present in more than one time bucket counts\nonce for that metric in the period summary, so adding daily or hourly\ndistinct counts can overstate the summary. Very large counts are close\nestimates rather than exact tallies. Latency percentiles are also computed\nacross the whole period. A rate is null when its denominator is zero."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsSummaryPeriod, Field(
+        description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
+    )]
+    sends_accepted: Annotated[int, Field(
+        description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) across the whole requested period. This field counts messages. `delivery.accepted` counts recipients, so the two values are not comparable (a single message to 500 recipients is 1 here and up to 500 there).",
+        examples=[12410],
+        ge=0,
+    )]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+    comparison: Optional[EmailStatsComparison] = None
+
+
+class EmailStatsPoint(BaseModel):
+    "Aggregate stats for one time bucket (a calendar day or hour, per the requested grain, in the requested `timezone` or UTC by default), bucketed by event time. Buckets with no activity are included with zero counts and null latency percentiles, so the series charts continuously without client-side gap handling."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD, in the requested `timezone`) or hour this point covers, matching the period's grain. An hour bucket is an RFC 3339 UTC instant marking the start of the hour. It falls on a local hour boundary when `timezone` is set, which is on the UTC hour only for whole-hour offsets.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    sends_accepted: Annotated[int, Field(
+        description="Distinct email messages accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other metric in `delivery` and `engagement` is recipient-level or event-level.",
+        examples=[412],
+        ge=0,
+    )]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+
+
+class EmailStatsSortMetric(str, Enum):
+    processed = "processed"
+    delivered = "delivered"
+    bounced = "bounced"
+    complained = "complained"
+    deferred = "deferred"
+    rejected = "rejected"
+    oob_bounces = "oob_bounces"
+    bounces_hard = "bounces.hard"
+    bounces_soft = "bounces.soft"
+    bounces_admin = "bounces.admin"
+    bounces_block = "bounces.block"
+    bounces_undetermined = "bounces.undetermined"
+    opens = "opens"
+    opens_non_prefetched = "opens_non_prefetched"
+    unique_opens = "unique_opens"
+    unique_opens_non_prefetched = "unique_opens_non_prefetched"
+    clicks = "clicks"
+    unique_clicks = "unique_clicks"
+    unsubscribes = "unsubscribes"
+    delivery_rate = "delivery_rate"
+    bounce_rate = "bounce_rate"
+    complaint_rate = "complaint_rate"
+    open_rate = "open_rate"
+    click_rate = "click_rate"
+    unsubscribe_rate = "unsubscribe_rate"
+    bounces_hard_rate = "bounces.hard_rate"
+    bounces_soft_rate = "bounces.soft_rate"
+    bounces_admin_rate = "bounces.admin_rate"
+    bounces_block_rate = "bounces.block_rate"
+    bounces_undetermined_rate = "bounces.undetermined_rate"
+
+
+class EmailStatsPeriod(BaseModel):
+    "The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried."
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start date the response covers (YYYY-MM-DD).",
+        examples=["2026-05-01"],
+        min_length=1,
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end date the response covers (YYYY-MM-DD).",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example \"as of 14:03\") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class IPPoolID(RootModel[str]):
+    root: str
+
+
+class EmailSendingIpDeliveryStats(BaseModel):
+    "Delivery counts and rates for messages attributed to a single sending IP. Per-IP results omit `accepted` and `processed` counts. The sending IP becomes known only after a message is delivered, bounced, deferred, or bounced late. Those earlier lifecycle states cannot be attributed to a specific IP. Spam complaints and out-of-band bounce notifications also lack per-IP attribution on this breakdown. The `complained` and `oob_bounces` fields therefore read 0. Their rates read 0 when the denominator is non-zero and null when it is zero. The `effective_delivered` field equals `delivered`, and `all_bounces` equals `bounced`."
+    model_config = ConfigDict(extra="allow")
+    delivered: Annotated[int, Field(
+        description="Distinct recipients whose message the receiving mail server accepted.",
+        examples=[8290],
+        ge=0,
+    )]
+    bounced: Annotated[int, Field(
+        description="Distinct recipients whose delivery failed. This is approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined). The two are computed independently, so they can differ slightly.",
+        examples=[131],
+        ge=0,
+    )]
+    complained: Annotated[int, Field(
+        description="Distinct recipients who reported the message as spam. Complaints are not attributed to a sending IP, so this reads 0 on this breakdown. Read complaint counts from the summary or time-series statistics instead.",
+        examples=[8],
+        ge=0,
+    )]
+    deferred: Annotated[int, Field(
+        description="Distinct recipients in transient delivery deferral that is still being retried.",
+        examples=[4],
+        ge=0,
+    )]
+    oob_bounces: Annotated[int, Field(
+        description="Out-of-band bounce events: failure notifications received after the receiving server had initially confirmed delivery. Not attributed to a sending IP on this breakdown, so this reads 0. Workspace-wide out-of-band counts are on the summary and time-series statistics.",
+        examples=[3],
+        ge=0,
+    )]
+    effective_delivered: Annotated[int, Field(
+        description="Recipients on this IP who remain delivered after all bounce signals resolve, computed as `delivered - oob_bounces`. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
+        examples=[8287],
+        ge=0,
+    )]
+    all_bounces: Annotated[int, Field(
+        description="Total recipients on this IP who did not receive the message, computed as `bounced + oob_bounces`.",
+        examples=[134],
+        ge=0,
+    )]
+    oob_rate: Annotated[Optional[float], Field(
+        description="Share of this IP's delivery attempts that resulted in an out-of-band bounce, computed as `oob_bounces / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
+        examples=[0.00036],
+        ge=0,
+        le=1,
+    )]
+    bounces: EmailBounceStatsWithRates
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Share of this IP's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero.",
+        examples=[0.9844],
+        ge=0,
+        le=1,
+    )]
+    bounce_rate: Annotated[Optional[float], Field(
+        description="Share of this IP's delivery attempts that ultimately failed (inband or out-of-band), computed as `all_bounces / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
+        examples=[0.0156],
+        ge=0,
+        le=1,
+    )]
+    complaint_rate: Annotated[Optional[float], Field(
+        description="Share of effectively delivered recipients on this IP who reported the message as spam, computed as `complained / effective_delivered`. Null when `effective_delivered` is zero.",
+        examples=[0.00096],
+        ge=0,
+    )]
+
+
+class EmailDeliveryLatencyStats(BaseModel):
+    "Latency percentiles (p50, p95, p99) in milliseconds for the messages in this breakdown row, for breakdowns whose dimension is known only from delivery onward (sending IP, mailbox provider).\n\n- `delivery`: Time from handing the message off to the receiving mail server accepting it. Null when no deliveries occurred for this row in the period.\n- `total`: End-to-end time from accepting the send to delivery. Null when no deliveries occurred for this row in the period.\n\nThese breakdowns have no `processing` latency family. A message's row identifies which sending IP carried it or which mailbox provider received it. This becomes known only after the receiving mail server reports a delivery, bounce, deferral, or late bounce. The accept-to-processed phase ends before that attribution is known, preventing row-level processing latency. Use `GET /v1/email/stats/daily` for processing-latency percentiles across the whole workspace."
+    model_config = ConfigDict(extra="allow")
+    delivery: Annotated[EmailLatencyQuantiles, Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
+    )]
+    total: Annotated[EmailLatencyQuantiles, Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
+    )]
+
+
+class EmailStatsSeriesPoint(BaseModel):
+    "One point in a breakdown row's trend series: the headline delivery and engagement rates for that row's dimension value over a single day or hour. Returned only when `include_trend=true`. The bucket grain (day or hour) follows the `trend_grain` parameter. Counts and rates are approximate at scale."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (ISO 8601, on the hour) this point covers, matching the requested `trend_grain`.",
+        examples=["2026-05-12"],
+        min_length=1,
+    )]
+    delivered: Annotated[int, Field(
+        description="Delivered recipients in this bucket.",
+        ge=0,
+    )]
+    bounced: Annotated[int, Field(
+        description="Bounced recipients in this bucket.",
+        ge=0,
+    )]
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Delivery rate for this bucket, as a fraction. Null when nothing was delivered or bounced.",
+        ge=0,
+        le=1,
+    )]
+    bounce_rate: Annotated[Optional[float], Field(
+        description="Bounce rate for this bucket, as a fraction. Null when nothing was delivered or bounced.",
+        ge=0,
+        le=1,
+    )]
+    complaint_rate: Annotated[Optional[float], Field(
+        description="Complaint rate for this bucket, as a fraction. Event-time attribution can push it above 1 when complaints outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row complaints are not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
+        ge=0,
+    )]
+    open_rate: Annotated[Optional[float], Field(
+        description="Open rate for this bucket, as a fraction. Event-time attribution can push it above 1 when opens outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
+        ge=0,
+    )]
+    click_rate: Annotated[Optional[float], Field(
+        description="Click rate for this bucket, as a fraction. Event-time attribution can push it above 1 when clicks outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
+        ge=0,
+    )]
+
+
+class EmailTagStatsPoint(BaseModel):
+    "Aggregate delivery and engagement stats for a single tag name-and-value pair over the requested period."
+    model_config = ConfigDict(extra="allow")
+    tag: Annotated[str, Field(
+        description="The tag this row aggregates, formatted as `name:value` from the tag set at send time (for example `campaign:welcome-series`). Each distinct name-and-value pair is its own row.",
+        examples=["campaign:welcome-series"],
+        min_length=1,
+    )]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+    trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        description="Per-bucket rate series for this tag over the window. Present only when `include_trend=true`.",
+    )] = None
+
+
+class EmailStatsTagsResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsPeriod, Field(
+        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
+    )]
+    data: Annotated[List[EmailTagStatsPoint], Field(
+        description="Tag breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no tagged sends occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
+        examples=[173],
+        ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailBroadcastID(RootModel[str]):
+    root: str
+
+
+class EmailTemplateID(RootModel[str]):
+    root: str
+
+
+class EmailMailboxProviderSortMetric(str, Enum):
+    delivered = "delivered"
+    bounced = "bounced"
+    complained = "complained"
+    deferred = "deferred"
+    bounces_hard = "bounces.hard"
+    bounces_soft = "bounces.soft"
+    bounces_admin = "bounces.admin"
+    bounces_block = "bounces.block"
+    bounces_undetermined = "bounces.undetermined"
+    opens = "opens"
+    opens_non_prefetched = "opens_non_prefetched"
+    unique_opens = "unique_opens"
+    unique_opens_non_prefetched = "unique_opens_non_prefetched"
+    clicks = "clicks"
+    unique_clicks = "unique_clicks"
+    unsubscribes = "unsubscribes"
+    delivery_rate = "delivery_rate"
+    bounce_rate = "bounce_rate"
+    complaint_rate = "complaint_rate"
+    open_rate = "open_rate"
+    click_rate = "click_rate"
+    unsubscribe_rate = "unsubscribe_rate"
+    bounces_hard_rate = "bounces.hard_rate"
+    bounces_soft_rate = "bounces.soft_rate"
+    bounces_admin_rate = "bounces.admin_rate"
+    bounces_block_rate = "bounces.block_rate"
+    bounces_undetermined_rate = "bounces.undetermined_rate"
+
+
+class EmailMailboxProviderDeliveryStats(BaseModel):
+    "Delivery counts and rates for messages attributed to a single recipient mailbox provider. Per-provider results do not include `accepted` or `processed` counts, because we only learn the recipient's mailbox provider once the receiving mail server reports delivery, a bounce, a deferral, or a late bounce. Earlier lifecycle states (accepted, processed) cannot be attributed to a specific provider."
+    model_config = ConfigDict(extra="allow")
+    delivered: Annotated[int, Field(
+        description="Distinct recipients whose message the receiving mail server accepted.",
+        examples=[8290],
+        ge=0,
+    )]
+    bounced: Annotated[int, Field(
+        description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.",
+        examples=[131],
+        ge=0,
+    )]
+    complained: Annotated[int, Field(
+        description="Distinct recipients who reported the message as spam.",
+        examples=[8],
+        ge=0,
+    )]
+    deferred: Annotated[int, Field(
+        description="Distinct recipients in transient delivery deferral that is still being retried.",
+        examples=[4],
+        ge=0,
+    )]
+    bounces: EmailBounceStatsWithRates
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Share of attempted recipients on this mailbox provider that were delivered, computed as `delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
+        examples=[0.9844],
+        ge=0,
+        le=1,
+    )]
+    bounce_rate: Annotated[Optional[float], Field(
+        description="Share of attempted recipients on this mailbox provider that bounced, computed as `bounced / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
+        examples=[0.0156],
+        ge=0,
+        le=1,
+    )]
+    complaint_rate: Annotated[Optional[float], Field(
+        description="Share of delivered recipients on this mailbox provider who reported the message as spam, computed as `complained / delivered`. Null when `delivered` is zero.",
+        examples=[0.00096],
+        ge=0,
+        le=1,
+    )]
+
+
+class EmailMailboxProviderStatsPoint(BaseModel):
+    "Delivery, engagement, and deliverability stats for messages grouped by a single recipient mailbox provider (`gmail`, `microsoft`, `yahoo`, `apple`, ...) over the requested period. We learn a recipient's mailbox provider from the receiving mail server. Per-provider rows therefore cover the delivery stage onward. They omit the `accepted` and `processed` counts and the `processing` latency family. These fields are absent rather than null. Engagement (opens and clicks, and their rates) is included because those events happen after delivery, once the mailbox provider is already known."
+    model_config = ConfigDict(extra="allow")
+    mailbox_provider: Annotated[str, Field(
+        description="The recipient mailbox provider this row aggregates, as a lowercase classifier such as `gmail`, `yahoo`, `microsoft`, or `apple`. New classifiers may be added over time.",
+        examples=["gmail"],
+        min_length=1,
+    )]
+    delivery: EmailMailboxProviderDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailDeliveryLatencyStats
+    trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        description="Per-bucket rate series for this mailbox provider over the window. Present only when `include_trend=true`.",
+    )] = None
+
+
+class EmailStatsByMailboxProviderResponse(BaseModel):
+    "Per-mailbox-provider breakdown for the requested period, ranked by the `sort` metric (default `delivered`) descending and paginated with the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsPeriod, Field(
+        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
+    )]
+    data: Annotated[List[EmailMailboxProviderStatsPoint], Field(
+        description="Mailbox-provider breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no eligible activity occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
+        examples=[14],
+        ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailRecipientDomainStatsPoint(BaseModel):
+    "Aggregate delivery, engagement, and latency stats for messages sent to a single recipient mailbox domain over the requested period."
+    model_config = ConfigDict(extra="allow")
+    recipient_domain: Annotated[str, Field(
+        description="The recipient mailbox domain this row aggregates (the part of the recipient address after the `@`), normalized to lowercase.",
+        examples=["gmail.com"],
+        min_length=1,
+    )]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: EmailLatencyStats
+    trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        description="Per-bucket rate series for this recipient domain over the window. Present only when `include_trend=true`.",
+    )] = None
+
+
+class EmailStatsByRecipientDomainResponse(BaseModel):
+    "Per-recipient-domain breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsPeriod, Field(
+        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
+    )]
+    data: Annotated[List[EmailRecipientDomainStatsPoint], Field(
+        description="Recipient-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
+        examples=[412],
+        ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailBounceStats(BaseModel):
+    "Breakdown of `bounced` by failure type. Each field counts distinct bounced recipients of that type in this row's scope; the five types approximately partition `bounced`."
+    model_config = ConfigDict(extra="allow")
+    hard: Annotated[int, Field(
+        description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain). The address is automatically added to the suppression list.",
+        examples=[42],
+        ge=0,
+    )]
+    soft: Annotated[int, Field(
+        description="Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable). Delivery was retried.",
+        examples=[48],
+        ge=0,
+    )]
+    admin: Annotated[int, Field(
+        description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain. Fix these by changing your content or sender configuration. Cleaning the recipient list does not usually help.",
+        examples=[4],
+        ge=0,
+    )]
+    block: Annotated[int, Field(
+        description="Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons (mail block, spam block, spam content). Triage usually focuses on IP reputation and sending volume.",
+        examples=[6],
+        ge=0,
+    )]
+    undetermined: Annotated[int, Field(
+        description="Distinct recipients bounced where the receiving server's response did not allow precise classification.",
+        examples=[1],
+        ge=0,
+    )]
+
+
+class EmailBounceCodeStatsPoint(BaseModel):
+    "Bounce counts for a single SMTP status code over the requested period, with the per-type breakdown. This is a deliverability-debugging view keyed on what the receiving mail server returned, so it only reports the failure side: bounced recipients, and their `hard`, `soft`, `admin`, `block`, and `undetermined` split. It has no delivered, open, or rate fields."
+    model_config = ConfigDict(extra="allow")
+    smtp_error_code: Annotated[str, Field(
+        description="The SMTP error code the receiving mail server returned for these bounces, as reported by that server (for example `5.1.1` for an unknown recipient, `4.2.2` for a full mailbox). The form varies by server, and the set of codes is open.",
+        examples=["5.1.1"],
+        min_length=1,
+    )]
+    bounced: Annotated[int, Field(
+        description="Distinct recipients whose delivery failed with this SMTP status code, approximately equal to the sum of the five `bounces.*` sub-counts. The two are computed independently, so they can differ slightly because of approximation.",
+        examples=[1240],
+        ge=0,
+    )]
+    bounces: EmailBounceStats
+
+
+class EmailStatsByBounceCodeResponse(BaseModel):
+    "Per-SMTP-code bounce breakdown for the requested period, ranked by the `sort` metric (default `bounced`) descending and paginated with the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsPeriod, Field(
+        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
+    )]
+    data: Annotated[List[EmailBounceCodeStatsPoint], Field(
+        description="Bounce-code breakdown rows, ranked by the `sort` metric (default `bounced`) descending. Empty when no bounces occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
+        examples=[17],
+        ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailComplaintTypeStatsPoint(BaseModel):
+    "Complaint counts for a single feedback-loop complaint type over the requested period. A complaint type is recorded only on spam-complaint events, so this breakdown reports the complained count for each type and nothing else. A complaint event has no delivery or engagement information attached to it, so no other count applies."
+    model_config = ConfigDict(extra="allow")
+    feedback_type: Annotated[str, Field(
+        description="The complaint classification reported by the mailbox provider's feedback loop, in the abuse-reporting-format vocabulary (for example `abuse`, `fraud`, `virus`, `other`). The set is open.",
+        examples=["abuse"],
+        min_length=1,
+    )]
+    complained: Annotated[int, Field(
+        description="Distinct recipients who reported a message as spam with this complaint type at any point in the period.",
+        examples=[47],
+        ge=0,
+    )]
+
+
+class EmailStatsByComplaintTypeResponse(BaseModel):
+    "Per-complaint-type breakdown for the requested period, ranked by `complained` descending and paginated with the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsPeriod, Field(
+        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
+    )]
+    data: Annotated[List[EmailComplaintTypeStatsPoint], Field(
+        description="Complaint-type breakdown rows, ranked by `complained` descending. Empty when no complaints occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct feedback types with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
+        examples=[4],
+        ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class SMSStatsSummaryPeriod(BaseModel):
+    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class SMSDeliveryStats(BaseModel):
+    "SMS lifecycle counts and rates for a whole period or breakdown. Counts use the message send time, so a later delivery stays attributed to the bucket in which the message was sent. Rates are null when their denominator is zero."
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
+        examples=[14820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off to the carrier for delivery.",
+        examples=[14810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct messages the carrier confirmed as delivered to the handset.",
+        examples=[14720],
+        ge=0,
+    )]
+    undelivered: Annotated[int, Field(
+        description="Distinct messages the carrier reported as not delivered.",
+        examples=[60],
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Distinct messages that failed during sending.",
+        examples=[25],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages rejected before any send attempt, for example by sending policy or a message-generation failure.",
+        examples=[10],
+        ge=0,
+    )]
+    expired: Annotated[int, Field(
+        description="Distinct messages that could not be delivered within their validity window and expired.",
+        examples=[5],
+        ge=0,
+    )]
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that were delivered, computed as `delivered / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.9932],
+        ge=0,
+        le=1,
+    )]
+    failure_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that ultimately failed, computed as `(undelivered + failed + expired) / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.0061],
+        ge=0,
+    )]
+
+
+class SMSLatencyQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
+    model_config = ConfigDict(extra="allow")
+    p50_ms: Annotated[Optional[int], Field(
+        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[420],
+        ge=0,
+    )]
+    p95_ms: Annotated[Optional[int], Field(
+        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[1820],
+        ge=0,
+    )]
+    p99_ms: Annotated[Optional[int], Field(
+        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[4920],
+        ge=0,
+    )]
+
+
+class SMSLatencyStats(BaseModel):
+    "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to carrier handoff.\n- `delivery`: From carrier handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying event contributes a measurement.\nIndividual percentiles can also be null."
+    model_config = ConfigDict(extra="allow")
+    processing: Annotated[Optional[SMSLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    delivery: Annotated[Optional[SMSLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    total: Annotated[Optional[SMSLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class SMSStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. A `*_pct_change` value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero. A `*_rate_pp` value is the signed difference between rate fractions and is null when either rate is undefined."
+    model_config = ConfigDict(extra="allow")
+    accepted_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+        examples=[0.508],
+    )]
+    sent_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in sent messages (`delivery.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.121],
+    )]
+    delivered_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in delivered messages (`delivery.delivered`) versus the previous period, as a signed fraction. Null when the previous period delivered none.",
+        examples=[0.122],
+    )]
+    undelivered_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in undelivered messages (`delivery.undelivered`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.031],
+    )]
+    failed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in failed messages (`delivery.failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.018],
+    )]
+    rejected_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.0],
+    )]
+    expired_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in expired messages (`delivery.expired`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.04],
+    )]
+    delivery_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
+        examples=[0.004],
+        ge=-1,
+        le=1,
+    )]
+    failure_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between the current and previous failure-rate fractions. Multiply by 100 for percentage points. The value can fall outside `[-1, 1]` because a message can contribute to more than one failure outcome and high-volume counts are approximate. Null when either rate is undefined.",
+        examples=[-0.0008],
+    )]
+
+
+class SMSStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    delta: SMSStatsComparisonDelta
+
+
+class SMSStatsSummary(BaseModel):
+    "Single-row aggregate across the full requested period, covering SMS lifecycle counts plus the derived delivery and failure rates, and latency percentiles. Use this endpoint for KPI tiles and reporting; the daily and hourly endpoints carry the same counts per bucket.\n\nEvery count is a sum of per-bucket counts across the window. Latency percentiles are computed across the whole period rather than summed per bucket. Rates are null when their denominator is zero."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    comparison: Optional[SMSStatsComparison] = None
+
+
+class SMSDeliveryCounts(BaseModel):
+    "SMS lifecycle counts for a time bucket. Counts use the message send time, so a message accepted on Monday and delivered on Tuesday counts in Monday's bucket. Rates are available only for whole periods and breakdowns."
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks.",
+        examples=[14820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off to the carrier for delivery.",
+        examples=[14810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct messages the carrier confirmed as delivered to the handset.",
+        examples=[14720],
+        ge=0,
+    )]
+    undelivered: Annotated[int, Field(
+        description="Distinct messages the carrier reported as not delivered.",
+        examples=[60],
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Distinct messages that failed during sending.",
+        examples=[25],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages rejected before any send attempt, for example by sending policy or a message-generation failure.",
+        examples=[10],
+        ge=0,
+    )]
+    expired: Annotated[int, Field(
+        description="Distinct messages that could not be delivered within their validity window and expired.",
+        examples=[5],
+        ge=0,
+    )]
+
+
+class SMSStatsPoint(BaseModel):
+    "SMS lifecycle counts for one time bucket (a calendar day or hour), bucketed by send time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. Per-bucket values include counts only. The summary and breakdown endpoints report rates and latency as whole-window aggregates."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    delivery: SMSDeliveryCounts
+
+
+class SMSStatsSortMetric(str, Enum):
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    undelivered = "undelivered"
+    failed = "failed"
+    rejected = "rejected"
+    expired = "expired"
+    delivery_rate = "delivery_rate"
+    failure_rate = "failure_rate"
+
+
+class SMSCountryStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single destination country over the requested period."
+    model_config = ConfigDict(extra="allow")
+    country: Annotated[str, Field(
+        description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code.",
+        examples=["US"],
+        min_length=1,
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        description="Per-bucket lifecycle counts for this country, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByCountryResponse(BaseModel):
+    "Per-country breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSCountryStatsPoint], Field(
+        description="Country breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct destination countries with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[42],
+        ge=0,
+    )]
+
+
+class SMSCarrierStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single delivery carrier over the requested period."
+    model_config = ConfigDict(extra="allow")
+    carrier: Annotated[str, Field(
+        description="The delivery carrier this row aggregates, as resolved for the destination handset.",
+        examples=["Verizon"],
+        min_length=1,
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        description="Per-bucket lifecycle counts for this carrier, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByCarrierResponse(BaseModel):
+    "Per-carrier breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSCarrierStatsPoint], Field(
+        description="Carrier breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct carriers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[24],
+        ge=0,
+    )]
+
+
+class SMSCategoryStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single message category over the requested period."
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[str, Field(
+        description="The category this row aggregates, as set at send time. `transactional` is one-to-one messaging triggered by a user action; `marketing` is bulk sending. New categories may be added over time.",
+        examples=["transactional"],
+        min_length=1,
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        description="Per-bucket lifecycle counts for this category, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByCategoryResponse(BaseModel):
+    "Per-category breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSCategoryStatsPoint], Field(
+        description="Category breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[8],
+        ge=0,
+    )]
+
+
+class SMSTagStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single tag (`name:value`) over the requested period."
+    model_config = ConfigDict(extra="allow")
+    tag: Annotated[str, Field(
+        description="The tag this row aggregates, in `name:value` form. Each distinct name-and-value pair is its own row, and a message carrying several tags is counted once under each of them, so rows do not sum to the period total.",
+        examples=["campaign:summer_sale"],
+        min_length=1,
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        description="Per-bucket lifecycle-count series for this tag over the window, bucketed by `trend_grain`. Sparse, so only buckets with activity are present rather than zero-filled, unlike the daily and hourly series. Present only when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByTagResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSTagStatsPoint], Field(
+        description="Tag breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no tagged messages were sent in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct tags with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[18],
+        ge=0,
+    )]
+
+
+class SMSStatsLifecycleSortMetric(str, Enum):
+    accepted = "accepted"
+    sent = "sent"
+    delivered = "delivered"
+    undelivered = "undelivered"
+    failed = "failed"
+    rejected = "rejected"
+    expired = "expired"
+
+
+class SMSErrorCode(str, Enum):
+    invalid_destination = "invalid_destination"
+    unreachable = "unreachable"
+    blocked_by_carrier = "blocked_by_carrier"
+    blocked_by_fraud_protection = "blocked_by_fraud_protection"
+    blocked_by_recipient = "blocked_by_recipient"
+    landline_unreachable = "landline_unreachable"
+    content_rejected = "content_rejected"
+    sender_unregistered = "sender_unregistered"
+    recipient_opted_out = "recipient_opted_out"
+    provider_unavailable = "provider_unavailable"
+    insufficient_balance = "insufficient_balance"
+    unknown = "unknown"
+
+
+class SMSErrorCodeStatsPoint(BaseModel):
+    "Delivery and latency statistics for one standardized failure reason over the requested period."
+    model_config = ConfigDict(extra="allow")
+    error_code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
+        description="Standardized failure reason this row aggregates. Matches the `error_code` message-list filter.",
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        description="Per-bucket lifecycle counts for this error code, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByErrorCodeResponse(BaseModel):
+    "Per-error-code breakdown for the requested period, ranked by the `sort` metric (default `failed`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSErrorCodeStatsPoint], Field(
+        description="Error-code breakdown rows, ranked by the `sort` metric (default `failed`) descending. Empty when no delivery failures occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[17],
+        ge=0,
+    )]
+
+
+class SMSInboundStatsComparisonDelta(BaseModel):
+    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
+    model_config = ConfigDict(extra="allow")
+    received_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
+        examples=[0.058],
+    )]
+
+
+class SMSInboundStatsComparison(BaseModel):
+    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the preceding period.",
+        examples=[3980],
+        ge=0,
+    )]
+    delta: SMSInboundStatsComparisonDelta
+
+
+class SMSInboundStatsSummaryResponse(BaseModel):
+    "Total received messages over the requested period."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the period, counted by the time the carrier received them.",
+        examples=[4210],
+        ge=0,
+    )]
+    comparison: Optional[SMSInboundStatsComparison] = None
+
+
+class SMSInboundStatsPoint(BaseModel):
+    "One time bucket of received-message counts, attributed by arrival time."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="Start of the bucket this row covers, as a calendar day (YYYY-MM-DD) for the daily series or an hour boundary (RFC 3339) for the hourly one.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in this bucket, counted by the time the carrier received them.",
+        examples=[128],
+        ge=0,
+    )]
+
+
+class SMSInboundCountryStatsPoint(BaseModel):
+    "Received-message volume for one country."
+    model_config = ConfigDict(extra="allow")
+    country: Annotated[str, Field(
+        description="The country of the Bird number the messages arrived on, as an ISO 3166-1 alpha-2 code. This identifies where the message was received. It does not identify the sender's country.",
+        examples=["US"],
+        min_length=1,
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received on numbers in this country during the period.",
+        examples=[1840],
+        ge=0,
+    )]
+
+
+class SMSInboundStatsByCountryResponse(BaseModel):
+    "Received-message volume broken down by country, ranked by volume."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSInboundCountryStatsPoint], Field(
+        description="One row per country with activity in the period, most messages first, capped at the requested `limit`. A country with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct countries the messages arrived in with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[12],
+        ge=0,
+    )]
+
+
+class SMSInboundOperatorStatsPoint(BaseModel):
+    "Received-message volume for one mobile operator."
+    model_config = ConfigDict(extra="allow")
+    mcc_mnc: Annotated[str, Field(
+        description="Mobile country code and mobile network code of the network the sending subscriber is on. The breakdown keys on this rather than on an operator name because the carrier reports a name only where a surcharge applies, which would leave most of the world in one unnamed bucket.",
+        examples=[311480],
+        min_length=1,
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received from senders on this operator during the period.",
+        examples=[640],
+        ge=0,
+    )]
+
+
+class SMSInboundStatsByOperatorResponse(BaseModel):
+    "Received-message volume broken down by operator, ranked by volume."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSInboundOperatorStatsPoint], Field(
+        description="One row per operator with activity in the period, most messages first, capped at the requested `limit`. An operator with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct sending operators with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[38],
+        ge=0,
+    )]
+
+
+class WhatsAppTemplateCategory(str, Enum):
+    authentication = "authentication"
+    utility = "utility"
+    marketing = "marketing"
+
+
+class WhatsAppStatsSummaryPeriod(BaseModel):
+    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class WhatsAppDeliveryStats(BaseModel):
+    "WhatsApp lifecycle counts and rates for the requested period, attributed by send time, so a later delivery stays attributed to the period in which its message was accepted, and a recent period under-reports `delivered` while delivery reports are still arriving. The sibling `engagement` block reports read counts and rates. Rates are null when their denominator is zero. Very large counts are close estimates rather than exact tallies."
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off for delivery.",
+        examples=[4810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct messages confirmed delivered to the recipient's device.",
+        examples=[4720],
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Distinct messages that failed during sending or delivery.",
+        examples=[25],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
+        examples=[412],
+        ge=0,
+    )]
+    delivery_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that were delivered, computed as `delivered / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.9793],
+        ge=0,
+        le=1,
+    )]
+    failure_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that ultimately failed, computed as `failed / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.0052],
+        ge=0,
+        le=1,
+    )]
+
+
+class WhatsAppEngagementStats(BaseModel):
+    "WhatsApp engagement counts and the derived read rate for the scope of the containing row (the whole requested period or a breakdown dimension). The `read` field is the number of distinct messages confirmed read by the recipient. Send time determines attribution; the instant the read receipt arrived does not. A read is counted in the period its message was accepted in, alongside that message's own delivery when one arrived. The read rate divides reads by messages delivered in the same scope and is null when its denominator is zero. Very large counts are close estimates rather than exact tallies."
+    model_config = ConfigDict(extra="allow")
+    read: Annotated[int, Field(
+        description="Distinct messages confirmed read by the recipient.",
+        examples=[3105],
+        ge=0,
+    )]
+    read_rate: Annotated[Optional[float], Field(
+        description="Distinct messages read relative to messages delivered in the same scope, computed as `read / delivery.delivered`. Both counts are attributed by send time, so a read is counted alongside its own message's delivery. The rate can exceed 1 where a read receipt arrived for a message whose delivery receipt did not, or, at high volume, because the counts are close estimates. Null when `delivery.delivered` is zero.",
+        examples=[0.6578],
+        ge=0,
+    )]
+
+
+class WhatsAppLatencyQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
+    model_config = ConfigDict(extra="allow")
+    p50_ms: Annotated[Optional[int], Field(
+        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[610],
+        ge=0,
+    )]
+    p95_ms: Annotated[Optional[int], Field(
+        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[2140],
+        ge=0,
+    )]
+    p99_ms: Annotated[Optional[int], Field(
+        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[5380],
+        ge=0,
+    )]
+
+
+class WhatsAppLatencyStats(BaseModel):
+    "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to WhatsApp handoff.\n- `delivery`: From WhatsApp handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying message contributes a measurement.\nIndividual percentiles can also be null. `delivery` is measured on a best-effort basis, so\nit can be absent for a scope whose `processing` and `total` are present."
+    model_config = ConfigDict(extra="allow")
+    processing: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    delivery: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    total: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class WhatsAppStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. A `*_pct_change` value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero. A `*_rate_pp` value is the signed difference between rate fractions and is null when either rate is undefined."
+    model_config = ConfigDict(extra="allow")
+    accepted_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+        examples=[0.508],
+    )]
+    sent_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in sent messages (`delivery.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.508],
+    )]
+    delivered_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in delivered messages (`delivery.delivered`) versus the previous period, as a signed fraction. Null when the previous period delivered none.",
+        examples=[0.513],
+    )]
+    failed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in failed messages (`delivery.failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.194],
+    )]
+    rejected_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.084],
+    )]
+    read_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in messages read (`engagement.read`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.568],
+    )]
+    delivery_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
+        examples=[0.0031],
+        ge=-1,
+        le=1,
+    )]
+    failure_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between this period's and the previous period's failure rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's failure rate is undefined.",
+        examples=[-0.0045],
+        ge=-1,
+        le=1,
+    )]
+    read_rate_pp: Annotated[Optional[float], Field(
+        description="Signed difference between the current and previous read-rate fractions. Multiply by 100 for percentage points. The value can fall outside `[-1, 1]` because a read receipt can arrive for a message whose delivery receipt did not, and high-volume counts are approximate. Null when either rate is undefined.",
+        examples=[0.0232],
+    )]
+
+
+class WhatsAppStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+    delta: WhatsAppStatsComparisonDelta
+
+
+class WhatsAppStatsSummary(BaseModel):
+    "WhatsApp lifecycle counts, rates, engagement, and latency percentiles for the full requested period. Counts aggregate the time buckets. Latency percentiles cover the whole period. Rates are null when their denominator is zero."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+    comparison: Optional[WhatsAppStatsComparison] = None
+
+
+class WhatsAppDeliveryCounts(BaseModel):
+    "WhatsApp lifecycle counts for a time bucket, attributed by send time. A message accepted on Monday and delivered on Tuesday counts in Monday's bucket. The sibling `engagement` block reports read counts. Rates are available only for the whole period. Very large counts are close estimates rather than exact tallies."
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off for delivery.",
+        examples=[4810],
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Distinct messages confirmed delivered to the recipient's device.",
+        examples=[4720],
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Distinct messages that failed during sending or delivery.",
+        examples=[25],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
+        examples=[412],
+        ge=0,
+    )]
+
+
+class WhatsAppEngagementCounts(BaseModel):
+    "WhatsApp engagement counts for a time bucket, attributed by send time. A message accepted on Monday and read on Tuesday counts in Monday's bucket. Read rates are available only for the whole period. Very large counts are close estimates rather than exact tallies."
+    model_config = ConfigDict(extra="allow")
+    read: Annotated[int, Field(
+        description="Distinct messages confirmed read by the recipient.",
+        examples=[3105],
+        ge=0,
+    )]
+
+
+class WhatsAppStatsPoint(BaseModel):
+    "WhatsApp lifecycle counts, engagement, and latency percentiles for one time bucket (a calendar day or hour), bucketed by send time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. Rates apply to the whole window rather than individual buckets."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    delivery: WhatsAppDeliveryCounts
+    engagement: WhatsAppEngagementCounts
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppTemplateID(RootModel[str]):
+    root: str
+
+
+class WhatsAppTemplateCategoryStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, and engagement for a single WhatsApp template category over the requested period."
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
+        description="The template category this row aggregates.",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByTemplateCategoryResponse(BaseModel):
+    "Per-template-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppTemplateCategoryStatsPoint], Field(
+        description="Category rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct categories with activity in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class WhatsAppTagStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, and engagement for a single tag (name:value) over the requested period."
+    model_config = ConfigDict(extra="allow")
+    tag: Annotated[str, Field(
+        description="The tag this row aggregates, in `name:value` form.",
+        examples=["campaign:summer_sale"],
+        min_length=1,
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByTagResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppTagStatsPoint], Field(
+        description="Tag rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct tags with activity in the period, regardless of `limit`.",
+        examples=[12],
+        ge=0,
+    )]
+
+
+class WhatsAppCountryStatsPoint(BaseModel):
+    "Lifecycle counts, derived rates, engagement and latency for a single destination country over the requested period."
+    model_config = ConfigDict(extra="allow")
+    country: Annotated[str, Field(
+        description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code. `ZZ` collects recipients whose country could not be resolved.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )]
+    delivery: WhatsAppDeliveryStats
+    engagement: WhatsAppEngagementStats
+    latency: WhatsAppLatencyStats
+
+
+class WhatsAppStatsByCountryResponse(BaseModel):
+    "Per-country breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppCountryStatsPoint], Field(
+        description="Country rows ranked by accepted volume descending. Empty when no eligible activity occurred in the period; rows sum to the summary less group-send volume, and less any pre-cutover phone-addressed sends still inside the window.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct countries with activity in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class WhatsAppErrorCode(str, Enum):
+    insufficient_balance = "insufficient_balance"
+    price_not_found = "price_not_found"
+    internal_error = "internal_error"
+    undeliverable = "undeliverable"
+    service_window_expired = "service_window_expired"
+    rate_limited = "rate_limited"
+    recipient_suppressed = "recipient_suppressed"
+    media_rejected = "media_rejected"
+
+
+class WhatsAppErrorCodeStatsPoint(BaseModel):
+    "Number of failed messages for a single normalized failure reason over the requested period."
+    model_config = ConfigDict(extra="allow")
+    error_code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
+        description="The normalized failure reason this row aggregates, matching the `last_error.code` reported on an individual failed message.",
+    )]
+    count: Annotated[int, Field(
+        description="Distinct messages that failed with this reason in scope.",
+        examples=[18],
+        ge=0,
+    )]
+
+
+class WhatsAppStatsByErrorCodeResponse(BaseModel):
+    "Per-error-code failure breakdown for the requested period, ranked by failure count descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[WhatsAppErrorCodeStatsPoint], Field(
+        description="Error-code rows ranked by failure count descending. Empty when no failures occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct error codes with failures in the period, regardless of `limit`.",
+        examples=[3],
+        ge=0,
+    )]
+
+
+class WhatsAppInboundStatsComparisonDelta(BaseModel):
+    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
+    model_config = ConfigDict(extra="allow")
+    received_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
+        examples=[0.058],
+    )]
+
+
+class WhatsAppInboundStatsComparison(BaseModel):
+    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the preceding period.",
+        examples=[3980],
+        ge=0,
+    )]
+    delta: WhatsAppInboundStatsComparisonDelta
+
+
+class WhatsAppInboundStatsSummaryResponse(BaseModel):
+    "Total received messages for the requested period."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the period, counted by the time each message reached your number. Computed across the whole window rather than summed from the daily or hourly series, so it can sit slightly below the sum of those rows.",
+        examples=[4210],
+        ge=0,
+    )]
+    comparison: Optional[WhatsAppInboundStatsComparison] = None
+
+
+class WhatsAppInboundStatsPoint(BaseModel):
+    "Received-message count for one time bucket (a calendar day or hour), bucketed by the time each message reached your number."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in this bucket.",
+        examples=[182],
+        ge=0,
+    )]
+
+
+class AMBBusinessID(RootModel[str]):
+    root: str
+
+
+class AMBContentKind(str, Enum):
+    text = "text"
+    attachment = "attachment"
+    rich_link = "rich_link"
+    quick_reply = "quick_reply"
+    list_picker = "list_picker"
+    time_picker = "time_picker"
+    form = "form"
+    apple_pay = "apple_pay"
+    authenticate = "authenticate"
+    imessage_app = "imessage_app"
+    interactive = "interactive"
+
+
+class AMBStatsSummaryPeriod(BaseModel):
+    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary. Historical starts are preserved; the maximum request length does not impose a historical cutoff.",
+        examples=["2026-05-01"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
+        examples=["2026-05-25"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
+        examples=["2026-05-25T14:03:10Z"],
+    )] = None
+
+
+class AMBStatsAttribution(str, Enum):
+    accepted_time = "accepted_time"
+    event_time = "event_time"
+
+
+class AMBOutboundStatsCounts(BaseModel):
+    "Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted."
+    model_config = ConfigDict(extra="allow")
+    accepted: Annotated[int, Field(
+        description="Distinct messages accepted for sending after admission checks. This is the denominator for `sent_rate` and `send_failure_rate`.",
+        examples=[4820],
+        ge=0,
+    )]
+    sent: Annotated[int, Field(
+        description="Distinct messages handed off to Apple.",
+        examples=[4790],
+        ge=0,
+    )]
+    send_failed: Annotated[int, Field(
+        description="Distinct accepted messages that Apple refused or that exhausted their send attempts. See `last_error.code` on the message for the reason; a refused charge is not a send failure, it is `rejected`.",
+        examples=[30],
+        ge=0,
+    )]
+    rejected: Annotated[int, Field(
+        description="Distinct messages refused before any send attempt, because the destination has no price, the wallet could not fund the send, or the content cannot be sent yet. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `send_failure_rate`, which covers send failures only.",
+        examples=[4],
+        ge=0,
+    )]
+    sent_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages Apple acknowledged, computed as `sent / accepted`. Null when no messages were accepted in scope. This stands where other channels report a delivery rate.",
+        examples=[0.9938],
+        ge=0,
+        le=1,
+    )]
+    send_failure_rate: Annotated[Optional[float], Field(
+        description="Share of accepted messages that failed to send, computed as `send_failed / accepted`. Null when no messages were accepted in scope.",
+        examples=[0.0062],
+        ge=0,
+        le=1,
+    )]
+
+
+class AMBStatsQuantiles(BaseModel):
+    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
+    model_config = ConfigDict(extra="allow")
+    p50_ms: Annotated[Optional[int], Field(
+        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[610],
+        ge=0,
+    )]
+    p95_ms: Annotated[Optional[int], Field(
+        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[2140],
+        ge=0,
+    )]
+    p99_ms: Annotated[Optional[int], Field(
+        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
+        examples=[5380],
+        ge=0,
+    )]
+
+
+class AMBStatsLatency(BaseModel):
+    "Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement."
+    model_config = ConfigDict(extra="allow")
+    processing: Annotated[AMBStatsQuantiles, Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )]
+
+
+class AMBStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero."
+    model_config = ConfigDict(extra="allow")
+    accepted_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in accepted messages (`counts.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
+        examples=[0.508],
+    )]
+    sent_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in sent messages (`counts.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.501],
+    )]
+    send_failed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in send failures (`counts.send_failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.12],
+    )]
+    rejected_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in rejected messages (`counts.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0],
+    )]
+
+
+class AMBStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change."
+    model_config = ConfigDict(extra="allow")
+    monthly_active_contacts: Annotated[Optional[int], Field(
+        description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
+        ge=0,
+    )] = None
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    delta: Annotated[AMBStatsComparisonDelta, Field(
+        description="Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero.",
+    )]
+
+
+class AMBStatsSummary(BaseModel):
+    "Outbound Apple Messages for Business counts and latency percentiles for the full requested period. Counts and percentiles are computed over the whole period rather than combined from the returned time-series values."
+    model_config = ConfigDict(extra="allow")
+    monthly_active_contacts: Annotated[Optional[int], Field(
+        description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
+        ge=0,
+    )] = None
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+    comparison: Annotated[Optional[AMBStatsComparison], Field(
+        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change.",
+    )] = None
+
+
+class AMBStatsPoint(BaseModel):
+    "Outbound Apple Messages for Business counts and processing-latency percentiles for one time bucket (a calendar day or hour), bucketed by acceptance time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. There is no `first_response` here. Read first-response latency from the summary or a breakdown endpoint."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+
+
+class AMBMessageKindStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single message content kind over the requested period."
+    model_config = ConfigDict(extra="allow")
+    message_kind: Annotated[AMBContentKind, Field(
+        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByMessageKindResponse(BaseModel):
+    "Per-content-kind breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBMessageKindStatsPoint], Field(
+        description="Content-kind rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct content kinds with activity in the period, regardless of `limit`.",
+        examples=[4],
+        ge=0,
+    )]
+
+
+class AMBCategoryStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single message category over the requested period."
+    model_config = ConfigDict(extra="allow")
+    category: Annotated[str, Field(
+        description="The category these messages were sent with. Defaults to an empty string when a send names no category.",
+        examples=["order_update"],
+        min_length=0,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByCategoryResponse(BaseModel):
+    "Per-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBCategoryStatsPoint], Field(
+        description="Category rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct categories with activity in the period, regardless of `limit`.",
+        examples=[6],
+        ge=0,
+    )]
+
+
+class AMBTagStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single tag over the requested period."
+    model_config = ConfigDict(extra="allow")
+    tag: Annotated[str, Field(
+        description="The tag these messages carry, as a bare name or a `name:value` pair. A message with several tags is counted once under each, so rows do not sum to the period total.",
+        examples=["campaign:spring_launch"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByTagResponse(BaseModel):
+    "Per-tag breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200). Only tagged messages appear."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBTagStatsPoint], Field(
+        description="Tag rows ranked by accepted volume descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct tags with activity in the period, regardless of `limit`.",
+        examples=[9],
+        ge=0,
+    )]
+
+
+class AMBStatsErrorCode(RootModel[str]):
+    root: str
+
+
+class AMBErrorCodeStatsPoint(BaseModel):
+    "Outbound counts and latency percentiles for a single failure reason over the requested period."
+    model_config = ConfigDict(extra="allow")
+    error_code: Annotated[str, Field(
+        description="Machine-readable reason a send failed, in one of two namespaces: `bird:` for a reason Bird's own pipeline assigned (for example `bird:business_not_registered`), or `apple:` followed by the HTTP status Apple's API returned for the send attempt (for example `apple:404`). This is an open, growing set in both namespaces; accept unrecognized values.",
+        examples=["bird:business_not_registered"],
+        min_length=1,
+        pattern="^(bird:[a-z0-9_]+|apple:\\d{3})$",
+    )]
+    counts: Annotated[AMBOutboundStatsCounts, Field(
+        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
+    )]
+    latency: Annotated[AMBStatsLatency, Field(
+        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
+    )]
+    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
+    )] = None
+
+
+class AMBStatsByErrorCodeResponse(BaseModel):
+    "Per-failure-reason breakdown for the requested period, ranked by `send_failed + rejected` descending and capped at the requested `limit` (default 50, max 200). Only messages carrying an error code appear: a `bird:` code is usually a rejection, an `apple:` code a send failure."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    data: Annotated[List[AMBErrorCodeStatsPoint], Field(
+        description="Error-code rows ranked by `send_failed + rejected` descending.",
+    )]
+    total: Annotated[int, Field(
+        description="Total distinct error codes with activity in the period, regardless of `limit`.",
+        examples=[2],
+        ge=0,
+    )]
+
+
+class AMBInboundStatsComparisonDelta(BaseModel):
+    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
+    model_config = ConfigDict(extra="allow")
+    received_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
+        examples=[0.058],
+    )]
+
+
+class AMBInboundStatsComparison(BaseModel):
+    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the preceding period.",
+        examples=[3980],
+        ge=0,
+    )]
+    delta: Annotated[AMBInboundStatsComparisonDelta, Field(
+        description="The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none.",
+    )]
+
+
+class AMBInboundStatsSummary(BaseModel):
+    "Total inbound Apple Messages for Business messages for the requested period."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in the period, counted by the time each message occurred. Computed across the whole window rather than summed from the daily or hourly series, so it can sit slightly below the sum of those rows.",
+        examples=[4210],
+        ge=0,
+    )]
+    comparison: Annotated[Optional[AMBInboundStatsComparison], Field(
+        description="The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
+    )] = None
+
+
+class AMBInboundStatsPoint(BaseModel):
+    "Received-message count for one time bucket (a calendar day or hour), bucketed by the time each message occurred."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received in this bucket.",
+        examples=[182],
+        ge=0,
+    )]
+
+
+class AMBConversationStatsCounts(BaseModel):
+    "Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies."
+    model_config = ConfigDict(extra="allow")
+    started: Annotated[int, Field(
+        description="Count of conversation-started events in scope.",
+        examples=[210],
+        ge=0,
+    )]
+    reopened: Annotated[int, Field(
+        description="Count of conversation-reopened events in scope.",
+        examples=[34],
+        ge=0,
+    )]
+    closed: Annotated[int, Field(
+        description="Count of conversation-closed events in scope.",
+        examples=[198],
+        ge=0,
+    )]
+    conversations: Annotated[int, Field(
+        description="Distinct conversations with at least one lifecycle event in scope.",
+        examples=[205],
+        ge=0,
+    )]
+
+
+class AMBConversationStatsComparisonDelta(BaseModel):
+    "Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero."
+    model_config = ConfigDict(extra="allow")
+    started_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in conversation starts (`counts.started`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.22],
+    )]
+    reopened_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in conversation reopens (`counts.reopened`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[-0.05],
+    )]
+    closed_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in conversation closes (`counts.closed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.19],
+    )]
+    conversations_pct_change: Annotated[Optional[float], Field(
+        description="Relative change in distinct conversations touched (`counts.conversations`) versus the previous period, as a signed fraction. Null when the previous period had none.",
+        examples=[0.21],
+    )]
+
+
+class AMBConversationStatsComparison(BaseModel):
+    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    counts: Annotated[AMBConversationStatsCounts, Field(
+        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
+    )]
+    delta: Annotated[AMBConversationStatsComparisonDelta, Field(
+        description="Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero.",
+    )]
+
+
+class AMBConversationStatsSummary(BaseModel):
+    "Conversation lifecycle counts for the full requested period. Counts aggregate the time buckets."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[AMBStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    attribution: Annotated[AMBStatsAttribution, Field(
+        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
+    )]
+    counts: Annotated[AMBConversationStatsCounts, Field(
+        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
+    )]
+    comparison: Annotated[Optional[AMBConversationStatsComparison], Field(
+        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
+    )] = None
+
+
+class AMBConversationStatsPoint(BaseModel):
+    "Conversation lifecycle counts for one time bucket (a calendar day or hour), bucketed by when each event occurred."
+    model_config = ConfigDict(extra="allow")
+    bucket: Annotated[str, Field(
+        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
+        examples=["2026-05-25"],
+        min_length=1,
+    )]
+    counts: Annotated[AMBConversationStatsCounts, Field(
+        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
+    )]
+
+
+class SIPTrunkID(RootModel[str]):
+    root: str
+
+
+class VoiceCallStatus(str, Enum):
+    answered = "answered"
+    no_answer = "no_answer"
+    busy = "busy"
+    canceled = "canceled"
+    failed = "failed"
+    rejected = "rejected"
+    unknown = "unknown"
+    ringing = "ringing"
+    in_progress = "in_progress"
+
+
+class VoiceCallDirection(str, Enum):
+    inbound = "inbound"
+    outbound = "outbound"
+
+
+class Money(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    amount: Annotated[str, Field(
+        description="Decimal amount as a string, in major currency units.",
+        examples=[0.00995],
+        min_length=1,
+    )]
+    currency_code: Annotated[str, Field(
+        description="ISO 4217 three-letter currency code.",
+        examples=["EUR"],
+        max_length=3,
+        min_length=3,
+        pattern="^[A-Z]{3}$",
+    )]
+
+
+class VerificationChannel(str, Enum):
+    email = "email"
+    sms = "sms"
+    whatsapp = "whatsapp"
+    telegram = "telegram"
+    voice = "voice"
+
+
+class VerificationTerminalReason(str, Enum):
+    attempts_exhausted = "attempts_exhausted"
+    ttl_elapsed = "ttl_elapsed"
+    undeliverable = "undeliverable"
+
+
+class VerificationAttemptFailureReason(str, Enum):
+    carrier_rejected = "carrier_rejected"
+    hard_bounce = "hard_bounce"
+    soft_bounce = "soft_bounce"
+    undelivered = "undelivered"
+    channel_unavailable = "channel_unavailable"
+    channel_disabled = "channel_disabled"
+    channel_restricted = "channel_restricted"
+    delivery_timeout = "delivery_timeout"
+    not_billable = "not_billable"
+
+
 class RealtimeEventName(RootModel[str]):
     root: str
 
@@ -575,10 +2951,6 @@ class RealtimeMemberPublish(BaseModel):
     )] = None
 
 
-class EmailBroadcastID(RootModel[str]):
-    root: str
-
-
 class EmailMessageStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
@@ -619,10 +2991,6 @@ class EmailAddress(BaseModel):
 
 
 class LanguageTag(RootModel[str]):
-    root: str
-
-
-class EmailTemplateID(RootModel[str]):
     root: str
 
 
@@ -970,7 +3338,7 @@ class EmailMessageSendRequest(BaseModel):
         description="Whether to track click events for this message.",
     )] = None
     ip_pool_id: Annotated[Optional[str], Field(
-        description="ID of the IP pool to send from (`ipp_` prefix), or `ipp_shared` to route through the shared pool explicitly. Omit to use your organization's default pool. An unknown pool, or a pool with no dedicated IPs available to send from, is rejected with a `422`.",
+        description="ID of the IP pool to send from (`ipp_` prefix), or `ipp_shared` to route through the shared pool explicitly. Omit to use the sending domain's default pool in this workspace, or the organization's default when the domain has none. An unknown pool, or a pool with no dedicated IPs available to send from, is rejected with a `422`.",
         pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
     )] = None
     category: Annotated[Optional[EmailMessageCategory], Field(
@@ -1306,22 +3674,6 @@ class EmailEventList(BaseModel):
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
-    )]
-
-
-class Money(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    amount: Annotated[str, Field(
-        description="Decimal amount as a string, in major currency units.",
-        examples=[0.00995],
-        min_length=1,
-    )]
-    currency_code: Annotated[str, Field(
-        description="ISO 4217 three-letter currency code.",
-        examples=["EUR"],
-        max_length=3,
-        min_length=3,
-        pattern="^[A-Z]{3}$",
     )]
 
 
@@ -3031,6 +5383,22 @@ class SMSMessageStatus(str, Enum):
     received = "received"
 
 
+class SMSBinary(BaseModel):
+    "An 8-bit binary SMS payload, sent as one segment. `udh` plus `data` must fit 140 octets."
+    model_config = ConfigDict(extra="allow")
+    udh: Annotated[Optional[str], Field(
+        description="User data header as hexadecimal, 1-16 octets. Required on a send: a binary send without it returns `422`. Its first octet must count the octets after it, every information element must fit inside it, and concatenation elements (`00`, `08`) are refused because the message is one segment.",
+        examples=["0605041582158A"],
+        pattern="^([0-9A-Fa-f]{2}){1,16}$",
+    )] = None
+    data: Annotated[str, Field(
+        description="The payload after the header, as hexadecimal.",
+        examples=["C0FFEE"],
+        min_length=2,
+        pattern="^([0-9A-Fa-f]{2})+$",
+    )]
+
+
 class SMSTemplateID(RootModel[str]):
     root: str
 
@@ -3043,9 +5411,14 @@ class SMSTemplateContentHash(RootModel[str]):
     root: str
 
 
+class SMSMessagingProfileID(RootModel[str]):
+    root: str
+
+
 class SMSSegmentsEncoding(str, Enum):
     GSM_7BIT = "GSM_7BIT"
     UCS2 = "UCS2"
+    BINARY = "BINARY"
 
 
 class SMSSegments(BaseModel):
@@ -3057,11 +5430,11 @@ class SMSSegments(BaseModel):
         ge=1,
     )]
     encoding: Annotated[SMSSegmentsEncoding, Field(
-        description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.",
+        description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.\n\n`BINARY` marks an 8-bit binary payload, sent as one segment, where `characters` counts its octets. Only the preview binary send produces it; it is declared ahead of general availability so clients see the value before any message carries it outside the preview.",
         min_length=1,
     )]
     characters: Annotated[int, Field(
-        description="Character count of the body, counted in Unicode code points under either encoding. This is not the segment measure: a `GSM_7BIT` extended-table character counts once here but costs two septets, and a `UCS2` emoji outside the Basic Multilingual Plane counts once here but costs two of the segment's 70 code units.",
+        description="Character count of the body, counted in Unicode code points under `GSM_7BIT` and `UCS2`; under `BINARY` it is the payload's octets, header included. This is not the segment measure: a `GSM_7BIT` extended-table character counts once here but costs two septets, and a `UCS2` emoji outside the Basic Multilingual Plane counts once here but costs two of the segment's 70 code units.",
         examples=[41],
         ge=0,
     )]
@@ -3098,21 +5471,15 @@ class SMSMessageEffectiveOptions(BaseModel):
     smart_encoding: Annotated[bool, Field(
         description="Whether Bird replaced characters outside the GSM-7 alphabet in this message's body with their closest equivalent before sending it. When `true`, `text` is the body as sent and `segments` describes that body.",
     )]
-
-
-class SMSErrorCode(str, Enum):
-    invalid_destination = "invalid_destination"
-    unreachable = "unreachable"
-    blocked_by_carrier = "blocked_by_carrier"
-    blocked_by_fraud_protection = "blocked_by_fraud_protection"
-    blocked_by_recipient = "blocked_by_recipient"
-    landline_unreachable = "landline_unreachable"
-    content_rejected = "content_rejected"
-    sender_unregistered = "sender_unregistered"
-    recipient_opted_out = "recipient_opted_out"
-    provider_unavailable = "provider_unavailable"
-    insufficient_balance = "insufficient_balance"
-    unknown = "unknown"
+    ignore_delivery_window: Annotated[Optional[bool], Field(
+        description="Preview feature: `true` when this message is excluded from any future quiet-hours delivery window. Absent otherwise.",
+    )] = None
+    ignore_suppression: Annotated[Optional[bool], Field(
+        description="Preview feature: `true` when the send asked to skip opt-outs. Recorded only: every opt-out still applied. Absent otherwise.",
+    )] = None
+    callback_url: Annotated[Optional[str], Field(
+        description="Preview feature: the callback URL the send recorded. Absent when it recorded none. Recorded only: status events go to your webhook subscriptions either way.",
+    )] = None
 
 
 class SMSError(BaseModel):
@@ -3133,6 +5500,27 @@ class SMSError(BaseModel):
         description="When the failure occurred.",
         min_length=1,
     )]
+    permanent: Annotated[Optional[bool], Field(
+        description="Whether the cause is permanent, so sending the same message again would fail the same way. Describes the cause, not whether Bird retries. Null when Bird cannot tell, which is currently always.",
+    )] = None
+
+
+class SMSInReplyToMessage(BaseModel):
+    "Preview feature: the outbound message a received message was paired with. Bird pairs a reply with the last message the messaging profile sent this subscriber from the receiving number, within the profile's outbound-matching window. The pairing is inferred from timing; the subscriber does not report which message they answered."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    text: Annotated[Optional[str], Field(
+        description="Text of the outbound message as Bird stored it. Authentication messages read `**REDACTED**`. Absent once that message is past the read window.",
+        examples=["Reply YES to confirm your appointment on Friday."],
+    )] = None
+    sent_at: Annotated[Optional[str], Field(
+        description="Time Bird handed the outbound message to the carrier; the matching window counts from here. Absent once that message is past the read window.",
+        examples=["2026-10-22T10:14:04.001Z"],
+    )] = None
 
 
 class SMSMessageDirection(str, Enum):
@@ -3164,9 +5552,12 @@ class SMSMessage(BaseModel):
         min_length=1,
     )]
     text: Annotated[Optional[str], Field(
-        description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, but the API does not retain it for later reads.",
+        description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text, and on a binary message, which returns `binary` instead. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, but the API does not retain it for later reads.",
         examples=["Your order has shipped and is on its way."],
         min_length=1,
+    )] = None
+    binary: Annotated[Optional[SMSBinary], Field(
+        description="Preview feature: the payload of a binary send, in place of `text`. Absent on every other message.",
     )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
         description="Content classification supplied for free text or derived from the template. Null for inbound messages.",
@@ -3200,6 +5591,11 @@ class SMSMessage(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     segments: Annotated[SMSSegments, Field(
         description="Segment breakdown for the message body. Segment count drives billing.",
     )]
@@ -3216,7 +5612,11 @@ class SMSMessage(BaseModel):
         description="The settings applied to this message, with any option you omitted filled in with the default in force when you sent it. Absent on inbound messages, and on any outbound message for which no settings were recorded.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
-        description="Preview feature: how long, in seconds, the carrier may keep attempting delivery before the message is marked `expired`. Not returned yet.",
+        description="Preview feature: the `validity_period` applied to the message, in seconds: the send's own, or else its messaging profile's. Absent when neither set one.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message: the send's own, or else its messaging profile's. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
         description="Carrier that handled the message. Absent until a delivery receipt identifies it, and on a received message the carrier reports it only where a carrier fee applies.",
@@ -3228,6 +5628,16 @@ class SMSMessage(BaseModel):
     )] = None
     last_error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. The same value as the message's `sms.*` events' `country_code`. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
+    in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
+        description="Preview feature: on a received message, the outbound message it was paired with through its messaging profile's outbound matching. Absent on outbound messages and on received messages that were not paired.",
     )] = None
     created_at: Annotated[str, Field(
         description="When the message was accepted (outbound) or received (inbound).",
@@ -3262,7 +5672,7 @@ class SMSMessageList(BaseModel):
 
 
 class SMSSendOptions(BaseModel):
-    "Settings that change how Bird processes this message. Each option applies to this send only; omit one to use its default."
+    "Settings that change how Bird processes this message. Each option applies to this send only; omit one to use the value of the messaging profile in `messaging_profile_id`, or its default when the profile sets none."
     model_config = ConfigDict(extra="allow")
     smart_encoding: Annotated[Optional[bool], Field(
         description="Replace characters outside the GSM-7 alphabet with their closest GSM-7 equivalent before sending: typically curly quotes, dashes, ellipses, fullwidth forms, and non-breaking spaces.\n\nOne such character forces the whole body into `UCS2`, which more than halves the characters that fit in a segment, so replacing them often lowers the segment count and the cost.\n\nDisabled by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet afterwards, such as an emoji or a non-Latin script, is sent exactly as you supplied it. Read the message back to see what was applied: `text` is the body as sent.",
@@ -3306,16 +5716,16 @@ class SMSTemplateSend(BaseModel):
 
 
 class SMSMessageSendRequest(BaseModel):
-    "A message to send. Supply exactly one of `text` (free-text, which also requires `category`) or `template` (a stored template, whose category is derived). Supplying both, or neither, is rejected."
+    "A message to send. Supply exactly one of `text` (free-text, which also requires `category` unless a messaging profile supplies a default), `template` (a stored template, whose category is derived), or the preview `binary` (which also requires `category`). Supplying more than one, or none, is rejected."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
-        description="Recipient phone number in E.164 format (for example `+14155550100`). One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.",
+        description="Recipient phone number in E.164 format (for example `+14155550100`), or in national format when you also pass `to_country_code`. One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.",
         examples=[+14155550100],
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and when sending a workspace template. Omitting it in either case returns `422`. A built-in template selects its sender automatically and rejects `from`.",
+        description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and when sending a workspace template, unless `messaging_profile_id` is set and the profile selects a sender for the destination country or has a default sender. Omitting it otherwise returns `422`. A built-in template selects its sender automatically and rejects `from`.",
         examples=[+15557654321],
         min_length=1,
     )] = None
@@ -3325,10 +5735,10 @@ class SMSMessageSendRequest(BaseModel):
         min_length=1,
     )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
-        description="Content classification: why you are sending. Required on a free-text send; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.",
+        description="Content classification: why you are sending. Required on a free-text send unless the messaging profile in `messaging_profile_id` sets a default category; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
-        description="Preview feature: how long, in seconds (60-172800), the carrier may keep attempting delivery before the message is marked `expired`. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
+        description="Preview feature: how long, in seconds (60-172800), the message may wait for delivery, counted from acceptance. Bird does not submit the message to the carrier after this deadline and passes the remaining time to the carrier where the route supports it. A message that misses the deadline before reaching the carrier ends `rejected` or `failed`, not `expired`; `expired` comes only from a carrier report. Omit it to use the validity period of the messaging profile in `messaging_profile_id`, or the carrier's own validity rules when the profile sets none. Organizations outside the preview receive `422 SMSUnsupportedFeature`.",
         ge=60,
         le=172800,
     )] = None
@@ -3346,7 +5756,7 @@ class SMSMessageSendRequest(BaseModel):
         description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     messaging_profile_id: Annotated[Optional[str], Field(
-        description="Preview feature: sender selection from a messaging profile pool. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
+        description="Preview feature: the messaging profile that supplies this message's sender and defaults. When `from` is omitted, Bird sends from the profile's sender for the destination country, or its default sender. An omitted `category` on a free-text send takes the profile's default category, and `smart_encoding`, `cost_center` and `validity_period` take the profile's settings. So do `options.callback_url`, `options.ignore_delivery_window` and `options.ignore_suppression`, which Bird records on the message; the profile's `options.validation.network` is not inherited. Values you set on the message take precedence. A built-in template sends from Bird's system sender and ignores the profile's senders. A profile that does not exist in this workspace returns `422` `SMSMessagingProfileNotFound`; a `from` bound to a different profile returns `422` `SMSMessagingProfileSenderBound`. Organizations outside the preview get `422` `SMSUnsupportedFeature`.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
         description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
@@ -3372,6 +5782,13 @@ class SMSMessageSendRequest(BaseModel):
     personalization: Annotated[Optional[Dict[str, Any]], Field(
         description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
+
+
+class SMSSenderType(str, Enum):
+    long_code = "long_code"
+    short_code = "short_code"
+    alphanumeric = "alphanumeric"
+    toll_free = "toll_free"
 
 
 class SMSMessageBatchRequest(BaseModel):
@@ -3694,6 +6111,9 @@ class TemplateVariableType(str, Enum):
     date_time = "date_time"
     amount = "amount"
     currency = "currency"
+    url = "url"
+    image = "image"
+    timestamp = "timestamp"
     text = "text"
 
 
@@ -3705,7 +6125,7 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
-        description="The value type this slot accepts. Built-in SMS templates use typed slots (`code`, `amount` and the rest), each of which rejects a value that does not match its `constraint`. Email, WhatsApp and workspace SMS templates use `text`. Workspace SMS parameters must be scalar values. Open enum: treat an unrecognized value as a future type rather than an error.",
+        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest). Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email, WhatsApp and workspace SMS templates use `text`. Workspace SMS parameters must be scalar values. Open enum: treat an unrecognized value as a future type rather than an error.",
         min_length=1,
     )]
     required: Annotated[bool, Field(
@@ -4182,6 +6602,10 @@ class SMSKeywordRuleUpdate(BaseModel):
     )] = None
 
 
+class SMSSenderID(RootModel[str]):
+    root: str
+
+
 class ComplianceDataType(str, Enum):
     string = "string"
     text = "text"
@@ -4361,10 +6785,6 @@ class Attachment(BaseModel):
     )]
 
 
-class SMSSenderID(RootModel[str]):
-    root: str
-
-
 class ComplianceIdentitySortField(str, Enum):
     created_at = "created_at"
     name = "name"
@@ -4536,7 +6956,7 @@ class AssetKind(str, Enum):
 
 
 class Asset(BaseModel):
-    "A file in the workspace's media library, hosted at a permanent public URL. Embed or link `url` anywhere hosted media is needed, including in email that has already been sent: an asset's bytes and URL never change."
+    "A file in the workspace's media library, hosted at a permanent public URL. Embed or link `url` in your content. Metadata changes and removing a library entry preserve the URL and bytes; an abuse or security takedown can make the file unavailable."
     model_config = ConfigDict(extra="allow")
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -4574,7 +6994,7 @@ class Asset(BaseModel):
         description="The stored image's height in pixels. Null for every kind but `image`.",
     )]
     alt_text: Annotated[Optional[str], Field(
-        description="Default alternative text describing the asset, carried along whenever it is placed. Most mail clients block images by default, so for an image this is often the only thing a recipient reads.",
+        description="Default alternative text for the asset. Use it as the starting point for an image description when inserting the asset into content. Updating this field does not update descriptions already copied into saved content.",
         max_length=1000,
     )]
     folder_id: Annotated[Optional[str], Field(
@@ -5045,178 +7465,6 @@ class ComplianceSubmissionResupply(BaseModel):
     answers: Annotated[List[ComplianceAnswer], Field(min_length=1)]
 
 
-class SMSStatsSummaryPeriod(BaseModel):
-    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
-    model_config = ConfigDict(extra="allow")
-    from_: Annotated[str, Field(
-        alias="from",
-        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
-        examples=["2026-05-01"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    to: Annotated[str, Field(
-        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
-        examples=["2026-05-25"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    data_as_of: Annotated[Optional[str], Field(
-        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
-        examples=["2026-05-25T14:03:10Z"],
-    )] = None
-
-
-class SMSDeliveryStats(BaseModel):
-    "SMS lifecycle counts and rates for a whole period or breakdown. Counts use the message send time, so a later delivery stays attributed to the bucket in which the message was sent. Rates are null when their denominator is zero."
-    model_config = ConfigDict(extra="allow")
-    accepted: Annotated[int, Field(
-        description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
-        examples=[14820],
-        ge=0,
-    )]
-    sent: Annotated[int, Field(
-        description="Distinct messages handed off to the carrier for delivery.",
-        examples=[14810],
-        ge=0,
-    )]
-    delivered: Annotated[int, Field(
-        description="Distinct messages the carrier confirmed as delivered to the handset.",
-        examples=[14720],
-        ge=0,
-    )]
-    undelivered: Annotated[int, Field(
-        description="Distinct messages the carrier reported as not delivered.",
-        examples=[60],
-        ge=0,
-    )]
-    failed: Annotated[int, Field(
-        description="Distinct messages that failed during sending.",
-        examples=[25],
-        ge=0,
-    )]
-    rejected: Annotated[int, Field(
-        description="Distinct messages rejected before any send attempt, for example by sending policy or a message-generation failure.",
-        examples=[10],
-        ge=0,
-    )]
-    expired: Annotated[int, Field(
-        description="Distinct messages that could not be delivered within their validity window and expired.",
-        examples=[5],
-        ge=0,
-    )]
-    delivery_rate: Annotated[Optional[float], Field(
-        description="Share of accepted messages that were delivered, computed as `delivered / accepted`. Null when no messages were accepted in scope.",
-        examples=[0.9932],
-        ge=0,
-        le=1,
-    )]
-    failure_rate: Annotated[Optional[float], Field(
-        description="Share of accepted messages that ultimately failed, computed as `(undelivered + failed + expired) / accepted`. Null when no messages were accepted in scope.",
-        examples=[0.0061],
-        ge=0,
-    )]
-
-
-class SMSLatencyQuantiles(BaseModel):
-    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
-    model_config = ConfigDict(extra="allow")
-    p50_ms: Annotated[Optional[int], Field(
-        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[420],
-        ge=0,
-    )]
-    p95_ms: Annotated[Optional[int], Field(
-        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[1820],
-        ge=0,
-    )]
-    p99_ms: Annotated[Optional[int], Field(
-        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[4920],
-        ge=0,
-    )]
-
-
-class SMSLatencyStats(BaseModel):
-    "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to carrier handoff.\n- `delivery`: From carrier handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying event contributes a measurement.\nIndividual percentiles can also be null."
-    model_config = ConfigDict(extra="allow")
-    processing: Annotated[Optional[SMSLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    delivery: Annotated[Optional[SMSLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    total: Annotated[Optional[SMSLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class SMSStatsComparisonDelta(BaseModel):
-    "Changes from the previous period. A `*_pct_change` value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero. A `*_rate_pp` value is the signed difference between rate fractions and is null when either rate is undefined."
-    model_config = ConfigDict(extra="allow")
-    accepted_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
-        examples=[0.508],
-    )]
-    sent_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in sent messages (`delivery.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.121],
-    )]
-    delivered_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in delivered messages (`delivery.delivered`) versus the previous period, as a signed fraction. Null when the previous period delivered none.",
-        examples=[0.122],
-    )]
-    undelivered_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in undelivered messages (`delivery.undelivered`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.031],
-    )]
-    failed_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in failed messages (`delivery.failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.018],
-    )]
-    rejected_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.0],
-    )]
-    expired_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in expired messages (`delivery.expired`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.04],
-    )]
-    delivery_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
-        examples=[0.004],
-        ge=-1,
-        le=1,
-    )]
-    failure_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between the current and previous failure-rate fractions. Multiply by 100 for percentage points. The value can fall outside `[-1, 1]` because a message can contribute to more than one failure outcome and high-volume counts are approximate. Null when either rate is undefined.",
-        examples=[-0.0008],
-    )]
-
-
-class SMSStatsComparison(BaseModel):
-    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    delta: SMSStatsComparisonDelta
-
-
-class SMSStatsSummary(BaseModel):
-    "Single-row aggregate across the full requested period, covering SMS lifecycle counts plus the derived delivery and failure rates, and latency percentiles. Use this endpoint for KPI tiles and reporting; the daily and hourly endpoints carry the same counts per bucket.\n\nEvery count is a sum of per-bucket counts across the window. Latency percentiles are computed across the whole period rather than summed per bucket. Rates are null when their denominator is zero."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    comparison: Optional[SMSStatsComparison] = None
-
-
 class StatsGrain(str, Enum):
     day = "day"
     hour = "hour"
@@ -5247,57 +7495,6 @@ class SMSStatsSeriesPeriod(BaseModel):
     )] = None
 
 
-class SMSDeliveryCounts(BaseModel):
-    "SMS lifecycle counts for a time bucket. Counts use the message send time, so a message accepted on Monday and delivered on Tuesday counts in Monday's bucket. Rates are available only for whole periods and breakdowns."
-    model_config = ConfigDict(extra="allow")
-    accepted: Annotated[int, Field(
-        description="Distinct messages accepted for sending after admission checks.",
-        examples=[14820],
-        ge=0,
-    )]
-    sent: Annotated[int, Field(
-        description="Distinct messages handed off to the carrier for delivery.",
-        examples=[14810],
-        ge=0,
-    )]
-    delivered: Annotated[int, Field(
-        description="Distinct messages the carrier confirmed as delivered to the handset.",
-        examples=[14720],
-        ge=0,
-    )]
-    undelivered: Annotated[int, Field(
-        description="Distinct messages the carrier reported as not delivered.",
-        examples=[60],
-        ge=0,
-    )]
-    failed: Annotated[int, Field(
-        description="Distinct messages that failed during sending.",
-        examples=[25],
-        ge=0,
-    )]
-    rejected: Annotated[int, Field(
-        description="Distinct messages rejected before any send attempt, for example by sending policy or a message-generation failure.",
-        examples=[10],
-        ge=0,
-    )]
-    expired: Annotated[int, Field(
-        description="Distinct messages that could not be delivered within their validity window and expired.",
-        examples=[5],
-        ge=0,
-    )]
-
-
-class SMSStatsPoint(BaseModel):
-    "SMS lifecycle counts for one time bucket (a calendar day or hour), bucketed by send time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. Per-bucket values include counts only. The summary and breakdown endpoints report rates and latency as whole-window aggregates."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    delivery: SMSDeliveryCounts
-
-
 class SMSStatsResponse(BaseModel):
     "Time-series stats payload. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
@@ -5307,18 +7504,6 @@ class SMSStatsResponse(BaseModel):
     data: Annotated[List[SMSStatsPoint], Field(
         description="One row per day or hour in chronological order. Buckets with no activity contain zero counts.",
     )]
-
-
-class SMSStatsSortMetric(str, Enum):
-    accepted = "accepted"
-    sent = "sent"
-    delivered = "delivered"
-    undelivered = "undelivered"
-    failed = "failed"
-    rejected = "rejected"
-    expired = "expired"
-    delivery_rate = "delivery_rate"
-    failure_rate = "failure_rate"
 
 
 class StatsTrendGrain(str, Enum):
@@ -5353,169 +7538,6 @@ class SMSStatsByOriginatorResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total number of distinct originators with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
         examples=[42],
-        ge=0,
-    )]
-
-
-class SMSCountryStatsPoint(BaseModel):
-    "Aggregate delivery and latency stats for a single destination country over the requested period."
-    model_config = ConfigDict(extra="allow")
-    country: Annotated[str, Field(
-        description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code.",
-        examples=["US"],
-        min_length=1,
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
-        description="Per-bucket lifecycle counts for this country, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
-    )] = None
-
-
-class SMSStatsByCountryResponse(BaseModel):
-    "Per-country breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSCountryStatsPoint], Field(
-        description="Country breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct destination countries with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[42],
-        ge=0,
-    )]
-
-
-class SMSCategoryStatsPoint(BaseModel):
-    "Aggregate delivery and latency stats for a single message category over the requested period."
-    model_config = ConfigDict(extra="allow")
-    category: Annotated[str, Field(
-        description="The category this row aggregates, as set at send time. `transactional` is one-to-one messaging triggered by a user action; `marketing` is bulk sending. New categories may be added over time.",
-        examples=["transactional"],
-        min_length=1,
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
-        description="Per-bucket lifecycle counts for this category, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
-    )] = None
-
-
-class SMSStatsByCategoryResponse(BaseModel):
-    "Per-category breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSCategoryStatsPoint], Field(
-        description="Category breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct categories with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[8],
-        ge=0,
-    )]
-
-
-class SMSStatsLifecycleSortMetric(str, Enum):
-    accepted = "accepted"
-    sent = "sent"
-    delivered = "delivered"
-    undelivered = "undelivered"
-    failed = "failed"
-    rejected = "rejected"
-    expired = "expired"
-
-
-class SMSErrorCodeStatsPoint(BaseModel):
-    "Delivery and latency statistics for one standardized failure reason over the requested period."
-    model_config = ConfigDict(extra="allow")
-    error_code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason this row aggregates. Matches the `error_code` message-list filter.",
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
-        description="Per-bucket lifecycle counts for this error code, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
-    )] = None
-
-
-class SMSStatsByErrorCodeResponse(BaseModel):
-    "Per-error-code breakdown for the requested period, ranked by the `sort` metric (default `failed`) descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSErrorCodeStatsPoint], Field(
-        description="Error-code breakdown rows, ranked by the `sort` metric (default `failed`) descending. Empty when no delivery failures occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct error codes with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[17],
-        ge=0,
-    )]
-
-
-class SMSCarrierStatsPoint(BaseModel):
-    "Aggregate delivery and latency stats for a single delivery carrier over the requested period."
-    model_config = ConfigDict(extra="allow")
-    carrier: Annotated[str, Field(
-        description="The delivery carrier this row aggregates, as resolved for the destination handset.",
-        examples=["Verizon"],
-        min_length=1,
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
-        description="Per-bucket lifecycle counts for this carrier, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
-    )] = None
-
-
-class SMSStatsByCarrierResponse(BaseModel):
-    "Per-carrier breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSCarrierStatsPoint], Field(
-        description="Carrier breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct carriers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[24],
-        ge=0,
-    )]
-
-
-class SMSTagStatsPoint(BaseModel):
-    "Aggregate delivery and latency stats for a single tag (`name:value`) over the requested period."
-    model_config = ConfigDict(extra="allow")
-    tag: Annotated[str, Field(
-        description="The tag this row aggregates, in `name:value` form. Each distinct name-and-value pair is its own row, and a message carrying several tags is counted once under each of them, so rows do not sum to the period total.",
-        examples=["campaign:summer_sale"],
-        min_length=1,
-    )]
-    delivery: SMSDeliveryStats
-    latency: SMSLatencyStats
-    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
-        description="Per-bucket lifecycle-count series for this tag over the window, bucketed by `trend_grain`. Sparse, so only buckets with activity are present rather than zero-filled, unlike the daily and hourly series. Present only when `include_trend=true`.",
-    )] = None
-
-
-class SMSStatsByTagResponse(BaseModel):
-    "Per-tag breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSTagStatsPoint], Field(
-        description="Tag breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no tagged messages were sent in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct tags with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[18],
         ge=0,
     )]
 
@@ -5561,59 +7583,6 @@ class SMSStatsByStatusResponse(BaseModel):
     )]
 
 
-class SMSInboundStatsComparisonDelta(BaseModel):
-    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
-    model_config = ConfigDict(extra="allow")
-    received_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
-        examples=[0.058],
-    )]
-
-
-class SMSInboundStatsComparison(BaseModel):
-    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in the preceding period.",
-        examples=[3980],
-        ge=0,
-    )]
-    delta: SMSInboundStatsComparisonDelta
-
-
-class SMSInboundStatsSummaryResponse(BaseModel):
-    "Total received messages over the requested period."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in the period, counted by the time the carrier received them.",
-        examples=[4210],
-        ge=0,
-    )]
-    comparison: Optional[SMSInboundStatsComparison] = None
-
-
-class SMSInboundStatsPoint(BaseModel):
-    "One time bucket of received-message counts, attributed by arrival time."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="Start of the bucket this row covers, as a calendar day (YYYY-MM-DD) for the daily series or an hour boundary (RFC 3339) for the hourly one.",
-        examples=["2026-05-01"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in this bucket, counted by the time the carrier received them.",
-        examples=[128],
-        ge=0,
-    )]
-
-
 class SMSInboundStatsResponse(BaseModel):
     "Received-message time series. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
@@ -5622,68 +7591,6 @@ class SMSInboundStatsResponse(BaseModel):
     )]
     data: Annotated[List[SMSInboundStatsPoint], Field(
         description="One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with a count of zero, so the series charts continuously without client-side gap handling.",
-    )]
-
-
-class SMSInboundCountryStatsPoint(BaseModel):
-    "Received-message volume for one country."
-    model_config = ConfigDict(extra="allow")
-    country: Annotated[str, Field(
-        description="The country of the Bird number the messages arrived on, as an ISO 3166-1 alpha-2 code. This identifies where the message was received. It does not identify the sender's country.",
-        examples=["US"],
-        min_length=1,
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received on numbers in this country during the period.",
-        examples=[1840],
-        ge=0,
-    )]
-
-
-class SMSInboundStatsByCountryResponse(BaseModel):
-    "Received-message volume broken down by country, ranked by volume."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSInboundCountryStatsPoint], Field(
-        description="One row per country with activity in the period, most messages first, capped at the requested `limit`. A country with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct countries the messages arrived in with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[12],
-        ge=0,
-    )]
-
-
-class SMSInboundOperatorStatsPoint(BaseModel):
-    "Received-message volume for one mobile operator."
-    model_config = ConfigDict(extra="allow")
-    mcc_mnc: Annotated[str, Field(
-        description="Mobile country code and mobile network code of the network the sending subscriber is on. The breakdown keys on this rather than on an operator name because the carrier reports a name only where a surcharge applies, which would leave most of the world in one unnamed bucket.",
-        examples=[311480],
-        min_length=1,
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received from senders on this operator during the period.",
-        examples=[640],
-        ge=0,
-    )]
-
-
-class SMSInboundStatsByOperatorResponse(BaseModel):
-    "Received-message volume broken down by operator, ranked by volume."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[SMSStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[SMSInboundOperatorStatsPoint], Field(
-        description="One row per operator with activity in the period, most messages first, capped at the requested `limit`. An operator with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct sending operators with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
-        examples=[38],
-        ge=0,
     )]
 
 
@@ -5738,13 +7645,6 @@ class AllocatedNumberID(RootModel[str]):
 class SMSSenderSortField(str, Enum):
     created_at = "created_at"
     sender = "sender"
-
-
-class SMSSenderType(str, Enum):
-    long_code = "long_code"
-    short_code = "short_code"
-    alphanumeric = "alphanumeric"
-    toll_free = "toll_free"
 
 
 class SMSSenderStatus(str, Enum):
@@ -6355,22 +8255,8 @@ class EmailLookupBatchResponse(BaseModel):
     )]
 
 
-class VerificationChannel(str, Enum):
-    email = "email"
-    sms = "sms"
-    whatsapp = "whatsapp"
-    telegram = "telegram"
-    voice = "voice"
-
-
 class VerificationID(RootModel[str]):
     root: str
-
-
-class VerificationTerminalReason(str, Enum):
-    attempts_exhausted = "attempts_exhausted"
-    ttl_elapsed = "ttl_elapsed"
-    undeliverable = "undeliverable"
 
 
 class VerificationTo(BaseModel):
@@ -6393,24 +8279,6 @@ class VerificationChannelEntry(BaseModel):
     channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
     )]
-
-
-class VerificationAttemptFailureReason(str, Enum):
-    carrier_rejected = "carrier_rejected"
-    hard_bounce = "hard_bounce"
-    soft_bounce = "soft_bounce"
-    undelivered = "undelivered"
-    channel_unavailable = "channel_unavailable"
-    channel_disabled = "channel_disabled"
-    channel_restricted = "channel_restricted"
-    delivery_timeout = "delivery_timeout"
-    not_billable = "not_billable"
-
-
-class WhatsAppTemplateCategory(str, Enum):
-    authentication = "authentication"
-    utility = "utility"
-    marketing = "marketing"
 
 
 class VerificationStatus(str, Enum):
@@ -6548,10 +8416,6 @@ class DomainID(RootModel[str]):
 
 
 class WhatsAppNumberID(RootModel[str]):
-    root: str
-
-
-class WhatsAppTemplateID(RootModel[str]):
     root: str
 
 
@@ -6737,6 +8601,10 @@ class WhatsAppMessageTemplate(BaseModel):
         max_length=35,
         min_length=2,
     )]
+    bid_multiplier: Annotated[Optional[float], Field(
+        description="The `bid_multiplier` the message was sent with. Absent when the send named none, which bids at 1. Also absent on messages sent before Bird stored it.",
+        examples=[0.8],
+    )] = None
     components: Annotated[List[WhatsAppMessageTemplateComponent], Field(
         description="The values that filled the template's placeholders. Empty for an authentication template, whose content is never returned.",
     )]
@@ -7268,17 +9136,6 @@ class WhatsAppMessageOrigin(str, Enum):
     history_sync = "history_sync"
 
 
-class WhatsAppErrorCode(str, Enum):
-    insufficient_balance = "insufficient_balance"
-    price_not_found = "price_not_found"
-    internal_error = "internal_error"
-    undeliverable = "undeliverable"
-    service_window_expired = "service_window_expired"
-    rate_limited = "rate_limited"
-    recipient_suppressed = "recipient_suppressed"
-    media_rejected = "media_rejected"
-
-
 class WhatsAppError(BaseModel):
     "Failure detail for a message that could not be delivered or was rejected."
     model_config = ConfigDict(extra="allow")
@@ -7450,6 +9307,12 @@ class WhatsAppTemplateSend(BaseModel):
         examples=["en-US"],
         max_length=35,
         min_length=2,
+    )] = None
+    bid_multiplier: Annotated[Optional[float], Field(
+        description="Scales the language's maximum price for this message only. The effective bid is the language's `optimization_spec.bid_amount`, times its country multiplier, times this value. At least 0.01 and at most 100; 1 when omitted. Only a language with an `optimization_spec`, on a template still in the `marketing` category, accepts it.",
+        examples=[0.8],
+        ge=0.01,
+        le=100,
     )] = None
     components: Annotated[Optional[List[WhatsAppMessageTemplateComponent]], Field(
         description="Values for the template's placeholders. Build it from the template language's `components`: each block's `example_parameters`, with real values, becomes that part's `parameters`. A template's `buttons` block becomes one `button` part per button that has `example_parameters`, in order; a `carousel` becomes one `cards` entry per card, built the same way. A `location` header always needs a part with a `location` parameter. Leave out other blocks without any.",
@@ -9159,6 +11022,22 @@ class WhatsAppTemplateCategoryWrite(str, Enum):
     marketing = "marketing"
 
 
+class WhatsAppTemplateOptimizationSpecWrite(BaseModel):
+    "A maximum price for this language's marketing deliveries. Meta charges each delivery a variable amount up to the bid. Only marketing templates accept it."
+    model_config = ConfigDict(extra="allow")
+    bid_amount: Annotated[int, Field(
+        description="The maximum price per 1,000 deliveries, in the smallest unit of the account's currency. The reach estimate returns that currency as `currency_code`. 5000 is USD 0.05 per delivery.",
+        examples=[5000],
+        ge=1,
+    )]
+    bid_strategy: Annotated[Literal["lowest_cost_with_bid_cap"], Field(
+        description="How Meta bids for each delivery.\n\n- `lowest_cost_with_bid_cap`: Meta delivers at the lowest cost it can find, never above the bid.",
+    )]
+    bid_country_multiplier_overrides: Annotated[Optional[Dict[str, float]], Field(
+        description="Scales the bid for recipients in a country, keyed by ISO 3166-1 alpha-2 code. A country you leave out uses 1. Each write replaces the whole map.",
+    )] = None
+
+
 class WhatsAppTemplateComponentTypeWrite(str, Enum):
     header = "header"
     body = "body"
@@ -9325,6 +11204,9 @@ class WhatsAppTemplateRevision(RootModel[int]):
 class WhatsAppTemplateLanguageUpsert(BaseModel):
     "One language's content, as written to a draft."
     model_config = ConfigDict(extra="allow")
+    optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpecWrite], Field(
+        description="This language's maximum price. Omit it to keep the current one. A new language written without it uses Meta's standard rate. Send `null` to return to the standard rate. Changing only the price updates Meta without a new review. A send at a maximum price needs the business account's `marketing_messages_onboarding_status` to be `onboarded`. Otherwise it fails with WhatsApp error 131061.",
+    )] = None
     components: Annotated[Optional[List[WhatsAppTemplateComponentWrite]], Field(
         description="The template's content blocks for this language. Header, footer and buttons are optional. Every variable needs an example value, which is what Meta reviews against. May be omitted or empty on a draft; a body block is required before the language can be submitted.",
         max_length=10,
@@ -9634,6 +11516,25 @@ class WhatsAppTemplateLanguageList(BaseModel):
     )]
 
 
+class WhatsAppTemplateBidStrategy(str, Enum):
+    lowest_cost_with_bid_cap = "lowest_cost_with_bid_cap"
+
+
+class WhatsAppTemplateOptimizationSpec(BaseModel):
+    "The maximum price for this language's marketing deliveries. Meta charges each delivery a variable amount up to the bid."
+    model_config = ConfigDict(extra="allow")
+    bid_amount: Annotated[int, Field(
+        description="The maximum price per 1,000 deliveries, in the smallest unit of the account's currency. The reach estimate returns that currency as `currency_code`. 5000 is USD 0.05 per delivery.",
+        examples=[5000],
+    )]
+    bid_strategy: Annotated[Annotated[Union[WhatsAppTemplateBidStrategy, str], Field(union_mode="left_to_right")], Field(
+        description="How Meta bids for each delivery.\n\n- `lowest_cost_with_bid_cap`: Meta delivers at the lowest cost it can find, never above the bid.",
+    )]
+    bid_country_multiplier_overrides: Annotated[Dict[str, float], Field(
+        description="Scales the bid for recipients in a country, keyed by ISO 3166-1 alpha-2 code. A country not listed uses 1. Empty when no country is scaled.",
+    )]
+
+
 class WhatsAppTemplateContentHash(RootModel[str]):
     root: str
 
@@ -9689,6 +11590,9 @@ class WhatsAppTemplatePause(BaseModel):
 class WhatsAppTemplateLanguage(BaseModel):
     "One language of one version: its content, what the submission carrying it did with it, and everything Meta holds about it."
     model_config = ConfigDict(extra="allow")
+    optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpec], Field(
+        description="This language's maximum price, or `null` when Meta's standard rate applies.",
+    )] = None
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
@@ -9783,188 +11687,6 @@ class WhatsAppTemplateLanguageDiscard(BaseModel):
     )] = None
 
 
-class WhatsAppStatsSummaryPeriod(BaseModel):
-    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
-    model_config = ConfigDict(extra="allow")
-    from_: Annotated[str, Field(
-        alias="from",
-        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
-        examples=["2026-05-01"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    to: Annotated[str, Field(
-        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
-        examples=["2026-05-25"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    data_as_of: Annotated[Optional[str], Field(
-        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
-        examples=["2026-05-25T14:03:10Z"],
-    )] = None
-
-
-class WhatsAppDeliveryStats(BaseModel):
-    "WhatsApp lifecycle counts and rates for the requested period, attributed by send time, so a later delivery stays attributed to the period in which its message was accepted, and a recent period under-reports `delivered` while delivery reports are still arriving. The sibling `engagement` block reports read counts and rates. Rates are null when their denominator is zero. Very large counts are close estimates rather than exact tallies."
-    model_config = ConfigDict(extra="allow")
-    accepted: Annotated[int, Field(
-        description="Distinct messages accepted for sending after admission checks. This is the denominator for `delivery_rate` and `failure_rate`.",
-        examples=[4820],
-        ge=0,
-    )]
-    sent: Annotated[int, Field(
-        description="Distinct messages handed off for delivery.",
-        examples=[4810],
-        ge=0,
-    )]
-    delivered: Annotated[int, Field(
-        description="Distinct messages confirmed delivered to the recipient's device.",
-        examples=[4720],
-        ge=0,
-    )]
-    failed: Annotated[int, Field(
-        description="Distinct messages that failed during sending or delivery.",
-        examples=[25],
-        ge=0,
-    )]
-    rejected: Annotated[int, Field(
-        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
-        examples=[412],
-        ge=0,
-    )]
-    delivery_rate: Annotated[Optional[float], Field(
-        description="Share of accepted messages that were delivered, computed as `delivered / accepted`. Null when no messages were accepted in scope.",
-        examples=[0.9793],
-        ge=0,
-        le=1,
-    )]
-    failure_rate: Annotated[Optional[float], Field(
-        description="Share of accepted messages that ultimately failed, computed as `failed / accepted`. Null when no messages were accepted in scope.",
-        examples=[0.0052],
-        ge=0,
-        le=1,
-    )]
-
-
-class WhatsAppEngagementStats(BaseModel):
-    "WhatsApp engagement counts and the derived read rate for the scope of the containing row (the whole requested period or a breakdown dimension). The `read` field is the number of distinct messages confirmed read by the recipient. Send time determines attribution; the instant the read receipt arrived does not. A read is counted in the period its message was accepted in, alongside that message's own delivery when one arrived. The read rate divides reads by messages delivered in the same scope and is null when its denominator is zero. Very large counts are close estimates rather than exact tallies."
-    model_config = ConfigDict(extra="allow")
-    read: Annotated[int, Field(
-        description="Distinct messages confirmed read by the recipient.",
-        examples=[3105],
-        ge=0,
-    )]
-    read_rate: Annotated[Optional[float], Field(
-        description="Distinct messages read relative to messages delivered in the same scope, computed as `read / delivery.delivered`. Both counts are attributed by send time, so a read is counted alongside its own message's delivery. The rate can exceed 1 where a read receipt arrived for a message whose delivery receipt did not, or, at high volume, because the counts are close estimates. Null when `delivery.delivered` is zero.",
-        examples=[0.6578],
-        ge=0,
-    )]
-
-
-class WhatsAppLatencyQuantiles(BaseModel):
-    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
-    model_config = ConfigDict(extra="allow")
-    p50_ms: Annotated[Optional[int], Field(
-        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[610],
-        ge=0,
-    )]
-    p95_ms: Annotated[Optional[int], Field(
-        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[2140],
-        ge=0,
-    )]
-    p99_ms: Annotated[Optional[int], Field(
-        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[5380],
-        ge=0,
-    )]
-
-
-class WhatsAppLatencyStats(BaseModel):
-    "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to WhatsApp handoff.\n- `delivery`: From WhatsApp handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying message contributes a measurement.\nIndividual percentiles can also be null. `delivery` is measured on a best-effort basis, so\nit can be absent for a scope whose `processing` and `total` are present."
-    model_config = ConfigDict(extra="allow")
-    processing: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    delivery: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    total: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class WhatsAppStatsComparisonDelta(BaseModel):
-    "Changes from the previous period. A `*_pct_change` value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero. A `*_rate_pp` value is the signed difference between rate fractions and is null when either rate is undefined."
-    model_config = ConfigDict(extra="allow")
-    accepted_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in accepted messages (`delivery.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
-        examples=[0.508],
-    )]
-    sent_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in sent messages (`delivery.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.508],
-    )]
-    delivered_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in delivered messages (`delivery.delivered`) versus the previous period, as a signed fraction. Null when the previous period delivered none.",
-        examples=[0.513],
-    )]
-    failed_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in failed messages (`delivery.failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.194],
-    )]
-    rejected_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in rejected messages (`delivery.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.084],
-    )]
-    read_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in messages read (`engagement.read`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.568],
-    )]
-    delivery_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
-        examples=[0.0031],
-        ge=-1,
-        le=1,
-    )]
-    failure_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's failure rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's failure rate is undefined.",
-        examples=[-0.0045],
-        ge=-1,
-        le=1,
-    )]
-    read_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between the current and previous read-rate fractions. Multiply by 100 for percentage points. The value can fall outside `[-1, 1]` because a read receipt can arrive for a message whose delivery receipt did not, and high-volume counts are approximate. Null when either rate is undefined.",
-        examples=[0.0232],
-    )]
-
-
-class WhatsAppStatsComparison(BaseModel):
-    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    delivery: WhatsAppDeliveryStats
-    engagement: WhatsAppEngagementStats
-    latency: WhatsAppLatencyStats
-    delta: WhatsAppStatsComparisonDelta
-
-
-class WhatsAppStatsSummary(BaseModel):
-    "WhatsApp lifecycle counts, rates, engagement, and latency percentiles for the full requested period. Counts aggregate the time buckets. Latency percentiles cover the whole period. Rates are null when their denominator is zero."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    delivery: WhatsAppDeliveryStats
-    engagement: WhatsAppEngagementStats
-    latency: WhatsAppLatencyStats
-    comparison: Optional[WhatsAppStatsComparison] = None
-
-
 class WhatsAppStatsSeriesPeriod(BaseModel):
     "The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to."
     model_config = ConfigDict(extra="allow")
@@ -9990,59 +11712,6 @@ class WhatsAppStatsSeriesPeriod(BaseModel):
     )] = None
 
 
-class WhatsAppDeliveryCounts(BaseModel):
-    "WhatsApp lifecycle counts for a time bucket, attributed by send time. A message accepted on Monday and delivered on Tuesday counts in Monday's bucket. The sibling `engagement` block reports read counts. Rates are available only for the whole period. Very large counts are close estimates rather than exact tallies."
-    model_config = ConfigDict(extra="allow")
-    accepted: Annotated[int, Field(
-        description="Distinct messages accepted for sending after admission checks.",
-        examples=[4820],
-        ge=0,
-    )]
-    sent: Annotated[int, Field(
-        description="Distinct messages handed off for delivery.",
-        examples=[4810],
-        ge=0,
-    )]
-    delivered: Annotated[int, Field(
-        description="Distinct messages confirmed delivered to the recipient's device.",
-        examples=[4720],
-        ge=0,
-    )]
-    failed: Annotated[int, Field(
-        description="Distinct messages that failed during sending or delivery.",
-        examples=[25],
-        ge=0,
-    )]
-    rejected: Annotated[int, Field(
-        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
-        examples=[412],
-        ge=0,
-    )]
-
-
-class WhatsAppEngagementCounts(BaseModel):
-    "WhatsApp engagement counts for a time bucket, attributed by send time. A message accepted on Monday and read on Tuesday counts in Monday's bucket. Read rates are available only for the whole period. Very large counts are close estimates rather than exact tallies."
-    model_config = ConfigDict(extra="allow")
-    read: Annotated[int, Field(
-        description="Distinct messages confirmed read by the recipient.",
-        examples=[3105],
-        ge=0,
-    )]
-
-
-class WhatsAppStatsPoint(BaseModel):
-    "WhatsApp lifecycle counts, engagement, and latency percentiles for one time bucket (a calendar day or hour), bucketed by send time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. Rates apply to the whole window rather than individual buckets."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    delivery: WhatsAppDeliveryCounts
-    engagement: WhatsAppEngagementCounts
-    latency: WhatsAppLatencyStats
-
-
 class WhatsAppStatsResponse(BaseModel):
     "Time-series stats payload. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
@@ -10051,35 +11720,6 @@ class WhatsAppStatsResponse(BaseModel):
     )]
     data: Annotated[List[WhatsAppStatsPoint], Field(
         description="One row per day or hour in chronological order. Buckets with no activity contain zero counts.",
-    )]
-
-
-class WhatsAppErrorCodeStatsPoint(BaseModel):
-    "Number of failed messages for a single normalized failure reason over the requested period."
-    model_config = ConfigDict(extra="allow")
-    error_code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="The normalized failure reason this row aggregates, matching the `last_error.code` reported on an individual failed message.",
-    )]
-    count: Annotated[int, Field(
-        description="Distinct messages that failed with this reason in scope.",
-        examples=[18],
-        ge=0,
-    )]
-
-
-class WhatsAppStatsByErrorCodeResponse(BaseModel):
-    "Per-error-code failure breakdown for the requested period, ranked by failure count descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[WhatsAppErrorCodeStatsPoint], Field(
-        description="Error-code rows ranked by failure count descending. Empty when no failures occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct error codes with failures in the period, regardless of `limit`.",
-        examples=[3],
-        ge=0,
     )]
 
 
@@ -10113,62 +11753,6 @@ class WhatsAppStatsByTemplateResponse(BaseModel):
     )]
 
 
-class WhatsAppTemplateCategoryStatsPoint(BaseModel):
-    "Lifecycle counts, derived rates, and engagement for a single WhatsApp template category over the requested period."
-    model_config = ConfigDict(extra="allow")
-    category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
-        description="The template category this row aggregates.",
-    )]
-    delivery: WhatsAppDeliveryStats
-    engagement: WhatsAppEngagementStats
-    latency: WhatsAppLatencyStats
-
-
-class WhatsAppStatsByTemplateCategoryResponse(BaseModel):
-    "Per-template-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[WhatsAppTemplateCategoryStatsPoint], Field(
-        description="Category rows ranked by accepted volume descending.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct categories with activity in the period, regardless of `limit`.",
-        examples=[4],
-        ge=0,
-    )]
-
-
-class WhatsAppTagStatsPoint(BaseModel):
-    "Lifecycle counts, derived rates, and engagement for a single tag (name:value) over the requested period."
-    model_config = ConfigDict(extra="allow")
-    tag: Annotated[str, Field(
-        description="The tag this row aggregates, in `name:value` form.",
-        examples=["campaign:summer_sale"],
-        min_length=1,
-    )]
-    delivery: WhatsAppDeliveryStats
-    engagement: WhatsAppEngagementStats
-    latency: WhatsAppLatencyStats
-
-
-class WhatsAppStatsByTagResponse(BaseModel):
-    "Per-tag breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[WhatsAppTagStatsPoint], Field(
-        description="Tag rows ranked by accepted volume descending.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct tags with activity in the period, regardless of `limit`.",
-        examples=[12],
-        ge=0,
-    )]
-
-
 class WhatsAppPhoneNumberStatsPoint(BaseModel):
     "Lifecycle counts, rates, and engagement for one business phone number over the requested period, including whether the number is shared."
     model_config = ConfigDict(extra="allow")
@@ -10198,90 +11782,6 @@ class WhatsAppStatsByPhoneNumberResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total distinct phone numbers with activity in the period, regardless of `limit`.",
         examples=[2],
-        ge=0,
-    )]
-
-
-class WhatsAppCountryStatsPoint(BaseModel):
-    "Lifecycle counts, derived rates, engagement and latency for a single destination country over the requested period."
-    model_config = ConfigDict(extra="allow")
-    country: Annotated[str, Field(
-        description="The destination country this row aggregates, as an ISO 3166-1 alpha-2 code. `ZZ` collects recipients whose country could not be resolved.",
-        examples=["US"],
-        max_length=2,
-        min_length=2,
-        pattern="^[A-Za-z]{2}$",
-    )]
-    delivery: WhatsAppDeliveryStats
-    engagement: WhatsAppEngagementStats
-    latency: WhatsAppLatencyStats
-
-
-class WhatsAppStatsByCountryResponse(BaseModel):
-    "Per-country breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    data: Annotated[List[WhatsAppCountryStatsPoint], Field(
-        description="Country rows ranked by accepted volume descending. Empty when no eligible activity occurred in the period; rows sum to the summary less group-send volume, and less any pre-cutover phone-addressed sends still inside the window.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct countries with activity in the period, regardless of `limit`.",
-        examples=[4],
-        ge=0,
-    )]
-
-
-class WhatsAppInboundStatsComparisonDelta(BaseModel):
-    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
-    model_config = ConfigDict(extra="allow")
-    received_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
-        examples=[0.058],
-    )]
-
-
-class WhatsAppInboundStatsComparison(BaseModel):
-    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in the preceding period.",
-        examples=[3980],
-        ge=0,
-    )]
-    delta: WhatsAppInboundStatsComparisonDelta
-
-
-class WhatsAppInboundStatsSummaryResponse(BaseModel):
-    "Total received messages for the requested period."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[WhatsAppStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in the period, counted by the time each message reached your number. Computed across the whole window rather than summed from the daily or hourly series, so it can sit slightly below the sum of those rows.",
-        examples=[4210],
-        ge=0,
-    )]
-    comparison: Optional[WhatsAppInboundStatsComparison] = None
-
-
-class WhatsAppInboundStatsPoint(BaseModel):
-    "Received-message count for one time bucket (a calendar day or hour), bucketed by the time each message reached your number."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
-        examples=["2026-05-25"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in this bucket.",
-        examples=[182],
         ge=0,
     )]
 
@@ -10820,10 +12320,6 @@ class WhatsAppNumberProfile(BaseModel):
         description="A link to the profile picture WhatsApp currently shows. WhatsApp signs this link and it expires within days, so load it when you display it and never store it. It is served with permissive cross-origin headers, so a browser can load it directly.",
         examples=["https://pps.whatsapp.net/v/t61.24694-24/643148303_1005107588793925.jpg"],
     )] = None
-
-
-class AMBBusinessID(RootModel[str]):
-    root: str
 
 
 class AMBBusinessAccountStatus(str, Enum):
@@ -11538,6 +13034,10 @@ class AMBRoutingRuleUpdate(RootModel[AMBRoutingRuleUpdate1 | AMBRoutingRuleUpdat
     root: AMBRoutingRuleUpdate1 | AMBRoutingRuleUpdate2 | AMBRoutingRuleUpdate3 | AMBRoutingRuleUpdate4
 
 
+class AMBAttachmentID(RootModel[str]):
+    root: str
+
+
 class AMBConversationID(RootModel[str]):
     root: str
 
@@ -11555,20 +13055,6 @@ class AMBMessageStatus(str, Enum):
     received = "received"
 
 
-class AMBContentKind(str, Enum):
-    text = "text"
-    attachment = "attachment"
-    rich_link = "rich_link"
-    quick_reply = "quick_reply"
-    list_picker = "list_picker"
-    time_picker = "time_picker"
-    form = "form"
-    apple_pay = "apple_pay"
-    authenticate = "authenticate"
-    imessage_app = "imessage_app"
-    interactive = "interactive"
-
-
 class AMBMessageSource(str, Enum):
     operator = "operator"
     automation = "automation"
@@ -11576,37 +13062,23 @@ class AMBMessageSource(str, Enum):
 
 
 class AMBNativeAttachment(BaseModel):
-    "Provide source_url or the complete encrypted reference, never both."
+    "One attachment. A send supplies source_url or attachment_id. attachment_id reuses a received, sent or uploaded attachment of the sending business account instead of source_url; supplying both is refused with a `422`. A read returns the attachment's name, media type and, once Apple holds it, its size. It returns attachment_id when Bird stores the attachment: received attachments with an Apple reference, and sent attachments once Apple holds them. Download the bytes with getAMBAttachmentContent by attachment_id, or with getAMBMessageAttachment by message and position."
     model_config = ConfigDict(extra="allow")
+    attachment_id: Annotated[Optional[str], Field(
+        examples=["aat_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aat_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     source_url: Annotated[Optional[str], Field(
-        description="HTTPS URL Bird downloads and uploads to Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
+        description="HTTPS URL Bird downloads and uploads to Apple. Required on a send unless attachment_id is given. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS. Returned on reads of attachments you sent this way.",
         min_length=1,
     )] = None
     name: Annotated[Optional[str], Field(description="Display filename.")] = None
     mime_type: Annotated[Optional[str], Field(
         description="Media type of the attachment.",
     )] = None
-    url: Annotated[Optional[str], Field(
-        description="Encrypted attachment URL returned by Apple.",
-        min_length=1,
-        pattern="^https://",
-    )] = None
-    owner: Annotated[Optional[str], Field(
-        description="Opaque owner value returned by Apple.",
-        min_length=1,
-    )] = None
-    signature_base64: Annotated[Optional[str], Field(
-        description="Attachment authorization signature returned by Apple.",
-        min_length=1,
-    )] = None
-    key: Annotated[Optional[str], Field(
-        description="Attachment decryption key returned by Apple.",
-        max_length=66,
-        min_length=66,
-        pattern="^00[0-9a-fA-F]{64}$",
-    )] = None
     size: Annotated[Optional[int], Field(
-        description="Attachment size in bytes.",
+        description="Attachment size in bytes. Absent until Apple holds the attachment.",
         ge=1,
         le=99999999,
     )] = None
@@ -11624,7 +13096,7 @@ class AMBNativeTextContent(BaseModel):
         description="Subject displayed above the message body.",
     )] = None
     attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
-        description="Ordered attachments. Each object supplies a source URL or an encrypted Apple reference.",
+        description="Ordered attachments. A send supplies each one by source_url or attachment_id.",
     )] = None
 
 
@@ -11666,48 +13138,8 @@ class AMBNativeRichLinkData(BaseModel):
     assets: AMBNativeRichLinkAssets
 
 
-class AMBRichLinkReference(BaseModel):
-    "Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple."
-    model_config = ConfigDict(extra="allow")
-    title: Annotated[Optional[str], Field(
-        description="Title supplied by Apple for the preview.",
-        min_length=1,
-    )] = None
-    bid: Annotated[Optional[str], Field(
-        description="Messages extension identifier supplied by Apple, when present.",
-        min_length=1,
-    )] = None
-    data_ref_sig: Annotated[Optional[str], Field(
-        description="Signature binding the reference to the business, when supplied by Apple.",
-        min_length=1,
-    )] = None
-    url: Annotated[str, Field(
-        description="Location of the encrypted preview.",
-        min_length=1,
-        pattern="^https://",
-    )]
-    owner: Annotated[str, Field(
-        description="Owner identifier supplied by Apple.",
-        min_length=1,
-    )]
-    signature_base64: Annotated[str, Field(
-        description="Signature supplied by Apple.",
-        min_length=1,
-    )]
-    key: Annotated[Optional[str], Field(
-        description="Decryption key supplied by Apple.",
-        max_length=66,
-        min_length=66,
-        pattern="^00[0-9a-fA-F]{64}$",
-    )] = None
-    size: Annotated[int, Field(
-        description="Size of the encrypted preview in bytes.",
-        ge=1,
-    )]
-
-
 class AMBRichLinkConstruct(BaseModel):
-    "Asks Apple to build the rich link preview when the message is sent, rather than through a prior `POST /v1/amb/messages/construct-payload` call. No caller holds a signed reference until the send itself resolves one."
+    "Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. A URL Apple cannot build a preview for is refused with a `422` `AMBConstructPayloadFailed`; send `rich_link` content with your own `title` and `image` instead.",
@@ -11735,14 +13167,11 @@ class AMBNativeRichLinkContent(BaseModel):
         description="Subject displayed above the message body.",
     )] = None
     attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
-        description="Ordered attachments. Each object supplies a source URL or an encrypted Apple reference.",
+        description="Ordered attachments. A send supplies each one by source_url or attachment_id.",
     )] = None
     rich_link_data: Optional[AMBNativeRichLinkData] = None
-    rich_link_data_ref: Annotated[Optional[AMBRichLinkReference], Field(
-        description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
-    )] = None
     rich_link_construct: Annotated[Optional[AMBRichLinkConstruct], Field(
-        description="Asks Apple to build the rich link preview when the message is sent, rather than through a prior `POST /v1/amb/messages/construct-payload` call. No caller holds a signed reference until the send itself resolves one.",
+        description="Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title.",
     )] = None
 
 
@@ -11900,8 +13329,10 @@ class AMBTimeSlot(BaseModel):
         min_length=1,
     )]
     start_at: Annotated[str, Field(
-        description="When this slot begins. Seconds and fractional seconds must be zero, for example `2026-09-02T14:30:00Z`; otherwise sending returns `422` with error code `E01001`. The timestamp is converted to UTC for Apple while preserving the instant.",
+        description="When this slot begins, as an ISO 8601 date-time with a UTC offset. Seconds and fractional seconds must be zero, for example `2026-09-02T14:30:00Z`; any other value returns `422` with error code `E01001`. The timestamp is converted to UTC for Apple while preserving the instant. In Apple Messages template content it may instead be exactly one placeholder, such as `{{ slot_1 }}`, filled with a `timestamp` variable when the template is sent.",
+        examples=["2026-09-02T14:30:00Z"],
         min_length=1,
+        pattern="^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})|\\{\\{[ \\t]*[a-z_][a-z0-9_]*[ \\t]*\\}\\})$",
     )]
     duration_seconds: Annotated[int, Field(
         description="Duration in seconds. Zero indicates no duration.",
@@ -12289,20 +13720,17 @@ class AMBNativeInteractiveContent(BaseModel):
         description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
     )]
     body: Annotated[Optional[str], Field(
-        description="Automatic introductions for inline quick replies are enabled regionally in stages. When enabled for a new send containing `interactive_data.data.quick_reply`, a nonblank body is sent as separate text before the choices. Messages using `interactive_data_ref` do not receive this automatic introduction, even after activation. All parts belong to one message, which becomes sent after Apple accepts all parts. For referenced interactions, before activation, and for retries retaining legacy behavior, body is included in the interactive request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the quick reply. Omit body to send choices only. For list pickers, time pickers and forms, use interactive_data.received_message for the visible introduction. Use one U+FFFC object replacement character per attachment to control placement.",
+        description="Automatic introductions for inline quick replies are enabled regionally in stages. When enabled for a new send containing `interactive_data.data.quick_reply`, a nonblank body is sent as separate text before the choices. All parts belong to one message, which becomes sent after Apple accepts all parts. Before activation, and for retries retaining legacy behavior, body is included in the interactive request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the quick reply. Omit body to send choices only. For list pickers, time pickers and forms, use interactive_data.received_message for the visible introduction. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
     subject: Annotated[Optional[str], Field(
         description="Subject displayed above the message body.",
     )] = None
     attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
-        description="Ordered attachments. Each object supplies a source URL or an encrypted Apple reference.",
+        description="Ordered attachments. A send supplies each one by source_url or attachment_id.",
     )] = None
-    interactive_data: Annotated[Optional[AMBNativeInteractiveData], Field(
+    interactive_data: Annotated[AMBNativeInteractiveData, Field(
         description="A built-in interaction or custom iMessage app. Custom apps require the app metadata and both message bubbles.",
-    )] = None
-    interactive_data_ref: Annotated[Optional[AMBRichLinkReference], Field(
-        description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
-    )] = None
+    )]
 
 
 class AMBMessageContent(RootModel[AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent]):
@@ -12501,10 +13929,6 @@ class AMBInboundContent(RootModel[AMBNativeTextContent | AMBNativeInboundInterac
     root: AMBNativeTextContent | AMBNativeInboundInteractiveContent
 
 
-class AMBStatsErrorCode(RootModel[str]):
-    root: str
-
-
 class AMBError(BaseModel):
     "Failure detail for a message or invitation that could not be sent or was rejected."
     model_config = ConfigDict(extra="allow")
@@ -12619,9 +14043,6 @@ class AMBMessage(BaseModel):
     )]
     sent_at: Annotated[Optional[str], Field(
         description="When the selected sending outcome occurred. Null unless the current status is `sent` and the message is outbound. For older messages without a retained sending event, the stored record time is used.",
-    )] = None
-    data_ref: Annotated[Optional[AMBRichLinkReference], Field(
-        description="Reusable Apple content reference. Supply the decryption key, or the signed bid and data_ref_sig returned by Apple.",
     )] = None
     group: Annotated[Optional[str], Field(
         description="Apple department identifier carried by this message. Omitted when absent from the message or unavailable on a historical record.",
@@ -13075,170 +14496,6 @@ class AMBSuppressionCreate(BaseModel):
     )]
 
 
-class AMBStatsSummaryPeriod(BaseModel):
-    "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
-    model_config = ConfigDict(extra="allow")
-    from_: Annotated[str, Field(
-        alias="from",
-        description="Inclusive start of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary. Historical starts are preserved; the maximum request length does not impose a historical cutoff.",
-        examples=["2026-05-01"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    to: Annotated[str, Field(
-        description="Inclusive end of the window, as a calendar day (`YYYY-MM-DD`) or an RFC 3339 hour boundary.",
-        examples=["2026-05-25"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    data_as_of: Annotated[Optional[str], Field(
-        description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
-        examples=["2026-05-25T14:03:10Z"],
-    )] = None
-
-
-class AMBStatsAttribution(str, Enum):
-    accepted_time = "accepted_time"
-    event_time = "event_time"
-
-
-class AMBOutboundStatsCounts(BaseModel):
-    "Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted."
-    model_config = ConfigDict(extra="allow")
-    accepted: Annotated[int, Field(
-        description="Distinct messages accepted for sending after admission checks. This is the denominator for `sent_rate` and `send_failure_rate`.",
-        examples=[4820],
-        ge=0,
-    )]
-    sent: Annotated[int, Field(
-        description="Distinct messages handed off to Apple.",
-        examples=[4790],
-        ge=0,
-    )]
-    send_failed: Annotated[int, Field(
-        description="Distinct accepted messages that Apple refused or that exhausted their send attempts. See `last_error.code` on the message for the reason; a refused charge is not a send failure, it is `rejected`.",
-        examples=[30],
-        ge=0,
-    )]
-    rejected: Annotated[int, Field(
-        description="Distinct messages refused before any send attempt, because the destination has no price, the wallet could not fund the send, or the content cannot be sent yet. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `send_failure_rate`, which covers send failures only.",
-        examples=[4],
-        ge=0,
-    )]
-    sent_rate: Annotated[Optional[float], Field(
-        description="Share of accepted messages Apple acknowledged, computed as `sent / accepted`. Null when no messages were accepted in scope. This stands where other channels report a delivery rate.",
-        examples=[0.9938],
-        ge=0,
-        le=1,
-    )]
-    send_failure_rate: Annotated[Optional[float], Field(
-        description="Share of accepted messages that failed to send, computed as `send_failed / accepted`. Null when no messages were accepted in scope.",
-        examples=[0.0062],
-        ge=0,
-        le=1,
-    )]
-
-
-class AMBStatsQuantiles(BaseModel):
-    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement."
-    model_config = ConfigDict(extra="allow")
-    p50_ms: Annotated[Optional[int], Field(
-        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[610],
-        ge=0,
-    )]
-    p95_ms: Annotated[Optional[int], Field(
-        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[2140],
-        ge=0,
-    )]
-    p99_ms: Annotated[Optional[int], Field(
-        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[5380],
-        ge=0,
-    )]
-
-
-class AMBStatsLatency(BaseModel):
-    "Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement."
-    model_config = ConfigDict(extra="allow")
-    processing: Annotated[AMBStatsQuantiles, Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )]
-
-
-class AMBStatsComparisonDelta(BaseModel):
-    "Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero."
-    model_config = ConfigDict(extra="allow")
-    accepted_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in accepted messages (`counts.accepted`) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
-        examples=[0.508],
-    )]
-    sent_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in sent messages (`counts.sent`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.501],
-    )]
-    send_failed_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in send failures (`counts.send_failed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.12],
-    )]
-    rejected_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in rejected messages (`counts.rejected`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0],
-    )]
-
-
-class AMBStatsComparison(BaseModel):
-    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change."
-    model_config = ConfigDict(extra="allow")
-    monthly_active_contacts: Annotated[Optional[int], Field(
-        description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
-        ge=0,
-    )] = None
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
-    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    delta: Annotated[AMBStatsComparisonDelta, Field(
-        description="Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero.",
-    )]
-
-
-class AMBStatsSummary(BaseModel):
-    "Outbound Apple Messages for Business counts and latency percentiles for the full requested period. Counts and percentiles are computed over the whole period rather than combined from the returned time-series values."
-    model_config = ConfigDict(extra="allow")
-    monthly_active_contacts: Annotated[Optional[int], Field(
-        description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
-        ge=0,
-    )] = None
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
-    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    comparison: Annotated[Optional[AMBStatsComparison], Field(
-        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change.",
-    )] = None
-
-
 class AMBStatsSeriesPeriod(BaseModel):
     "The window and bucket grain the response covers, echoed from the request, plus the freshness boundary the data is current to."
     model_config = ConfigDict(extra="allow")
@@ -13262,22 +14519,6 @@ class AMBStatsSeriesPeriod(BaseModel):
         description="Latest time reflected in the statistics. More recent events might not be included yet. Null when the freshness boundary is unavailable.",
         examples=["2026-05-25T14:03:10Z"],
     )] = None
-
-
-class AMBStatsPoint(BaseModel):
-    "Outbound Apple Messages for Business counts and processing-latency percentiles for one time bucket (a calendar day or hour), bucketed by acceptance time. Every count in a bucket describes the messages accepted in it, regardless of when their later events arrived. There is no `first_response` here. Read first-response latency from the summary or a breakdown endpoint."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
 
 
 class AMBStatsResponse(BaseModel):
@@ -13328,42 +14569,6 @@ class AMBStatsByBusinessResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total distinct businesses with activity in the period, regardless of `limit`.",
         examples=[1],
-        ge=0,
-    )]
-
-
-class AMBMessageKindStatsPoint(BaseModel):
-    "Outbound counts and latency percentiles for a single message content kind over the requested period."
-    model_config = ConfigDict(extra="allow")
-    message_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
-    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class AMBStatsByMessageKindResponse(BaseModel):
-    "Per-content-kind breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    data: Annotated[List[AMBMessageKindStatsPoint], Field(
-        description="Content-kind rows ranked by accepted volume descending.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct content kinds with activity in the period, regardless of `limit`.",
-        examples=[4],
         ge=0,
     )]
 
@@ -13440,180 +14645,6 @@ class AMBStatsByGroupResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total distinct groups with activity in the period, regardless of `limit`.",
         examples=[3],
-        ge=0,
-    )]
-
-
-class AMBCategoryStatsPoint(BaseModel):
-    "Outbound counts and latency percentiles for a single message category over the requested period."
-    model_config = ConfigDict(extra="allow")
-    category: Annotated[str, Field(
-        description="The category these messages were sent with. Defaults to an empty string when a send names no category.",
-        examples=["order_update"],
-        min_length=0,
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
-    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class AMBStatsByCategoryResponse(BaseModel):
-    "Per-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    data: Annotated[List[AMBCategoryStatsPoint], Field(
-        description="Category rows ranked by accepted volume descending.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct categories with activity in the period, regardless of `limit`.",
-        examples=[6],
-        ge=0,
-    )]
-
-
-class AMBTagStatsPoint(BaseModel):
-    "Outbound counts and latency percentiles for a single tag over the requested period."
-    model_config = ConfigDict(extra="allow")
-    tag: Annotated[str, Field(
-        description="The tag these messages carry, as a bare name or a `name:value` pair. A message with several tags is counted once under each, so rows do not sum to the period total.",
-        examples=["campaign:spring_launch"],
-        min_length=1,
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
-    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class AMBStatsByTagResponse(BaseModel):
-    "Per-tag breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200). Only tagged messages appear."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    data: Annotated[List[AMBTagStatsPoint], Field(
-        description="Tag rows ranked by accepted volume descending.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct tags with activity in the period, regardless of `limit`.",
-        examples=[9],
-        ge=0,
-    )]
-
-
-class AMBErrorCodeStatsPoint(BaseModel):
-    "Outbound counts and latency percentiles for a single failure reason over the requested period."
-    model_config = ConfigDict(extra="allow")
-    error_code: Annotated[str, Field(
-        description="Machine-readable reason a send failed, in one of two namespaces: `bird:` for a reason Bird's own pipeline assigned (for example `bird:business_not_registered`), or `apple:` followed by the HTTP status Apple's API returned for the send attempt (for example `apple:404`). This is an open, growing set in both namespaces; accept unrecognized values.",
-        examples=["bird:business_not_registered"],
-        min_length=1,
-        pattern="^(bird:[a-z0-9_]+|apple:\\d{3})$",
-    )]
-    counts: Annotated[AMBOutboundStatsCounts, Field(
-        description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
-    )]
-    latency: Annotated[AMBStatsLatency, Field(
-        description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
-    )]
-    first_response: Annotated[Optional[AMBStatsQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class AMBStatsByErrorCodeResponse(BaseModel):
-    "Per-failure-reason breakdown for the requested period, ranked by `send_failed + rejected` descending and capped at the requested `limit` (default 50, max 200). Only messages carrying an error code appear: a `bird:` code is usually a rejection, an `apple:` code a send failure."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    data: Annotated[List[AMBErrorCodeStatsPoint], Field(
-        description="Error-code rows ranked by `send_failed + rejected` descending.",
-    )]
-    total: Annotated[int, Field(
-        description="Total distinct error codes with activity in the period, regardless of `limit`.",
-        examples=[2],
-        ge=0,
-    )]
-
-
-class AMBInboundStatsComparisonDelta(BaseModel):
-    "The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none."
-    model_config = ConfigDict(extra="allow")
-    received_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in received messages versus the previous period, as a signed fraction. Null when the previous period received none.",
-        examples=[0.058],
-    )]
-
-
-class AMBInboundStatsComparison(BaseModel):
-    "The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in the preceding period.",
-        examples=[3980],
-        ge=0,
-    )]
-    delta: Annotated[AMBInboundStatsComparisonDelta, Field(
-        description="The change from the preceding period to the requested one. The `received_pct_change` field is a signed relative change, computed as `(current - previous) / previous`. A value of `0.5` means 50% higher, and `-0.2` means 20% lower. The field is null when the previous period received none.",
-    )]
-
-
-class AMBInboundStatsSummary(BaseModel):
-    "Total inbound Apple Messages for Business messages for the requested period."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in the period, counted by the time each message occurred. Computed across the whole window rather than summed from the daily or hourly series, so it can sit slightly below the sum of those rows.",
-        examples=[4210],
-        ge=0,
-    )]
-    comparison: Annotated[Optional[AMBInboundStatsComparison], Field(
-        description="The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
-    )] = None
-
-
-class AMBInboundStatsPoint(BaseModel):
-    "Received-message count for one time bucket (a calendar day or hour), bucketed by the time each message occurred."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the request's grain.",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    received: Annotated[int, Field(
-        description="Distinct messages received in this bucket.",
-        examples=[182],
         ge=0,
     )]
 
@@ -13700,96 +14731,6 @@ class AMBInboundStatsByIntentResponse(BaseModel):
     )]
 
 
-class AMBConversationStatsCounts(BaseModel):
-    "Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies."
-    model_config = ConfigDict(extra="allow")
-    started: Annotated[int, Field(
-        description="Count of conversation-started events in scope.",
-        examples=[210],
-        ge=0,
-    )]
-    reopened: Annotated[int, Field(
-        description="Count of conversation-reopened events in scope.",
-        examples=[34],
-        ge=0,
-    )]
-    closed: Annotated[int, Field(
-        description="Count of conversation-closed events in scope.",
-        examples=[198],
-        ge=0,
-    )]
-    conversations: Annotated[int, Field(
-        description="Distinct conversations with at least one lifecycle event in scope.",
-        examples=[205],
-        ge=0,
-    )]
-
-
-class AMBConversationStatsComparisonDelta(BaseModel):
-    "Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero."
-    model_config = ConfigDict(extra="allow")
-    started_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in conversation starts (`counts.started`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.22],
-    )]
-    reopened_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in conversation reopens (`counts.reopened`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.05],
-    )]
-    closed_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in conversation closes (`counts.closed`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.19],
-    )]
-    conversations_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in distinct conversations touched (`counts.conversations`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.21],
-    )]
-
-
-class AMBConversationStatsComparison(BaseModel):
-    "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    counts: Annotated[AMBConversationStatsCounts, Field(
-        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
-    )]
-    delta: Annotated[AMBConversationStatsComparisonDelta, Field(
-        description="Changes from the previous period. Each value is the signed relative change `(current - previous) / previous` and is null when the previous count is zero.",
-    )]
-
-
-class AMBConversationStatsSummary(BaseModel):
-    "Conversation lifecycle counts for the full requested period. Counts aggregate the time buckets."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[AMBStatsSummaryPeriod, Field(
-        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
-    )]
-    attribution: Annotated[AMBStatsAttribution, Field(
-        description="Which timestamp a statistics response buckets its rows and totals by:\n\n- `accepted_time`: attributed to when Bird accepted the outbound message for sending. The outbound send statistics use this, so a later event for the same message, such as a send failure, still counts against the day or hour its message was accepted.\n- `event_time`: attributed to when the event itself occurred. Inbound message statistics, conversation statistics and the staff per-business failure counts use this, since there is no earlier outbound event to anchor them to.\n\nA response never mixes the two axes: every row and total in one payload shares the same attribution.",
-    )]
-    counts: Annotated[AMBConversationStatsCounts, Field(
-        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
-    )]
-    comparison: Annotated[Optional[AMBConversationStatsComparison], Field(
-        description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
-    )] = None
-
-
-class AMBConversationStatsPoint(BaseModel):
-    "Conversation lifecycle counts for one time bucket (a calendar day or hour), bucketed by when each event occurred."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (RFC 3339, on the hour) this point covers, matching the period's grain.",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    counts: Annotated[AMBConversationStatsCounts, Field(
-        description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
-    )]
-
-
 class AMBConversationStatsResponse(BaseModel):
     "Conversation lifecycle time series. `period` echoes the range and bucket grain the server computed against; `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
@@ -13860,6 +14801,9 @@ class AMBTemplateSummary(BaseModel):
     )]
     content_kind: Annotated[AMBContentKind, Field(
         description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    customize_before_use: Annotated[bool, Field(
+        description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The permanent editable draft version. Null for a built-in template.",
@@ -13962,6 +14906,9 @@ class AMBTemplate(BaseModel):
     )]
     content_kind: Annotated[AMBContentKind, Field(
         description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+    )]
+    customize_before_use: Annotated[bool, Field(
+        description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The permanent editable draft version. Null for a built-in template.",
@@ -16134,252 +17081,6 @@ class EmailStatsSeriesPeriod(BaseModel):
     )] = None
 
 
-class EmailBounceStatsWithRates(BaseModel):
-    "Breakdown of `bounced` by failure type, with each rate as a fraction of `bounced`. Counts are distinct bounced recipients of that type; the five types approximately partition `bounced`, so the five rates sum to roughly 1.0 when `bounced` is non-zero."
-    model_config = ConfigDict(extra="allow")
-    hard: Annotated[int, Field(
-        description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain).",
-        examples=[12410],
-        ge=0,
-    )]
-    soft: Annotated[int, Field(
-        description="Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable).",
-        examples=[14290],
-        ge=0,
-    )]
-    admin: Annotated[int, Field(
-        description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain.",
-        examples=[410],
-        ge=0,
-    )]
-    block: Annotated[int, Field(
-        description="Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons.",
-        examples=[920],
-        ge=0,
-    )]
-    undetermined: Annotated[int, Field(
-        description="Distinct recipients bounced where the receiving server's response did not allow precise classification.",
-        examples=[80],
-        ge=0,
-    )]
-    hard_rate: Annotated[Optional[float], Field(
-        description="Fraction of bounced recipients that hard bounced, computed as `hard / bounced`. Null when `bounced` is zero.",
-        examples=[0.4540],
-        ge=0,
-        le=1,
-    )]
-    soft_rate: Annotated[Optional[float], Field(
-        description="Fraction of bounced recipients that soft bounced, computed as `soft / bounced`. Null when `bounced` is zero.",
-        examples=[0.5230],
-        ge=0,
-        le=1,
-    )]
-    admin_rate: Annotated[Optional[float], Field(
-        description="Fraction of bounced recipients that admin bounced, computed as `admin / bounced`. Null when `bounced` is zero.",
-        examples=[0.0150],
-        ge=0,
-        le=1,
-    )]
-    block_rate: Annotated[Optional[float], Field(
-        description="Fraction of bounced recipients that block bounced, computed as `block / bounced`. Null when `bounced` is zero.",
-        examples=[0.0337],
-        ge=0,
-        le=1,
-    )]
-    undetermined_rate: Annotated[Optional[float], Field(
-        description="Fraction of bounced recipients with undetermined classification, computed as `undetermined / bounced`. Null when `bounced` is zero.",
-        examples=[0.0029],
-        ge=0,
-        le=1,
-    )]
-
-
-class EmailDeliveryStats(BaseModel):
-    "Delivery counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). Lifecycle counts identify distinct recipients that reached the named stage in scope; `oob_bounces` counts distinct failure events. Period summaries count each identity once per metric across the whole window, so adding time-bucket distinct counts can overstate the summary. Event time determines attribution; send time does not. A recipient delivered on Monday counts in Monday's row. A recipient who bounced and then succeeded on a retry can appear in both `bounced` and `delivered`. Very large counts are close estimates rather than exact tallies.\n\nThese counts are successive lifecycle stages, so a recipient can appear in more than one:\n\n- `rejected`: Happens before any send attempt, from suppression, policy, or a generation failure.\n- `deferred`: A temporary in-flight delay that is still being retried.\n- `bounced`: A delivery failure, with its own hard, soft, admin, block, and undetermined sub-types.\n- `complained`: Post-delivery spam feedback.\n\nEach rate is a fraction in the range 0 to 1 and is null when its denominator is zero. `accepted` is reported only where it can be attributed (time buckets and the period summary). Breakdown rows omit it."
-    model_config = ConfigDict(extra="allow")
-    accepted: Annotated[Optional[int], Field(
-        description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary. Breakdown rows leave it out, because their rollups do not have it.",
-        examples=[14820],
-        ge=0,
-    )] = None
-    processed: Annotated[int, Field(
-        description="Distinct recipients whose message was processed and handed off for delivery.",
-        examples=[14810],
-        ge=0,
-    )]
-    delivered: Annotated[int, Field(
-        description="Distinct recipients whose message the receiving mail server accepted.",
-        examples=[14720],
-        ge=0,
-    )]
-    bounced: Annotated[int, Field(
-        description="Distinct recipients whose delivery failed. This is approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined). The two totals are worked out independently, so they can differ slightly.",
-        examples=[90],
-        ge=0,
-    )]
-    bounces: EmailBounceStatsWithRates
-    complained: Annotated[int, Field(
-        description="Distinct recipients who reported the message as spam via a feedback loop.",
-        examples=[3],
-        ge=0,
-    )]
-    deferred: Annotated[int, Field(
-        description="Distinct recipients whose delivery the receiving server temporarily delayed and is still being retried.",
-        examples=[14],
-        ge=0,
-    )]
-    rejected: Annotated[int, Field(
-        description="Distinct recipients rejected before any delivery attempt. Includes recipients on the workspace suppression list, transmissions that could not be completed, message-generation failures, and recipients refused by sending policy. The per-recipient `rejection_reason` field on `GET /v1/email/messages/{message_id}/recipients` surfaces the specific cause.",
-        examples=[10],
-        ge=0,
-    )]
-    oob_bounces: Annotated[int, Field(
-        description="Out-of-band bounce events: distinct failure notifications received after the receiving server had initially confirmed delivery. The count represents deduplicated events rather than unique recipients.",
-        examples=[2],
-        ge=0,
-    )]
-    effective_delivered: Annotated[int, Field(
-        description="Recipients who remain delivered after all bounce signals resolve, computed as `delivered - oob_bounces`. Use this as the base for engagement-rate denominators. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
-        examples=[14718],
-        ge=0,
-    )]
-    all_bounces: Annotated[int, Field(
-        description="Total recipients in this scope who did not receive the message, computed as `bounced + oob_bounces`.",
-        examples=[92],
-        ge=0,
-    )]
-    oob_rate: Annotated[Optional[float], Field(
-        description="Share of this scope's delivery attempts that resulted in an out-of-band bounce, computed as `oob_bounces / (delivered + bounced)`. Null when there were no attempts.",
-        examples=[0.00014],
-        ge=0,
-        le=1,
-    )]
-    delivery_rate: Annotated[Optional[float], Field(
-        description="Share of this scope's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when there were no attempts.",
-        examples=[0.9939],
-        ge=0,
-        le=1,
-    )]
-    bounce_rate: Annotated[Optional[float], Field(
-        description="Share of this scope's delivery attempts that ultimately failed (inband or out-of-band), computed as `all_bounces / (delivered + bounced)`. Because `oob_bounces` counts events rather than recipients, `all_bounces` can exceed the attempt count. The rate is clamped to 1. Null when there were no attempts.",
-        examples=[0.0061],
-        ge=0,
-        le=1,
-    )]
-    complaint_rate: Annotated[Optional[float], Field(
-        description="Spam complaints in this scope relative to effectively delivered recipients, computed as `complained / effective_delivered`. Complaints are attributed by event time, so a scope can record more of them than it effectively delivered, pushing the rate above 1. Null when `effective_delivered` is zero.",
-        examples=[0.0002],
-        ge=0,
-    )]
-
-
-class EmailEngagementStats(BaseModel):
-    "Engagement counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). `opens`, `opens_non_prefetched` and `clicks` count distinct engagement events (deduplicated occurrences). The `unique_*` fields count distinct recipients. `unsubscribes` counts distinct unsubscribe events. An event counts in the time bucket when it occurs, even if the message was sent in an earlier bucket. Counts are deduplicated with a scalable approximate counting method, so very large counts are close estimates rather than exact tallies. Each rate divides the counts in this scope and is null when its denominator is zero."
-    model_config = ConfigDict(extra="allow")
-    opens: Annotated[int, Field(
-        description="Distinct open events, counting repeat opens from the same recipient and opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy).",
-        examples=[5420],
-        ge=0,
-    )]
-    opens_non_prefetched: Annotated[int, Field(
-        description="Distinct open events excluding those auto-fetched by inbox privacy features. Same event-counting semantics as `opens` (repeat opens from the same recipient count separately), with prefetched opens removed.",
-        examples=[3210],
-        ge=0,
-    )]
-    unique_opens: Annotated[int, Field(
-        description="Distinct recipients who opened at least once, including opens auto-fetched by inbox privacy features.",
-        examples=[3640],
-        ge=0,
-    )]
-    unique_opens_non_prefetched: Annotated[int, Field(
-        description="Distinct recipients who opened at least once, excluding opens auto-fetched by inbox privacy features. This is the numerator used for open rate, so iOS-heavy audiences (Apple Mail Privacy Protection and similar) do not inflate it.",
-        examples=[2480],
-        ge=0,
-    )]
-    clicks: Annotated[int, Field(
-        description="Distinct click events, counting repeat clicks from the same recipient.",
-        examples=[924],
-        ge=0,
-    )]
-    unique_clicks: Annotated[int, Field(
-        description="Distinct recipients who clicked at least once.",
-        examples=[621],
-        ge=0,
-    )]
-    unsubscribes: Annotated[int, Field(
-        description="Distinct unsubscribe events, recorded via the list-unsubscribe header or the footer link.",
-        examples=[12],
-        ge=0,
-    )]
-    open_rate: Annotated[Optional[float], Field(
-        description="Distinct non-prefetched openers relative to effectively delivered recipients in the same scope, computed as `unique_opens_non_prefetched / delivery.effective_delivered`; on rows without an `effective_delivered` field (the mailbox-provider breakdowns) the denominator equals `delivery.delivered`. The numerator excludes opens auto-fetched by inbox privacy features. Opens are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.",
-        examples=[0.1683],
-        ge=0,
-    )]
-    click_rate: Annotated[Optional[float], Field(
-        description="Distinct clickers relative to effectively delivered recipients in the same scope, computed as `unique_clicks / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Clicks are attributed by event time, so engagement earned by earlier deliveries can push the rate above 1. Null when the denominator is zero.",
-        examples=[0.0422],
-        ge=0,
-    )]
-    unsubscribe_rate: Annotated[Optional[float], Field(
-        description="Unsubscribe events relative to effectively delivered recipients in the same scope, computed as `unsubscribes / delivery.effective_delivered` (`delivery.delivered` on rows without an `effective_delivered` field). Unsubscribes are attributed by event time, so the rate can exceed 1. Null when the denominator is zero.",
-        examples=[0.0009],
-        ge=0,
-    )]
-
-
-class EmailLatencyQuantiles(BaseModel):
-    "Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement."
-    model_config = ConfigDict(extra="allow")
-    p50_ms: Annotated[Optional[int], Field(
-        description="Median (50th percentile) latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[420],
-        ge=0,
-    )]
-    p95_ms: Annotated[Optional[int], Field(
-        description="95th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[1820],
-        ge=0,
-    )]
-    p99_ms: Annotated[Optional[int], Field(
-        description="99th percentile latency in milliseconds. Null when no qualifying event contributed a measurement.",
-        examples=[4920],
-        ge=0,
-    )]
-
-
-class EmailLatencyStats(BaseModel):
-    "Latency percentiles (p50, p95, p99) in milliseconds for the bucket. On the summary endpoint these are computed across the whole period rather than per bucket. Three families are reported:\n\n- `processing`: Time from accepting the send to handing the message off for delivery. Measured per processed recipient; null when no recipient in the bucket has reached the processed stage.\n- `delivery`: Time from handoff to the receiving mail server accepting the message, dominated by recipient-side delivery behavior. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n- `total`: End-to-end time from accepting the send to delivery, and the number most worth watching against your own delivery targets. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n\nEach family is reported independently. A family is omitted when no qualifying\nevent contributed a latency measurement in the bucket. This also applies when\nthe workspace has not recorded latency for that stage yet. The `processing`\nfamily can therefore be present while `delivery` and `total` are absent. A\nclient must handle a missing family, and a null p50/p95/p99 within a present\nfamily, by rendering a placeholder rather than assuming a number."
-    model_config = ConfigDict(extra="allow")
-    processing: Annotated[Optional[EmailLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    delivery: Annotated[Optional[EmailLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-    total: Annotated[Optional[EmailLatencyQuantiles], Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
-    )] = None
-
-
-class EmailStatsPoint(BaseModel):
-    "Aggregate stats for one time bucket (a calendar day or hour, per the requested grain, in the requested `timezone` or UTC by default), bucketed by event time. Buckets with no activity are included with zero counts and null latency percentiles, so the series charts continuously without client-side gap handling."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD, in the requested `timezone`) or hour this point covers, matching the period's grain. An hour bucket is an RFC 3339 UTC instant marking the start of the hour. It falls on a local hour boundary when `timezone` is set, which is on the UTC hour only for whole-hour offsets.",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    sends_accepted: Annotated[int, Field(
-        description="Distinct email messages accepted in this bucket, counted at the message level (one per accepted send regardless of how many recipients it addresses). Every other metric in `delivery` and `engagement` is recipient-level or event-level.",
-        examples=[412],
-        ge=0,
-    )]
-    delivery: EmailDeliveryStats
-    engagement: EmailEngagementStats
-    latency: EmailLatencyStats
-
-
 class EmailStatsResponse(BaseModel):
     "Time-series stats payload. `period` echoes the range and bucket grain actually computed against. `data` is one row per bucket in chronological order."
     model_config = ConfigDict(extra="allow")
@@ -16388,143 +17089,6 @@ class EmailStatsResponse(BaseModel):
     )]
     data: Annotated[List[EmailStatsPoint], Field(
         description="One row per bucket (day or hour, per the grain) in the period, in chronological order. Buckets with no activity are included with zero counts.",
-    )]
-
-
-class EmailStatsSortMetric(str, Enum):
-    processed = "processed"
-    delivered = "delivered"
-    bounced = "bounced"
-    complained = "complained"
-    deferred = "deferred"
-    rejected = "rejected"
-    oob_bounces = "oob_bounces"
-    bounces_hard = "bounces.hard"
-    bounces_soft = "bounces.soft"
-    bounces_admin = "bounces.admin"
-    bounces_block = "bounces.block"
-    bounces_undetermined = "bounces.undetermined"
-    opens = "opens"
-    opens_non_prefetched = "opens_non_prefetched"
-    unique_opens = "unique_opens"
-    unique_opens_non_prefetched = "unique_opens_non_prefetched"
-    clicks = "clicks"
-    unique_clicks = "unique_clicks"
-    unsubscribes = "unsubscribes"
-    delivery_rate = "delivery_rate"
-    bounce_rate = "bounce_rate"
-    complaint_rate = "complaint_rate"
-    open_rate = "open_rate"
-    click_rate = "click_rate"
-    unsubscribe_rate = "unsubscribe_rate"
-    bounces_hard_rate = "bounces.hard_rate"
-    bounces_soft_rate = "bounces.soft_rate"
-    bounces_admin_rate = "bounces.admin_rate"
-    bounces_block_rate = "bounces.block_rate"
-    bounces_undetermined_rate = "bounces.undetermined_rate"
-
-
-class EmailStatsPeriod(BaseModel):
-    "The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried."
-    model_config = ConfigDict(extra="allow")
-    from_: Annotated[str, Field(
-        alias="from",
-        description="Inclusive start date the response covers (YYYY-MM-DD).",
-        examples=["2026-05-01"],
-        min_length=1,
-    )]
-    to: Annotated[str, Field(
-        description="Inclusive end date the response covers (YYYY-MM-DD).",
-        examples=["2026-05-25"],
-        min_length=1,
-    )]
-    data_as_of: Annotated[Optional[str], Field(
-        description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example \"as of 14:03\") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.",
-        examples=["2026-05-25T14:03:10Z"],
-    )] = None
-
-
-class EmailStatsSeriesPoint(BaseModel):
-    "One point in a breakdown row's trend series: the headline delivery and engagement rates for that row's dimension value over a single day or hour. Returned only when `include_trend=true`. The bucket grain (day or hour) follows the `trend_grain` parameter. Counts and rates are approximate at scale."
-    model_config = ConfigDict(extra="allow")
-    bucket: Annotated[str, Field(
-        description="The day (YYYY-MM-DD) or hour (ISO 8601, on the hour) this point covers, matching the requested `trend_grain`.",
-        examples=["2026-05-12"],
-        min_length=1,
-    )]
-    delivered: Annotated[int, Field(
-        description="Delivered recipients in this bucket.",
-        ge=0,
-    )]
-    bounced: Annotated[int, Field(
-        description="Bounced recipients in this bucket.",
-        ge=0,
-    )]
-    delivery_rate: Annotated[Optional[float], Field(
-        description="Delivery rate for this bucket, as a fraction. Null when nothing was delivered or bounced.",
-        ge=0,
-        le=1,
-    )]
-    bounce_rate: Annotated[Optional[float], Field(
-        description="Bounce rate for this bucket, as a fraction. Null when nothing was delivered or bounced.",
-        ge=0,
-        le=1,
-    )]
-    complaint_rate: Annotated[Optional[float], Field(
-        description="Complaint rate for this bucket, as a fraction. Event-time attribution can push it above 1 when complaints outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row complaints are not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
-        ge=0,
-    )]
-    open_rate: Annotated[Optional[float], Field(
-        description="Open rate for this bucket, as a fraction. Event-time attribution can push it above 1 when opens outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
-        ge=0,
-    )]
-    click_rate: Annotated[Optional[float], Field(
-        description="Click rate for this bucket, as a fraction. Event-time attribution can push it above 1 when clicks outrun the bucket's deliveries. Null when nothing was delivered in the bucket. On a sending-IP row engagement is not attributed to the IP, so this reads 0 in buckets that had deliveries and null in buckets that had none.",
-        ge=0,
-    )]
-
-
-class EmailTagStatsPoint(BaseModel):
-    "Aggregate delivery and engagement stats for a single tag name-and-value pair over the requested period."
-    model_config = ConfigDict(extra="allow")
-    tag: Annotated[str, Field(
-        description="The tag this row aggregates, formatted as `name:value` from the tag set at send time (for example `campaign:welcome-series`). Each distinct name-and-value pair is its own row.",
-        examples=["campaign:welcome-series"],
-        min_length=1,
-    )]
-    delivery: EmailDeliveryStats
-    engagement: EmailEngagementStats
-    latency: EmailLatencyStats
-    trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
-        description="Per-bucket rate series for this tag over the window. Present only when `include_trend=true`.",
-    )] = None
-
-
-class EmailStatsTagsResponse(BaseModel):
-    "Per-tag breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsPeriod, Field(
-        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
-    )]
-    data: Annotated[List[EmailTagStatsPoint], Field(
-        description="Tag breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no tagged sends occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct tags (name and value pairs) with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
-        examples=[173],
-        ge=0,
-    )]
-    next_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
-    )]
-    prev_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
-    )]
-    refresh_cursor: Annotated[Optional[str], Field(
-        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -16627,10 +17191,6 @@ class EmailStatsQueryTagFilter(BaseModel):
     name: Annotated[str, Field(examples=["campaign"], min_length=1)]
     include: Optional[List[str]] = None
     exclude: Optional[List[str]] = None
-
-
-class IPPoolID(RootModel[str]):
-    root: str
 
 
 class EmailStatsQueryIPPoolFilter(BaseModel):
@@ -17059,190 +17619,6 @@ class EmailStatsQueryResponse(BaseModel):
     )]
 
 
-class EmailStatsSummaryPeriod(BaseModel):
-    "The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted)."
-    model_config = ConfigDict(extra="allow")
-    from_: Annotated[str, Field(
-        alias="from",
-        description="Inclusive start of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows. For hour windows, an RFC 3339 UTC instant marking the start of the first hour, which falls on a local hour boundary when `timezone` is set.",
-        examples=["2026-05-01"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    to: Annotated[str, Field(
-        description="Inclusive end of the window the response covers. A calendar day (YYYY-MM-DD, in the requested `timezone`) for day windows. For hour windows, an RFC 3339 UTC instant marking the start of the last hour, which falls on a local hour boundary when `timezone` is set.",
-        examples=["2026-05-25"],
-        min_length=1,
-        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
-    )]
-    data_as_of: Annotated[Optional[str], Field(
-        description="The instant the statistics in this response are current to: events recorded up to roughly this time are reflected, while more recent events may not be yet. Statistics are served from a rolling aggregation that refreshes every few seconds, so a response reflects data from up to a few seconds ago. Use this field to label data freshness (for example \"as of 14:03\") rather than assuming the numbers are to-the-second. Null when the freshness boundary is not being reported.",
-        examples=["2026-05-25T14:03:10Z"],
-    )] = None
-
-
-class EmailStatsComparisonDelta(BaseModel):
-    "The change in each headline metric from the preceding period to the requested one. A `*_pct_change` field is a signed relative change in a count, computed as `(current - previous) / previous`, so `0.5` means 50% higher and `-0.2` means 20% lower. It is null when the previous period's count was zero because a relative change cannot be computed. A `*_rate_pp` field is the signed difference between the two periods' rate values. Each value is expressed as a fraction. A value of `0.012` means the rate rose by 1.2 percentage points. A value of `-0.003` means it fell by 0.3 points. The field is null when either period's rate is undefined, because its denominator was zero. `delivery_rate_pp` and `bounce_rate_pp` range from `-1` to `1`, because the rates behind them cannot exceed 1. The engagement deltas have no fixed bound, because events are counted when they arrive rather than when the message was sent, which can push their rate above 1."
-    model_config = ConfigDict(extra="allow")
-    sends_accepted_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in accepted messages (the `sends_accepted` count) versus the previous period, as a signed fraction. Null when the previous period accepted none.",
-        examples=[0.508],
-    )]
-    delivered_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in effectively delivered recipients (`delivery.effective_delivered`, the delivery-rate numerator) versus the previous period, as a signed fraction. Null when the previous period effectively delivered none.",
-        examples=[0.122],
-    )]
-    bounced_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in total bounces including out-of-band (`delivery.all_bounces`, the bounce-rate numerator) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.031],
-    )]
-    complained_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in spam complaints (`delivery.complained`) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[0.018],
-    )]
-    opened_pct_change: Annotated[Optional[float], Field(
-        description="Relative change in unique non-prefetched opens (`engagement.unique_opens_non_prefetched`, the same count the open rate uses) versus the previous period, as a signed fraction. Null when the previous period had none.",
-        examples=[-0.046],
-    )]
-    delivery_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's delivery rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's delivery rate is undefined.",
-        examples=[0.004],
-        ge=-1,
-        le=1,
-    )]
-    open_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's open rate, both fractions (multiply by 100 for percentage points). Null when either period's open rate is undefined.",
-        examples=[0.005],
-    )]
-    click_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's click rate, both fractions (multiply by 100 for percentage points). Null when either period's click rate is undefined.",
-        examples=[0.002],
-    )]
-    bounce_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's bounce rate, both fractions in [0,1] (multiply by 100 for percentage points). Null when either period's bounce rate is undefined.",
-        examples=[-0.0008],
-        ge=-1,
-        le=1,
-    )]
-    complaint_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's complaint rate, both fractions (multiply by 100 for percentage points). Null when either period's complaint rate is undefined.",
-        examples=[0.0001],
-    )]
-    unsubscribe_rate_pp: Annotated[Optional[float], Field(
-        description="Signed difference between this period's and the previous period's unsubscribe rate, both fractions (multiply by 100 for percentage points). Null when either period's unsubscribe rate is undefined.",
-        examples=[-0.0001],
-    )]
-
-
-class EmailStatsComparison(BaseModel):
-    "The same statistics for the equal-length, inclusive period ending the day immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsSummaryPeriod, Field(
-        description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
-    )]
-    sends_accepted: Annotated[int, Field(
-        description="Distinct email messages accepted in the preceding period, counted at the message level.",
-        examples=[8230],
-        ge=0,
-    )]
-    delivery: EmailDeliveryStats
-    engagement: EmailEngagementStats
-    latency: EmailLatencyStats
-    delta: EmailStatsComparisonDelta
-
-
-class EmailStatsSummary(BaseModel):
-    "A single row that aggregates delivery and engagement counts, plus derived\nrates, across the whole requested period. Use this endpoint for KPI\ntiles, campaign reporting, and anywhere you need a rate with a meaningful\ndenominator. The daily and hourly endpoints report the same rates, but\nper bucket, each one dividing that bucket's own counts.\n\nDistinct message, recipient, and event counts are computed across the whole\nrequested period. An identity present in more than one time bucket counts\nonce for that metric in the period summary, so adding daily or hourly\ndistinct counts can overstate the summary. Very large counts are close\nestimates rather than exact tallies. Latency percentiles are also computed\nacross the whole period. A rate is null when its denominator is zero."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsSummaryPeriod, Field(
-        description="The window this response was actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants). The grain of `from` and `to` mirrors the grain of the request's bounds. Days and hour boundaries follow the requested `timezone` (UTC when omitted).",
-    )]
-    sends_accepted: Annotated[int, Field(
-        description="Distinct email messages accepted, counted at the message level (one per accepted send regardless of recipient count) across the whole requested period. This field counts messages. `delivery.accepted` counts recipients, so the two values are not comparable (a single message to 500 recipients is 1 here and up to 500 there).",
-        examples=[12410],
-        ge=0,
-    )]
-    delivery: EmailDeliveryStats
-    engagement: EmailEngagementStats
-    latency: EmailLatencyStats
-    comparison: Optional[EmailStatsComparison] = None
-
-
-class EmailSendingIpDeliveryStats(BaseModel):
-    "Delivery counts and rates for messages attributed to a single sending IP. Per-IP results omit `accepted` and `processed` counts. The sending IP becomes known only after a message is delivered, bounced, deferred, or bounced late. Those earlier lifecycle states cannot be attributed to a specific IP. Spam complaints and out-of-band bounce notifications also lack per-IP attribution on this breakdown. The `complained` and `oob_bounces` fields therefore read 0. Their rates read 0 when the denominator is non-zero and null when it is zero. The `effective_delivered` field equals `delivered`, and `all_bounces` equals `bounced`."
-    model_config = ConfigDict(extra="allow")
-    delivered: Annotated[int, Field(
-        description="Distinct recipients whose message the receiving mail server accepted.",
-        examples=[8290],
-        ge=0,
-    )]
-    bounced: Annotated[int, Field(
-        description="Distinct recipients whose delivery failed. This is approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined). The two are computed independently, so they can differ slightly.",
-        examples=[131],
-        ge=0,
-    )]
-    complained: Annotated[int, Field(
-        description="Distinct recipients who reported the message as spam. Complaints are not attributed to a sending IP, so this reads 0 on this breakdown. Read complaint counts from the summary or time-series statistics instead.",
-        examples=[8],
-        ge=0,
-    )]
-    deferred: Annotated[int, Field(
-        description="Distinct recipients in transient delivery deferral that is still being retried.",
-        examples=[4],
-        ge=0,
-    )]
-    oob_bounces: Annotated[int, Field(
-        description="Out-of-band bounce events: failure notifications received after the receiving server had initially confirmed delivery. Not attributed to a sending IP on this breakdown, so this reads 0. Workspace-wide out-of-band counts are on the summary and time-series statistics.",
-        examples=[3],
-        ge=0,
-    )]
-    effective_delivered: Annotated[int, Field(
-        description="Recipients on this IP who remain delivered after all bounce signals resolve, computed as `delivered - oob_bounces`. Clamped to 0 when `oob_bounces` exceeds `delivered`.",
-        examples=[8287],
-        ge=0,
-    )]
-    all_bounces: Annotated[int, Field(
-        description="Total recipients on this IP who did not receive the message, computed as `bounced + oob_bounces`.",
-        examples=[134],
-        ge=0,
-    )]
-    oob_rate: Annotated[Optional[float], Field(
-        description="Share of this IP's delivery attempts that resulted in an out-of-band bounce, computed as `oob_bounces / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
-        examples=[0.00036],
-        ge=0,
-        le=1,
-    )]
-    bounces: EmailBounceStatsWithRates
-    delivery_rate: Annotated[Optional[float], Field(
-        description="Share of this IP's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero.",
-        examples=[0.9844],
-        ge=0,
-        le=1,
-    )]
-    bounce_rate: Annotated[Optional[float], Field(
-        description="Share of this IP's delivery attempts that ultimately failed (inband or out-of-band), computed as `all_bounces / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
-        examples=[0.0156],
-        ge=0,
-        le=1,
-    )]
-    complaint_rate: Annotated[Optional[float], Field(
-        description="Share of effectively delivered recipients on this IP who reported the message as spam, computed as `complained / effective_delivered`. Null when `effective_delivered` is zero.",
-        examples=[0.00096],
-        ge=0,
-    )]
-
-
-class EmailDeliveryLatencyStats(BaseModel):
-    "Latency percentiles (p50, p95, p99) in milliseconds for the messages in this breakdown row, for breakdowns whose dimension is known only from delivery onward (sending IP, mailbox provider).\n\n- `delivery`: Time from handing the message off to the receiving mail server accepting it. Null when no deliveries occurred for this row in the period.\n- `total`: End-to-end time from accepting the send to delivery. Null when no deliveries occurred for this row in the period.\n\nThese breakdowns have no `processing` latency family. A message's row identifies which sending IP carried it or which mailbox provider received it. This becomes known only after the receiving mail server reports a delivery, bounce, deferral, or late bounce. The accept-to-processed phase ends before that attribution is known, preventing row-level processing latency. Use `GET /v1/email/stats/daily` for processing-latency percentiles across the whole workspace."
-    model_config = ConfigDict(extra="allow")
-    delivery: Annotated[EmailLatencyQuantiles, Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
-    )]
-    total: Annotated[EmailLatencyQuantiles, Field(
-        description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
-    )]
-
-
 class EmailSendingIpStatsPoint(BaseModel):
     "Delivery and latency stats for messages sent from a single IP address over the requested period. Per-IP attribution begins only after a message is processed: we learn which IP a message used only from its delivery, bounce, deferral, and late-bounce events. Acceptance and processing events do not contribute to per-IP attribution. As a result, per-IP rows omit the `accepted` and `processed` counts and the `processing` latency family. Those fields never appear on a per-IP row. They are not returned as null."
     model_config = ConfigDict(extra="allow")
@@ -17380,124 +17756,6 @@ class EmailStatsByCategoryResponse(BaseModel):
     )]
 
 
-class EmailMailboxProviderSortMetric(str, Enum):
-    delivered = "delivered"
-    bounced = "bounced"
-    complained = "complained"
-    deferred = "deferred"
-    bounces_hard = "bounces.hard"
-    bounces_soft = "bounces.soft"
-    bounces_admin = "bounces.admin"
-    bounces_block = "bounces.block"
-    bounces_undetermined = "bounces.undetermined"
-    opens = "opens"
-    opens_non_prefetched = "opens_non_prefetched"
-    unique_opens = "unique_opens"
-    unique_opens_non_prefetched = "unique_opens_non_prefetched"
-    clicks = "clicks"
-    unique_clicks = "unique_clicks"
-    unsubscribes = "unsubscribes"
-    delivery_rate = "delivery_rate"
-    bounce_rate = "bounce_rate"
-    complaint_rate = "complaint_rate"
-    open_rate = "open_rate"
-    click_rate = "click_rate"
-    unsubscribe_rate = "unsubscribe_rate"
-    bounces_hard_rate = "bounces.hard_rate"
-    bounces_soft_rate = "bounces.soft_rate"
-    bounces_admin_rate = "bounces.admin_rate"
-    bounces_block_rate = "bounces.block_rate"
-    bounces_undetermined_rate = "bounces.undetermined_rate"
-
-
-class EmailMailboxProviderDeliveryStats(BaseModel):
-    "Delivery counts and rates for messages attributed to a single recipient mailbox provider. Per-provider results do not include `accepted` or `processed` counts, because we only learn the recipient's mailbox provider once the receiving mail server reports delivery, a bounce, a deferral, or a late bounce. Earlier lifecycle states (accepted, processed) cannot be attributed to a specific provider."
-    model_config = ConfigDict(extra="allow")
-    delivered: Annotated[int, Field(
-        description="Distinct recipients whose message the receiving mail server accepted.",
-        examples=[8290],
-        ge=0,
-    )]
-    bounced: Annotated[int, Field(
-        description="Distinct recipients whose delivery failed. Approximately the sum of the five `bounces.*` sub-counts (hard, soft, admin, block, undetermined); the totals are computed independently so they may differ slightly at the approximation error.",
-        examples=[131],
-        ge=0,
-    )]
-    complained: Annotated[int, Field(
-        description="Distinct recipients who reported the message as spam.",
-        examples=[8],
-        ge=0,
-    )]
-    deferred: Annotated[int, Field(
-        description="Distinct recipients in transient delivery deferral that is still being retried.",
-        examples=[4],
-        ge=0,
-    )]
-    bounces: EmailBounceStatsWithRates
-    delivery_rate: Annotated[Optional[float], Field(
-        description="Share of attempted recipients on this mailbox provider that were delivered, computed as `delivered / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
-        examples=[0.9844],
-        ge=0,
-        le=1,
-    )]
-    bounce_rate: Annotated[Optional[float], Field(
-        description="Share of attempted recipients on this mailbox provider that bounced, computed as `bounced / (delivered + bounced)`. Null when `delivered + bounced` is zero (no attempts).",
-        examples=[0.0156],
-        ge=0,
-        le=1,
-    )]
-    complaint_rate: Annotated[Optional[float], Field(
-        description="Share of delivered recipients on this mailbox provider who reported the message as spam, computed as `complained / delivered`. Null when `delivered` is zero.",
-        examples=[0.00096],
-        ge=0,
-        le=1,
-    )]
-
-
-class EmailMailboxProviderStatsPoint(BaseModel):
-    "Delivery, engagement, and deliverability stats for messages grouped by a single recipient mailbox provider (`gmail`, `microsoft`, `yahoo`, `apple`, ...) over the requested period. We learn a recipient's mailbox provider from the receiving mail server. Per-provider rows therefore cover the delivery stage onward. They omit the `accepted` and `processed` counts and the `processing` latency family. These fields are absent rather than null. Engagement (opens and clicks, and their rates) is included because those events happen after delivery, once the mailbox provider is already known."
-    model_config = ConfigDict(extra="allow")
-    mailbox_provider: Annotated[str, Field(
-        description="The recipient mailbox provider this row aggregates, as a lowercase classifier such as `gmail`, `yahoo`, `microsoft`, or `apple`. New classifiers may be added over time.",
-        examples=["gmail"],
-        min_length=1,
-    )]
-    delivery: EmailMailboxProviderDeliveryStats
-    engagement: EmailEngagementStats
-    latency: EmailDeliveryLatencyStats
-    trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
-        description="Per-bucket rate series for this mailbox provider over the window. Present only when `include_trend=true`.",
-    )] = None
-
-
-class EmailStatsByMailboxProviderResponse(BaseModel):
-    "Per-mailbox-provider breakdown for the requested period, ranked by the `sort` metric (default `delivered`) descending and paginated with the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsPeriod, Field(
-        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
-    )]
-    data: Annotated[List[EmailMailboxProviderStatsPoint], Field(
-        description="Mailbox-provider breakdown rows, ranked by the `sort` metric (default `delivered`) descending. Empty when no eligible activity occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct mailbox providers with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
-        examples=[14],
-        ge=0,
-    )]
-    next_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
-    )]
-    prev_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
-    )]
-    refresh_cursor: Annotated[Optional[str], Field(
-        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
-    )]
-
-
 class EmailMailboxProviderRegionStatsPoint(BaseModel):
     "Delivery, engagement, and deliverability stats for messages grouped by a single mailbox provider and provider region pair over the requested period, for example `gmail` in `NA` or `microsoft` in `EU`. The provider region is the regional pod the receiving mail system reports for the recipient's provider; pairing it with the provider disambiguates a region label that several providers share. Like the mailbox-provider breakdown, rows cover the delivery stage onward: the `accepted` and `processed` counts and the `processing` latency family are omitted (a provider region cannot be attributed before delivery)."
     model_config = ConfigDict(extra="allow")
@@ -17531,50 +17789,6 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total number of distinct mailbox provider and region pairs with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[31],
-        ge=0,
-    )]
-    next_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
-    )]
-    prev_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
-    )]
-    refresh_cursor: Annotated[Optional[str], Field(
-        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
-    )]
-
-
-class EmailRecipientDomainStatsPoint(BaseModel):
-    "Aggregate delivery, engagement, and latency stats for messages sent to a single recipient mailbox domain over the requested period."
-    model_config = ConfigDict(extra="allow")
-    recipient_domain: Annotated[str, Field(
-        description="The recipient mailbox domain this row aggregates (the part of the recipient address after the `@`), normalized to lowercase.",
-        examples=["gmail.com"],
-        min_length=1,
-    )]
-    delivery: EmailDeliveryStats
-    engagement: EmailEngagementStats
-    latency: EmailLatencyStats
-    trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
-        description="Per-bucket rate series for this recipient domain over the window. Present only when `include_trend=true`.",
-    )] = None
-
-
-class EmailStatsByRecipientDomainResponse(BaseModel):
-    "Per-recipient-domain breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsPeriod, Field(
-        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
-    )]
-    data: Annotated[List[EmailRecipientDomainStatsPoint], Field(
-        description="Recipient-domain breakdown rows, ranked by the `sort` metric (default `processed`) descending. Empty when no eligible activity occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct recipient domains with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
-        examples=[412],
         ge=0,
     )]
     next_cursor: Annotated[Optional[str], Field(
@@ -17757,123 +17971,6 @@ class EmailStatsByClientResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total number of distinct values of the requested `group_by` facet with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[9],
-        ge=0,
-    )]
-    next_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
-    )]
-    prev_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
-    )]
-    refresh_cursor: Annotated[Optional[str], Field(
-        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
-    )]
-
-
-class EmailBounceStats(BaseModel):
-    "Breakdown of `bounced` by failure type. Each field counts distinct bounced recipients of that type in this row's scope; the five types approximately partition `bounced`."
-    model_config = ConfigDict(extra="allow")
-    hard: Annotated[int, Field(
-        description="Distinct recipients with a permanent delivery failure (invalid address or non-existent domain). The address is automatically added to the suppression list.",
-        examples=[42],
-        ge=0,
-    )]
-    soft: Annotated[int, Field(
-        description="Distinct recipients with a transient delivery failure (mailbox full or server temporarily unavailable). Delivery was retried.",
-        examples=[48],
-        ge=0,
-    )]
-    admin: Annotated[int, Field(
-        description="Distinct recipients refused by a policy at the receiving end, such as relaying denied or a blocklisted domain. Fix these by changing your content or sender configuration. Cleaning the recipient list does not usually help.",
-        examples=[4],
-        ge=0,
-    )]
-    block: Annotated[int, Field(
-        description="Distinct recipients bounced because the receiving mail server blocked the sending IP for reputation reasons (mail block, spam block, spam content). Triage usually focuses on IP reputation and sending volume.",
-        examples=[6],
-        ge=0,
-    )]
-    undetermined: Annotated[int, Field(
-        description="Distinct recipients bounced where the receiving server's response did not allow precise classification.",
-        examples=[1],
-        ge=0,
-    )]
-
-
-class EmailBounceCodeStatsPoint(BaseModel):
-    "Bounce counts for a single SMTP status code over the requested period, with the per-type breakdown. This is a deliverability-debugging view keyed on what the receiving mail server returned, so it only reports the failure side: bounced recipients, and their `hard`, `soft`, `admin`, `block`, and `undetermined` split. It has no delivered, open, or rate fields."
-    model_config = ConfigDict(extra="allow")
-    smtp_error_code: Annotated[str, Field(
-        description="The SMTP error code the receiving mail server returned for these bounces, as reported by that server (for example `5.1.1` for an unknown recipient, `4.2.2` for a full mailbox). The form varies by server, and the set of codes is open.",
-        examples=["5.1.1"],
-        min_length=1,
-    )]
-    bounced: Annotated[int, Field(
-        description="Distinct recipients whose delivery failed with this SMTP status code, approximately equal to the sum of the five `bounces.*` sub-counts. The two are computed independently, so they can differ slightly because of approximation.",
-        examples=[1240],
-        ge=0,
-    )]
-    bounces: EmailBounceStats
-
-
-class EmailStatsByBounceCodeResponse(BaseModel):
-    "Per-SMTP-code bounce breakdown for the requested period, ranked by the `sort` metric (default `bounced`) descending and paginated with the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsPeriod, Field(
-        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
-    )]
-    data: Annotated[List[EmailBounceCodeStatsPoint], Field(
-        description="Bounce-code breakdown rows, ranked by the `sort` metric (default `bounced`) descending. Empty when no bounces occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct SMTP error codes with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
-        examples=[17],
-        ge=0,
-    )]
-    next_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
-    )]
-    prev_cursor: Annotated[Optional[str], Field(
-        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
-    )]
-    refresh_cursor: Annotated[Optional[str], Field(
-        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
-        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
-    )]
-
-
-class EmailComplaintTypeStatsPoint(BaseModel):
-    "Complaint counts for a single feedback-loop complaint type over the requested period. A complaint type is recorded only on spam-complaint events, so this breakdown reports the complained count for each type and nothing else. A complaint event has no delivery or engagement information attached to it, so no other count applies."
-    model_config = ConfigDict(extra="allow")
-    feedback_type: Annotated[str, Field(
-        description="The complaint classification reported by the mailbox provider's feedback loop, in the abuse-reporting-format vocabulary (for example `abuse`, `fraud`, `virus`, `other`). The set is open.",
-        examples=["abuse"],
-        min_length=1,
-    )]
-    complained: Annotated[int, Field(
-        description="Distinct recipients who reported a message as spam with this complaint type at any point in the period.",
-        examples=[47],
-        ge=0,
-    )]
-
-
-class EmailStatsByComplaintTypeResponse(BaseModel):
-    "Per-complaint-type breakdown for the requested period, ranked by `complained` descending and paginated with the requested `limit` (default 50, max 200)."
-    model_config = ConfigDict(extra="allow")
-    period: Annotated[EmailStatsPeriod, Field(
-        description="The date range this response was actually computed against. Echoed back so clients can render the period without tracking it themselves and so cached responses can be keyed by what was queried.",
-    )]
-    data: Annotated[List[EmailComplaintTypeStatsPoint], Field(
-        description="Complaint-type breakdown rows, ranked by `complained` descending. Empty when no complaints occurred in the period.",
-    )]
-    total: Annotated[int, Field(
-        description="Total number of distinct feedback types with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
-        examples=[4],
         ge=0,
     )]
     next_cursor: Annotated[Optional[str], Field(
@@ -18223,6 +18320,12 @@ class DomainStatus(str, Enum):
 
 class Domain(BaseModel):
     model_config = ConfigDict(extra="allow")
+    default_ip_pool_id: Annotated[Optional[str], Field(
+        description="Default IP pool for this domain in this workspace. Used only when a send omits `ip_pool_id`; an explicit send option takes precedence. The pool must belong to the same organization. Set to `null` to use normal organization routing.",
+        examples=["ipp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ipp_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     id: Annotated[str, Field(
         examples=["dom_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -18371,6 +18474,12 @@ class DomainInboundConfig(BaseModel):
 class DomainUpdate(BaseModel):
     "Partial update. `settings` changes apply immediately. Changes to `return_path`, `tracking`, or `dkim` on a verified capability are staged. The current configuration keeps serving until the new DNS records verify. The change is then promoted automatically and the old records are marked `deprecated`. The staged value is visible under `capabilities.*.pending` and can be replaced by submitting another change."
     model_config = ConfigDict(extra="allow")
+    default_ip_pool_id: Annotated[Optional[str], Field(
+        description="Default IP pool for this domain in this workspace. Used only when a send omits `ip_pool_id`; an explicit send option takes precedence. The pool must belong to the same organization. Set to `null` to use normal organization routing.",
+        examples=["ipp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ipp_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     settings: Annotated[Optional[DomainSettings], Field(
         description="Per-domain behavior toggles. Changes apply immediately to new sends.",
     )] = None
@@ -19578,7 +19687,7 @@ class EmailTemplateParameter(BaseModel):
         min_length=1,
     )]
     type: Annotated[Annotated[Union[EmailTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
-        description="The value type the template declares for a parameter. A broadcast can still supply any scalar value; see `value_domain`.\n\n- `text`: any value. A parameter the template uses without declaring it is reported as a required `text` parameter.\n- `code`: 4 to 8 digits.\n- `ttl`: a whole number from 1 to 999.\n- `count`: a whole number from 1 to 999.\n- `ref`: up to 16 uppercase letters, digits or hyphens.\n- `date`: an ISO 8601 date (YYYY-MM-DD).\n- `date_time`: an ISO 8601 date and time, with an optional offset.\n- `amount`: a decimal amount in major units, with up to 4 decimal places.\n- `currency`: an ISO 4217 currency code of 3 uppercase letters.",
+        description="The value type the template declares for a parameter. A broadcast can still supply any scalar value; see `value_domain`.\n\n- `text`: any value. A parameter the template uses without declaring it is reported as a required `text` parameter.\n- `code`: 4 to 8 digits.\n- `ttl`: a whole number from 1 to 999.\n- `count`: a whole number from 1 to 999.\n- `ref`: up to 16 uppercase letters, digits or hyphens.\n- `date`: an ISO 8601 date (YYYY-MM-DD). A date and time is also accepted and shows as its date.\n- `date_time`: an ISO 8601 date and time, with an optional offset.\n- `amount`: a decimal amount in major units, with up to 4 decimal places.\n- `currency`: a known ISO 4217 currency code of 3 uppercase letters.",
     )]
     value_domain: Annotated[Annotated[Union[EmailTemplateParameterValueDomain, str], Field(union_mode="left_to_right")], Field(
         description="The shape of value a broadcast may supply for a parameter, independent of the declared `type`.\n\n- `scalar`: a string, number, boolean or null, used as given.",
@@ -20454,6 +20563,10 @@ class MailboxCreate(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Your own key/value data to attach to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved.",
     )] = None
+
+
+class MailboxIdentifier(RootModel[str]):
+    root: str
 
 
 class MailboxUpdateReceivePolicy(str, Enum):
@@ -23440,8 +23553,24 @@ class EventSMSAcceptedData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     segments: Annotated[SMSSegments, Field(
         description="Segment breakdown for the message body. Segment count drives billing.",
@@ -23525,8 +23654,24 @@ class EventSMSDeliveredData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
         description="Carrier that delivered the message. Absent when the carrier does not report one.",
@@ -23615,8 +23760,24 @@ class EventSMSExpiredData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -23700,8 +23861,24 @@ class EventSMSFailedData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -23785,8 +23962,24 @@ class EventSMSReceivedData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     text: Annotated[Optional[str], Field(
         description="The message body, so you can act on it without a follow-up read. Absent when the message carried only attachments and no text of its own.",
@@ -23803,6 +23996,9 @@ class EventSMSReceivedData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         description="Mobile country code and mobile network code of the carrier. Absent when not known.",
         examples=[311480],
+    )] = None
+    in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
+        description="Preview feature: the outbound message this one was paired with through its messaging profile's outbound matching. Absent when it was not paired.",
     )] = None
     subject: Annotated[Optional[str], Field(
         description="Subject line. Absent when the message carried none.",
@@ -23884,8 +24080,24 @@ class EventSMSRejectedData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -23969,8 +24181,24 @@ class EventSMSSentData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
         description="Carrier that handled the message. Absent when the carrier does not report one.",
@@ -24059,8 +24287,24 @@ class EventSMSUndeliveredData(BaseModel):
         examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
+    messaging_profile_id: Annotated[Optional[str], Field(
+        examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -24487,11 +24731,6 @@ class VoiceSessionID(RootModel[str]):
     root: str
 
 
-class VoiceCallDirection(str, Enum):
-    inbound = "inbound"
-    outbound = "outbound"
-
-
 class EventVoiceCallAnsweredData(BaseModel):
     "Identity fields shared by every voice call lifecycle event payload."
     model_config = ConfigDict(extra="allow")
@@ -24543,18 +24782,6 @@ class EventVoiceCallAnswered(BaseModel):
     data: Annotated[EventVoiceCallAnsweredData, Field(
         description="Payload of the voice_call.answered event.",
     )]
-
-
-class VoiceCallStatus(str, Enum):
-    answered = "answered"
-    no_answer = "no_answer"
-    busy = "busy"
-    canceled = "canceled"
-    failed = "failed"
-    rejected = "rejected"
-    unknown = "unknown"
-    ringing = "ringing"
-    in_progress = "in_progress"
 
 
 class EventVoiceCallEndedData(BaseModel):
@@ -25465,10 +25692,6 @@ class VoicePartyBridgePSTNEndpoint(BaseModel):
     )]
 
 
-class SIPTrunkID(RootModel[str]):
-    root: str
-
-
 class VoicePartyBridgeSIPEndpoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     trunk_id: Annotated[str, Field(
@@ -26168,6 +26391,10 @@ class VoiceNumberID(RootModel[str]):
 
 class BillingResolvedPrice(BaseModel):
     model_config = ConfigDict(extra="allow")
+    is_priced: Annotated[bool, Field(
+        description="Whether a published price matched. True includes an explicitly published zero price. False means no price matched and the zero amounts are placeholders, not a quote.",
+        examples=[True],
+    )]
     unit_price: Money
     tax_rate: Annotated[str, Field(
         description="The tax rate applied to this price for your organization, as a decimal (for example `0.21` for 21%). `0` if your organization is tax-exempt or no tax applies.",
