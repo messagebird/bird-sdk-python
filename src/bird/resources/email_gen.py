@@ -26,6 +26,7 @@ class EmailListParams(TypedDict, total=False):
     broadcast_id: str
     status: str
     tag: Sequence[str]
+    reference: str
     category: str
     to: str
     from_: str
@@ -70,6 +71,7 @@ class EmailBase(Resource):
         broadcast_id: str | None = None,
         status: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         category: str | None = None,
         to: str | None = None,
         from_: str | None = None,
@@ -91,6 +93,7 @@ class EmailBase(Resource):
             "broadcast_id": broadcast_id,
             "status": status,
             "tag": tag,
+            "reference": reference,
             "category": category,
             "to": to,
             "from": from_,
@@ -174,6 +177,7 @@ class AsyncEmailBase(AsyncResource):
         broadcast_id: str | None = None,
         status: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         category: str | None = None,
         to: str | None = None,
         from_: str | None = None,
@@ -195,6 +199,7 @@ class AsyncEmailBase(AsyncResource):
             "broadcast_id": broadcast_id,
             "status": status,
             "tag": tag,
+            "reference": reference,
             "category": category,
             "to": to,
             "from": from_,

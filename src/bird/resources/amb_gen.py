@@ -31,6 +31,7 @@ class AmbListParams(TypedDict, total=False):
     kind: str
     category: str
     tag: Sequence[str]
+    reference: str
     created_after: str
     created_before: str
     limit: int
@@ -92,6 +93,7 @@ class AmbBase(Resource):
         kind: str | None = None,
         category: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
         limit: int | None = None,
@@ -114,6 +116,7 @@ class AmbBase(Resource):
             "kind": kind,
             "category": category,
             "tag": tag,
+            "reference": reference,
             "created_after": created_after,
             "created_before": created_before,
             "limit": limit,
@@ -177,6 +180,7 @@ class AsyncAmbBase(AsyncResource):
         kind: str | None = None,
         category: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
         limit: int | None = None,
@@ -199,6 +203,7 @@ class AsyncAmbBase(AsyncResource):
             "kind": kind,
             "category": category,
             "tag": tag,
+            "reference": reference,
             "created_after": created_after,
             "created_before": created_before,
             "limit": limit,

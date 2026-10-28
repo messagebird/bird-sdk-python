@@ -35,6 +35,7 @@ class WhatsappListParams(TypedDict, total=False):
     category: str
     group_id: str
     tag: Sequence[str]
+    reference: str
 
 
 class WhatsappListEventsParams(TypedDict, total=False):
@@ -87,6 +88,7 @@ class WhatsappBase(Resource):
         category: str | None = None,
         group_id: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppMessage]:
         """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document, location, interactive or contact_cards. An inbound tap on a reply button or list row carries interactive_reply instead. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), group (group_id), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Neither matches a group, so group_id is what narrows the list to one group's messages. Use whatsapp_get for one message's current state.
@@ -111,6 +113,7 @@ class WhatsappBase(Resource):
             "category": category,
             "group_id": group_id,
             "tag": tag,
+            "reference": reference,
         }
         return SyncPage(self._client, "/v1/whatsapp/messages", query, WhatsAppMessage, options)
 
@@ -205,6 +208,7 @@ class AsyncWhatsappBase(AsyncResource):
         category: str | None = None,
         group_id: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppMessage]:
         """List WhatsApp messages, newest first, as a cursor page ({data, next_cursor, …}). Each message carries the one content it was built from: a template, or free-form text, image, video, audio, sticker, document, location, interactive or contact_cards. An inbound tap on a reply button or list row carries interactive_reply instead. Pass next_cursor back as starting_after to fetch the next page. Filter by direction, status, recipient (to), sender (from), business-scoped user ID (bsuid), group (group_id), template category, or tag. to and from each accept a phone number or a business-scoped user ID; pair either with direction to search a single side of the message. Neither matches a group, so group_id is what narrows the list to one group's messages. Use whatsapp_get for one message's current state.
@@ -229,6 +233,7 @@ class AsyncWhatsappBase(AsyncResource):
             "category": category,
             "group_id": group_id,
             "tag": tag,
+            "reference": reference,
         }
         return AsyncPage(self._client, "/v1/whatsapp/messages", query, WhatsAppMessage, options)
 

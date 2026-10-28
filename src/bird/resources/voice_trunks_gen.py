@@ -17,6 +17,14 @@ from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
 
 
+class VoiceTrunkMediaCreate(TypedDict, total=False):
+    encryption: str
+
+
+class VoiceTrunkMediaUpdate(TypedDict, total=False):
+    encryption: str
+
+
 class _VoiceTrunkIPACLCreateRequired(TypedDict):
     cidr: str
 
@@ -45,6 +53,7 @@ class VoiceTrunksCreateParams(_VoiceTrunksCreateRequired, total=False):
     outbound_enabled: bool
     inbound_enabled: bool
     media_bypass: bool
+    media: VoiceTrunkMediaCreate
     digest_algorithms: Sequence[str]
     session_credentials_enabled: bool
 
@@ -56,6 +65,7 @@ class VoiceTrunksUpdateParams(TypedDict, total=False):
     outbound_enabled: bool
     inbound_enabled: bool
     media_bypass: bool
+    media: VoiceTrunkMediaUpdate
     ip_acls: Sequence[VoiceTrunkIPACLCreate]
     allowed_api_key_ids: Sequence[str]
     digest_algorithms: Sequence[str]
@@ -117,6 +127,7 @@ class VoiceTrunksBase(Resource):
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
+        media: VoiceTrunkMediaCreate | None = None,
         digest_algorithms: Sequence[str] | None = None,
         session_credentials_enabled: bool | None = None,
         options: RequestOptions | None = None,
@@ -137,6 +148,7 @@ class VoiceTrunksBase(Resource):
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
+                "media": media,
                 "digest_algorithms": digest_algorithms,
                 "session_credentials_enabled": session_credentials_enabled,
             },
@@ -157,6 +169,7 @@ class VoiceTrunksBase(Resource):
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
+        media: VoiceTrunkMediaUpdate | None = None,
         ip_acls: Sequence[VoiceTrunkIPACLCreate] | None = None,
         allowed_api_key_ids: Sequence[str] | None = None,
         digest_algorithms: Sequence[str] | None = None,
@@ -181,6 +194,7 @@ class VoiceTrunksBase(Resource):
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
+                "media": media,
                 "ip_acls": ip_acls,
                 "allowed_api_key_ids": allowed_api_key_ids,
                 "digest_algorithms": digest_algorithms,
@@ -265,6 +279,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
+        media: VoiceTrunkMediaCreate | None = None,
         digest_algorithms: Sequence[str] | None = None,
         session_credentials_enabled: bool | None = None,
         options: RequestOptions | None = None,
@@ -285,6 +300,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
+                "media": media,
                 "digest_algorithms": digest_algorithms,
                 "session_credentials_enabled": session_credentials_enabled,
             },
@@ -305,6 +321,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
+        media: VoiceTrunkMediaUpdate | None = None,
         ip_acls: Sequence[VoiceTrunkIPACLCreate] | None = None,
         allowed_api_key_ids: Sequence[str] | None = None,
         digest_algorithms: Sequence[str] | None = None,
@@ -329,6 +346,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
+                "media": media,
                 "ip_acls": ip_acls,
                 "allowed_api_key_ids": allowed_api_key_ids,
                 "digest_algorithms": digest_algorithms,

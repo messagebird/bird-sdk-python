@@ -46,8 +46,7 @@ def webhook_test() -> None:
 
 
 def webhook_attempts() -> None:
-    attempts = client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg")
-    for attempt in attempts.data:
+    for attempt in client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg"):
         print(attempt.status, attempt.response_status_code)
 
 

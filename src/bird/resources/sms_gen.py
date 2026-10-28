@@ -31,6 +31,7 @@ class SmsListParams(TypedDict, total=False):
     from_: str
     country: str
     tag: Sequence[str]
+    reference: str
 
 
 class SmsListEventsParams(TypedDict, total=False):
@@ -76,6 +77,7 @@ class SmsBase(Resource):
         from_: str | None = None,
         country: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[SMSMessage]:
         """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, country, or tag.
@@ -99,6 +101,7 @@ class SmsBase(Resource):
             "from": from_,
             "country": country,
             "tag": tag,
+            "reference": reference,
         }
         return SyncPage(self._client, "/v1/sms/messages", query, SMSMessage, options)
 
@@ -164,6 +167,7 @@ class AsyncSmsBase(AsyncResource):
         from_: str | None = None,
         country: str | None = None,
         tag: Sequence[str] | None = None,
+        reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[SMSMessage]:
         """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, country, or tag.
@@ -187,6 +191,7 @@ class AsyncSmsBase(AsyncResource):
             "from": from_,
             "country": country,
             "tag": tag,
+            "reference": reference,
         }
         return AsyncPage(self._client, "/v1/sms/messages", query, SMSMessage, options)
 

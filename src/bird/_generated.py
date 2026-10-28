@@ -55,7 +55,7 @@ class QuotaScope(str, Enum):
 
 
 class QuotaErrorContext(BaseModel):
-    "The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can raise or remove the workspace ceiling; the shared organization limit still applies."
+    "The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies."
     model_config = ConfigDict(extra="allow")
     quota_key: Annotated[str, Field(
         description="Stable key of the quota that refused the change.",
@@ -133,7 +133,7 @@ class ErrorBody(BaseModel):
         description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.",
     )] = None
     quota: Annotated[Optional[QuotaErrorContext], Field(
-        description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can raise or remove the workspace ceiling; the shared organization limit still applies.",
+        description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies.",
     )] = None
 
 
@@ -156,6 +156,10 @@ class WorkspaceID(RootModel[str]):
 
 
 class UserID(RootModel[str]):
+    root: str
+
+
+class TenantName(RootModel[str]):
     root: str
 
 
@@ -284,6 +288,12 @@ class WorkspaceQuotaCeiling(BaseModel):
     )]
 
 
+class WorkspaceQuotaLimitSource(str, Enum):
+    manual = "manual"
+    automatic = "automatic"
+    organization = "organization"
+
+
 class WorkspaceQuotaUsageStatus(str, Enum):
     available = "available"
     unavailable = "unavailable"
@@ -355,11 +365,21 @@ class WorkspaceQuota(BaseModel):
         description="Where the organization limit comes from.\n\n- `default`: Bird's standard limit.\n- `plan`: the organization's plan.\n- `override`: a limit Bird set for the organization.",
     )]
     workspace_limit: Annotated[Optional[WorkspaceQuotaCeiling], Field(
-        description="The workspace's own limit. `null` when the workspace has none and uses only the shared organization limit.",
+        description="The workspace's own saved limit. `null` when none is saved; `limit_source` and `automatic_limit` then show whether an automatic share applies.",
     )]
     limit: Annotated[int, Field(
-        description="The lower of the organization limit currently applied to requests and any active workspace limit. The applied organization limit can briefly differ from the configured `organization_limit` after a change. A request can still be refused below this value when other workspaces use the shared organization limit.",
+        description="The lower of the organization limit currently applied to requests and the workspace's active limit or automatic share. The applied organization limit can briefly differ from the configured `organization_limit` after a change. A request can still be refused below this value when other workspaces use the shared organization limit.",
         ge=0,
+    )]
+    limit_source: Annotated[Annotated[Union[WorkspaceQuotaLimitSource, str], Field(union_mode="left_to_right")], Field(
+        description="Which limit bounds the workspace's own usage.\n\n- `manual`: the workspace's own active limit.\n- `automatic`: the workspace's share of the organization limit under its automatic allocation.\n- `organization`: no workspace limit applies; only the shared organization limit does. This includes an automatic allocation of an unlimited organization limit.",
+    )]
+    automatic_limit: Annotated[Optional[int], Field(
+        description="The workspace's share under the organization's automatic allocation. Set only when `limit_source` is `automatic`; it is never saved as a workspace limit.",
+        ge=0,
+    )]
+    allocation_enabled: Annotated[bool, Field(
+        description="Whether the organization has an automatic allocation of this quota. It can be `true` while `limit_source` is `manual`, or `organization` when the organization limit is unlimited. When `true`, changing or removing this workspace's limit can change other workspaces' automatic shares.",
     )]
     usage: Annotated[Optional[WorkspaceQuotaUsage], Field(
         description="Current usage. `null` for a `value` quota, which counts nothing.",
@@ -2759,6 +2779,52 @@ class VerificationAttemptFailureReason(str, Enum):
     not_billable = "not_billable"
 
 
+class WorkspaceSortField(str, Enum):
+    created_at = "created_at"
+    name = "name"
+
+
+class OrganizationWorkspaceList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[Workspace]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
+        ge=0,
+    )] = None
+
+
+class WorkspaceCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="Must include at least one letter or number.",
+        examples=["Acme Corp"],
+        max_length=100,
+        min_length=3,
+    )]
+
+
+class OrganizationWorkspaceUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="Must include at least one letter or number.",
+        examples=["Acme Corp"],
+        max_length=100,
+        min_length=3,
+    )] = None
+
+
 class RealtimeEventName(RootModel[str]):
     root: str
 
@@ -2964,6 +3030,10 @@ class EmailMessageStatus(str, Enum):
     canceled = "canceled"
 
 
+class MessageReference(RootModel[str]):
+    root: str
+
+
 class EmailMessageCategory(str, Enum):
     marketing = "marketing"
     transactional = "transactional"
@@ -3157,6 +3227,12 @@ class EmailMessage(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
     )] = None
@@ -3324,6 +3400,12 @@ class EmailMessageSendRequest(BaseModel):
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Arbitrary JSON object returned on API reads and included in webhook payloads. You can query its paths in analytics, such as `metadata.order_id`, but it is not a dashboard filter. The serialized object is limited to 2 KB. Use metadata for per-send context such as order IDs, customer references, and structured event data. For low-cardinality filterable labels, use `tags` instead.",
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         description="Parameter values used to personalize inline content, shared across all recipients of this send. Tokens such as `{{ animal }}` are replaced with matching values; missing values render empty. Include this object, even as `{}`, to use Liquid, or omit it to leave tokens unchanged. Use single-word names other than `bird`. Cap: 16 KB serialized. For a stored template, use `template.parameters` instead. See [inline personalization](https://bird.com/docs/guides/email/sending-email#content) for validation and URL encoding examples.",
@@ -4621,6 +4703,12 @@ class EmailBroadcastTestResult(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
     )] = None
@@ -5430,7 +5518,7 @@ class SMSSegments(BaseModel):
         ge=1,
     )]
     encoding: Annotated[SMSSegmentsEncoding, Field(
-        description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.\n\n`BINARY` marks an 8-bit binary payload, sent as one segment, where `characters` counts its octets. Only the preview binary send produces it; it is declared ahead of general availability so clients see the value before any message carries it outside the preview.",
+        description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.\n\n`BINARY` marks an 8-bit binary payload, sent as one segment, where `characters` counts its octets. Only a binary send produces it.",
         min_length=1,
     )]
     characters: Annotated[int, Field(
@@ -5471,14 +5559,11 @@ class SMSMessageEffectiveOptions(BaseModel):
     smart_encoding: Annotated[bool, Field(
         description="Whether Bird replaced characters outside the GSM-7 alphabet in this message's body with their closest equivalent before sending it. When `true`, `text` is the body as sent and `segments` describes that body.",
     )]
-    ignore_delivery_window: Annotated[Optional[bool], Field(
-        description="Preview feature: `true` when this message is excluded from any future quiet-hours delivery window. Absent otherwise.",
-    )] = None
     ignore_suppression: Annotated[Optional[bool], Field(
-        description="Preview feature: `true` when the send asked to skip opt-outs. Recorded only: every opt-out still applied. Absent otherwise.",
+        description="`true` when the send may reach the recipient even if they are suppressed for the sender, including after replying STOP. Only `authentication` and `transactional` messages can set it. Absent otherwise.",
     )] = None
     callback_url: Annotated[Optional[str], Field(
-        description="Preview feature: the callback URL the send recorded. Absent when it recorded none. Recorded only: status events go to your webhook subscriptions either way.",
+        description="The callback URL that applies to this message, which receives its events instead of your webhook endpoints. Absent when the message has none, in which case its events go to your webhook subscriptions.",
     )] = None
 
 
@@ -5501,12 +5586,12 @@ class SMSError(BaseModel):
         min_length=1,
     )]
     permanent: Annotated[Optional[bool], Field(
-        description="Whether the cause is permanent, so sending the same message again would fail the same way. Describes the cause, not whether Bird retries. Null when Bird cannot tell, which is currently always.",
+        description="Whether the cause is permanent, so sending the same message again would fail the same way. Describes the cause, not whether Bird retries. Null when Bird cannot tell, such as when the provider returned no code or one without a known permanence, or when Bird blocked the message itself.",
     )] = None
 
 
 class SMSInReplyToMessage(BaseModel):
-    "Preview feature: the outbound message a received message was paired with. Bird pairs a reply with the last message the messaging profile sent this subscriber from the receiving number, within the profile's outbound-matching window. The pairing is inferred from timing; the subscriber does not report which message they answered."
+    "The outbound message a received message was paired with. Bird pairs a reply with the last message the messaging profile sent this subscriber from the receiving number, within the profile's outbound-matching window. The pairing is inferred from timing; the subscriber does not report which message they answered."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -5557,7 +5642,7 @@ class SMSMessage(BaseModel):
         min_length=1,
     )] = None
     binary: Annotated[Optional[SMSBinary], Field(
-        description="Preview feature: the payload of a binary send, in place of `text`. Absent on every other message.",
+        description="The payload of a binary send, in place of `text`. Absent on every other message.",
     )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
         description="Content classification supplied for free text or derived from the template. Null for inbound messages.",
@@ -5609,13 +5694,19 @@ class SMSMessage(BaseModel):
         description="Arbitrary JSON metadata stored on the message and echoed in webhook payloads.",
     )] = None
     options: Annotated[Optional[SMSMessageEffectiveOptions], Field(
-        description="The settings applied to this message, with any option you omitted filled in with the default in force when you sent it. Absent on inbound messages, and on any outbound message for which no settings were recorded.",
+        description="The settings applied to this message, with any option you omitted filled in with the default in force when you sent it. Absent on received messages, and on any outbound message for which no settings were recorded.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
-        description="Preview feature: the `validity_period` applied to the message, in seconds: the send's own, or else its messaging profile's. Absent when neither set one.",
+        description="The `validity_period` applied to the message, in seconds: the send's own, or else its messaging profile's. Absent when neither set one.",
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none, and on inbound messages.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message: the send's own, or else its messaging profile's. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message: the send's own, or else its messaging profile's. Absent when neither set one, and on inbound messages.",
         examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
@@ -5637,7 +5728,7 @@ class SMSMessage(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
-        description="Preview feature: on a received message, the outbound message it was paired with through its messaging profile's outbound matching. Absent on outbound messages and on received messages that were not paired.",
+        description="On a received message, the outbound message it was paired with through its messaging profile's outbound matching. Absent on outbound messages and on received messages that were not paired.",
     )] = None
     created_at: Annotated[str, Field(
         description="When the message was accepted (outbound) or received (inbound).",
@@ -5676,6 +5767,14 @@ class SMSSendOptions(BaseModel):
     model_config = ConfigDict(extra="allow")
     smart_encoding: Annotated[Optional[bool], Field(
         description="Replace characters outside the GSM-7 alphabet with their closest GSM-7 equivalent before sending: typically curly quotes, dashes, ellipses, fullwidth forms, and non-breaking spaces.\n\nOne such character forces the whole body into `UCS2`, which more than halves the characters that fit in a segment, so replacing them often lowers the segment count and the cost.\n\nDisabled by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet afterwards, such as an emoji or a non-Latin script, is sent exactly as you supplied it. Read the message back to see what was applied: `text` is the body as sent.",
+    )] = None
+    ignore_suppression: Annotated[Optional[bool], Field(
+        description="Send this message even if the recipient is suppressed for the sender, including after replying STOP. Bird skips every suppression reason and records the flag on the message; communication preferences the recipient revoked still apply. Only `authentication` and `transactional` messages can use it; setting it to `true` on a `marketing` or `service` message returns `422`. Bird must enable it for your workspace first; until then, a message that uses it is refused with `422`. Omit it to use the setting of the messaging profile in `messaging_profile_id`.",
+    )] = None
+    callback_url: Annotated[Optional[str], Field(
+        description="An HTTPS URL that receives this message's events instead of your webhook endpoints. It must be a public address: a private, loopback or link-local host returns `422`. Bird fixes the URL when it accepts the message, so later profile changes do not reroute it. Each event is a signed POST, retried on failure, and signed with your workspace callback signing secret, which `rotateWebhookCallbackSigningSecret` creates and returns once. While a URL applies, this message's events skip your plain webhook endpoints, and a failed callback never falls back to them. MCP Events subscriptions and connector endpoints still receive them. The `callback_events` of the messaging profile in `messaging_profile_id` choose which events go to the URL. Omit the field to use the callback URL of that profile; send `null` to send this message's events to your webhook subscriptions.",
+        examples=["https://receipts.example.com/bird/sms"],
+        max_length=2048,
     )] = None
     track_clicks: Annotated[Optional[bool], Field(
         description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`.",
@@ -5716,13 +5815,18 @@ class SMSTemplateSend(BaseModel):
 
 
 class SMSMessageSendRequest(BaseModel):
-    "A message to send. Supply exactly one of `text` (free-text, which also requires `category` unless a messaging profile supplies a default), `template` (a stored template, whose category is derived), or the preview `binary` (which also requires `category`). Supplying more than one, or none, is rejected."
+    "A message to send. Supply exactly one of `text` (free-text, which also requires `category` unless a messaging profile supplies a default), `template` (a stored template, whose category is derived), or `binary` (which also requires `category`). Supplying more than one, or none, is rejected."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
         description="Recipient phone number in E.164 format (for example `+14155550100`), or in national format when you also pass `to_country_code`. One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.",
         examples=[+14155550100],
         min_length=1,
     )]
+    to_country_code: Annotated[Optional[str], Field(
+        description="The ISO 3166-1 alpha-2 country whose national numbering plan `to` is written in, such as `NL` for `0612345678`. Bird converts `to` to E.164 before checking the destination, price and sender. An E.164 `to` is still accepted when its country calling code matches this country; a mismatch, or a national number that is not valid in this country, returns a `422` `SMSInvalidRecipient`. Omit it to send `to` in E.164.",
+        examples=["NL"],
+        pattern="^[A-Z]{2}$",
+    )] = None
     from_: Annotated[Optional[str], Field(
         alias="from",
         description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and when sending a workspace template, unless `messaging_profile_id` is set and the profile selects a sender for the destination country or has a default sender. Omitting it otherwise returns `422`. A built-in template selects its sender automatically and rejects `from`.",
@@ -5734,13 +5838,28 @@ class SMSMessageSendRequest(BaseModel):
         examples=["Your verification code is 123456."],
         min_length=1,
     )] = None
+    binary: Annotated[Optional[SMSBinary], Field(
+        description="Send an 8-bit binary payload instead of `text` or `template`. Requires `category` `transactional` and refuses `options.smart_encoding`. It is sent and charged as one segment.",
+    )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
         description="Content classification: why you are sending. Required on a free-text send unless the messaging profile in `messaging_profile_id` sets a default category; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
-        description="Preview feature: how long, in seconds (60-172800), the message may wait for delivery, counted from acceptance. Bird does not submit the message to the carrier after this deadline and passes the remaining time to the carrier where the route supports it. A message that misses the deadline before reaching the carrier ends `rejected` or `failed`, not `expired`; `expired` comes only from a carrier report. Omit it to use the validity period of the messaging profile in `messaging_profile_id`, or the carrier's own validity rules when the profile sets none. Organizations outside the preview receive `422 SMSUnsupportedFeature`.",
+        description="How long, in seconds (60-172800), the message may wait for delivery, counted from acceptance. Bird does not submit the message to the carrier after this deadline and passes the remaining time to the carrier where the route supports it. A message that misses the deadline before reaching the carrier ends `rejected` or `failed`, not `expired`; `expired` comes only from a carrier report. Omit it to use the validity period of the messaging profile in `messaging_profile_id`, or the carrier's own validity rules when the profile sets none.",
         ge=60,
         le=172800,
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="Your accounting identifier for this message, such as a department code. Stored on the message and its usage record, returned on reads, and echoed in webhook payloads. Omit it to use the cost center of the messaging profile in `messaging_profile_id`. Accepting it does not change how the message is priced.",
+        examples=["CC001234"],
+        max_length=64,
+        min_length=1,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
         description="Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.",
@@ -5756,7 +5875,7 @@ class SMSMessageSendRequest(BaseModel):
         description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     messaging_profile_id: Annotated[Optional[str], Field(
-        description="Preview feature: the messaging profile that supplies this message's sender and defaults. When `from` is omitted, Bird sends from the profile's sender for the destination country, or its default sender. An omitted `category` on a free-text send takes the profile's default category, and `smart_encoding`, `cost_center` and `validity_period` take the profile's settings. So do `options.callback_url`, `options.ignore_delivery_window` and `options.ignore_suppression`, which Bird records on the message; the profile's `options.validation.network` is not inherited. Values you set on the message take precedence. A built-in template sends from Bird's system sender and ignores the profile's senders. A profile that does not exist in this workspace returns `422` `SMSMessagingProfileNotFound`; a `from` bound to a different profile returns `422` `SMSMessagingProfileSenderBound`. Organizations outside the preview get `422` `SMSUnsupportedFeature`.",
+        description="The messaging profile that supplies this message's sender and defaults. When `from` is omitted, Bird sends from the profile's sender for the destination country, or its default sender. An omitted `category` on a free-text send takes the profile's default category, and `smart_encoding`, `cost_center` and `validity_period` take the profile's settings. So do `options.callback_url` and `options.ignore_suppression`, which apply to the message. Values you set on the message take precedence. A built-in template sends from Bird's system sender and ignores the profile's senders. A profile that does not exist in this workspace returns `422` `SMSMessagingProfileNotFound`; a `from` bound to a different profile returns `422` `SMSMessagingProfileSenderBound`.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
         description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
@@ -6114,18 +6233,19 @@ class TemplateVariableType(str, Enum):
     url = "url"
     image = "image"
     timestamp = "timestamp"
+    location = "location"
     text = "text"
 
 
 class TemplateVariable(BaseModel):
-    "A single variable slot a template fills in when it sends. Most slots are filled from the values supplied when sending; on email, a slot with `system` true is filled by Bird itself, per recipient. The same shape on email, SMS and WhatsApp, so reading what a template needs works the same way whichever channel you are sending on."
+    "A single variable slot a template fills in when it sends. Most slots are filled from the values supplied when sending; a slot with `system` true is filled by Bird itself, per recipient. The same shape on email, SMS and WhatsApp, so reading what a template needs works the same way whichever channel you are sending on."
     model_config = ConfigDict(extra="allow")
     key: Annotated[str, Field(
-        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` you repeat on the matching parameter inside `components`, or, for a template whose placeholders are positional, the position itself as `1`, `2` and so on.",
+        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` on the matching parameter inside `components`, or, in the template parameters preview, the key in the send's `template.parameters`. A WhatsApp template whose placeholders are positional uses the position itself as `1`, `2` and so on, and values with no placeholder use fixed keys: `header_url`, `header_filename`, `header_location` and `code`.",
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
-        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest). Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email, WhatsApp and workspace SMS templates use `text`. Workspace SMS parameters must be scalar values. Open enum: treat an unrecognized value as a future type rather than an error.",
+        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest). Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email and workspace SMS templates use `text`. WhatsApp templates use `text`, plus `url` for a media header's file and `location` for a location header. Workspace SMS parameters must be scalar values. Open enum: treat an unrecognized value as a future type rather than an error.",
         min_length=1,
     )]
     required: Annotated[bool, Field(
@@ -6139,7 +6259,7 @@ class TemplateVariable(BaseModel):
         description="Whether this slot's value is redacted from stored message content. A placeholder replaces the sensitive value in message history; transport queues can still carry the text needed for delivery.",
     )] = None
     system: Annotated[Optional[bool], Field(
-        description="Whether the value comes from Bird rather than from the send. Absent means false. Only email templates have system slots, identified by the reserved `bird` key or a dotted path beneath it; every SMS and WhatsApp slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
+        description="Whether the value comes from Bird rather than from the send. Absent means false. System slots are identified by the reserved `bird` key or a dotted path beneath it. They appear on email templates, and, in the template parameters preview, on WhatsApp templates whose parameter bindings read contact data; every SMS slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
     )] = None
 
 
@@ -9266,6 +9386,12 @@ class WhatsAppMessage(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Arbitrary JSON metadata stored on the message.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none, and on inbound messages.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
 
 
 class WhatsAppMessageList(BaseModel):
@@ -9918,6 +10044,12 @@ class WhatsAppMessageSendRequest(BaseModel):
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="Arbitrary JSON object stored on the message and returned on API reads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.",
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
     )] = None
 
 
@@ -11264,6 +11396,33 @@ class WhatsAppTemplateCreate(BaseModel):
     )] = None
 
 
+class WhatsAppTemplateSubmitProblem(BaseModel):
+    "One problem found while checking a version."
+    model_config = ConfigDict(extra="allow")
+    language: Annotated[Optional[str], Field(
+        description="The language the problem belongs to, or null when it concerns the version as a whole. Always null in an analysis, which checks one language's unsaved content.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    field: Annotated[Optional[str], Field(
+        description="Where the problem sits inside the language's content, as a dotted path with indexes, or null when it is not about one field. The path is rooted at the language you wrote, so `components[0].text` is the first block's text.",
+        examples=["components[2].cards[0].components[1].example_parameters[0].url"],
+        min_length=1,
+    )] = None
+    code: Annotated[str, Field(
+        description="The error code a real submit fails with. Look it up in the error catalog for what to do about it.",
+        examples=["E15025"],
+        min_length=1,
+        pattern="^E\\d{5}$",
+    )]
+    message: Annotated[str, Field(
+        description="What is wrong, in a form you can show the author.",
+        examples=["A body block needs text."],
+        min_length=1,
+    )]
+
+
 class WhatsAppTemplateUpdate(BaseModel):
     "Partial update of a template's metadata and language policies. Only the fields you send are changed; the rest are left as they stand. The slug can change only before the first submission."
     model_config = ConfigDict(extra="allow")
@@ -11438,33 +11597,6 @@ class WhatsAppTemplateSubmit(BaseModel):
     validate_only: Annotated[Optional[bool], Field(
         description="Check the draft without submitting it. Every language is checked and every problem reported, but nothing is frozen and nothing is sent to WhatsApp. A clean result does not guarantee WhatsApp approval: WhatsApp offers no way to ask in advance, so it can still refuse a submission these checks passed. Use a different idempotency key for the validation and the submission. Reusing one key with different request bodies is rejected.",
     )] = None
-
-
-class WhatsAppTemplateSubmitProblem(BaseModel):
-    "One problem found while checking a version."
-    model_config = ConfigDict(extra="allow")
-    language: Annotated[Optional[str], Field(
-        description="The language the problem belongs to, or null when it concerns the version as a whole.",
-        examples=["pt-BR"],
-        max_length=35,
-        min_length=2,
-    )] = None
-    field: Annotated[Optional[str], Field(
-        description="Where the problem sits inside the language's content, as a dotted path with indexes, or null when it is not about one field. The path is rooted at the language you wrote, so `components[0].text` is the first block's text.",
-        examples=["components[2].cards[0].components[1].example_parameters[0].url"],
-        min_length=1,
-    )] = None
-    code: Annotated[str, Field(
-        description="The error code a real submit fails with. Look it up in the error catalog for what to do about it.",
-        examples=["E15025"],
-        min_length=1,
-        pattern="^E\\d{5}$",
-    )]
-    message: Annotated[str, Field(
-        description="What is wrong, in a form you can show the author.",
-        examples=["A body block needs text."],
-        min_length=1,
-    )]
 
 
 class WhatsAppTemplateSubmitResult(BaseModel):
@@ -14031,6 +14163,12 @@ class AMBMessage(BaseModel):
     tags: Annotated[Optional[List[Tag]], Field(
         description="Structured `{name, value}` filter labels applied to this message. Absent on an inbound message.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none, and on inbound messages.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )]
@@ -14162,6 +14300,12 @@ class AMBMessageSendRequest(BaseModel):
     tags: Annotated[Optional[List[Tag]], Field(
         description="Structured `{name, value}` labels for filtering. Maximum 20 tags per send.",
         max_length=20,
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
     )] = None
     group: Annotated[Optional[str], Field(
         description="Department identifier for this message.",
@@ -14341,15 +14485,15 @@ class AMBConversation(BaseModel):
         description="How the conversation started. `entry_point` means the customer opened it from one of your configured Apple Messages for Business entry points. `invitation` means the customer accepted an invitation and sent a message. This is set once when the conversation is created and never changes.",
     )]
     device_capabilities: Annotated[List[str], Field(
-        description="The capability tokens the customer's device advertised on its most recent message, replaced by each inbound rather than accumulated, so this describes the device in use now. An empty list means the device's capabilities are unknown. Implemented message types may still be sent, but device rendering support has not been confirmed. Authentication requires an explicitly advertised AUTH2 capability.",
+        description="The device capability tokens recorded for this conversation. When an inbound message creates, reopens, or updates an open conversation, a non-empty list replaces the previous tokens. Empty lists and delayed messages that leave the conversation closed preserve the previous tokens. An empty stored list means the device's capabilities are unknown. Implemented message types may still be sent, but device rendering support has not been confirmed. Authentication requires an explicitly advertised AUTH2 capability.",
     )]
     supported_content_kinds: Annotated[List[AMBContentKind], Field(
         description="Implemented baseline types plus interactive types confirmed by `device_capabilities`. An empty capability list yields text, attachments and rich links; it does not establish support for other types. Unadvertised quick replies, list pickers, time pickers and forms are refused when capabilities are known. Custom apps and opaque interactive references are not included because their device support cannot be inferred from these tokens. Unsupported roadmap types cannot be sent.",
     )]
     locale: Annotated[str, Field(
-        description="The customer's locale from the most recent inbound message, or your business's default locale before any inbound arrives. Preserved in Apple's locale format, for example `en_US@rg=nlzzzz`.",
+        description="The customer's locale recorded for this conversation. Messages without a locale and delayed messages that leave the conversation closed preserve the previous value. Empty when no locale is known. Preserved in Apple's locale format, for example `en_US@rg=nlzzzz`.",
         examples=["en-US"],
-        min_length=1,
+        min_length=0,
     )]
     unread_count: Annotated[int, Field(
         description="Number of inbound messages the workspace has not acknowledged. Shared across the workspace. Pass read with a date-time to acknowledge received inbound messages through that timestamp. Sending a reply does not change this count.",
@@ -15323,6 +15467,9 @@ class WhatsAppBusinessAccount(BaseModel):
     )] = None
     ban: Annotated[Optional[WhatsAppBusinessAccountBan], Field(
         description="WhatsApp's ban on this account, absent unless Bird was told of one. `status` is what the account said when Bird last read it; this is what WhatsApp announced, which arrives only on the webhook that announces it and is never re-read.",
+    )] = None
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next about this account's ban. Each entry names one action and says why\nit is worth taking. An empty list means Bird holds no `ban` record for this account.\nA ban Bird was never told of still shows as `banned` on the account's numbers, whose\nown `next` carries the appeal, and as Meta error `141014` on the `waba` entity in\n`meta_health_status`. Neither list says whether the account can send;\n`meta_health_status` does.\n\nWhile `ban` is present this links the account restrictions and appeals guide, which\nnames `ban.appeal_url`, because neither Bird nor this API can lift a ban.",
     )] = None
     meta_health_status: Annotated[Optional[WhatsAppMetaHealthStatus], Field(
         description="Meta's own messaging health for this account as of `meta_synced_at`. Absent until Bird has read it, and absent again when the stored reading did not parse at all. An entity whose verdict falls outside this vocabulary is dropped on its own and the rest of the report still ships, so `entities` can be shorter than Meta's. A `blocked` verdict on the `waba` entity is why template sends fail with Meta's `#200` even though the number reads `active`: for example `error_code` `141006` names a payment method Meta rejected on the account.",
@@ -21502,7 +21649,7 @@ class WebhookConnectorSetup(BaseModel):
     "The connector to deliver through and the values it needs. Omit the endpoint's `url`: Bird builds it from the connector's URL and these `config` values, and a URL given anyway must equal that. The credentials belong to this endpoint alone, and deleting the endpoint erases them."
     model_config = ConfigDict(extra="allow")
     connector_id: Annotated[str, Field(
-        description="The connector to deliver through. Each connector, its fields and the setup to do on its\nplatform first:\n\n- `claude_managed_agents`: Claude Managed Agents. Send each message you receive to your Claude managed agent.\n  - `agent_id` (`config`, required): Returned when you create the agent. Sessions use its latest version.\n  - `environment_id` (`config`, required): Returned when you create the environment.\n  - `vault_id` (`config`, optional): A credential vault the agent uses, such as the one holding its Bird MCP credential, so it can reply through Bird.\n  - `api_key` (secret, in `credentials`, required): From the Claude workspace your agent runs in.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, set up your agent in Claude. In the Claude Console, create the agent, its environment and an API key in the same workspace, then come back here with their IDs and the key. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 2: Create an API key. In the Claude workspace your agent runs in. See https://platform.claude.com/settings/keys.\n  - Setup 3: Copy the agent and environment IDs. Each create returns its ID. See https://platform.claude.com/docs/en/managed-agents/quickstart#create-your-first-session.\n  - Setup 4: Optionally, add a credential vault. To let the agent reply through Bird, store its Bird MCP credential in a Claude credential vault and give the vault ID here. Each session gets that vault. See https://platform.claude.com/docs/en/managed-agents/vaults.\n- `grok_bot`: Grok Bot. Send each message you receive to a Grok Bot routine.\n  - `webhook_url` (`config`, required): The routine's webhook URL.\n  - `sender_key` (secret, in `credentials`, required): The routine's sender key. Bird sends it only as the Bearer token.\n  - Events: `whatsapp.received`, `sms.received`, `email_mailbox.message_received`, `amb.received`.\n  - Setup 1: First, ask Grok Bot to create a routine. Ask Grok Bot to create a routine with a webhook trigger, then paste the webhook URL and sender key it gives you below. See https://cursor.com/docs/cloud-agent/automations#webhook-triggers.",
+        description="The connector to deliver through; [Webhook connectors](/docs/ai/webhook-connectors) lists each one's fields, accepted events and platform setup.",
         examples=["claude_managed_agents"],
         max_length=64,
         min_length=1,
@@ -22037,6 +22184,12 @@ class EventEmailAcceptedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22103,6 +22256,12 @@ class EventEmailBouncedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22169,6 +22328,12 @@ class EventEmailCanceledData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
 
 
 class EventEmailCanceled(BaseModel):
@@ -22221,6 +22386,12 @@ class EventEmailClickedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22292,6 +22463,12 @@ class EventEmailComplainedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22354,6 +22531,12 @@ class EventEmailDeferredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22429,6 +22612,12 @@ class EventEmailDeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22487,6 +22676,12 @@ class EventEmailListUnsubscribedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22545,6 +22740,12 @@ class EventEmailOpenedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22611,6 +22812,12 @@ class EventEmailOutOfBandBounceData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22690,6 +22897,12 @@ class EventEmailProcessedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22833,6 +23046,12 @@ class EventEmailRejectedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -22881,6 +23100,12 @@ class EventEmailScheduledData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     scheduled_at: Annotated[str, Field(
         description="When the message is scheduled to send.",
         examples=["2026-05-22T09:00:00Z"],
@@ -22938,6 +23163,12 @@ class EventEmailUnsubscribedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     broadcast_id: Annotated[Optional[str], Field(
         description="The broadcast this send went out as part of, echoed on every per-recipient event for the send so you can attribute engagement to the broadcast without an extra lookup. Null when the send was not part of a broadcast. On `email.unsubscribed` and `email.list_unsubscribed`, null can also mean the recipient used an unsubscribe link that names no broadcast, so on those two events null does not rule a broadcast out.",
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23495,7 +23726,7 @@ class EventPreferenceRevoked(BaseModel):
 
 
 class EventSMSAcceptedData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23508,13 +23739,13 @@ class EventSMSAcceptedData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -23559,22 +23790,28 @@ class EventSMSAcceptedData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
-    cost: Annotated[Optional[MessageCost], Field(
-        description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
-    )] = None
-    cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
-        examples=["CC001234"],
-    )] = None
     segments: Annotated[SMSSegments, Field(
         description="Segment breakdown for the message body. Segment count drives billing.",
     )]
+    cost: Annotated[Optional[MessageCost], Field(
+        description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
+    )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
+    cost_center: Annotated[Optional[str], Field(
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
+        examples=["CC001234"],
+    )] = None
 
 
 class EventSMSAccepted(BaseModel):
@@ -23596,7 +23833,7 @@ class EventSMSAccepted(BaseModel):
 
 
 class EventSMSDeliveredData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23609,13 +23846,13 @@ class EventSMSDeliveredData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -23660,17 +23897,26 @@ class EventSMSDeliveredData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
+    segments: Annotated[SMSSegments, Field(
+        description="Segment breakdown for the message body. Segment count drives billing.",
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
@@ -23702,7 +23948,7 @@ class EventSMSDelivered(BaseModel):
 
 
 class EventSMSExpiredData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23715,13 +23961,13 @@ class EventSMSExpiredData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -23766,22 +24012,39 @@ class EventSMSExpiredData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
+    segments: Annotated[SMSSegments, Field(
+        description="Segment breakdown for the message body. Segment count drives billing.",
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
+    carrier: Annotated[Optional[str], Field(
+        description="Carrier that reported the expiry. Absent when the carrier does not report one.",
+        examples=["Verizon"],
+    )] = None
+    mcc_mnc: Annotated[Optional[str], Field(
+        description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
+        examples=[311480],
+    )] = None
 
 
 class EventSMSExpired(BaseModel):
@@ -23803,7 +24066,7 @@ class EventSMSExpired(BaseModel):
 
 
 class EventSMSFailedData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23816,13 +24079,13 @@ class EventSMSFailedData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -23867,22 +24130,39 @@ class EventSMSFailedData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
+    segments: Annotated[SMSSegments, Field(
+        description="Segment breakdown for the message body. Segment count drives billing.",
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
+    carrier: Annotated[Optional[str], Field(
+        description="Carrier that reported the failure. Absent when the carrier does not report one.",
+        examples=["Verizon"],
+    )] = None
+    mcc_mnc: Annotated[Optional[str], Field(
+        description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
+        examples=[311480],
+    )] = None
 
 
 class EventSMSFailed(BaseModel):
@@ -23904,7 +24184,7 @@ class EventSMSFailed(BaseModel):
 
 
 class EventSMSReceivedData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Payload of the sms.received event."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -23917,49 +24197,14 @@ class EventSMSReceivedData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="Your number that received the message: an E.164 number, or a short code.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender: an E.164 number, or a short code or alphanumeric sender ID when the message came from one.",
         examples=[+15557654321],
-        min_length=1,
-    )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags provided on the send request, echoed on every event for the message so you can route and correlate without an extra lookup. Null when the message carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object provided on the send request, echoed on every event for the message so you can correlate events with your own records. Null when the message carried no metadata.",
-    )]
-    requested_language: Annotated[Optional[str], Field(
-        description="The template language requested by the send, in canonical form. Null when the send named no language or used no template.",
-        examples=["pt-BR"],
-        max_length=35,
-        min_length=2,
-    )]
-    resolved_language: Annotated[Optional[str], Field(
-        description="The template language rendered at acceptance, in canonical form. Null when the send used no template.",
-        examples=["pt-BR"],
-        max_length=35,
-        min_length=2,
-    )]
-    template_id: Annotated[Optional[str], Field(
-        description="The template rendered at acceptance, or null for a free-text message.",
-        examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    template_version_id: Annotated[Optional[str], Field(
-        description="The workspace published version or synthetic built-in version rendered at acceptance, or null for a free-text message. For a built-in template, `template_content_hash` identifies the exact catalogue source.",
-        examples=["smv_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^smv_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    template_content_hash: Annotated[Optional[str], Field(
-        description="The rendered language's source fingerprint, or null for a free-text message.",
-        examples=["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"],
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
@@ -23967,19 +24212,8 @@ class EventSMSReceivedData(BaseModel):
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
-        examples=["US"],
-        max_length=2,
-        min_length=2,
-        pattern="^[A-Za-z]{2}$",
-    )] = None
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
-    )] = None
-    cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
-        examples=["CC001234"],
     )] = None
     text: Annotated[Optional[str], Field(
         description="The message body, so you can act on it without a follow-up read. Absent when the message carried only attachments and no text of its own.",
@@ -23997,8 +24231,15 @@ class EventSMSReceivedData(BaseModel):
         description="Mobile country code and mobile network code of the carrier. Absent when not known.",
         examples=[311480],
     )] = None
+    country_code: Annotated[Optional[str], Field(
+        description="Country of the sender's number. When the sender is not a phone number, such as a short code or an alphanumeric sender, the country of your number that received the message. Absent when neither is known.",
+        examples=["US"],
+        max_length=2,
+        min_length=2,
+        pattern="^[A-Za-z]{2}$",
+    )] = None
     in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
-        description="Preview feature: the outbound message this one was paired with through its messaging profile's outbound matching. Absent when it was not paired.",
+        description="The outbound message this one was paired with through its messaging profile's outbound matching. Absent when it was not paired.",
     )] = None
     subject: Annotated[Optional[str], Field(
         description="Subject line. Absent when the message carried none.",
@@ -24022,7 +24263,7 @@ class EventSMSReceived(BaseModel):
 
 
 class EventSMSRejectedData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24035,13 +24276,13 @@ class EventSMSRejectedData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -24086,22 +24327,39 @@ class EventSMSRejectedData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
+    segments: Annotated[SMSSegments, Field(
+        description="Segment breakdown for the message body. Segment count drives billing.",
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
+    carrier: Annotated[Optional[str], Field(
+        description="Carrier the message was routed to. Absent when Bird rejected the message before routing it, or the carrier does not report one.",
+        examples=["Verizon"],
+    )] = None
+    mcc_mnc: Annotated[Optional[str], Field(
+        description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
+        examples=[311480],
+    )] = None
 
 
 class EventSMSRejected(BaseModel):
@@ -24123,7 +24381,7 @@ class EventSMSRejected(BaseModel):
 
 
 class EventSMSSentData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24136,13 +24394,13 @@ class EventSMSSentData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -24187,17 +24445,26 @@ class EventSMSSentData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
+    segments: Annotated[SMSSegments, Field(
+        description="Segment breakdown for the message body. Segment count drives billing.",
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
@@ -24229,7 +24496,7 @@ class EventSMSSent(BaseModel):
 
 
 class EventSMSUndeliveredData(BaseModel):
-    "Identity fields shared by every SMS lifecycle event payload."
+    "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24242,13 +24509,13 @@ class EventSMSUndeliveredData(BaseModel):
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     to: Annotated[str, Field(
-        description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
+        description="The recipient's phone number, in E.164 format.",
         examples=[+15551234567],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound one it is the phone number that sent it to you.",
+        description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
         examples=[+15557654321],
         min_length=1,
     )]
@@ -24293,22 +24560,39 @@ class EventSMSUndeliveredData(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
-        description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. Absent when not known.",
+        description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
         min_length=2,
         pattern="^[A-Za-z]{2}$",
     )] = None
+    segments: Annotated[SMSSegments, Field(
+        description="Segment breakdown for the message body. Segment count drives billing.",
+    )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     cost_center: Annotated[Optional[str], Field(
-        description="Preview feature: the `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one, and on inbound messages.",
+        description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
+    carrier: Annotated[Optional[str], Field(
+        description="Carrier that reported the delivery failure. Absent when the carrier does not report one.",
+        examples=["Verizon"],
+    )] = None
+    mcc_mnc: Annotated[Optional[str], Field(
+        description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
+        examples=[311480],
+    )] = None
 
 
 class EventSMSUndelivered(BaseModel):
@@ -24914,7 +25198,7 @@ class EventWhatsAppBaseDirection(str, Enum):
 
 
 class EventWhatsAppAcceptedData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Fields shared by every outbound WhatsApp message event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -24943,14 +25227,20 @@ class EventWhatsAppAcceptedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
 
 
@@ -24973,7 +25263,7 @@ class EventWhatsAppAccepted(BaseModel):
 
 
 class EventWhatsAppDeliveredData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Fields shared by every outbound WhatsApp message event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25002,14 +25292,20 @@ class EventWhatsAppDeliveredData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     recipient: Annotated[Optional[WhatsAppAddress], Field(
         description="The participant delivery was confirmed to, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
@@ -25035,7 +25331,7 @@ class EventWhatsAppDelivered(BaseModel):
 
 
 class EventWhatsAppFailedData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Fields shared by every outbound WhatsApp message event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25064,14 +25360,20 @@ class EventWhatsAppFailedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -25223,7 +25525,7 @@ class EventWhatsAppReacted(BaseModel):
 
 
 class EventWhatsAppReadData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Fields shared by every outbound WhatsApp message event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25252,14 +25554,20 @@ class EventWhatsAppReadData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     recipient: Annotated[Optional[WhatsAppAddress], Field(
         description="The participant who opened the message, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
@@ -25285,7 +25593,7 @@ class EventWhatsAppRead(BaseModel):
 
 
 class EventWhatsAppReceivedData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Payload of the whatsapp.received event. Carries the message's content so a subscriber can act on it without reading the message back. `from` is the WhatsApp contact who sent the message, the participant who wrote it in a group; `to` is the business number that received it, with the group's `group_id` on a group message."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25297,9 +25605,8 @@ class EventWhatsAppReceivedData(BaseModel):
         min_length=1,
         pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    direction: Annotated[EventWhatsAppBaseDirection, Field(
-        description="Whether the message was sent by the business (`outbound`) or received from the contact (`inbound`).",
-        min_length=1,
+    direction: Annotated[MessageDirection, Field(
+        description="Whether a message was sent from the workspace (`outbound`) or received by it (`inbound`).",
     )]
     from_: Annotated[WhatsAppAddress, Field(
         alias="from",
@@ -25308,20 +25615,14 @@ class EventWhatsAppReceivedData(BaseModel):
     to: Annotated[WhatsAppAddress, Field(
         description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
-    tags: Annotated[Optional[List[Tag]], Field(
-        description="Tags from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no tags.",
-    )]
-    metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
-    )]
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one answers, as WhatsApp reports the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent when we cannot match the target to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when the contact sent the message to Bird.",
     )] = None
     text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
     image: Annotated[Optional[WhatsAppImage], Field(
@@ -25363,12 +25664,12 @@ class EventWhatsAppReceived(BaseModel):
         min_length=1,
     )]
     data: Annotated[EventWhatsAppReceivedData, Field(
-        description="Payload of the whatsapp.received event. Carries the message's content so a subscriber can act on it without reading the message back.",
+        description="Payload of the whatsapp.received event. Carries the message's content so a subscriber can act on it without reading the message back. `from` is the WhatsApp contact who sent the message, the participant who wrote it in a group; `to` is the business number that received it, with the group's `group_id` on a group message.",
     )]
 
 
 class EventWhatsAppRejectedData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Fields shared by every outbound WhatsApp message event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25397,14 +25698,20 @@ class EventWhatsAppRejectedData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -25430,7 +25737,7 @@ class EventWhatsAppRejected(BaseModel):
 
 
 class EventWhatsAppSentData(BaseModel):
-    "Identity fields shared by every WhatsApp lifecycle event payload."
+    "Fields shared by every outbound WhatsApp message event payload."
     model_config = ConfigDict(extra="allow")
     whatsapp_id: Annotated[str, Field(
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -25459,14 +25766,20 @@ class EventWhatsAppSentData(BaseModel):
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
+    reference: Annotated[Optional[str], Field(
+        description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
+        examples=["INV-1234"],
+        max_length=255,
+        min_length=1,
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="The message this one answers. On an outbound message it is the message it quoted: for a send request, its `in_reply_to_message_id`. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
+        description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
-        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
+        description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
 
 
@@ -25619,12 +25932,12 @@ class WebhookAttempt(BaseModel):
         min_length=1,
     )]
     url: Annotated[str, Field(
-        description="URL the request was sent to: the endpoint's `url` at the time of the attempt, which can differ from the current configuration after an update.",
+        description="URL the request was sent to. For a webhook endpoint, its `url` at the time of the attempt, which can differ from the current configuration after an update. For an SMS callback, the callback URL resolved for the message's event.",
         examples=["https://example.com/webhooks"],
         min_length=1,
     )]
     failure_reason: Annotated[Optional[str], Field(
-        description="Why the attempt failed before any request was sent, for example a connector body that could not be rendered or an endpoint whose connection changed after the event was queued. Absent for an attempt that reached the network.",
+        description="Why the attempt failed when no HTTP response explains it: a failure before any request was sent, such as a connector body that could not be rendered, or a TLS failure, such as an endpoint certificate that could not be verified. Absent for other attempts.",
         examples=["The endpoint's connection changed after this delivery was queued."],
         min_length=1,
     )] = None
@@ -25652,6 +25965,18 @@ class WebhookAttemptList(BaseModel):
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[WebhookAttempt], Field(
         description="Delivery attempts, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+        examples=["null"],
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
 
 
@@ -25868,6 +26193,19 @@ class VoiceMediaQuality(BaseModel):
     )]
 
 
+class VoiceLegMediaEncryption(str, Enum):
+    none = "none"
+    sdes = "sdes"
+    dtls = "dtls"
+
+
+class VoiceLegMediaPath(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    encryption: Annotated[Annotated[Union[VoiceLegMediaEncryption, str], Field(union_mode="left_to_right")], Field(
+        description="How the audio between us and your side of the leg was encrypted: your SIP trunk's equipment, or the browser that placed the call. On a leg with neither, such as an incoming call a Sequence answered, it describes the carrier's side. Use it to confirm that a call on a trunk with `preferred` media encryption was actually encrypted: such a trunk delivers plain audio to a gateway not reached over TLS or behind an `exit_region`.\n\n- `none`: plain RTP.\n- `sdes`: SRTP with keys exchanged in the SDP over TLS signalling (SDES, RFC 4568). The audio between us and the carrier stays plain RTP.\n- `dtls`: DTLS-SRTP, which every call placed from a browser uses.\n\nAbsent when we did not record it: on a leg whose audio bypassed us, on an encrypted offer to a SIP trunk whose media encryption is `off`, on a leg placed without an SDP offer in its INVITE, on an incoming leg that was not answered, and on legs recorded before this field existed.",
+    )]
+
+
 class VoiceLegCost(BaseModel):
     "What was charged for a leg, split into the components that make it up."
     model_config = ConfigDict(extra="allow")
@@ -25991,6 +26329,9 @@ class VoiceLeg(BaseModel):
         ge=0,
     )] = None
     media_quality: Optional[VoiceMediaQuality] = None
+    media: Annotated[Optional[VoiceLegMediaPath], Field(
+        description="How the leg's audio travelled between us and your side. Absent when we recorded nothing about it, including on legs recorded before this field existed.",
+    )] = None
     cost: Annotated[Optional[VoiceLegCost], Field(
         description="What was charged for a leg, split into the components that make it up.",
     )] = None
@@ -26558,6 +26899,20 @@ class VoiceSIPDigestAlgorithm(str, Enum):
     MD5 = "MD5"
 
 
+class VoiceTrunkMediaEncryption(str, Enum):
+    off = "off"
+    preferred = "preferred"
+    required = "required"
+
+
+class VoiceTrunkMedia(BaseModel):
+    "How the trunk carries call audio. Set it through the trunk update operation."
+    model_config = ConfigDict(extra="allow")
+    encryption: Annotated[VoiceTrunkMediaEncryption, Field(
+        description="Whether audio between your equipment and Bird is encrypted with SRTP, keyed with SDES (`a=crypto`) over TLS signalling. Audio between Bird and the carrier network stays plain RTP.\n\n`preferred` encrypts when it can. A call your equipment places is encrypted when it offers `RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over TLS, and carried plain when it offers plain RTP. A call Bird delivers is encrypted to a gateway reached over TLS (`sips:` or `;transport=tls`) and plain to the rest. Deliveries through a gateway `exit_region`, and on a trunk with `media_bypass`, stay plain.\n\n`required` refuses a plain call with `488 Not Acceptable Here` and delivers encrypted to every gateway, so every gateway must use TLS.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an offer without a usable key, and DTLS-SRTP are refused with `488` and a `Warning` header naming why. `required` cannot be set alongside `media_bypass` or a gateway `exit_region`, since their audio does not pass through the relay that encrypts it. `off` encrypts nothing and relays an SRTP offer as it is. Calls from a web browser are always encrypted with DTLS-SRTP, whatever this says.",
+    )]
+
+
 class VoiceTrunk(BaseModel):
     "A SIP trunk's identity and access-control settings."
     model_config = ConfigDict(extra="allow")
@@ -26606,6 +26961,9 @@ class VoiceTrunk(BaseModel):
     session_credentials_enabled: Annotated[bool, Field(
         description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP, alongside whatever the allow lists admit. Off by default. It grants nothing on its own: a call still has to present a credential issued to this workspace, and each one expires within minutes. Set `session_credentials_enabled` through the trunk update operation.",
     )]
+    media: Annotated[VoiceTrunkMedia, Field(
+        description="How the trunk carries call audio. Set it through the trunk update operation.",
+    )]
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
@@ -26627,6 +26985,14 @@ class VoiceTrunkList(BaseModel):
     )]
 
 
+class VoiceTrunkMediaCreate(BaseModel):
+    "How the new trunk carries call audio. An omitted member takes its default."
+    model_config = ConfigDict(extra="allow")
+    encryption: Annotated[Optional[VoiceTrunkMediaEncryption], Field(
+        description="Omit it for `preferred`, which encrypts whenever your equipment and gateways allow and otherwise carries calls as before.",
+    )] = None
+
+
 class VoiceTrunkCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(
@@ -26646,6 +27012,9 @@ class VoiceTrunkCreate(BaseModel):
         description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Omit it to create the trunk with this off, which is what suits equipment behind NAT and any account that wants call recording. It is an inbound setting, so `true` is accepted only alongside `inbound_enabled: true`; `false` is always accepted. It can be changed later.",
         examples=[True],
     )] = None
+    media: Annotated[Optional[VoiceTrunkMediaCreate], Field(
+        description="How the new trunk carries call audio. An omitted member takes its default.",
+    )] = None
     digest_algorithms: Annotated[Optional[List[VoiceSIPDigestAlgorithm]], Field(
         description="The Digest hash algorithms to offer, in the order they should be offered. Omit this to use the default of `[\"SHA-256\", \"MD5\"]`, which suits most equipment. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. This can be changed later without re-issuing credentials.",
         min_length=1,
@@ -26653,6 +27022,14 @@ class VoiceTrunkCreate(BaseModel):
     session_credentials_enabled: Annotated[Optional[bool], Field(
         description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Omit it to create the trunk with this off, which is what a trunk reached only by a PBX wants. It can be changed later.",
         examples=[True],
+    )] = None
+
+
+class VoiceTrunkMediaUpdate(BaseModel):
+    "A change to how the trunk carries call audio. An omitted member is left unchanged."
+    model_config = ConfigDict(extra="allow")
+    encryption: Annotated[Optional[VoiceTrunkMediaEncryption], Field(
+        description="Whether audio between your equipment and Bird is encrypted with SRTP, keyed with SDES (`a=crypto`) over TLS signalling. Audio between Bird and the carrier network stays plain RTP.\n\n`preferred` encrypts when it can. A call your equipment places is encrypted when it offers `RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over TLS, and carried plain when it offers plain RTP. A call Bird delivers is encrypted to a gateway reached over TLS (`sips:` or `;transport=tls`) and plain to the rest. Deliveries through a gateway `exit_region`, and on a trunk with `media_bypass`, stay plain.\n\n`required` refuses a plain call with `488 Not Acceptable Here` and delivers encrypted to every gateway, so every gateway must use TLS.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an offer without a usable key, and DTLS-SRTP are refused with `488` and a `Warning` header naming why. `required` cannot be set alongside `media_bypass` or a gateway `exit_region`, since their audio does not pass through the relay that encrypts it. `off` encrypts nothing and relays an SRTP offer as it is. Calls from a web browser are always encrypted with DTLS-SRTP, whatever this says.",
     )] = None
 
 
@@ -26689,6 +27066,9 @@ class VoiceTrunkUpdate(BaseModel):
     media_bypass: Annotated[Optional[bool], Field(
         description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Turning it on takes effect at the next call setup and leaves calls already up untouched. It is an inbound setting, so the trunk must have `inbound_enabled` on; one update can do both. While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped, and your equipment must be reachable for audio from the public internet. Turning it off puts us back in the path at the next call setup. Omit the field to leave it unchanged.",
         examples=[True],
+    )] = None
+    media: Annotated[Optional[VoiceTrunkMediaUpdate], Field(
+        description="A change to how the trunk carries call audio. An omitted member is left unchanged.",
     )] = None
     ip_acls: Annotated[Optional[List[VoiceTrunkIPACLCreate]], Field(
         description="Replaces the trunk's entire IP allow list. When present, the allow list is set to exactly these CIDR blocks: ranges not listed are removed and new ones are added. Send an empty array to clear the list, turning IP filtering off. Omit the field to leave the allow list unchanged.",

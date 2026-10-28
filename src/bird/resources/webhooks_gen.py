@@ -7,7 +7,7 @@ from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
-    WebhookAttemptList,
+    WebhookAttempt,
     WebhookEndpoint,
     WebhookEndpointUpdate,
     WebhookReplayRequest,
@@ -65,6 +65,8 @@ class WebhooksAttemptsParams(TypedDict, total=False):
     limit: int
     before: str
     after: str
+    starting_after: str
+    ending_before: str
 
 
 class WebhooksReplayParams(TypedDict, total=False):
@@ -188,26 +190,25 @@ class WebhooksBase(Resource):
         limit: int | None = None,
         before: str | None = None,
         after: str | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         options: RequestOptions | None = None,
-    ) -> WebhookAttemptList:
-        """List an endpoint's recent delivery attempts, newest first. Each entry is one HTTP request, so a retried event appears once per try. Pagination uses the `before`/`after` timestamps; page further back by passing the oldest `attempted_at` you received as `before`.
+    ) -> SyncPage[WebhookAttempt]:
+        """List an endpoint's recent delivery attempts, newest first. Each entry is one HTTP request, so a retried event appears once per try. Pass `next_cursor` as `starting_after` to page to older attempts. `before` and `after` bound the time window and combine with a cursor. Pass only one of `starting_after` and `ending_before`; both returns 422.
 
         ```python
-        attempts = client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg")
-        for attempt in attempts.data:
+        for attempt in client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg"):
             print(attempt.status, attempt.response_status_code)
         ```
         """
-        return self._get(
-            f"/v1/webhooks/{quote(webhook_id, safe='')}/attempts",
-            {
-                "limit": limit,
-                "before": before,
-                "after": after,
-            },
-            WebhookAttemptList,
-            options,
-        )
+        query = {
+            "limit": limit,
+            "before": before,
+            "after": after,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return SyncPage(self._client, f"/v1/webhooks/{quote(webhook_id, safe='')}/attempts", query, WebhookAttempt, options)
 
     def replay(
         self,
@@ -401,33 +402,32 @@ class AsyncWebhooksBase(AsyncResource):
         """
         await self._delete(f"/v1/webhooks/{quote(webhook_id, safe='')}", options)
 
-    async def attempts(
+    def attempts(
         self,
         webhook_id: str,
         *,
         limit: int | None = None,
         before: str | None = None,
         after: str | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         options: RequestOptions | None = None,
-    ) -> WebhookAttemptList:
-        """List an endpoint's recent delivery attempts, newest first. Each entry is one HTTP request, so a retried event appears once per try. Pagination uses the `before`/`after` timestamps; page further back by passing the oldest `attempted_at` you received as `before`.
+    ) -> AsyncPage[WebhookAttempt]:
+        """List an endpoint's recent delivery attempts, newest first. Each entry is one HTTP request, so a retried event appears once per try. Pass `next_cursor` as `starting_after` to page to older attempts. `before` and `after` bound the time window and combine with a cursor. Pass only one of `starting_after` and `ending_before`; both returns 422.
 
         ```python
-        attempts = await client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg")
-        for attempt in attempts.data:
+        async for attempt in client.webhooks.attempts("whk_01krdgeqcxet5s7t44vh8rt9mg"):
             print(attempt.status, attempt.response_status_code)
         ```
         """
-        return await self._get(
-            f"/v1/webhooks/{quote(webhook_id, safe='')}/attempts",
-            {
-                "limit": limit,
-                "before": before,
-                "after": after,
-            },
-            WebhookAttemptList,
-            options,
-        )
+        query = {
+            "limit": limit,
+            "before": before,
+            "after": after,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return AsyncPage(self._client, f"/v1/webhooks/{quote(webhook_id, safe='')}/attempts", query, WebhookAttempt, options)
 
     async def replay(
         self,

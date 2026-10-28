@@ -585,6 +585,18 @@ class SMSKeywordOperation:
     STOP: Final = "stop"
 
 
+class SMSMessagingProfileCallbackEvent:
+    """Values of SMSMessagingProfileCallbackEvent known at this SDK version (open enum)."""
+
+    SMS_ACCEPTED: Final = "sms.accepted"
+    SMS_DELIVERED: Final = "sms.delivered"
+    SMS_EXPIRED: Final = "sms.expired"
+    SMS_FAILED: Final = "sms.failed"
+    SMS_REJECTED: Final = "sms.rejected"
+    SMS_SENT: Final = "sms.sent"
+    SMS_UNDELIVERED: Final = "sms.undelivered"
+
+
 class SMSRegistrationProgram:
     """Values of SMSRegistrationProgram known at this SDK version (open enum)."""
 
@@ -699,6 +711,14 @@ class VerificationTerminalReason:
     ATTEMPTS_EXHAUSTED: Final = "attempts_exhausted"
     TTL_ELAPSED: Final = "ttl_elapsed"
     UNDELIVERABLE: Final = "undeliverable"
+
+
+class VoiceLegMediaEncryption:
+    """Values of VoiceLegMediaEncryption known at this SDK version (open enum)."""
+
+    DTLS: Final = "dtls"
+    NONE: Final = "none"
+    SDES: Final = "sdes"
 
 
 class VoicePartyEndpointType:
@@ -1042,6 +1062,14 @@ class WhatsAppUsernameStatus:
     RESERVED: Final = "reserved"
 
 
+class WorkspaceQuotaLimitSource:
+    """Values of WorkspaceQuotaLimitSource known at this SDK version (open enum)."""
+
+    AUTOMATIC: Final = "automatic"
+    MANUAL: Final = "manual"
+    ORGANIZATION: Final = "organization"
+
+
 __all__ = [
     "AMBBusinessAccountReviewStatus",
     "AMBFormKeyboardType",
@@ -1095,6 +1123,7 @@ __all__ = [
     "QuotaSource",
     "SMSErrorCode",
     "SMSKeywordOperation",
+    "SMSMessagingProfileCallbackEvent",
     "SMSRegistrationProgram",
     "SMSRegistrationStatus",
     "SMSSenderProgramEntry",
@@ -1107,6 +1136,7 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
+    "VoiceLegMediaEncryption",
     "VoicePartyEndpointType",
     "VoiceVerifiedNumberStatus",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
@@ -1140,4 +1170,5 @@ __all__ = [
     "WhatsAppTemplateQualityScore",
     "WhatsAppTemplateRejectionCategory",
     "WhatsAppUsernameStatus",
+    "WorkspaceQuotaLimitSource",
 ]

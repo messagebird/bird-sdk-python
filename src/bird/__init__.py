@@ -9,6 +9,11 @@ verification.
 from __future__ import annotations
 
 from bird._client import AsyncBird, Bird
+from bird.resources.organization_workspaces_gen import (
+    OrganizationWorkspacesCreateParams,
+    OrganizationWorkspacesListParams,
+    OrganizationWorkspacesUpdateParams,
+)
 from bird._response import APIResponse
 from bird._types import (
     Attachment,
@@ -196,6 +201,7 @@ from bird._generated import (
     Verification,
     VerificationCheckResult,
     BillingResolvedPrice,
+    BillingWallet,
     BillingWalletList,
     ComplianceIdentity,
     ComplianceIdentityCreate,
@@ -260,6 +266,8 @@ from bird._generated import (
     WhatsAppTemplateSubmitResult,
     WhatsAppTemplateVersion,
     WhatsAppTemplateVersionSummary,
+    Workspace,
+    WorkspaceSortField,
     WorkspaceQuota,
     WorkspaceQuotaList,
 )
@@ -601,6 +609,7 @@ from bird._open_enums import (
     QuotaSource,
     SMSErrorCode,
     SMSKeywordOperation,
+    SMSMessagingProfileCallbackEvent,
     SMSSuppressionCoverage,
     SMSSuppressionEndReason,
     SMSSuppressionOrigin,
@@ -610,6 +619,7 @@ from bird._open_enums import (
     VerificationAttemptFailureReason,
     VerificationChannel,
     VerificationTerminalReason,
+    VoiceLegMediaEncryption,
     VoicePartyEndpointType,
     WhatsAppBusinessAccountMarketingMessagesStatus,
     WhatsAppBusinessAccountReviewStatus,
@@ -642,6 +652,7 @@ from bird._open_enums import (
     WhatsAppTemplateQualityScore,
     WhatsAppTemplateRejectionCategory,
     WhatsAppUsernameStatus,
+    WorkspaceQuotaLimitSource,
 )
 from bird.resources.realtime import ChannelAuthorization
 from bird.resources.webhooks import GenericWebhookEvent
@@ -728,6 +739,9 @@ from bird._generated import (
 )
 
 __all__ = [
+    "OrganizationWorkspacesCreateParams",
+    "OrganizationWorkspacesListParams",
+    "OrganizationWorkspacesUpdateParams",
     "Actor",
     "ActorType",
     "EmailMailboxScheduledMessage",
@@ -819,6 +833,7 @@ __all__ = [
     "AmbSendParams",
     "BillingPricesResolveParams",
     "BillingResolvedPrice",
+    "BillingWallet",
     "BillingWalletList",
     "ComplianceAttachmentsListParams",
     "ComplianceIdentitiesCreateParams",
@@ -1200,6 +1215,8 @@ __all__ = [
     "WhatsAppTemplateButtonWrite",
     "WhatsAppTemplateCardWrite",
     "WhatsAppTemplateCardComponentWrite",
+    "Workspace",
+    "WorkspaceSortField",
     "WorkspaceQuota",
     "WorkspaceQuotaList",
     "VerifyVerificationsCreateParams",
@@ -1272,6 +1289,7 @@ __all__ = [
     "QuotaSource",
     "SMSErrorCode",
     "SMSKeywordOperation",
+    "SMSMessagingProfileCallbackEvent",
     "SMSSuppressionCoverage",
     "SMSSuppressionEndReason",
     "SMSSuppressionOrigin",
@@ -1282,6 +1300,7 @@ __all__ = [
     "VerificationAttemptFailureReason",
     "VerificationChannel",
     "VerificationTerminalReason",
+    "VoiceLegMediaEncryption",
     "VoicePartyEndpointType",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
     "WhatsAppBusinessAccountReviewStatus",
@@ -1314,6 +1333,7 @@ __all__ = [
     "WhatsAppTemplateQualityScore",
     "WhatsAppTemplateRejectionCategory",
     "WhatsAppUsernameStatus",
+    "WorkspaceQuotaLimitSource",
     "BirdError",
     "APIError",
     "APIStatusError",
