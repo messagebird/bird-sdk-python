@@ -6376,6 +6376,7 @@ class TemplateVariableType(str, Enum):
     date_time = "date_time"
     amount = "amount"
     currency = "currency"
+    domain = "domain"
     url = "url"
     image = "image"
     timestamp = "timestamp"
@@ -6392,7 +6393,7 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
-        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest). Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`, `location`, `timezone`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email and workspace SMS templates use `text`. WhatsApp templates use `text`, plus `url` for a media header's file and `location` for a location header. A `location` value is an object with `latitude` and `longitude`, and optionally `name` and `address`. On Apple Messages, `name` becomes the location's title and `address` is not shown. Workspace SMS parameters must be scalar values.",
+        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest); `domain` is a lowercase DNS domain name such as `example.com`, which the verification templates fill to bind a passcode to a website. Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`, `location`, `timezone`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email and workspace SMS templates use `text`. WhatsApp templates use `text`, plus `url` for a media header's file and `location` for a location header. A `location` value is an object with `latitude` and `longitude`, and optionally `name` and `address`. On Apple Messages, `name` becomes the location's title and `address` is not shown. Workspace SMS parameters must be scalar values.",
         min_length=1,
     )]
     required: Annotated[bool, Field(
@@ -8651,6 +8652,12 @@ class VerificationOptions(BaseModel):
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
+    )] = None
+    autofill_origin: Annotated[Optional[str], Field(
+        description="The website this verification's passcodes are entered on, such as `https://login.example.com`, replacing the configured origin for this verification only. Write it as `https://` and a lowercase host, with no port, path or trailing slash; an internationalized host uses its `xn--` form. Any other form is rejected with `422`, naming the form to send when there is one. Each SMS passcode then ends with a line such as `@login.example.com #123456`, which browsers read to offer the code on that site and which can add an SMS segment in languages that need Unicode encoding. Each email passcode carries an `OTP-Token` header with the code and this website, unless `autofill_top_level_origin` is set. A retry of a verification still in progress keeps the origin it started with.",
+    )] = None
+    autofill_top_level_origin: Annotated[Optional[str], Field(
+        description="For a passcode entered in a cross-origin frame, such as a payment form embedded in a shop's checkout, the website of the top-level page in the browser tab. `autofill_origin` then names the frame. The SMS line names both sites, as in `@shop.example #123456 @pay.example`, and email passcodes carry no `OTP-Token` header, which can name only one site. It uses the same format as `autofill_origin`. The request is rejected with `422` when the value is not in that format, when no `autofill_origin` is set in the request or the configuration, or when it equals that origin. Autofill works only when this page embeds the frame directly.",
     )] = None
 
 
