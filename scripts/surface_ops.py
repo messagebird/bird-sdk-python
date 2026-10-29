@@ -230,6 +230,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/mailboxes/{mailbox_id}": {"delete", "get", "patch"},
     "/v1/email/mailboxes/{mailbox_id}/restore": {"post"},
     "/v1/email/mailboxes/{mailbox_id}/resume": {"post"},
+    "/v1/email/mailboxes/{mailbox_id}/forwarding-address": {"post"},
     "/v1/email/mailboxes/{mailbox_id}/stats": {"get"},
     "/v1/email/mailboxes/{mailbox_id}/scheduled-messages": {"get"},
     "/v1/email/mailboxes/{mailbox_id}/scheduled-messages/{scheduled_message_id}": {"get"},

@@ -313,6 +313,7 @@ def test_surface_conformance() -> None:
     assert callable(client.email.mailboxes.delete)
     assert callable(client.email.mailboxes.restore)
     assert callable(client.email.mailboxes.resume)
+    assert callable(client.email.mailboxes.forwarding_address.create)
     assert callable(client.email.mailboxes.stats)
     assert callable(client.email.mailboxes.scheduled_messages.list)
     assert callable(client.email.mailboxes.scheduled_messages.get)

@@ -60,6 +60,7 @@ class Amb(AmbBase):
         group: str | None = None,
         intent: str | None = None,
         locale: str | None = None,
+        skip_typing: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
@@ -78,7 +79,7 @@ class Amb(AmbBase):
             "from": from_, "to": to, "text": text, "rich_link": rich_link, "interactive": interactive,
             "template": _template_body(template=template, language=language, parameters=parameters),
             "source": source, "category": category, "metadata": metadata, "tags": tags,
-            "group": group, "intent": intent, "locale": locale,
+            "group": group, "intent": intent, "locale": locale, "skip_typing": skip_typing,
         })
         return self._write("POST", "/v1/amb/messages", body, AMBMessage, options)
 
@@ -111,6 +112,7 @@ class AsyncAmb(AsyncAmbBase):
         group: str | None = None,
         intent: str | None = None,
         locale: str | None = None,
+        skip_typing: bool | None = None,
         options: RequestOptions | None = None,
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
@@ -129,7 +131,7 @@ class AsyncAmb(AsyncAmbBase):
             "from": from_, "to": to, "text": text, "rich_link": rich_link, "interactive": interactive,
             "template": _template_body(template=template, language=language, parameters=parameters),
             "source": source, "category": category, "metadata": metadata, "tags": tags,
-            "group": group, "intent": intent, "locale": locale,
+            "group": group, "intent": intent, "locale": locale, "skip_typing": skip_typing,
         })
         return await self._write("POST", "/v1/amb/messages", body, AMBMessage, options)
 
@@ -153,3 +155,4 @@ class AmbSendParams(_AmbSendRequired, total=False):
     group: str
     intent: str
     locale: str
+    skip_typing: bool

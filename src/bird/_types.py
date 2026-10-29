@@ -134,10 +134,13 @@ class _SmsSendRequired(TypedDict):
 
 
 class SmsSendParams(_SmsSendRequired, total=False):
-    """Params for ``client.sms.send``. ``to`` is required. A send is either
-    free-text (``text`` plus ``category``) or by ``template`` — with a template,
-    omit ``text``/``category`` and personalize with ``parameters``. ``template``
-    is the template's id (``smt_`` prefix) or its slug."""
+    """Params for ``client.sms.send``. ``to`` is required. A send is free-text
+    (``text`` plus ``category``), by ``template`` — with a template, omit
+    ``text``/``category`` and personalize with ``parameters`` — or ``binary``
+    (with ``category`` ``transactional``). ``template`` is the template's id
+    (``smt_`` prefix) or its slug. ``callback_url`` set to ``None`` sends the
+    message's events to your webhook subscriptions; leave the key out to use the
+    messaging profile's URL."""
 
     from_: str
     text: str
@@ -148,6 +151,14 @@ class SmsSendParams(_SmsSendRequired, total=False):
     tags: Sequence[Mapping[str, str]]
     metadata: Mapping[str, Any]
     smart_encoding: bool
+    ignore_suppression: bool
+    callback_url: str | None
+    messaging_profile_id: str
+    reference: str
+    to_country_code: str
+    validity_period: int
+    cost_center: str
+    binary: Mapping[str, str]
 
 
 class _WhatsappSendRequired(TypedDict):

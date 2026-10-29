@@ -166,6 +166,11 @@ def mailbox_resume() -> None:
     print(mailbox.state)
 
 
+def mailbox_forwarding_address_create() -> None:
+    mailbox = client.email.mailboxes.forwarding_address.create("mbx_01krdgeqcxet5s7t44vh8rt9mg")
+    print(mailbox.forwarding_address)
+
+
 def mailbox_stats() -> None:
     stats = client.email.mailboxes.stats("mbx_01krdgeqcxet5s7t44vh8rt9mg")
     print(stats.summary)

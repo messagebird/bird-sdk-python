@@ -6389,7 +6389,7 @@ class TemplateVariable(BaseModel):
     "A single variable slot a template fills in when it sends. Most slots are filled from the values supplied when sending; a slot with `system` true is filled by Bird itself, per recipient. The same shape on email, SMS and WhatsApp, so reading what a template needs works the same way whichever channel you are sending on."
     model_config = ConfigDict(extra="allow")
     key: Annotated[str, Field(
-        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` on the matching parameter inside `components`, or, in the template parameters preview, the key in the send's `template.parameters`. A WhatsApp template whose placeholders are positional uses the position itself as `1`, `2` and so on, and values with no placeholder use fixed keys: `header_url`, `header_filename`, `header_location` and `code`.",
+        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` on the matching parameter inside `components`, or, in the template parameters preview, the key in the send's `template.parameters`. A WhatsApp template whose placeholders are positional uses the position itself as `1`, `2` and so on, and values with no placeholder use fixed keys: `header_url`, `header_filename`, `header_location` and `code`, plus `button_url` (or `button_url_1`, `button_url_2` for a carousel card) for a url button whose suffix is numbered.",
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
@@ -8725,6 +8725,207 @@ class WhatsAppNumberID(RootModel[str]):
     root: str
 
 
+class WhatsAppMessageID(RootModel[str]):
+    root: str
+
+
+class WhatsAppEventID(RootModel[str]):
+    root: str
+
+
+class WhatsAppError(BaseModel):
+    "Failure detail for a message that could not be delivered or was rejected."
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
+        description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
+    )]
+    description: Annotated[str, Field(
+        description="Human-readable explanation of the failure.",
+        examples=["Message could not be delivered."],
+        min_length=1,
+    )]
+    meta_error_code: Annotated[Optional[str], Field(
+        description="Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.",
+        examples=[131026],
+    )] = None
+    occurred_at: Annotated[str, Field(
+        description="When the failure occurred.",
+        min_length=1,
+    )]
+
+
+class WhatsAppTemplateParameterType(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    gif = "gif"
+    document = "document"
+    location = "location"
+
+
+class WhatsAppTemplateExampleParameter(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Annotated[Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
+        description="The kind of value this parameter accepts.",
+    )]
+    text: Annotated[Optional[str], Field(
+        description="An example value for a text parameter. Present when `type` is `text`.",
+        examples=[123456],
+        min_length=1,
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The address of the file a media header shows, as it was given when the header was authored rather than WhatsApp's copy of it. Present when `type` is `image`, `video`, `gif` or `document`.",
+        examples=["https://www.example.com/holiday/banner.jpg"],
+    )] = None
+    name: Annotated[Optional[str], Field(
+        description="The named placeholder this example fills. Present whenever the template declares named parameters, which is what a send must name; absent only for a positional template, whose values go in `{{n}}` order.",
+        examples=["first_name"],
+        min_length=1,
+    )] = None
+
+
+class WhatsAppTemplateButtonType(str, Enum):
+    url = "url"
+    quick_reply = "quick_reply"
+    phone_number = "phone_number"
+    otp = "otp"
+    copy_code = "copy_code"
+    request_contact_info = "request_contact_info"
+
+
+class WhatsAppTemplateButtonOtpType(str, Enum):
+    copy_code = "copy_code"
+
+
+class WhatsAppTemplateButton(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Annotated[Union[WhatsAppTemplateButtonType, str], Field(union_mode="left_to_right")], Field(
+        description="The button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It\n  belongs only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number\n  their WhatsApp account carries. It belongs only on a utility or\n  marketing template, as that template's only button.\n\nThis is an open enum. Accept unrecognized values.",
+        examples=["url"],
+        min_length=1,
+    )]
+    otp_type: Annotated[Optional[Annotated[Union[WhatsAppTemplateButtonOtpType, str], Field(union_mode="left_to_right")]], Field(
+        description="How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.",
+        examples=["copy_code"],
+        min_length=1,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The button's label. Absent on an authentication template's passcode button until the language has been submitted, since WhatsApp writes that label itself. Absent on a `request_contact_info` draft for a related reason: WhatsApp fixes that label, so a draft that carried it reads back without it. Once the language is submitted, this carries the label WhatsApp wrote, which is `Share Contact Info` in every language today.",
+        examples=["Copy code"],
+        min_length=1,
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="The address the button opens, with any variable placeholder shown inline. Present on link buttons.",
+        examples=["https://www.example.com/orders/{{1}}"],
+        min_length=1,
+    )] = None
+    phone_number: Annotated[Optional[str], Field(
+        description="The number the button dials. Present on dial buttons.",
+        examples=[+14155550100],
+        min_length=1,
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        description="Example values for this button's variables, in placeholder order. Present when the button address has variables, and on a `copy_code` button, where the single value is the sample coupon code WhatsApp reviewed.",
+    )] = None
+
+
+class WhatsAppTemplateCardComponentType(str, Enum):
+    header = "header"
+    body = "body"
+    buttons = "buttons"
+
+
+class WhatsAppTemplateCardComponentFormat(str, Enum):
+    image = "image"
+    video = "video"
+
+
+class WhatsAppTemplateCardComponent(BaseModel):
+    "One content block inside a carousel card."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Annotated[Union[WhatsAppTemplateCardComponentType, str], Field(union_mode="left_to_right")], Field(
+        description="The card block's type.",
+        examples=["header"],
+        min_length=1,
+    )]
+    format: Annotated[Optional[Annotated[Union[WhatsAppTemplateCardComponentFormat, str], Field(union_mode="left_to_right")]], Field(
+        description="The card header's content type. Present on a card's header block.",
+        examples=["image"],
+        min_length=1,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The block's text content, with any variable placeholders shown inline.",
+        examples=["Chronograph, brown leather"],
+        min_length=1,
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        description="Example values for this block's variables, in placeholder order.",
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
+        description="The buttons this card carries. Present on a card's buttons block.",
+    )] = None
+
+
+class WhatsAppTemplateCard(BaseModel):
+    "One card in a carousel."
+    model_config = ConfigDict(extra="allow")
+    components: Annotated[List[WhatsAppTemplateCardComponent], Field(
+        description="This card's content blocks, in display order.",
+    )]
+
+
+class WhatsAppTemplateComponentType(str, Enum):
+    header = "header"
+    body = "body"
+    footer = "footer"
+    buttons = "buttons"
+    carousel = "carousel"
+
+
+class WhatsAppTemplateComponentFormat(str, Enum):
+    text = "text"
+    image = "image"
+    video = "video"
+    gif = "gif"
+    document = "document"
+    location = "location"
+
+
+class WhatsAppTemplateComponent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Annotated[Union[WhatsAppTemplateComponentType, str], Field(union_mode="left_to_right")], Field(
+        description="The content block's type within the template.",
+        examples=["body"],
+        min_length=1,
+    )]
+    format: Annotated[Optional[Annotated[Union[WhatsAppTemplateComponentFormat, str], Field(union_mode="left_to_right")]], Field(
+        description="The header block's content type. Present on a header block. A `text` header carries a line of copy. The `image`, `video`, `gif`, and `document` formats each show a file whose address is in the block's `example_parameters`. The `location` format shows a map. It carries no content because the coordinates belong to the message rather than the template.",
+        examples=["text"],
+        min_length=1,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The block's text content, with any variable placeholders shown inline. Present when the block carries text. An authentication template's body and footer are written by WhatsApp from the two settings below rather than by you, so their text is absent until the language has been submitted and WhatsApp has supplied it.",
+        examples=["Your verification code is {{1}}."],
+        min_length=1,
+    )] = None
+    add_security_recommendation: Annotated[Optional[bool], Field(
+        description="Whether this authentication template's body ends with WhatsApp's advice not to share the code. Present on an authentication template's body block.",
+    )] = None
+    code_expiration_minutes: Annotated[Optional[int], Field(
+        description="How long the passcode stays valid, which WhatsApp states in this footer. Present on an authentication template's footer block. Omitting it on a write leaves the footer off entirely.",
+        examples=[60],
+    )] = None
+    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        description="Example values for this block's variables, in placeholder order (one per `{{n}}`). Use them to see what a filled message looks like. Present when the block has variables.",
+    )] = None
+    buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
+        description="The buttons attached to this block. Present when the block carries buttons.",
+    )] = None
+    cards: Annotated[Optional[List[WhatsAppTemplateCard]], Field(
+        description="The cards this block scrolls through, in display order. Present on a `carousel` block.",
+    )] = None
+
+
 class WhatsAppMessageStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
@@ -8737,10 +8938,6 @@ class WhatsAppMessageStatus(str, Enum):
 
 
 class WhatsAppGroupID(RootModel[str]):
-    root: str
-
-
-class WhatsAppMessageID(RootModel[str]):
     root: str
 
 
@@ -8771,15 +8968,6 @@ class WhatsAppAddress(BaseModel):
         description="Present only on a message received from a WhatsApp user, on `from`; never on an outbound send's `to`, where the profile is not known. Absent when the message carries no profile, and on a message received before this workspace started recording them.",
         min_length=1,
     )] = None
-
-
-class WhatsAppTemplateParameterType(str, Enum):
-    text = "text"
-    image = "image"
-    video = "video"
-    gif = "gif"
-    document = "document"
-    location = "location"
 
 
 class WhatsAppLocationSend(BaseModel):
@@ -9440,27 +9628,6 @@ class WhatsAppMessageOrigin(str, Enum):
     business_agent_echo = "business_agent_echo"
     business_app_echo = "business_app_echo"
     history_sync = "history_sync"
-
-
-class WhatsAppError(BaseModel):
-    "Failure detail for a message that could not be delivered or was rejected."
-    model_config = ConfigDict(extra="allow")
-    code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
-    )]
-    description: Annotated[str, Field(
-        description="Human-readable explanation of the failure.",
-        examples=["Message could not be delivered."],
-        min_length=1,
-    )]
-    meta_error_code: Annotated[Optional[str], Field(
-        description="Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.",
-        examples=[131026],
-    )] = None
-    occurred_at: Annotated[str, Field(
-        description="When the failure occurred.",
-        min_length=1,
-    )]
 
 
 class WhatsAppMessageDirection(str, Enum):
@@ -10267,10 +10434,6 @@ class WhatsAppEventType(str, Enum):
     whatsapp_sent = "whatsapp.sent"
 
 
-class WhatsAppEventID(RootModel[str]):
-    root: str
-
-
 class WhatsAppEvent(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
@@ -10978,169 +11141,6 @@ class WhatsAppGroupJoinRequestDecisionResult(BaseModel):
     failed: Annotated[List[WhatsAppGroupJoinRequestFailure], Field(
         description="The join requests WhatsApp refused, each with its reason. Empty when the whole batch was applied.",
     )]
-
-
-class WhatsAppTemplateExampleParameter(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Annotated[Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
-        description="The kind of value this parameter accepts.",
-    )]
-    text: Annotated[Optional[str], Field(
-        description="An example value for a text parameter. Present when `type` is `text`.",
-        examples=[123456],
-        min_length=1,
-    )] = None
-    url: Annotated[Optional[str], Field(
-        description="The address of the file a media header shows, as it was given when the header was authored rather than WhatsApp's copy of it. Present when `type` is `image`, `video`, `gif` or `document`.",
-        examples=["https://www.example.com/holiday/banner.jpg"],
-    )] = None
-    name: Annotated[Optional[str], Field(
-        description="The named placeholder this example fills. Present whenever the template declares named parameters, which is what a send must name; absent only for a positional template, whose values go in `{{n}}` order.",
-        examples=["first_name"],
-        min_length=1,
-    )] = None
-
-
-class WhatsAppTemplateButtonType(str, Enum):
-    url = "url"
-    quick_reply = "quick_reply"
-    phone_number = "phone_number"
-    otp = "otp"
-    copy_code = "copy_code"
-    request_contact_info = "request_contact_info"
-
-
-class WhatsAppTemplateButtonOtpType(str, Enum):
-    copy_code = "copy_code"
-
-
-class WhatsAppTemplateButton(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Annotated[Union[WhatsAppTemplateButtonType, str], Field(union_mode="left_to_right")], Field(
-        description="The button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It\n  belongs only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number\n  their WhatsApp account carries. It belongs only on a utility or\n  marketing template, as that template's only button.\n\nThis is an open enum. Accept unrecognized values.",
-        examples=["url"],
-        min_length=1,
-    )]
-    otp_type: Annotated[Optional[Annotated[Union[WhatsAppTemplateButtonOtpType, str], Field(union_mode="left_to_right")]], Field(
-        description="How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.",
-        examples=["copy_code"],
-        min_length=1,
-    )] = None
-    text: Annotated[Optional[str], Field(
-        description="The button's label. Absent on an authentication template's passcode button until the language has been submitted, since WhatsApp writes that label itself. Absent on a `request_contact_info` draft for a related reason: WhatsApp fixes that label, so a draft that carried it reads back without it. Once the language is submitted, this carries the label WhatsApp wrote, which is `Share Contact Info` in every language today.",
-        examples=["Copy code"],
-        min_length=1,
-    )] = None
-    url: Annotated[Optional[str], Field(
-        description="The address the button opens, with any variable placeholder shown inline. Present on link buttons.",
-        examples=["https://www.example.com/orders/{{1}}"],
-        min_length=1,
-    )] = None
-    phone_number: Annotated[Optional[str], Field(
-        description="The number the button dials. Present on dial buttons.",
-        examples=[+14155550100],
-        min_length=1,
-    )] = None
-    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
-        description="Example values for this button's variables, in placeholder order. Present when the button address has variables, and on a `copy_code` button, where the single value is the sample coupon code WhatsApp reviewed.",
-    )] = None
-
-
-class WhatsAppTemplateCardComponentType(str, Enum):
-    header = "header"
-    body = "body"
-    buttons = "buttons"
-
-
-class WhatsAppTemplateCardComponentFormat(str, Enum):
-    image = "image"
-    video = "video"
-
-
-class WhatsAppTemplateCardComponent(BaseModel):
-    "One content block inside a carousel card."
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Annotated[Union[WhatsAppTemplateCardComponentType, str], Field(union_mode="left_to_right")], Field(
-        description="The card block's type.",
-        examples=["header"],
-        min_length=1,
-    )]
-    format: Annotated[Optional[Annotated[Union[WhatsAppTemplateCardComponentFormat, str], Field(union_mode="left_to_right")]], Field(
-        description="The card header's content type. Present on a card's header block.",
-        examples=["image"],
-        min_length=1,
-    )] = None
-    text: Annotated[Optional[str], Field(
-        description="The block's text content, with any variable placeholders shown inline.",
-        examples=["Chronograph, brown leather"],
-        min_length=1,
-    )] = None
-    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
-        description="Example values for this block's variables, in placeholder order.",
-    )] = None
-    buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
-        description="The buttons this card carries. Present on a card's buttons block.",
-    )] = None
-
-
-class WhatsAppTemplateCard(BaseModel):
-    "One card in a carousel."
-    model_config = ConfigDict(extra="allow")
-    components: Annotated[List[WhatsAppTemplateCardComponent], Field(
-        description="This card's content blocks, in display order.",
-    )]
-
-
-class WhatsAppTemplateComponentType(str, Enum):
-    header = "header"
-    body = "body"
-    footer = "footer"
-    buttons = "buttons"
-    carousel = "carousel"
-
-
-class WhatsAppTemplateComponentFormat(str, Enum):
-    text = "text"
-    image = "image"
-    video = "video"
-    gif = "gif"
-    document = "document"
-    location = "location"
-
-
-class WhatsAppTemplateComponent(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Annotated[Union[WhatsAppTemplateComponentType, str], Field(union_mode="left_to_right")], Field(
-        description="The content block's type within the template.",
-        examples=["body"],
-        min_length=1,
-    )]
-    format: Annotated[Optional[Annotated[Union[WhatsAppTemplateComponentFormat, str], Field(union_mode="left_to_right")]], Field(
-        description="The header block's content type. Present on a header block. A `text` header carries a line of copy. The `image`, `video`, `gif`, and `document` formats each show a file whose address is in the block's `example_parameters`. The `location` format shows a map. It carries no content because the coordinates belong to the message rather than the template.",
-        examples=["text"],
-        min_length=1,
-    )] = None
-    text: Annotated[Optional[str], Field(
-        description="The block's text content, with any variable placeholders shown inline. Present when the block carries text. An authentication template's body and footer are written by WhatsApp from the two settings below rather than by you, so their text is absent until the language has been submitted and WhatsApp has supplied it.",
-        examples=["Your verification code is {{1}}."],
-        min_length=1,
-    )] = None
-    add_security_recommendation: Annotated[Optional[bool], Field(
-        description="Whether this authentication template's body ends with WhatsApp's advice not to share the code. Present on an authentication template's body block.",
-    )] = None
-    code_expiration_minutes: Annotated[Optional[int], Field(
-        description="How long the passcode stays valid, which WhatsApp states in this footer. Present on an authentication template's footer block. Omitting it on a write leaves the footer off entirely.",
-        examples=[60],
-    )] = None
-    example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
-        description="Example values for this block's variables, in placeholder order (one per `{{n}}`). Use them to see what a filled message looks like. Present when the block has variables.",
-    )] = None
-    buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
-        description="The buttons attached to this block. Present when the block carries buttons.",
-    )] = None
-    cards: Annotated[Optional[List[WhatsAppTemplateCard]], Field(
-        description="The cards this block scrolls through, in display order. Present on a `carousel` block.",
-    )] = None
 
 
 class WhatsAppTemplateLanguageStatus(str, Enum):
@@ -14474,6 +14474,9 @@ class AMBMessageSendRequest(BaseModel):
     intent: Annotated[Optional[str], Field(description="Purpose of this conversation.")] = None
     locale: Annotated[Optional[str], Field(
         description="Apple locale identifier, for example en_US. Defaults to the conversation locale.",
+    )] = None
+    skip_typing: Annotated[Optional[bool], Field(
+        description="Send the first part without the typing indicator and one-second pause Bird otherwise shows before it. Set it only after you sent `typing_start` with the conversation typing operation, so the customer already sees typing. A first part that Apple accepts clears that indicator when it arrives. If Bird accepts the message but it fails before then, such as a failed send or a rejection during processing, Bird sends `typing_end` instead. If the request itself returns an error, nothing is sent, so send `typing_end` yourself. When Bird splits the message into several parts, such as text around a link, the parts after the first keep their typing indicator.",
     )] = None
 
 
@@ -27267,7 +27270,7 @@ class VoiceTrunkGatewayID(RootModel[str]):
 
 
 class VoiceTrunkGateway(BaseModel):
-    "One address an inbound call to this trunk is forwarded to, and how that peer wants the call's two numbers spelled. A trunk can have several, tried in priority order until one answers."
+    "One address an inbound call to this trunk is forwarded to, and how that peer wants the call's two numbers spelled. A trunk can have several, and its **All gateways (automatic)** hunt group tries them in priority order until one answers."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["vtg_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -27286,7 +27289,7 @@ class VoiceTrunkGateway(BaseModel):
         min_length=1,
     )]
     priority: Annotated[int, Field(
-        description="The order gateways are tried in, lowest first. Gateways sharing a priority take an equal share of calls, and any of them may be tried first on a given call.",
+        description="The gateway's place in the trunk's **All gateways (automatic)** hunt group, which tries the lowest priority first. Gateways sharing a priority take an equal share of calls, and any of them may be tried first on a given call. Hunt groups you build in the trunk's inbound routing in the dashboard set their own order.",
         examples=[0],
         ge=0,
     )]
@@ -27323,7 +27326,7 @@ class VoiceTrunkGatewayCreate(BaseModel):
         min_length=1,
     )]
     priority: Annotated[int, Field(
-        description="The order gateways are tried in, lowest first. Give two gateways the same priority to share calls between them evenly.",
+        description="The gateway's place in the trunk's **All gateways (automatic)** hunt group, which tries the lowest priority first. Give two gateways the same priority to share calls between them evenly. Hunt groups you build in the trunk's inbound routing in the dashboard set their own order.",
         examples=[0],
         ge=0,
         le=2147483647,
@@ -27350,7 +27353,7 @@ class VoiceTrunkGatewayUpdate(BaseModel):
         min_length=1,
     )] = None
     priority: Annotated[Optional[int], Field(
-        description="The order gateways are tried in, lowest first. Give two gateways the same priority to share calls between them evenly.",
+        description="The gateway's place in the trunk's **All gateways (automatic)** hunt group, which tries the lowest priority first. Give two gateways the same priority to share calls between them evenly. Hunt groups you build in the trunk's inbound routing in the dashboard set their own order.",
         examples=[0],
         ge=0,
         le=2147483647,

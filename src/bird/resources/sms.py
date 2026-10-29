@@ -1,10 +1,11 @@
 """Use the ``client.sms`` channel to send an SMS (free text or by stored
 template), read a message, and list the message log.
 
-A send carries either ``text`` (with ``category`` and ``from_``) or a ``template``
-(by id or slug, with its ``parameters``). A workspace template requires an owned
-``from_``; a built-in template selects its sender and rejects ``from_``. The two
-content forms are mutually exclusive.
+A send carries one of ``text`` (with ``category`` and ``from_``), a ``template``
+(by id or slug, with its ``parameters``), or ``binary`` (with ``category``
+``transactional``). A workspace template requires an owned ``from_``; a built-in
+template selects its sender and rejects ``from_``. The content forms are mutually
+exclusive.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from typing import Any
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._generated import SMSMessage, SMSMessageBatchResponse
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.resources.sms_gen import AsyncSmsBase, SmsBase
 from bird.resources.sms_stats import AsyncSmsStats, SmsStats
 
@@ -39,14 +40,23 @@ def _send_body(
     tags: Sequence[Mapping[str, str]] | None = None,
     metadata: Mapping[str, Any] | None = None,
     smart_encoding: bool | None = None,
+    ignore_suppression: bool | None = None,
+    callback_url: str | None | Omit = omit,
+    messaging_profile_id: str | None = None,
+    reference: str | None = None,
+    to_country_code: str | None = None,
+    validity_period: int | None = None,
+    cost_center: str | None = None,
+    binary: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     # The generated send request is an anyOf(text | template) with no single
     # wrappable model, so the body is assembled as a plain dict here; unset fields
     # are dropped. ``from_`` maps to the wire field "from" (a Python keyword).
     #
-    # The wire nests smart_encoding under "options", but it is a flat keyword here:
-    # ``options`` on every method in this SDK is the transport RequestOptions, so a
-    # second meaning would be a trap. A future send option joins it as its own keyword.
+    # The wire nests smart_encoding, ignore_suppression and callback_url under
+    # "options", but they are flat keywords here: ``options`` on every method in this
+    # SDK is the transport RequestOptions, so a second meaning would be a trap. A
+    # future send option joins them as its own keyword.
     body: dict[str, Any] = {
         "to": to,
         "from": from_,
@@ -54,9 +64,24 @@ def _send_body(
         "category": category,
         "tags": tags,
         "metadata": metadata,
+        "messaging_profile_id": messaging_profile_id,
+        "reference": reference,
+        "to_country_code": to_country_code,
+        "validity_period": validity_period,
+        "cost_center": cost_center,
+        "binary": binary,
     }
-    if smart_encoding is not None:
-        body["options"] = {"smart_encoding": smart_encoding}
+    send_options: dict[str, Any] = {
+        "smart_encoding": smart_encoding,
+        "ignore_suppression": ignore_suppression,
+    }
+    send_options = {key: value for key, value in send_options.items() if value is not None}
+    # None is a value here: a null callback_url sends the message's events to the
+    # webhook subscriptions, where omitting it applies the messaging profile's URL.
+    if not isinstance(callback_url, Omit):
+        send_options["callback_url"] = callback_url
+    if send_options:
+        body["options"] = send_options
     if template is not None:
         # An smt_-prefixed value is the id; anything else is the slug handle.
         tmpl: dict[str, Any] = {"id" if template.startswith("smt_") else "slug": template}
@@ -80,6 +105,14 @@ def _message_body(m: Mapping[str, Any]) -> dict[str, Any]:
         tags=m.get("tags"),
         metadata=m.get("metadata"),
         smart_encoding=m.get("smart_encoding"),
+        ignore_suppression=m.get("ignore_suppression"),
+        callback_url=m.get("callback_url", omit),
+        messaging_profile_id=m.get("messaging_profile_id"),
+        reference=m.get("reference"),
+        to_country_code=m.get("to_country_code"),
+        validity_period=m.get("validity_period"),
+        cost_center=m.get("cost_center"),
+        binary=m.get("binary"),
     )
 
 
@@ -103,13 +136,25 @@ class Sms(SmsBase):
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
         smart_encoding: bool | None = None,
+        ignore_suppression: bool | None = None,
+        callback_url: str | None | Omit = omit,
+        messaging_profile_id: str | None = None,
+        reference: str | None = None,
+        to_country_code: str | None = None,
+        validity_period: int | None = None,
+        cost_center: str | None = None,
+        binary: Mapping[str, str] | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Send one SMS to a single recipient. Supply either ``text`` (with a
-        ``category`` and ``from_``) or a stored ``template`` (by id or slug, with
-        ``parameters``). A workspace template requires an owned ``from_``; a
-        built-in template selects its sender and rejects ``from_``. The API accepts
-        the message for delivery. Read it back with ``get`` for the latest status.
+        """Send one SMS to a single recipient. Supply one of ``text`` (with a
+        ``category`` and ``from_``), a stored ``template`` (by id or slug, with
+        ``parameters``), or ``binary`` (with ``category`` ``transactional``). A workspace template requires an owned
+        ``from_``; a built-in template selects its sender and rejects ``from_``.
+        The API accepts the message for delivery. Read it back with ``get`` for the latest status.
+
+        ``callback_url`` takes three states: leave it out to use the messaging
+        profile's URL, pass a URL to receive this message's events there, or pass
+        ``None`` to send them to your webhook subscriptions.
 
         ```python
         msg = client.sms.send(
@@ -132,7 +177,10 @@ class Sms(SmsBase):
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
-            smart_encoding=smart_encoding,
+            smart_encoding=smart_encoding, ignore_suppression=ignore_suppression,
+            callback_url=callback_url, messaging_profile_id=messaging_profile_id,
+            reference=reference, to_country_code=to_country_code,
+            validity_period=validity_period, cost_center=cost_center, binary=binary,
         )
         return self._write("POST", _PATH, body, SMSMessage, options)
 
@@ -190,9 +238,17 @@ class AsyncSms(AsyncSmsBase):
         tags: Sequence[Mapping[str, str]] | None = None,
         metadata: Mapping[str, Any] | None = None,
         smart_encoding: bool | None = None,
+        ignore_suppression: bool | None = None,
+        callback_url: str | None | Omit = omit,
+        messaging_profile_id: str | None = None,
+        reference: str | None = None,
+        to_country_code: str | None = None,
+        validity_period: int | None = None,
+        cost_center: str | None = None,
+        binary: Mapping[str, str] | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Send one SMS to a single recipient (free text or by template).
+        """Send one SMS to a single recipient (free text, by template, or binary).
 
         A workspace template requires an owned ``from_``; a built-in template
         selects its sender and rejects ``from_``.
@@ -200,7 +256,10 @@ class AsyncSms(AsyncSmsBase):
         body = _send_body(
             to=to, from_=from_, text=text, category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
-            smart_encoding=smart_encoding,
+            smart_encoding=smart_encoding, ignore_suppression=ignore_suppression,
+            callback_url=callback_url, messaging_profile_id=messaging_profile_id,
+            reference=reference, to_country_code=to_country_code,
+            validity_period=validity_period, cost_center=cost_center, binary=binary,
         )
         return await self._write("POST", _PATH, body, SMSMessage, options)
 
