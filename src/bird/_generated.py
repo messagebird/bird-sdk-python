@@ -6233,6 +6233,7 @@ class TemplateVariableType(str, Enum):
     url = "url"
     image = "image"
     timestamp = "timestamp"
+    timezone = "timezone"
     location = "location"
     text = "text"
 
@@ -6245,11 +6246,11 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
-        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest). Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email and workspace SMS templates use `text`. WhatsApp templates use `text`, plus `url` for a media header's file and `location` for a location header. Workspace SMS parameters must be scalar values. Open enum: treat an unrecognized value as a future type rather than an error.",
+        description="The value type this slot accepts. Each typed slot rejects a value that does not match its `constraint`. Built-in SMS templates use typed slots (`code`, `amount` and the rest). Apple Messages templates type a variable from its content: the field it fills (`url`, `image`, `timestamp`, `location`, `timezone`) or the formatting filter applied to it (`date`, `date_time`, `amount`, `currency`). Email and workspace SMS templates use `text`. WhatsApp templates use `text`, plus `url` for a media header's file and `location` for a location header. A `location` value is an object with `latitude` and `longitude`, and optionally `name` and `address`. On Apple Messages, `name` becomes the location's title and `address` is not shown. Workspace SMS parameters must be scalar values.",
         min_length=1,
     )]
     required: Annotated[bool, Field(
-        description="Whether the send must supply this variable. Omitting a required value returns `422` on email, SMS, and WhatsApp sends. Always false when `system` is true, because you do not supply that slot's value.",
+        description="Whether the send must supply this variable. Omitting a required value returns `422` on every channel. On Apple Messages, a later time slot's start that is used nowhere else is optional: a send that omits it drops that slot. Always false when `system` is true, because you do not supply that slot's value.",
     )]
     constraint: Annotated[str, Field(
         description="A plain-language description of what values this variable accepts. When `system` is true it names where Bird takes the value from instead, because there is no value for you to send.",
@@ -13448,6 +13449,11 @@ class AMBLocation(BaseModel):
         ge=-180,
         le=180,
     )] = None
+    coordinates: Annotated[Optional[str], Field(
+        description="Apple Messages template content only: exactly one placeholder, such as `{{ store }}`, set instead of `latitude` and `longitude`. When the template is sent, a `location` variable fills it with its `latitude` and `longitude`, and its `name`, when it has one, replaces `title`. A direct send that includes it returns `422`. Never present on an inbound event.",
+        examples=["{{ store }}"],
+        pattern="^\\{\\{[ \\t]*[a-z_][a-z0-9_]*[ \\t]*\\}\\}$",
+    )] = None
     radius: Annotated[Optional[float], Field(
         description="Location radius in meters. Apple ignores it without coordinates.",
         ge=0,
@@ -13461,7 +13467,7 @@ class AMBTimeSlot(BaseModel):
         min_length=1,
     )]
     start_at: Annotated[str, Field(
-        description="When this slot begins, as an ISO 8601 date-time with a UTC offset. Seconds and fractional seconds must be zero, for example `2026-09-02T14:30:00Z`; any other value returns `422` with error code `E01001`. The timestamp is converted to UTC for Apple while preserving the instant. In Apple Messages template content it may instead be exactly one placeholder, such as `{{ slot_1 }}`, filled with a `timestamp` variable when the template is sent.",
+        description="When this slot begins, as an ISO 8601 date-time with a UTC offset. Seconds and fractional seconds must be zero, for example `2026-09-02T14:30:00Z`; any other value returns `422` with error code `E01001`. The timestamp is converted to UTC for Apple while preserving the instant. In Apple Messages template content it may instead be exactly one placeholder, such as `{{ slot_1 }}`, filled with a `timestamp` variable when the template is sent. A slot after the first whose variable is used nowhere else is optional: a send that omits that variable drops the slot.",
         examples=["2026-09-02T14:30:00Z"],
         min_length=1,
         pattern="^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})|\\{\\{[ \\t]*[a-z_][a-z0-9_]*[ \\t]*\\}\\})$",
@@ -13480,7 +13486,13 @@ class AMBNativeEvent(BaseModel):
     )] = None
     location: Optional[AMBLocation] = None
     timezone_offset: Annotated[Optional[int], Field(
-        description="Minutes from GMT at the event location. Omit to use the customer's time zone.",
+        description="Minutes from GMT at the event location. Omit it and `timezone` to use the customer's time zone.",
+    )] = None
+    timezone: Annotated[Optional[str], Field(
+        description="IANA time zone of the event location. Apple receives the zone's offset at the time slots, so a template keeps the right offset across a daylight-saving change. Every slot must have the same offset in the zone: slots on both sides of a clock change return `422`. Set it instead of `timezone_offset`. An unknown zone returns `422`. In Apple Messages template content it may instead be exactly one placeholder, such as `{{ timezone }}`, filled with a `timezone` variable when the template is sent. A direct send with a placeholder returns `422`.",
+        examples=["Europe/Amsterdam"],
+        min_length=1,
+        pattern="^(\\{\\{[ \\t]*[a-z_][a-z0-9_]*[ \\t]*\\}\\}|[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*)$",
     )] = None
     timeslots: Annotated[List[AMBTimeSlot], Field(
         description="Appointment times with RFC 3339 timestamps and duration in seconds.",
@@ -14262,7 +14274,7 @@ class AMBTemplateSend(BaseModel):
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A missing key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
+        description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A `location` variable takes an object with `latitude` and `longitude`, and optionally `name`, which becomes the location's title. `address` is accepted for parity with WhatsApp and is not shown on Apple Messages. Every other variable takes a string, number or boolean. A missing required key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
     )] = None
 
 
@@ -17009,6 +17021,10 @@ class EmailInboxInsightsSeedTests(BaseModel):
     )]
 
 
+class EmailInboxInsightsSeedRegions(RootModel[List[str]]):
+    root: List[str]
+
+
 class EmailInboxInsightsSeedTestCreate(BaseModel):
     "How to configure a seed test. The choices available for a domain come from the seed-test configuration."
     model_config = ConfigDict(extra="allow")
@@ -17024,7 +17040,7 @@ class EmailInboxInsightsSeedTestCreate(BaseModel):
         description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
     )]
     regions: Annotated[List[str], Field(
-        description="The regions to place seeds in, as the seed-test configuration names them.",
+        description="Region names exactly as returned by the seed-test configuration.",
         min_length=1,
     )]
     label: Annotated[Optional[str], Field(
@@ -26345,6 +26361,10 @@ class WalletTransactionID(RootModel[str]):
     root: str
 
 
+class BillingProductSlug(RootModel[str]):
+    root: str
+
+
 class BillingInterval(str, Enum):
     day = "day"
     month = "month"
@@ -26363,10 +26383,6 @@ class BillingPricingInterval(BaseModel):
         ge=1,
         le=366,
     )]
-
-
-class BillingProductSlug(RootModel[str]):
-    root: str
 
 
 class BillingPricingModel(str, Enum):

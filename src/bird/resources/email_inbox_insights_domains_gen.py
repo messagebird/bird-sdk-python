@@ -74,7 +74,7 @@ class EmailInboxInsightsDomains(Resource):
         monitored: bool,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsDomain:
-        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change. A 412 means eDataSource declined to measure the domain; nothing was saved and a retry gets the same answer, so tell the user to contact support with the domain name.
+        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change. A 412 means monitoring setup was refused. Contact support with the sending domain and request ID.
 
         ```python
         # Requires inbox_insights:write permission in the target workspace.
@@ -143,7 +143,7 @@ class AsyncEmailInboxInsightsDomains(AsyncResource):
         monitored: bool,
         options: RequestOptions | None = None,
     ) -> EmailInboxInsightsDomain:
-        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change. A 412 means eDataSource declined to measure the domain; nothing was saved and a retry gets the same answer, so tell the user to contact support with the domain name.
+        """Set monitored explicitly to true or false for a verified domain owned by the workspace. Enabling enrolls the domain with eDataSource and saves the workspace preference. Disabling removes only that preference; vendor enrollment and measurement history remain. Reports still require verified ownership and are not gated by this preference. Repeating the same value is safe. Reuse an idempotency key when retrying the same change. A 412 means monitoring setup was refused. Contact support with the sending domain and request ID.
 
         ```python
         # Requires inbox_insights:write permission in the target workspace.
