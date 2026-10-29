@@ -2657,3 +2657,12 @@ async def _ex_394() -> None:
     quotas = client.workspace.quotas.list()
     for quota in quotas.data:
         print(quota.key, quota.limit, quota.organization_limit)
+
+
+async def _ex_395() -> None:
+    # Workspace limits matter with several workspaces, or one that kept a limit after a deletion.
+    limits = client.workspace.rate_limits.list()
+    for policy in limits.data:
+        # Check usage.status first: workspace_remaining is also None when the
+        # workspace has no limit of its own or its usage is not measured yet.
+        print(policy.key, policy.limit, policy.usage.workspace_remaining)

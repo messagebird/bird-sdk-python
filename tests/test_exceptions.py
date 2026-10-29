@@ -29,6 +29,7 @@ WIRE_TO_ATTR = {
     "details": "details",
     "remediation": "remediation",
     "next": "next",
+    "rate_limit": "rate_limit",
     "quota": "quota",
 }
 
@@ -123,6 +124,24 @@ def test_from_response_tolerates_null_or_absent_next(next_value: str) -> None:
     err = from_response(409, body, {})
     assert err.next == []
     assert err.remediation == "r"
+
+
+def _rate_limited(rate_limit: object) -> str:
+    return json.dumps({"error": {"type": "rate_limit_error", "code": "E01003", "message": "slow down", "rate_limit": rate_limit}})
+
+
+def test_rate_limit_context_round_trips() -> None:
+    """The refusing policy limit is read from the body; a malformed one is dropped."""
+    context = {"policy_key": "email_send", "scope": "workspace", "window_seconds": 60, "limit": 300}
+    err = from_response(429, _rate_limited(context), {"Retry-After": "12"})
+    assert err.rate_limit is not None
+    assert (err.rate_limit.policy_key, err.rate_limit.scope, err.rate_limit.window_seconds, err.rate_limit.limit) == (
+        "email_send",
+        "workspace",
+        60,
+        300,
+    )
+    assert from_response(429, _rate_limited({"policy_key": "email_send"}), {}).rate_limit is None
 
 
 def test_from_response_surfaces_quota_context() -> None:

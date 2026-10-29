@@ -270,6 +270,8 @@ from bird._generated import (
     WorkspaceSortField,
     WorkspaceQuota,
     WorkspaceQuotaList,
+    WorkspaceRateLimit,
+    WorkspaceRateLimitList,
 )
 from bird.resources.audiences_gen import (
     AudienceAddContactsParams,
@@ -666,6 +668,7 @@ from bird._exceptions import (
     ErrorType,
     MissingAPIKeyError,
     NextAction,
+    RateLimitContext,
     QuotaContext,
     RateLimitError,
     ValidationError,
@@ -1219,6 +1222,8 @@ __all__ = [
     "WorkspaceSortField",
     "WorkspaceQuota",
     "WorkspaceQuotaList",
+    "WorkspaceRateLimit",
+    "WorkspaceRateLimitList",
     "VerifyVerificationsCreateParams",
     "VerifyVerificationsCheckParams",
     "VerifyVerificationsNextChannelParams",
@@ -1346,6 +1351,7 @@ __all__ = [
     "ErrorDetail",
     "ErrorType",
     "NextAction",
+    "RateLimitContext",
     "QuotaContext",
     "__version__",
 ]

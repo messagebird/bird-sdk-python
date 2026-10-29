@@ -49,6 +49,32 @@ class NextAction(BaseModel):
     )] = None
 
 
+class RateLimitScope(str, Enum):
+    organization = "organization"
+    workspace = "workspace"
+
+
+class RateLimitErrorContext(BaseModel):
+    "The rate-limit policy that refused the request. Present only on `rate_limit_error` responses from a rate-limit policy. A workspace-targeted request is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both are exhausted."
+    model_config = ConfigDict(extra="allow")
+    policy_key: Annotated[str, Field(
+        description="Stable key of the rate-limit policy that refused the request.",
+        examples=["email_send"],
+        min_length=1,
+    )]
+    scope: Annotated[RateLimitScope, Field(
+        description="Which limit refused the request.\n\n- `organization`: the limit shared by every workspace in the organization.\n- `workspace`: the limit set for this workspace.",
+    )]
+    window_seconds: Annotated[int, Field(
+        description="The rolling window length in seconds.",
+        ge=1,
+    )]
+    limit: Annotated[int, Field(
+        description="Maximum policy units per rolling window under the limit that refused the request.",
+        ge=1,
+    )]
+
+
 class QuotaScope(str, Enum):
     organization = "organization"
     workspace = "workspace"
@@ -131,6 +157,9 @@ class ErrorBody(BaseModel):
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
         description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.",
+    )] = None
+    rate_limit: Annotated[Optional[RateLimitErrorContext], Field(
+        description="The rate-limit policy that refused the request. Present only on `rate_limit_error` responses from a rate-limit policy. A workspace-targeted request is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both are exhausted.",
     )] = None
     quota: Annotated[Optional[QuotaErrorContext], Field(
         description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies.",
@@ -245,6 +274,123 @@ class Workspace(BaseModel):
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class WorkspaceRateLimitCapStatus(str, Enum):
+    active = "active"
+    expired = "expired"
+
+
+class WorkspaceRateLimitCap(BaseModel):
+    "A workspace's own limit for a policy. It is not reserved capacity; the organization limit still applies."
+    model_config = ConfigDict(extra="allow")
+    value: Annotated[int, Field(
+        description="Maximum policy units this workspace can use per rolling window. It can exceed the organization limit.",
+        ge=1,
+    )]
+    status: Annotated[WorkspaceRateLimitCapStatus, Field(
+        description="Whether the workspace limit applies.\n\n- `active`: the limit is enforced alongside the organization limit.\n- `expired`: the limit passed its expiry and no longer applies. It stays visible until it is replaced or removed.",
+    )]
+    expires_at: Annotated[Optional[str], Field(
+        description="When the workspace limit stops applying. `null` means it has no expiry.",
+    )]
+    updated_at: Annotated[str, Field(
+        description="When the workspace limit was last set.",
+        min_length=1,
+    )]
+
+
+class WorkspaceRateLimitAttributionStatus(str, Enum):
+    unavailable = "unavailable"
+    warming = "warming"
+    ready = "ready"
+
+
+class WorkspaceRateLimitAttribution(BaseModel):
+    "When workspace usage has been measured for long enough to set a new workspace limit for this policy. Readiness covers timing only; a new limit also needs an organization with several workspaces, and with one workspace only an existing unexpired limit can be changed."
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[WorkspaceRateLimitAttributionStatus, Field(
+        description="Whether workspace usage has been measured for long enough to set a new workspace limit.\n\n- `unavailable`: workspace limits cannot be set in this region yet.\n- `warming`: workspace usage is being measured; a limit can be set from `ready_at`.\n- `ready`: a workspace limit can be set.\n\nExisting workspace limits are enforced in every state and can be removed while the workspace can be managed.",
+    )]
+    ready_at: Annotated[Optional[str], Field(
+        description="When workspace usage has been measured for long enough, from which a workspace limit can be set if the organization's other conditions allow it. `null` while workspace limits are unavailable in this region.",
+    )]
+
+
+class WorkspaceRateLimitUsageStatus(str, Enum):
+    available = "available"
+    unavailable = "unavailable"
+
+
+class WorkspaceRateLimitUsage(BaseModel):
+    "Remaining capacity in the current rolling window. Taking the observation consumes no capacity, but the request that reads it counts against its own policy, `api_list`, like any other read. It is measured against the limits that requests were checked against when it was read, which can briefly differ from the configured top-level `organization_limit` and `workspace_limit` after a limit changes."
+    model_config = ConfigDict(extra="allow")
+    status: Annotated[WorkspaceRateLimitUsageStatus, Field(
+        description="Whether current usage could be read.\n\n- `available`: the remaining counts reflect usage at `observed_at`.\n- `unavailable`: usage could not be read. Remaining counts are unknown, not zero.",
+    )]
+    observed_at: Annotated[str, Field(description="When usage was read.", min_length=1)]
+    organization_limit: Annotated[Optional[int], Field(
+        description="The organization limit requests were checked against when usage was read. `null` when usage is unavailable.",
+        ge=1,
+    )]
+    organization_remaining: Annotated[Optional[int], Field(
+        description="Units the whole organization can still use in this window, shared by all its workspaces. `null` when usage is unavailable.",
+        ge=0,
+    )]
+    workspace_limit: Annotated[Optional[int], Field(
+        description="The workspace's own limit requests were checked against when usage was read. `null` when no workspace limit applied or usage is unavailable.",
+        ge=1,
+    )]
+    workspace_remaining: Annotated[Optional[int], Field(
+        description="Units this workspace can still use under its own limit. `null` when no workspace limit applied, usage is unavailable, or workspace usage is not yet measured for long enough.",
+        ge=0,
+    )]
+    resets_in_seconds: Annotated[Optional[int], Field(
+        description="Seconds until the current window ends. `null` when usage is unavailable.",
+        ge=0,
+    )]
+
+
+class WorkspaceRateLimit(BaseModel):
+    "A rate-limit policy as it applies to one workspace."
+    model_config = ConfigDict(extra="allow")
+    key: Annotated[str, Field(
+        description="Stable key of the rate-limit policy.",
+        examples=["email_send"],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(min_length=1)]
+    description: Annotated[str, Field(min_length=1)]
+    unit: Annotated[str, Field(
+        description="What the policy counts, such as `request` or `message`.",
+        min_length=1,
+    )]
+    window_seconds: Annotated[int, Field(
+        description="The rolling window length in seconds.",
+        ge=1,
+    )]
+    organization_limit: Annotated[int, Field(
+        description="Maximum policy units per rolling window for the whole organization, shared by all its workspaces.",
+        ge=1,
+    )]
+    workspace_limit: Annotated[Optional[WorkspaceRateLimitCap], Field(
+        description="The workspace's own limit. `null` when the workspace has none and uses only the shared organization limit.",
+    )]
+    limit: Annotated[int, Field(
+        description="The lower of the organization limit and any active workspace limit. Requests can still be refused below it when other workspaces use the shared organization limit.",
+        ge=1,
+    )]
+    attribution: Annotated[WorkspaceRateLimitAttribution, Field(
+        description="When workspace usage has been measured for long enough to set a new workspace limit for this policy. Readiness covers timing only; a new limit also needs an organization with several workspaces, and with one workspace only an existing unexpired limit can be changed.",
+    )]
+    usage: Annotated[WorkspaceRateLimitUsage, Field(
+        description="Remaining capacity in the current rolling window. Taking the observation consumes no capacity, but the request that reads it counts against its own policy, `api_list`, like any other read. It is measured against the limits that requests were checked against when it was read, which can briefly differ from the configured top-level `organization_limit` and `workspace_limit` after a limit changes.",
+    )]
+
+
+class WorkspaceRateLimitList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[WorkspaceRateLimit]
 
 
 class WorkspaceQuotaKind(str, Enum):
@@ -8645,12 +8791,12 @@ class WhatsAppLocationSend(BaseModel):
         le=180,
     )]
     name: Annotated[Optional[str], Field(
-        description="Name of the place, shown above the address.",
+        description="Place name, shown above the address.",
         examples=["Ferry Building"],
         max_length=1000,
     )] = None
     address: Annotated[Optional[str], Field(
-        description="Street address of the place. Shown only when `name` is also set.",
+        description="Street address; shown only with `name`.",
         examples=["1 Ferry Building, San Francisco, CA 94111"],
         max_length=1000,
     )] = None
@@ -8659,28 +8805,28 @@ class WhatsAppLocationSend(BaseModel):
 class WhatsAppMessageTemplateComponentParameter(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppTemplateParameterType, str], Field(union_mode="left_to_right")], Field(
-        description="The kind of value this parameter carries, which decides which of the fields below to send.",
+        description="Value kind; determines which field to supply.",
     )]
     text: Annotated[Optional[str], Field(
-        description="The value substituted into the placeholder, as a plain string. Send it on a `text` parameter.",
+        description="Placeholder value for a `text` parameter.",
         min_length=1,
     )] = None
     url: Annotated[Optional[str], Field(
-        description="Public `https` URL of the file a media header shows, fetched by WhatsApp at send time. Send it on an `image`, `video`, `gif` or `document` parameter.",
+        description="Public HTTPS media-header URL, fetched at send time. For `image`, `video`, `gif`, or `document` parameters.",
         examples=["https://cdn.example.com/receipts/a1b2c3.png"],
         min_length=1,
     )] = None
     filename: Annotated[Optional[str], Field(
-        description="Name the recipient sees on the document, including the extension. Without it, the document arrives untitled. Send it only on a `document` parameter; Bird rejects it on any other kind.",
+        description="Document name with extension; rejected on other parameter types.",
         examples=["invoice-a1b2c3.pdf"],
         max_length=100,
         min_length=1,
     )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
-        description="The point on the map a location header opens. Send it on a `location` parameter.",
+        description="Map point for a `location` header parameter.",
     )] = None
     name: Annotated[Optional[str], Field(
-        description="The placeholder this value fills, for a template with named parameters (for example `first_name`); name every parameter then. Omit it for a positional template, which takes values in `{{n}}` order.",
+        description="Placeholder name, such as `first_name`; required on every named parameter. Omit for positional templates and supply values in `{{n}}` order.",
         min_length=1,
     )] = None
 
@@ -8705,7 +8851,7 @@ class WhatsAppMessageTemplateCardComponent(BaseModel):
 
 
 class WhatsAppMessageTemplateCard(BaseModel):
-    "The values that fill one card of a carousel. Cards fill in the order the template was approved with, so send one entry per card and keep them in that order."
+    "Placeholder values for one carousel card. Supply one entry per approved card, in approval order."
     model_config = ConfigDict(extra="allow")
     components: Annotated[List[WhatsAppMessageTemplateCardComponent], Field(
         description="The values that fill this card's blocks.",
@@ -8726,10 +8872,10 @@ class WhatsAppMessageTemplateComponent(BaseModel):
         min_length=1,
     )]
     parameters: Annotated[Optional[List[WhatsAppMessageTemplateComponentParameter]], Field(
-        description="The values for this part's placeholders, in `{{n}}` order unless the template names them. Send it on every part except `carousel`, which uses `cards`. Send no `button` part for a button that takes no value.",
+        description="Placeholder values in `{{n}}` order, or named. Required except for `carousel`, which uses `cards`. Omit button parts without variables.",
     )] = None
     cards: Annotated[Optional[List[WhatsAppMessageTemplateCard]], Field(
-        description="Values for each carousel card, one entry per card the template was approved with. Send it only on a `carousel` part.",
+        description="For `carousel` only: one entry per approved card, in approval order.",
         max_length=10,
         min_length=2,
     )] = None
@@ -9447,7 +9593,7 @@ class WhatsAppMessageList(BaseModel):
 
 
 class WhatsAppTemplateSend(BaseModel):
-    "A send-by-template reference. Identify the template by its `id` or its `slug` (supply exactly one), optionally name a language, and fill its placeholders through `components`."
+    "Supply exactly one of `id` or `slug`, optionally a language, and fill required placeholders through `components`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -9455,26 +9601,26 @@ class WhatsAppTemplateSend(BaseModel):
         pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     slug: Annotated[Optional[str], Field(
-        description="The template to send, by its slug handle (for example `bird_otp`).",
+        description="Template slug, such as `bird_otp`.",
         examples=["bird_otp"],
         max_length=63,
         min_length=1,
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
-        description="Which of the template's languages to send, as a BCP-47 tag (for example `en-US`; Meta's `en_US` is accepted too). Omit it for the template's default language, unless the template sets `language_source_required`. A language the template lacks is handled by its `on_missing_language` setting. The message is priced at the language it resolves to, which the accepted message echoes.",
+        description="BCP-47 tag (`en-US`; `en_US` also accepted). Defaults to the template's default language unless `language_source_required` is set. Missing variants follow `on_missing_language`. The resolved language determines pricing and is echoed in the accepted message.",
         examples=["en-US"],
         max_length=35,
         min_length=2,
     )] = None
     bid_multiplier: Annotated[Optional[float], Field(
-        description="Scales the language's maximum price for this message only. The effective bid is the language's `optimization_spec.bid_amount`, times its country multiplier, times this value. At least 0.01 and at most 100; 1 when omitted. Only a language with an `optimization_spec`, on a template still in the `marketing` category, accepts it.",
+        description="Multiplies `optimization_spec.bid_amount` × country multiplier for this message. Range 0.01–100; default 1. Requires `optimization_spec` on a marketing template language.",
         examples=[0.8],
         ge=0.01,
         le=100,
     )] = None
     components: Annotated[Optional[List[WhatsAppMessageTemplateComponent]], Field(
-        description="Values for the template's placeholders. Build it from the template language's `components`: each block's `example_parameters`, with real values, becomes that part's `parameters`. A template's `buttons` block becomes one `button` part per button that has `example_parameters`, in order; a `carousel` becomes one `cards` entry per card, built the same way. A `location` header always needs a part with a `location` parameter. Leave out other blocks without any.",
+        description="Copy each language component's `example_parameters` into that part's `parameters`, replacing examples with real values. Map `buttons` to one `button` part per button with examples, in order; map `carousel` to `cards`, built likewise. A location header requires a `location` parameter. Omit other blocks without examples.",
     )] = None
 
 
@@ -9482,13 +9628,13 @@ class WhatsAppTextSend(BaseModel):
     "Free-form text to send. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     body: Annotated[str, Field(
-        description="The message text. The WhatsApp client turns any URL it contains into a clickable link.",
+        description="Message text; URLs become clickable links.",
         examples=["Your driver is 2 minutes away."],
         max_length=4096,
         min_length=1,
     )]
     preview_url: Annotated[Optional[bool], Field(
-        description="Whether the WhatsApp client previews the first link in `body`. Not returned when the message is read back.",
+        description="Preview the first link in `body`. Omitted on reads.",
     )] = None
 
 
@@ -9496,7 +9642,7 @@ class WhatsAppImageSend(BaseModel):
     "A free-form image to send, with an optional caption. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the image. WhatsApp fetches it at send time, so it must still be reachable then. JPEG or PNG, up to 5 MB.",
+        description="Public HTTPS URL fetched at send time. JPEG/PNG, up to 5 MB.",
         examples=["https://cdn.example.com/receipts/a1b2c3.png"],
         min_length=1,
     )]
@@ -9511,7 +9657,7 @@ class WhatsAppVideoSend(BaseModel):
     "A free-form video to send, with an optional caption. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the video. WhatsApp fetches it at send time, so it must still be reachable then. MP4 with H.264 video and AAC audio, up to 16 MB.",
+        description="Public HTTPS URL fetched at send time. MP4 with H.264 video and AAC audio, up to 16 MB.",
         examples=["https://cdn.example.com/unboxing.mp4"],
         min_length=1,
     )]
@@ -9526,12 +9672,12 @@ class WhatsAppAudioSend(BaseModel):
     "Free-form audio to send, either as a voice note or as a basic audio file. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the audio file. WhatsApp fetches it at send time, so it must still be reachable then. AAC, AMR, MP3, M4A or OGG (OPUS codec, mono), up to 16 MB.",
+        description="Public HTTPS URL fetched at send time. AAC, AMR, MP3, M4A, or OGG (OPUS, mono), up to 16 MB.",
         examples=["https://cdn.example.com/voice/9f2e4a.ogg"],
         min_length=1,
     )]
     voice: Annotated[Optional[bool], Field(
-        description="Whether to send this as a voice note rather than an audio file. A voice note needs an `.ogg` file encoded with the OPUS codec.",
+        description="Send as a voice note; requires an `.ogg` file with the OPUS codec.",
     )] = None
 
 
@@ -9539,7 +9685,7 @@ class WhatsAppStickerSend(BaseModel):
     "A free-form sticker to send. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the sticker. WhatsApp fetches it at send time, so it must still be reachable then. WebP only, up to 100 KB static or 500 KB animated.",
+        description="Public HTTPS URL fetched at send time. WebP, up to 100 KB static or 500 KB animated.",
         examples=["https://cdn.example.com/stickers/thumbs-up.webp"],
         min_length=1,
     )]
@@ -9549,7 +9695,7 @@ class WhatsAppDocumentSend(BaseModel):
     "A free-form document to send, with an optional caption and filename. Deliverable only inside an open 24-hour customer service window; outside one, send a template instead."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="Public `https` URL of the document. WhatsApp fetches it at send time, so it must still be reachable then. Up to 100 MB; PDF, Word, Excel, PowerPoint and plain text render reliably in the WhatsApp client.",
+        description="Public HTTPS URL fetched at send time, up to 100 MB. PDF, Word, Excel, PowerPoint, and plain text render reliably.",
         examples=["https://cdn.example.com/invoices/a1b2c3.pdf"],
         min_length=1,
     )]
@@ -9559,7 +9705,7 @@ class WhatsAppDocumentSend(BaseModel):
         max_length=1024,
     )] = None
     filename: Annotated[Optional[str], Field(
-        description="Name the recipient sees, including the extension. WhatsApp derives one from the URL when you omit it.",
+        description="Recipient-visible filename with extension.",
         examples=["invoice-a1b2c3.pdf"],
         max_length=100,
         min_length=1,
@@ -9586,7 +9732,7 @@ class WhatsAppInteractiveHeaderSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["text"]
     text: Annotated[str, Field(
-        description="A single line of text above the body. Send it on a `text` header.",
+        description="Single line above the body, for `text` headers.",
         examples=["New workshop dates announced"],
         max_length=60,
         min_length=1,
@@ -9605,7 +9751,7 @@ class WhatsAppInteractiveHeaderSend2(BaseModel):
     type: WhatsAppInteractiveHeaderSend2Type
     text: Optional[Any] = None
     url: Annotated[str, Field(
-        description="Public `https` URL of the file to show on an `image`, `video` or `document` header, fetched by WhatsApp at send time. The free-form `image`, `video` and `document` limits apply.",
+        description="Public HTTPS URL fetched at send time for `image`, `video`, or `document` headers. The corresponding free-form media limits apply.",
         examples=["https://cdn.example.com/banners/workshop.png"],
         min_length=1,
     )]
@@ -9621,16 +9767,16 @@ class WhatsAppInteractiveButtonTypeWrite(str, Enum):
 
 
 class WhatsAppInteractiveQuickReplyButtonSend(BaseModel):
-    "One tappable reply button. Tapping it sends `slug` back as an inbound message, which reads as an `interactive_reply`."
+    "Reply button; tapping returns `slug` in an inbound `interactive_reply`."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
-        description="Your own handle for this button, echoed back on the reply. You choose the value and it is never shown to the recipient, so it can carry whatever your application needs to route the answer. Any characters, up to 256.",
+        description="Hidden reply identifier, echoed on tap. Any characters, up to 256.",
         examples=["change-booking"],
         max_length=256,
         min_length=1,
     )]
     text: Annotated[str, Field(
-        description="The button's label. It must differ from every other button's label in the same message, because the recipient's reply is identified to them by the label they tapped.",
+        description="Button label, unique within its message or carousel card.",
         examples=["Change"],
         max_length=20,
         min_length=1,
@@ -9638,7 +9784,7 @@ class WhatsAppInteractiveQuickReplyButtonSend(BaseModel):
 
 
 class WhatsAppInteractiveCtaUrlSend(BaseModel):
-    "A button that opens a link in the recipient's browser, so a long or opaque address never has to appear in the message body."
+    "Button that opens a link in the recipient's browser."
     model_config = ConfigDict(extra="allow")
     text: Annotated[str, Field(
         description="The button's label.",
@@ -9647,7 +9793,7 @@ class WhatsAppInteractiveCtaUrlSend(BaseModel):
         min_length=1,
     )]
     url: Annotated[str, Field(
-        description="The address the button opens. It is fixed for every recipient, so per recipient tracking belongs in the address you supply, for example as a query parameter you generate per send.",
+        description="Destination URL. Include per-recipient tracking in the supplied URL.",
         examples=["https://example.com/workshops?click_id=a1b2c3"],
         max_length=2000,
         min_length=1,
@@ -9658,7 +9804,7 @@ class WhatsAppInteractiveButtonSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["quick_reply"]
     quick_reply: Annotated[WhatsAppInteractiveQuickReplyButtonSend, Field(
-        description="The button's label and the handle it sends back. Send this on a `quick_reply` button.",
+        description="Label and reply identifier for `quick_reply`.",
     )]
     cta_url: Optional[Any] = None
 
@@ -9668,7 +9814,7 @@ class WhatsAppInteractiveButtonSend2(BaseModel):
     type: Literal["cta_url"]
     quick_reply: Optional[Any] = None
     cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
-        description="The button's label and the address it opens. Send this on a `cta_url` button.",
+        description="Label and destination for `cta_url`.",
     )]
 
 
@@ -9677,29 +9823,29 @@ class WhatsAppInteractiveButtonSend(RootModel[WhatsAppInteractiveButtonSend1 | W
 
 
 class WhatsAppInteractiveListRowSend(BaseModel):
-    "One option in a list's menu. Choosing it sends `slug` back as an inbound message, which reads as an `interactive_reply`."
+    "Menu option; selection returns `slug` in an inbound `interactive_reply`."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[str, Field(
-        description="Your own handle for this option, echoed back on the reply. You choose the value and it is never shown to the recipient. Any characters, up to 200.",
+        description="Hidden reply identifier, echoed on selection. Any characters, up to 200.",
         examples=["priority_express"],
         max_length=200,
         min_length=1,
     )]
     text: Annotated[str, Field(
-        description="The option's label, shown as the row's title in the menu. It must differ from every other row's label and from every button's label in the same message, not merely within its own group; a repeat returns a `422` `WhatsAppInteractiveDuplicateLabel`.",
+        description="Row label, unique across every section's rows; duplicates return `422` `WhatsAppInteractiveDuplicateLabel`.",
         examples=["Priority Mail Express"],
         max_length=24,
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
-        description="A second line under the label, for detail that will not fit in it.",
+        description="Detail shown below the label.",
         examples=["Next day to 2 days"],
         max_length=72,
     )] = None
 
 
 class WhatsAppInteractiveListSectionSend(BaseModel):
-    "One group of options in a list's menu. A menu with a single group still carries a title, which WhatsApp shows above its rows."
+    "Menu section. A title is required even for a single section."
     model_config = ConfigDict(extra="allow")
     title: Annotated[str, Field(
         description="The group's heading, shown above its rows.",
@@ -9708,14 +9854,14 @@ class WhatsAppInteractiveListSectionSend(BaseModel):
         min_length=1,
     )]
     rows: Annotated[List[WhatsAppInteractiveListRowSend], Field(
-        description="The options in this group. A message carries at most 10 rows across all its groups combined, so this per-group maximum is not additive: more than 10 in total returns a `422` `WhatsAppInteractiveLimitExceeded`. Row labels must be unique across the whole message too, not just within a group.",
+        description="At most 10 rows across the message (`422` `WhatsAppInteractiveLimitExceeded` otherwise). Labels must be unique across sections.",
         max_length=10,
         min_length=1,
     )]
 
 
 class WhatsAppInteractiveListSend(BaseModel):
-    "A menu of options behind a single button. The recipient taps the button, WhatsApp opens the menu, and choosing one option sends it back as a reply."
+    "Button-opened menu; selecting an option sends a reply."
     model_config = ConfigDict(extra="allow")
     button_text: Annotated[str, Field(
         description="The label of the button that opens the menu.",
@@ -9724,7 +9870,7 @@ class WhatsAppInteractiveListSend(BaseModel):
         min_length=1,
     )]
     sections: Annotated[List[WhatsAppInteractiveListSectionSend], Field(
-        description="The groups of options in the menu, in the order shown. At most 10 rows across all groups combined, each carrying a label unique across the whole message.",
+        description="Sections in display order. At most 10 rows total, with labels unique across the message.",
         max_length=10,
         min_length=1,
     )]
@@ -9734,7 +9880,7 @@ class WhatsAppInteractiveCardHeaderSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["image"]
     url: Annotated[str, Field(
-        description="Public `https` URL of the file to show at the top of the card. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB. WhatsApp fetches it at send time, on the same terms as a message header's `url`.",
+        description="Public HTTPS URL fetched at send time. Image: JPEG/PNG, up to 5 MB. Video: MP4 (H.264/AAC), up to 16 MB.",
         examples=["https://cdn.example.com/plants/blue-echeveria.jpeg"],
         min_length=1,
     )]
@@ -9744,7 +9890,7 @@ class WhatsAppInteractiveCardHeaderSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["video"]
     url: Annotated[str, Field(
-        description="Public `https` URL of the file to show at the top of the card. An image must be JPEG or PNG, up to 5 MB; a video, MP4 with H.264 video and AAC audio, up to 16 MB. WhatsApp fetches it at send time, on the same terms as a message header's `url`.",
+        description="Public HTTPS URL fetched at send time. Image: JPEG/PNG, up to 5 MB. Video: MP4 (H.264/AAC), up to 16 MB.",
         examples=["https://cdn.example.com/plants/blue-echeveria.jpeg"],
         min_length=1,
     )]
@@ -9760,7 +9906,7 @@ class WhatsAppInteractiveCardSend1(BaseModel):
         description="The image or video at the top of the card.",
     )]
     body_text: Annotated[Optional[str], Field(
-        description="The card's own text, below its media, with at most two line breaks. Optional: a card can carry media and buttons alone.",
+        description="Optional text below the media, with at most two line breaks.",
         examples=["*Blue Echeveria*\n\nA rosette-shaped succulent with powdery blue leaves."],
         max_length=160,
         min_length=1,
@@ -9775,7 +9921,7 @@ class WhatsAppInteractiveCardSend2(BaseModel):
         description="The image or video at the top of the card.",
     )]
     body_text: Annotated[Optional[str], Field(
-        description="The card's own text, below its media, with at most two line breaks. Optional: a card can carry media and buttons alone.",
+        description="Optional text below the media, with at most two line breaks.",
         examples=["*Blue Echeveria*\n\nA rosette-shaped succulent with powdery blue leaves."],
         max_length=160,
         min_length=1,
@@ -9792,11 +9938,11 @@ class WhatsAppInteractiveSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["button"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
-        description="Optional content above the body: text on a `list`; text, image, video or document on `button` and `cta_url`. A `carousel` and the two request kinds take none.",
+        description="For `list`: text only. For `button` and `cta_url`: text, image, video, or document. Unsupported for carousel and request kinds.",
     )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Annotated[Optional[str], Field(
-        description="Optional small print below the body and above the buttons. A `carousel` and both request kinds take no footer.",
+        description="Small print below the body. Unsupported for carousel and request kinds.",
         examples=["Dates are subject to change."],
         max_length=60,
         min_length=1,
@@ -9818,20 +9964,20 @@ class WhatsAppInteractiveSend2(BaseModel):
     type: Literal["list"]
     header: Optional[WhatsAppInteractiveSend2Header] = None
     body_text: Annotated[str, Field(
-        description="The message's main text, required on every kind. Up to 1024 characters, except on a `list`.",
+        description="Required main text. Maximum 1024 characters, or 4096 for `list`.",
         examples=["Your workshop is scheduled for 9am tomorrow."],
         max_length=4096,
         min_length=1,
     )]
     footer_text: Annotated[Optional[str], Field(
-        description="Optional small print below the body and above the buttons. A `carousel` and both request kinds take no footer.",
+        description="Small print below the body. Unsupported for carousel and request kinds.",
         examples=["Dates are subject to change."],
         max_length=60,
         min_length=1,
     )] = None
     buttons: Optional[Any] = None
     list: Annotated[WhatsAppInteractiveListSend, Field(
-        description="The menu to show. Send this on a `list` message.",
+        description="Menu for a `list` message.",
     )]
     cta_url: Optional[Any] = None
     cards: Optional[Any] = None
@@ -9841,11 +9987,11 @@ class WhatsAppInteractiveSend3(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["cta_url"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
-        description="Optional content above the body: text on a `list`; text, image, video or document on `button` and `cta_url`. A `carousel` and the two request kinds take none.",
+        description="For `list`: text only. For `button` and `cta_url`: text, image, video, or document. Unsupported for carousel and request kinds.",
     )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Annotated[Optional[str], Field(
-        description="Optional small print below the body and above the buttons. A `carousel` and both request kinds take no footer.",
+        description="Small print below the body. Unsupported for carousel and request kinds.",
         examples=["Dates are subject to change."],
         max_length=60,
         min_length=1,
@@ -9853,7 +9999,7 @@ class WhatsAppInteractiveSend3(BaseModel):
     buttons: Optional[Any] = None
     list: Optional[Any] = None
     cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
-        description="The link button to show. Send this on a `cta_url` message.",
+        description="Link button for a `cta_url` message.",
     )]
     cards: Optional[Any] = None
 
@@ -9868,7 +10014,7 @@ class WhatsAppInteractiveSend4(BaseModel):
     list: Optional[Any] = None
     cta_url: Optional[Any] = None
     cards: Annotated[List[WhatsAppInteractiveCardSend], Field(
-        description="The cards of a `carousel` message, 2 to 10, left to right. A carousel takes no header or footer of its own.",
+        description="2–10 carousel cards, in display order. No message-level header or footer.",
         max_length=10,
         min_length=2,
     )]
@@ -9903,7 +10049,7 @@ class WhatsAppInteractiveSend(RootModel[WhatsAppInteractiveSend1 | WhatsAppInter
 
 
 class WhatsAppContactNameSend(BaseModel):
-    "The contact's name. `formatted_name` is what the card shows, and WhatsApp additionally requires at least one of the parts below it, so a card carrying only a formatted name is rejected."
+    "Requires `formatted_name` plus at least one other name part."
     model_config = ConfigDict(extra="allow")
     formatted_name: Annotated[str, Field(
         description="The whole name, as the card should render it.",
@@ -9930,13 +10076,13 @@ class WhatsAppContactPhoneSend(BaseModel):
     "One phone number to put on a contact card."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
-        description="The number to show. Send it in E.164 to get a card the recipient can message from; any other form still renders, with an invite button.",
+        description="E.164 enables a chat button; other formats show an invite button.",
         examples=[+16505551234],
         max_length=32,
         min_length=1,
     )]
     type: Annotated[Optional[str], Field(
-        description="A label for the number, shown beside it. Free text: WhatsApp defines no vocabulary, and the label is sent exactly as written.",
+        description="Free-text label shown beside the number, sent verbatim.",
         examples=["Mobile"],
         max_length=64,
     )] = None
@@ -9951,7 +10097,7 @@ class WhatsAppContactEmailSend(BaseModel):
         min_length=1,
     )]
     type: Annotated[Optional[str], Field(
-        description="A label for the address, shown beside it. Free text, sent exactly as written.",
+        description="Free-text label shown beside the address, sent verbatim.",
         examples=["Work"],
         max_length=64,
     )] = None
@@ -9961,13 +10107,13 @@ class WhatsAppContactUrlSend(BaseModel):
     "One website to put on a contact card."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="The address to show. Not validated as a URL, because a card commonly carries a bare domain.",
+        description="Website address; bare domains accepted without URL validation.",
         examples=["https://luckyshrub.example.com"],
         max_length=2048,
         min_length=1,
     )]
     type: Annotated[Optional[str], Field(
-        description="A label for the website, shown beside it. Free text, sent exactly as written.",
+        description="Free-text label shown beside the website, sent verbatim.",
         examples=["Company"],
         max_length=64,
     )] = None
@@ -9990,26 +10136,26 @@ class WhatsAppContactAddressSend(BaseModel):
         max_length=128,
     )] = None
     type: Annotated[Optional[str], Field(
-        description="A label for the address, shown beside it. Free text, sent exactly as written.",
+        description="Free-text label shown beside the address, sent verbatim.",
         examples=["Office"],
         max_length=64,
     )] = None
 
 
 class WhatsAppContactCardSend(BaseModel):
-    "A contact card to send. WhatsApp shows the name on the card and the rest in a profile view the recipient opens from it.\n\nA card carrying a phone number renders buttons that message or save the contact; a card without one can only be added to an address book."
+    "Contact card with a name and profile details. With a phone number, recipients can message or save it; without one, they can save it."
     model_config = ConfigDict(extra="allow")
     name: WhatsAppContactNameSend
     org: Annotated[Optional[WhatsAppContactOrgSend], Field(
         description="Where the contact works.",
     )] = None
     birthday: Annotated[Optional[str], Field(
-        description="The contact's birthday, as `YYYY-MM-DD`. WhatsApp rejects any other shape, and a date no calendar holds is rejected too.",
+        description="Valid calendar date in `YYYY-MM-DD` format.",
         examples=["1999-01-23"],
         pattern="^\\d{4}-\\d{2}-\\d{2}$",
     )] = None
     phone_numbers: Annotated[Optional[List[WhatsAppContactPhoneSend]], Field(
-        description="The numbers on the card. A number in E.164 renders a button that opens a WhatsApp chat with it; one that is not renders an invite instead.",
+        description="E.164 numbers get a WhatsApp chat button; other formats get an invite button.",
         max_length=10,
     )] = None
     emails: Annotated[Optional[List[WhatsAppContactEmailSend]], Field(max_length=10)] = None
@@ -10023,63 +10169,63 @@ class WhatsAppMessageSendRequest(BaseModel):
     "A WhatsApp message to send, carrying exactly one kind of content."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
-        description="The recipient: a phone number in E.164 format (for example `+14155550100`), a business-scoped user ID (for example `US.13491208655302741918`) for a WhatsApp user whose number you do not have, or a WhatsApp group ID (for example `wag_01krdgeqcxet5s7t44vh8rt9mg`). One-time-passcode templates need a phone number. Bird tracks the customer service window per identity and business number, so reply to the identity a contact's message came from, from the number it reached.",
+        description="Recipient E.164 number, business-scoped user ID (BSUID, such as `US.13491208655302741918`), or group ID (such as `wag_01krdgeqcxet5s7t44vh8rt9mg`). OTP templates require a phone number. For replies, use the inbound sender identity and receiving business number.",
         examples=[+14155550100],
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="The business phone number to send from, in E.164 format: a connected number this workspace owns, on the same WhatsApp Business Account as an authored template. Omit it for a Bird-managed template or a group send, which use their own number; every other send requires it.",
+        description="Connected E.164 number owned by this workspace; for authored templates, use the same WhatsApp Business Account. Omit for Bird-managed templates and groups; required otherwise.",
         examples=[+13124495648],
         min_length=1,
     )] = None
     template: Annotated[Optional[WhatsAppTemplateSend], Field(
-        description="The template to send, the only content deliverable outside the customer service window. A group takes only templates your workspace authored, outside the authentication category.",
+        description="Required outside the customer service window. Groups accept workspace-authored, non-authentication templates only.",
     )] = None
     text: Annotated[Optional[WhatsAppTextSend], Field(
-        description="Free-form text. Deliverable only inside an open customer service window.",
+        description="Free-form text; requires an open customer service window.",
     )] = None
     image: Annotated[Optional[WhatsAppImageSend], Field(
-        description="A free-form image. Deliverable only inside an open customer service window.",
+        description="Free-form image; requires an open customer service window.",
     )] = None
     video: Annotated[Optional[WhatsAppVideoSend], Field(
-        description="A free-form video. Deliverable only inside an open customer service window.",
+        description="Free-form video; requires an open customer service window.",
     )] = None
     audio: Annotated[Optional[WhatsAppAudioSend], Field(
-        description="Free-form audio. Deliverable only inside an open customer service window.",
+        description="Free-form audio; requires an open customer service window.",
     )] = None
     sticker: Annotated[Optional[WhatsAppStickerSend], Field(
-        description="A free-form sticker. Deliverable only inside an open customer service window.",
+        description="Free-form sticker; requires an open customer service window.",
     )] = None
     document: Annotated[Optional[WhatsAppDocumentSend], Field(
-        description="A free-form document. Deliverable only inside an open customer service window.",
+        description="Free-form document; requires an open customer service window.",
     )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
-        description="A free-form location. Deliverable only inside an open customer service window.",
+        description="Free-form location; requires an open customer service window.",
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractiveSend], Field(
-        description="Free-form interactive content: reply buttons, a list menu, a link button, media cards, or a request for the recipient's location or contact details. Deliverable only inside an open customer service window, and never to a group.",
+        description="Reply buttons, a list, a link button, media cards, or a location/contact request. Requires an open customer service window; unsupported for groups.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCardSend]], Field(
-        description="Up to five contact cards, each `name` carrying `formatted_name` plus at least one other part. Deliverable only inside an open customer service window.",
+        description="Up to five cards. Each name needs `formatted_name` and another name part. Requires an open customer service window.",
         max_length=5,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
-        description="An earlier message to quote above this one: one from the same conversation, between this `to` and `from`, in the last 15 days.",
+        description="Message to quote, from this conversation (`to` and `from`) within the last 15 days.",
         examples=["wam_01kya19eknftrs2s6p82asmvnh"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Structured `{name, value}` labels for filtering. Tags become first-class query dimensions: filter the list endpoint by tag name. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.",
+        description="Up to 20 `{name, value}` labels, filterable by name. Use for low-cardinality dimensions such as category; put other context in `metadata`.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="Arbitrary JSON object stored on the message and returned on API reads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.",
+        description="Per-message JSON context, such as internal IDs, returned on reads. Maximum 2 KB serialized. Use `tags` for filterable labels.",
     )] = None
     reference: Annotated[Optional[str], Field(
-        description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
+        description="Identifier matched exactly by the message list's `reference` filter; returned on reads and webhooks. May be shared by multiple messages. Put non-searchable context in `metadata`.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
@@ -20602,7 +20748,7 @@ class Mailbox(BaseModel):
         min_length=5,
     )]
     forwarding_address: Annotated[Optional[str], Field(
-        description="An address we generate on our receiving domain when the mailbox is created on a domain not set up for receiving with us. Forward mail for `address` here from your current email provider, and it lands in this mailbox. Replies still go out from `address`. Immutable. It stops receiving while the mailbox is deleted, works again with the same value after a restore, and keeps working if you later enable receiving on the domain. `null` on mailboxes created on the shared domain or on a domain already enabled for receiving.",
+        description="An address we generate on our receiving domain, either when the mailbox is created on a domain not set up for receiving with us or later, when you set up forwarding for the mailbox. Forward mail for `address` here from your current email provider, and it lands in this mailbox. Replies still go out from `address`. Immutable once set. It stops receiving while the mailbox is deleted, works again with the same value after a restore, and keeps working if you later enable or disable receiving on the domain. `null` until set up; always `null` on the shared domain, which receives directly.",
         examples=["k7q2mzxw4h6p5ra3@eu1.inbound.bird.com"],
     )]
     display_name: Annotated[Optional[str], Field(
@@ -20665,7 +20811,7 @@ class Mailbox(BaseModel):
         description="When the mailbox was deleted, or `null` if active. Deletion stops receiving; restore is available for 30 days unless permanent erasure has started.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
-        description="What to do next with this mailbox. The response that creates it suggests subscribing to the mail it receives; other reads of one mailbox return an empty list, and lists omit it.",
+        description="What to do next with this mailbox. The response that creates it suggests subscribing to the mail it receives. Forwarding-address setup suggests configuring the email provider. Other reads of one mailbox return an empty list, and lists omit it.",
     )] = None
 
 

@@ -67,6 +67,18 @@ class NextAction:
 
 
 @dataclass(frozen=True)
+class RateLimitContext:
+    """The policy limit that refused a request. ``scope`` is ``organization`` for the
+    limit shared by every workspace in the organization, or ``workspace`` for a limit
+    set on the workspace itself."""
+
+    policy_key: str
+    scope: str
+    window_seconds: int
+    limit: int
+
+
+@dataclass(frozen=True)
 class QuotaContext:
     """The quota limit that refused a resource change. ``scope`` is ``organization``
     for the limit shared by every workspace in the organization, or ``workspace``
@@ -138,6 +150,7 @@ class APIStatusError(APIError):
         vendor_code: str | None = None,
         remediation: str | None = None,
         next: list[NextAction] | None = None,
+        rate_limit: RateLimitContext | None = None,
         quota: QuotaContext | None = None,
     ) -> None:
         super().__init__(message)
@@ -151,6 +164,7 @@ class APIStatusError(APIError):
         self.vendor_code = vendor_code
         self.remediation = remediation
         self.next = next or []
+        self.rate_limit = rate_limit
         self.quota = quota
 
     def __str__(self) -> str:
@@ -249,6 +263,7 @@ def from_response(status_code: int, body: bytes | str, headers: Mapping[str, str
             for n in (data.get("next") or [])  # `or []` handles both an absent key and an explicit null
             if isinstance(n, dict)
         ],
+        "rate_limit": _rate_limit(data.get("rate_limit")),
         "quota": _quota(data.get("quota")),
     }
 
@@ -279,6 +294,18 @@ def parse_retry_after(headers: Mapping[str, str]) -> float | None:
             return None
         seconds = (when - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
     return seconds if seconds >= 0 else None
+
+
+def _rate_limit(raw: Any) -> RateLimitContext | None:
+    """The refusing policy limit, or ``None``. A malformed context is dropped rather
+    than raised: an error response must always arrive as its own error."""
+    if not isinstance(raw, dict):
+        return None
+    policy_key, scope = raw.get("policy_key"), raw.get("scope")
+    window_seconds, limit = raw.get("window_seconds"), raw.get("limit")
+    if not (isinstance(policy_key, str) and isinstance(scope, str) and isinstance(window_seconds, int) and isinstance(limit, int)):
+        return None
+    return RateLimitContext(policy_key=policy_key, scope=scope, window_seconds=window_seconds, limit=limit)
 
 
 def _quota(raw: Any) -> QuotaContext | None:
