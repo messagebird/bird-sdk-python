@@ -7,6 +7,7 @@ from typing import TypedDict
 from bird._generated import (
     SMSStatsByCarrierResponse,
     SMSStatsByCategoryResponse,
+    SMSStatsByCostCenterResponse,
     SMSStatsByCountryResponse,
     SMSStatsByErrorCodeResponse,
     SMSStatsByOriginatorResponse,
@@ -29,6 +30,7 @@ class SmsStatsSummaryParams(TypedDict, total=False):
     country: str
     category: str
     carrier: str
+    cost_center: str
     compare: str
 
 
@@ -42,6 +44,7 @@ class SmsStatsDailyParams(TypedDict, total=False):
     country: str
     category: str
     carrier: str
+    cost_center: str
 
 
 class SmsStatsHourlyParams(TypedDict, total=False):
@@ -54,6 +57,7 @@ class SmsStatsHourlyParams(TypedDict, total=False):
     country: str
     category: str
     carrier: str
+    cost_center: str
 
 
 class SmsStatsByCountryParams(TypedDict, total=False):
@@ -136,6 +140,18 @@ class SmsStatsByTagParams(TypedDict, total=False):
     trend_grain: str
 
 
+class SmsStatsByCostCenterParams(TypedDict, total=False):
+    """Query params for ``client.sms.stats.by_cost_center``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+
+
 class SmsStatsBase(Resource):
     def summary(
         self,
@@ -147,6 +163,7 @@ class SmsStatsBase(Resource):
         country: str | None = None,
         category: str | None = None,
         carrier: str | None = None,
+        cost_center: str | None = None,
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsSummary:
@@ -167,6 +184,7 @@ class SmsStatsBase(Resource):
                 "country": country,
                 "category": category,
                 "carrier": carrier,
+                "cost_center": cost_center,
                 "compare": compare,
             },
             SMSStatsSummary,
@@ -183,6 +201,7 @@ class SmsStatsBase(Resource):
         country: str | None = None,
         category: str | None = None,
         carrier: str | None = None,
+        cost_center: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per calendar day, for charts and trend lines. The window is at most 365 days; set `timezone` to get local calendar days instead of UTC. Rates and latency percentiles are whole-window figures, so read those from `sms.stats.summary`.
@@ -203,6 +222,7 @@ class SmsStatsBase(Resource):
                 "country": country,
                 "category": category,
                 "carrier": carrier,
+                "cost_center": cost_center,
             },
             SMSStatsResponse,
             options,
@@ -218,6 +238,7 @@ class SmsStatsBase(Resource):
         country: str | None = None,
         category: str | None = None,
         carrier: str | None = None,
+        cost_center: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per hour, for inspecting send rate and deliverability inside a single day. The window is at most 30 days (720 rows) and both bounds round down to the hour. For longer ranges use `sms.stats.daily`.
@@ -238,6 +259,7 @@ class SmsStatsBase(Resource):
                 "country": country,
                 "category": category,
                 "carrier": carrier,
+                "cost_center": cost_center,
             },
             SMSStatsResponse,
             options,
@@ -483,6 +505,43 @@ class SmsStatsBase(Resource):
             options,
         )
 
+    def by_cost_center(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSStatsByCostCenterResponse:
+        """SMS delivery and latency stats grouped by the `cost_center` messages were sent with, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Messages sent without a cost center are not counted, so rows do not sum to the period total.
+
+        ```python
+        stats = client.sms.stats.by_cost_center(from_="2026-05-01", to="2026-05-31")
+        for row in stats.data:
+            # Messages sent without a cost center are not counted, so rows do not
+            # sum to the period total.
+            print(row.cost_center, row.delivery)
+        ```
+        """
+        return self._get(
+            "/v1/sms/stats/cost-centers",
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "sort": sort,
+                "limit": limit,
+                "include_trend": include_trend,
+                "trend_grain": trend_grain,
+            },
+            SMSStatsByCostCenterResponse,
+            options,
+        )
+
 
 class AsyncSmsStatsBase(AsyncResource):
     async def summary(
@@ -495,6 +554,7 @@ class AsyncSmsStatsBase(AsyncResource):
         country: str | None = None,
         category: str | None = None,
         carrier: str | None = None,
+        cost_center: str | None = None,
         compare: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsSummary:
@@ -515,6 +575,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "country": country,
                 "category": category,
                 "carrier": carrier,
+                "cost_center": cost_center,
                 "compare": compare,
             },
             SMSStatsSummary,
@@ -531,6 +592,7 @@ class AsyncSmsStatsBase(AsyncResource):
         country: str | None = None,
         category: str | None = None,
         carrier: str | None = None,
+        cost_center: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per calendar day, for charts and trend lines. The window is at most 365 days; set `timezone` to get local calendar days instead of UTC. Rates and latency percentiles are whole-window figures, so read those from `sms.stats.summary`.
@@ -551,6 +613,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "country": country,
                 "category": category,
                 "carrier": carrier,
+                "cost_center": cost_center,
             },
             SMSStatsResponse,
             options,
@@ -566,6 +629,7 @@ class AsyncSmsStatsBase(AsyncResource):
         country: str | None = None,
         category: str | None = None,
         carrier: str | None = None,
+        cost_center: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per hour, for inspecting send rate and deliverability inside a single day. The window is at most 30 days (720 rows) and both bounds round down to the hour. For longer ranges use `sms.stats.daily`.
@@ -586,6 +650,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "country": country,
                 "category": category,
                 "carrier": carrier,
+                "cost_center": cost_center,
             },
             SMSStatsResponse,
             options,
@@ -828,5 +893,42 @@ class AsyncSmsStatsBase(AsyncResource):
                 "trend_grain": trend_grain,
             },
             SMSStatsByTagResponse,
+            options,
+        )
+
+    async def by_cost_center(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSStatsByCostCenterResponse:
+        """SMS delivery and latency stats grouped by the `cost_center` messages were sent with, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Messages sent without a cost center are not counted, so rows do not sum to the period total.
+
+        ```python
+        stats = await client.sms.stats.by_cost_center(from_="2026-05-01", to="2026-05-31")
+        for row in stats.data:
+            # Messages sent without a cost center are not counted, so rows do not
+            # sum to the period total.
+            print(row.cost_center, row.delivery)
+        ```
+        """
+        return await self._get(
+            "/v1/sms/stats/cost-centers",
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "sort": sort,
+                "limit": limit,
+                "include_trend": include_trend,
+                "trend_grain": trend_grain,
+            },
+            SMSStatsByCostCenterResponse,
             options,
         )

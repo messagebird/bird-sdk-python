@@ -90,6 +90,14 @@ def sms_stats_by_tag() -> None:
         print(row.tag, row.delivery)
 
 
+def sms_stats_by_cost_center() -> None:
+    stats = client.sms.stats.by_cost_center(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data:
+        # Messages sent without a cost center are not counted, so rows do not
+        # sum to the period total.
+        print(row.cost_center, row.delivery)
+
+
 def sms_stats_inbound_summary() -> None:
     summary = client.sms.stats.inbound.summary(from_="2026-05-01", to="2026-05-31")
     print(summary.received)

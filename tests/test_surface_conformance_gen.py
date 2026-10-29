@@ -106,6 +106,7 @@ def test_surface_conformance() -> None:
     assert callable(client.sms.stats.by_status)
     assert callable(client.sms.stats.by_error_code)
     assert callable(client.sms.stats.by_tag)
+    assert callable(client.sms.stats.by_cost_center)
     assert callable(client.sms.stats.inbound.summary)
     assert callable(client.sms.stats.inbound.daily)
     assert callable(client.sms.stats.inbound.hourly)

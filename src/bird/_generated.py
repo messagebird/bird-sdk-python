@@ -2416,7 +2416,7 @@ class AMBMessageKindStatsPoint(BaseModel):
     "Outbound counts and latency percentiles for a single message content kind over the requested period."
     model_config = ConfigDict(extra="allow")
     message_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
     )]
     counts: Annotated[AMBOutboundStatsCounts, Field(
         description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
@@ -7659,6 +7659,38 @@ class SMSStatsByOriginatorResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total number of distinct originators with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
         examples=[42],
+        ge=0,
+    )]
+
+
+class SMSCostCenterStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single cost center over the requested period."
+    model_config = ConfigDict(extra="allow")
+    cost_center: Annotated[str, Field(
+        description="The cost center this row aggregates, as set on the message or taken from its messaging profile at send time.",
+        examples=["CC001234"],
+        max_length=64,
+        min_length=1,
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        description="Per-bucket lifecycle counts for this cost center, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByCostCenterResponse(BaseModel):
+    "Per-cost-center breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSCostCenterStatsPoint], Field(
+        description="Cost center breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages with a cost center were sent in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct cost centers with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[8],
         ge=0,
     )]
 
@@ -13217,11 +13249,9 @@ class AMBNativeAttachment(BaseModel):
     )] = None
 
 
-class AMBNativeTextContent(BaseModel):
+class AMBText(BaseModel):
+    "A text message: a body, an optional subject, and files placed in the body. Next to `rich_link` or `interactive`, it is sent first as its own text bubble."
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["text"], Field(
-        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
-    )]
     body: Annotated[Optional[str], Field(
         description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
@@ -13288,20 +13318,9 @@ class AMBRichLinkConstruct(BaseModel):
     )] = None
 
 
-class AMBNativeRichLinkContent(BaseModel):
+class AMBRichLink(BaseModel):
+    "A link with a preview card. Supply your own preview in `rich_link_data`, or ask Apple to build it with `rich_link_construct`. To introduce the link, send `text` alongside it."
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["rich_link"], Field(
-        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
-    )]
-    body: Annotated[Optional[str], Field(
-        description="Automatic introductions for rich links are enabled regionally in stages. When enabled for a new send, a nonblank body is sent as a separate text before the link. All parts belong to one message, which becomes sent after Apple accepts all parts. Before activation, and for retries retaining legacy behavior, body is included in the rich link request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the rich link. Use one U+FFFC object replacement character per attachment to control placement.",
-    )] = None
-    subject: Annotated[Optional[str], Field(
-        description="Subject displayed above the message body.",
-    )] = None
-    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
-        description="Ordered attachments. A send supplies each one by source_url or attachment_id.",
-    )] = None
     rich_link_data: Optional[AMBNativeRichLinkData] = None
     rich_link_construct: Annotated[Optional[AMBRichLinkConstruct], Field(
         description="Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title.",
@@ -13377,7 +13396,7 @@ class AMBQuickReplyItem(BaseModel):
 class AMBNativeQuickReply(BaseModel):
     model_config = ConfigDict(extra="allow")
     summary_text: Annotated[str, Field(
-        description="Text used for the device notification and shown in the transcript after the customer chooses an item. Automatic introductions through the enclosing content.body depend on regional activation and the send retry mode; see content.body. For an introduction independent of activation, send a separate text message and omit content.body from the quick reply.",
+        description="Text used for the device notification and shown in the transcript after the customer chooses an item. To introduce the choices, send `text` alongside `interactive`; it arrives first as its own bubble.",
         min_length=1,
     )]
     items: Annotated[List[AMBQuickReplyItem], Field(
@@ -13772,6 +13791,45 @@ class AMBNativeDynamic(BaseModel):
     data: AMBNativeFormData
 
 
+class AMBIMessageApp(BaseModel):
+    "A custom iMessage app interaction. It also requires both `received_message` and `reply_message`."
+    model_config = ConfigDict(extra="allow")
+    app_id: Annotated[str, Field(
+        description="App Store identifier of the iMessage app.",
+        min_length=1,
+    )]
+    app_name: Annotated[str, Field(
+        description="Name of the iMessage app.",
+        min_length=1,
+    )]
+    bid: Annotated[str, Field(
+        description="Identifier of the iMessage extension, in Apple's `com.apple.messages.MSMessageExtensionBalloonPlugin:team-id:extension-id` format.",
+        min_length=1,
+    )]
+    url: Annotated[str, Field(
+        description="Opaque URL string that Messages passes to the iMessage app.",
+        examples=["?order=1234&view=detail"],
+        min_length=1,
+    )]
+    app_icon_source_url: Annotated[str, Field(
+        description="Publicly accessible HTTPS URL of the app's PNG icon. The icon must be smaller than 15 kB. We fetch and include it in the request to Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
+        min_length=1,
+    )]
+    use_live_layout: Annotated[bool, Field(
+        description="Whether Messages renders the received and reply bubbles using Live Layout.",
+    )]
+
+
+class AMBNativePayment(BaseModel):
+    "Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials."
+    model_config = ConfigDict(extra="allow")
+    payment_id: Annotated[str, Field(
+        examples=["apay_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^apay_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
 class AMBAuthenticationID(RootModel[str]):
     root: str
 
@@ -13786,25 +13844,21 @@ class AMBNativeAuthentication(BaseModel):
     )]
 
 
-class AMBNativePayment(BaseModel):
-    "Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials."
+class AMBInteractive(BaseModel):
+    "Something for the customer to tap: exactly one of `quick_reply`, `list_picker`, `event` (a time picker), `dynamic` (a form) or `imessage_app`. To introduce it with text or files, send `text` alongside it; that text arrives as its own bubble first. Apple Pay and identity verification requests are created through their conversation endpoints and read back here as `payment` and `authenticate`."
     model_config = ConfigDict(extra="allow")
-    payment_id: Annotated[str, Field(
-        examples=["apay_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^apay_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-
-
-class AMBNativeInteractivePayload(BaseModel):
-    "Exactly one built-in interaction. Protocol versions are managed by Bird."
-    model_config = ConfigDict(extra="allow")
+    received_message: Optional[AMBMessageBubble] = None
+    reply_message: Optional[AMBMessageBubble] = None
+    session_identifier: Annotated[Optional[str], Field(
+        description="Session UUID to preserve across interactions. Apple creates one when omitted.",
+        pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+    )] = None
     request_identifier: Annotated[Optional[str], Field(
         description="Correlation identifier for this interaction. Bird generates one when omitted. Use a new value for each message. A reply is linked to its request only when no other sent message in the conversation uses the same identifier.",
         pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )] = None
     images: Annotated[Optional[List[AMBNativeImage]], Field(
-        description="Images referenced by identifier.",
+        description="Images the interaction references by `image_identifier`, such as list picker thumbnails.",
     )] = None
     quick_reply: Optional[AMBNativeQuickReply] = None
     list_picker: Optional[AMBNativeListPicker] = None
@@ -13812,73 +13866,30 @@ class AMBNativeInteractivePayload(BaseModel):
     dynamic: Annotated[Optional[AMBNativeDynamic], Field(
         description="Form content. Bird supplies Apple’s messageForms template and protocol version.",
     )] = None
-    authenticate: Annotated[Optional[AMBNativeAuthentication], Field(
-        description="Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials.",
+    imessage_app: Annotated[Optional[AMBIMessageApp], Field(
+        description="A custom iMessage app interaction. It also requires both `received_message` and `reply_message`.",
     )] = None
     payment: Annotated[Optional[AMBNativePayment], Field(
         description="Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials.",
     )] = None
+    authenticate: Annotated[Optional[AMBNativeAuthentication], Field(
+        description="Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials.",
+    )] = None
 
 
-class AMBNativeInteractiveData(BaseModel):
-    "A built-in interaction or custom iMessage app. Custom apps require the app metadata and both message bubbles."
+class AMBNativeInboundImage(BaseModel):
     model_config = ConfigDict(extra="allow")
-    app_id: Annotated[Optional[str], Field(
-        description="App Store identifier of the iMessage app.",
+    identifier: Annotated[str, Field(
+        description="Identifier used by the received message.",
         min_length=1,
-    )] = None
-    app_name: Annotated[Optional[str], Field(
-        description="Name of the iMessage app.",
-        min_length=1,
-    )] = None
-    bid: Annotated[Optional[str], Field(
-        description="Identifier of the iMessage extension, in Apple's `com.apple.messages.MSMessageExtensionBalloonPlugin:team-id:extension-id` format.",
-        min_length=1,
-    )] = None
-    url: Annotated[Optional[str], Field(
-        description="Opaque URL string that Messages passes to the iMessage app.",
-        examples=["?order=1234&view=detail"],
-        min_length=1,
-    )] = None
-    use_live_layout: Annotated[Optional[bool], Field(
-        description="Whether Messages renders the received and reply bubbles using Live Layout.",
-    )] = None
-    session_identifier: Annotated[Optional[str], Field(
-        description="Session UUID to preserve across interactions. Apple creates one when omitted.",
-        pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
-    )] = None
-    received_message: Optional[AMBMessageBubble] = None
-    reply_message: Optional[AMBMessageBubble] = None
-    app_icon_source_url: Annotated[Optional[str], Field(
-        description="Publicly accessible HTTPS URL of the app's PNG icon. The icon must be smaller than 15 kB. We fetch and include it in the request to Apple. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS.",
-        min_length=1,
-    )] = None
-    data: Annotated[Optional[AMBNativeInteractivePayload], Field(
-        description="Exactly one built-in interaction. Protocol versions are managed by Bird.",
-    )] = None
-
-
-class AMBNativeInteractiveContent(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["interactive"], Field(
-        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
     )]
-    body: Annotated[Optional[str], Field(
-        description="Automatic introductions for inline quick replies are enabled regionally in stages. When enabled for a new send containing `interactive_data.data.quick_reply`, a nonblank body is sent as separate text before the choices. All parts belong to one message, which becomes sent after Apple accepts all parts. Before activation, and for retries retaining legacy behavior, body is included in the interactive request and is not guaranteed to appear on the device. To ensure an introduction without relying on activation, send a separate text message and omit body from the quick reply. Omit body to send choices only. For list pickers, time pickers and forms, use interactive_data.received_message for the visible introduction. Use one U+FFFC object replacement character per attachment to control placement.",
+    description: Annotated[Optional[str], Field(
+        description="Accessibility description supplied by Apple.",
     )] = None
-    subject: Annotated[Optional[str], Field(
-        description="Subject displayed above the message body.",
-    )] = None
-    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
-        description="Ordered attachments. A send supplies each one by source_url or attachment_id.",
-    )] = None
-    interactive_data: Annotated[AMBNativeInteractiveData, Field(
-        description="A built-in interaction or custom iMessage app. Custom apps require the app metadata and both message bubbles.",
+    download_url: Annotated[str, Field(
+        description="Relative Bird API URL for downloading the image with the same authentication and workspace as the message.",
+        min_length=1,
     )]
-
-
-class AMBMessageContent(RootModel[AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent]):
-    root: AMBNativeTextContent | AMBNativeRichLinkContent | AMBNativeInteractiveContent
 
 
 class AMBNativeInboundQuickReply(BaseModel):
@@ -14003,38 +14014,8 @@ class AMBNativeInboundAuthentication(BaseModel):
     )] = None
 
 
-class AMBNativeInboundImage(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    identifier: Annotated[str, Field(
-        description="Identifier used by the received message.",
-        min_length=1,
-    )]
-    description: Annotated[Optional[str], Field(
-        description="Accessibility description supplied by Apple.",
-    )] = None
-    download_url: Annotated[str, Field(
-        description="Relative Bird API URL for downloading the image with the same authentication and workspace as the message.",
-        min_length=1,
-    )]
-
-
-class AMBNativeInboundPayload(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    request_identifier: Annotated[Optional[str], Field(
-        description="Correlation identifier reported by Apple.",
-    )] = None
-    quick_reply: Optional[AMBNativeInboundQuickReply] = None
-    list_picker: Optional[AMBNativeInboundListPicker] = None
-    event: Optional[AMBNativeInboundEvent] = None
-    dynamic: Optional[AMBNativeInboundDynamic] = None
-    payment: Optional[AMBNativeInboundPayment] = None
-    authenticate: Optional[AMBNativeInboundAuthentication] = None
-    images: Annotated[Optional[List[AMBNativeInboundImage]], Field(
-        description="Images returned by Apple, with authenticated download URLs.",
-    )] = None
-
-
-class AMBNativeInboundInteractiveData(BaseModel):
+class AMBInboundIMessageApp(BaseModel):
+    "The custom iMessage app a customer replied from."
     model_config = ConfigDict(extra="allow")
     app_id: Annotated[Optional[str], Field(description="Custom app identifier.")] = None
     app_name: Annotated[Optional[str], Field(description="Custom app name.")] = None
@@ -14043,34 +14024,34 @@ class AMBNativeInboundInteractiveData(BaseModel):
     use_live_layout: Annotated[Optional[bool], Field(
         description="Whether the app uses live layout.",
     )] = None
-    session_identifier: Annotated[Optional[str], Field(
-        description="Apple interaction session identifier.",
-    )] = None
-    reply_message: Optional[AMBMessageBubble] = None
-    received_message: Optional[AMBMessageBubble] = None
-    data: Optional[AMBNativeInboundPayload] = None
     app_icon_url: Annotated[Optional[str], Field(
         description="Relative Bird API URL for downloading the custom app icon with the same authentication and workspace as the message.",
     )] = None
 
 
-class AMBNativeInboundInteractiveContent(BaseModel):
+class AMBInteractiveReply(BaseModel):
+    "What the customer answered on an interactive message: their choice, time slot, form answers, payment result, sign-in result or custom app reply, under the same key as the request. Inbound only; a message that offers something to tap reads as `interactive` instead."
     model_config = ConfigDict(extra="allow")
-    type: Annotated[Literal["interactive"], Field(
-        description="Apple Messages for Business message family:\n\n- `text` means a text or attachment message.\n- `rich_link` means a rich URL or video link preview.\n- `interactive` means an interactive payload such as a list picker, time picker, quick reply, form, authentication request, or Apple Pay request.",
-    )]
-    body: Annotated[Optional[str], Field(description="Message body supplied by Apple.")] = None
-    subject: Annotated[Optional[str], Field(
-        description="Message subject supplied by Apple.",
+    received_message: Optional[AMBMessageBubble] = None
+    reply_message: Optional[AMBMessageBubble] = None
+    session_identifier: Annotated[Optional[str], Field(
+        description="Apple interaction session identifier.",
     )] = None
-    attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
-        description="Ordered attachments supplied by Apple.",
+    request_identifier: Annotated[Optional[str], Field(
+        description="Correlation identifier reported by Apple.",
     )] = None
-    interactive_data: AMBNativeInboundInteractiveData
-
-
-class AMBInboundContent(RootModel[AMBNativeTextContent | AMBNativeInboundInteractiveContent]):
-    root: AMBNativeTextContent | AMBNativeInboundInteractiveContent
+    images: Annotated[Optional[List[AMBNativeInboundImage]], Field(
+        description="Images returned by Apple, with authenticated download URLs.",
+    )] = None
+    quick_reply: Optional[AMBNativeInboundQuickReply] = None
+    list_picker: Optional[AMBNativeInboundListPicker] = None
+    event: Optional[AMBNativeInboundEvent] = None
+    dynamic: Optional[AMBNativeInboundDynamic] = None
+    payment: Optional[AMBNativeInboundPayment] = None
+    authenticate: Optional[AMBNativeInboundAuthentication] = None
+    imessage_app: Annotated[Optional[AMBInboundIMessageApp], Field(
+        description="The custom iMessage app a customer replied from.",
+    )] = None
 
 
 class AMBError(BaseModel):
@@ -14138,14 +14119,23 @@ class AMBMessage(BaseModel):
         description="Send status:\n\n- `accepted`: Accepted and queued for delivery to Apple.\n- `sent`: Handed to Apple. There is no delivery or read receipt on this\n  channel, so `sent` is the furthest an outbound message's status\n  advances.\n- `send_failed`: Sending stopped because of a business or conversation\n  restriction, a recipient opt-out, an Apple refusal, or exhausted attempts.\n  An earlier attempt may have reached Apple if its response or the local\n  record of success was lost. See `last_error` for why sending stopped.\n- `rejected`: Refused by Bird before any send attempt and never charged:\n  the destination has no price, the wallet could not fund the send, or the\n  content cannot be sent yet. See `last_error`.\n- `received`: Received as an inbound message.",
     )]
     kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
     )]
     source: Annotated[Optional[AMBMessageSource], Field(
         description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
     )] = None
-    content: Annotated[Any, Field(
-        description="Native message content. Outgoing interactions contain requests; incoming interactions contain replies.",
-    )]
+    text: Annotated[Optional[AMBText], Field(
+        description="The message's text and files. Next to `rich_link`, `interactive` or `interactive_reply`, it is the text that came with them.",
+    )] = None
+    rich_link: Annotated[Optional[AMBRichLink], Field(
+        description="The link preview an outbound message carried.",
+    )] = None
+    interactive: Annotated[Optional[AMBInteractive], Field(
+        description="What an outbound message offered the customer to tap.",
+    )] = None
+    interactive_reply: Annotated[Optional[AMBInteractiveReply], Field(
+        description="What the customer answered, on an inbound message replying to an interactive message.",
+    )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -14279,7 +14269,7 @@ class AMBTemplateSend(BaseModel):
 
 
 class AMBMessageSendRequest(BaseModel):
-    "A message to send. Supply exactly one of `content` (native content) or `template` (a stored template, whose category is derived). Supplying both, or neither, is rejected."
+    "A message to send. Supply `text`, `rich_link` or `interactive` (the last two optionally with `text` sent first as its own bubble), or `template` (a stored template, whose category is derived)."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[str, Field(
         alias="from",
@@ -14295,11 +14285,17 @@ class AMBMessageSendRequest(BaseModel):
     source: Annotated[Optional[AMBMessageSource], Field(
         description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
     )] = None
-    content: Annotated[Optional[AMBMessageContent], Field(
-        description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
+    text: Annotated[Optional[AMBText], Field(
+        description="A text message. Alongside `rich_link` or `interactive`, it is sent first as its own text bubble, in the same message.",
+    )] = None
+    rich_link: Annotated[Optional[AMBRichLink], Field(
+        description="A link with a preview card.",
+    )] = None
+    interactive: Annotated[Optional[AMBInteractive], Field(
+        description="Something for the customer to tap, such as quick replies, a list picker, a time picker, a form or a custom iMessage app.",
     )] = None
     template: Annotated[Optional[AMBTemplateSend], Field(
-        description="Send using a stored template instead of native content. The category is derived from the template, so `category` is rejected alongside it.",
+        description="Send using a stored template instead of `text`, `rich_link` or `interactive`. The category is derived from the template, so `category` is rejected alongside it.",
     )] = None
     category: Annotated[Optional[str], Field(
         description="Free-form reporting label; it does not change sending or suppression policy, for example `order_update`. Omit it to send with the default empty category. Rejected alongside `template`, where the category is derived from the template.",
@@ -14956,7 +14952,7 @@ class AMBTemplateSummary(BaseModel):
         description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
     )]
     content_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
     )]
     customize_before_use: Annotated[bool, Field(
         description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
@@ -15061,7 +15057,7 @@ class AMBTemplate(BaseModel):
         description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
     )]
     content_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the native content.type families. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
     )]
     customize_before_use: Annotated[bool, Field(
         description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
@@ -15185,9 +15181,15 @@ class AMBTemplateVersionList(BaseModel):
 class AMBTemplateVersionLanguage(BaseModel):
     "One language's content and revision metadata within a version."
     model_config = ConfigDict(extra="allow")
-    content: Annotated[AMBMessageContent, Field(
-        description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
-    )]
+    text: Annotated[Optional[AMBText], Field(
+        description="Stored text and files. Includes its `{{ variable }}` placeholders.",
+    )] = None
+    rich_link: Annotated[Optional[AMBRichLink], Field(
+        description="Stored link preview. Includes its `{{ variable }}` placeholders.",
+    )] = None
+    interactive: Annotated[Optional[AMBInteractive], Field(
+        description="Stored interaction. Includes its `{{ variable }}` placeholders.",
+    )] = None
     revision: Annotated[int, Field(
         description="This language's revision counter.",
         ge=0,
@@ -15285,9 +15287,15 @@ class AMBTemplateLanguage(BaseModel):
         max_length=35,
         min_length=2,
     )]
-    content: Annotated[AMBMessageContent, Field(
-        description="Apple message families with Bird field naming and media URLs. Authentication and Apple Pay requests are created through their dedicated conversation endpoints.",
-    )]
+    text: Annotated[Optional[AMBText], Field(
+        description="Stored text and files. Includes its `{{ variable }}` placeholders.",
+    )] = None
+    rich_link: Annotated[Optional[AMBRichLink], Field(
+        description="Stored link preview. Includes its `{{ variable }}` placeholders.",
+    )] = None
+    interactive: Annotated[Optional[AMBInteractive], Field(
+        description="Stored interaction. Includes its `{{ variable }}` placeholders.",
+    )] = None
     revision: Annotated[int, Field(
         description="This language's revision counter, used for concurrent-edit checks on draft writes.",
         ge=0,

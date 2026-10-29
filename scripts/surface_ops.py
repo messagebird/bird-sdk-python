@@ -88,6 +88,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/sms/stats/statuses": {"get"},
     "/v1/sms/stats/error-codes": {"get"},
     "/v1/sms/stats/tags": {"get"},
+    "/v1/sms/stats/cost-centers": {"get"},
     "/v1/sms/stats/inbound/summary": {"get"},
     "/v1/sms/stats/inbound/daily": {"get"},
     "/v1/sms/stats/inbound/hourly": {"get"},

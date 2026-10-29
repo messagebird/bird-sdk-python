@@ -10,7 +10,7 @@ with Bird() as client:
     message = client.amb.send(
         from_=business.apple_business_id,
         to=conversation.recipient.opaque_user_id,
-        content={"type": "text", "body": "Your order is ready."},
+        text={"body": "Your order is ready."},
     )
     print(message.id)
     print(client.amb.list_events(message.id))

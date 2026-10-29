@@ -84,7 +84,7 @@ def amb_list() -> None:
     print(result)
 
 def amb_send() -> None:
-    result = client.amb.send(from_='b52d6267-2b62-4f8a-8842-0533d0f1dc07', to='opaque-customer', content={'type': 'text', 'body': 'Your order is ready.'})
+    result = client.amb.send(from_='b52d6267-2b62-4f8a-8842-0533d0f1dc07', to='opaque-customer', text={'body': 'Your order is ready.'})
     print(result)
 
 def amb_routing_rules_get() -> None:

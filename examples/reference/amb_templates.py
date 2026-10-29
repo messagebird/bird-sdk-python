@@ -45,4 +45,4 @@ def amb_templates_versions_languages_get() -> None:
     language = client.amb.templates.versions.languages.get(
         "bird_order_update", "amv_01ky4x8e4genzb7way45txfkm1", "en"
     )
-    print(language.language, language.content)
+    print(language.language, language.text)

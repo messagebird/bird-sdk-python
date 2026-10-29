@@ -47,7 +47,9 @@ class Amb(AmbBase):
         *,
         from_: str,
         to: str,
-        content: Mapping[str, Any] | None = None,
+        text: Mapping[str, Any] | None = None,
+        rich_link: Mapping[str, Any] | None = None,
+        interactive: Mapping[str, Any] | None = None,
         template: str | None = None,
         language: str | None = None,
         parameters: Mapping[str, Any] | None = None,
@@ -61,19 +63,19 @@ class Amb(AmbBase):
         options: RequestOptions | None = None,
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
-        Supply either ``content`` (native text, rich_link, or interactive) or a
-        stored ``template`` (by id or slug, with optional ``language`` and
-        ``parameters``); the two are mutually exclusive.
+        Supply ``text``, ``rich_link`` or ``interactive`` (the last two optionally
+        with ``text``, sent first as its own bubble), or a stored ``template`` (by
+        id or slug, with optional ``language`` and ``parameters``).
 
         Example:
             message = bird.amb.send(
                 from_="b52d6267-2b62-4f8a-8842-0533d0f1dc07",
                 to="opaque-customer",
-                content={"type": "text", "body": "Your order is ready."},
+                text={"body": "Your order is ready."},
             )
         """
         body = to_wire(AMBMessageSendRequest, {
-            "from": from_, "to": to, "content": content,
+            "from": from_, "to": to, "text": text, "rich_link": rich_link, "interactive": interactive,
             "template": _template_body(template=template, language=language, parameters=parameters),
             "source": source, "category": category, "metadata": metadata, "tags": tags,
             "group": group, "intent": intent, "locale": locale,
@@ -96,7 +98,9 @@ class AsyncAmb(AsyncAmbBase):
         *,
         from_: str,
         to: str,
-        content: Mapping[str, Any] | None = None,
+        text: Mapping[str, Any] | None = None,
+        rich_link: Mapping[str, Any] | None = None,
+        interactive: Mapping[str, Any] | None = None,
         template: str | None = None,
         language: str | None = None,
         parameters: Mapping[str, Any] | None = None,
@@ -110,19 +114,19 @@ class AsyncAmb(AsyncAmbBase):
         options: RequestOptions | None = None,
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
-        Supply either ``content`` (native text, rich_link, or interactive) or a
-        stored ``template`` (by id or slug, with optional ``language`` and
-        ``parameters``); the two are mutually exclusive.
+        Supply ``text``, ``rich_link`` or ``interactive`` (the last two optionally
+        with ``text``, sent first as its own bubble), or a stored ``template`` (by
+        id or slug, with optional ``language`` and ``parameters``).
 
         Example:
             message = await bird.amb.send(
                 from_="b52d6267-2b62-4f8a-8842-0533d0f1dc07",
                 to="opaque-customer",
-                content={"type": "text", "body": "Your order is ready."},
+                text={"body": "Your order is ready."},
             )
         """
         body = to_wire(AMBMessageSendRequest, {
-            "from": from_, "to": to, "content": content,
+            "from": from_, "to": to, "text": text, "rich_link": rich_link, "interactive": interactive,
             "template": _template_body(template=template, language=language, parameters=parameters),
             "source": source, "category": category, "metadata": metadata, "tags": tags,
             "group": group, "intent": intent, "locale": locale,
@@ -136,7 +140,9 @@ class _AmbSendRequired(TypedDict):
 
 
 class AmbSendParams(_AmbSendRequired, total=False):
-    content: Mapping[str, Any]
+    text: Mapping[str, Any]
+    rich_link: Mapping[str, Any]
+    interactive: Mapping[str, Any]
     template: str
     language: str
     parameters: Mapping[str, Any]
