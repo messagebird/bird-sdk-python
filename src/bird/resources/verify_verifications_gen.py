@@ -28,6 +28,7 @@ class VerificationOptions(TypedDict, total=False):
     language: str
     autofill_origin: str
     autofill_top_level_origin: str
+    android_app_hash: str
 
 
 class _VerifyVerificationsCreateRequired(TypedDict):
