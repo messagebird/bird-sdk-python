@@ -393,6 +393,18 @@ class WorkspaceRateLimitList(BaseModel):
     data: List[WorkspaceRateLimit]
 
 
+class QuotaUnit(str, Enum):
+    count = "count"
+    bytes = "bytes"
+    days = "days"
+    microunits = "microunits"
+
+
+class QuotaType(str, Enum):
+    integer = "integer"
+    boolean = "boolean"
+
+
 class WorkspaceQuotaKind(str, Enum):
     counted = "counted"
     value = "value"
@@ -488,10 +500,16 @@ class WorkspaceQuota(BaseModel):
     )]
     name: Annotated[str, Field(min_length=1)]
     description: Annotated[str, Field(min_length=1)]
-    unit: Annotated[str, Field(
-        description="What the limit counts, such as `mailboxes`, `bytes` or `days`.",
+    unit: Annotated[Optional[Annotated[Union[QuotaUnit, str], Field(union_mode="left_to_right")]], Field(
+        description="What the quota's limit is measured in. `null` for a quota whose `type` is `boolean`, because its limit is a switch rather than an amount. `label` names what is counted.\n\n- `count`: a plain number: a count of things, such as domains or mailboxes, or a ratio such as a percentage or multiple.\n- `bytes`: stored data, in bytes.\n- `days`: a period, in days.\n- `microunits`: an amount of money in millionths of the billing currency's main unit.",
+    )]
+    label: Annotated[str, Field(
+        description="What the product calls the thing the limit applies to, such as `domains` or `seed tests`, for display next to the limit.",
         examples=["mailboxes"],
         min_length=1,
+    )]
+    type: Annotated[Annotated[Union[QuotaType, str], Field(union_mode="left_to_right")], Field(
+        description="How to read the quota's limit.\n\n- `integer`: a count or amount, measured in `unit`.\n- `boolean`: a feature switch. A limit of `1` turns the feature on and `0` turns it off.",
     )]
     kind: Annotated[WorkspaceQuotaKind, Field(
         description="What the quota limits.\n\n- `counted`: an amount the workspace accumulates, such as mailboxes or stored bytes. Usage is reported.\n- `value`: the largest setting a resource may be given, such as a retention period. No usage is counted.",
@@ -26029,6 +26047,12 @@ class EventWhatsAppSuppressionCreated(BaseModel):
     )]
 
 
+class WebhookTestClientCertificate(str, Enum):
+    presented = "presented"
+    not_requested = "not_requested"
+    rejected = "rejected"
+
+
 class WebhookTestResponseStatus(str, Enum):
     delivered = "delivered"
     failed = "failed"
@@ -26064,6 +26088,9 @@ class WebhookTestResponse(BaseModel):
         description="A short explanation of why the event could not be delivered. Present only when your endpoint could not be reached.",
         examples=["connection refused"],
         min_length=1,
+    )] = None
+    client_certificate: Annotated[Optional[WebhookTestClientCertificate], Field(
+        description="What your endpoint did with the client certificate that we present for your workspace. Omitted when your workspace presents no client certificate, or when the test failed before your endpoint answered.\n\n- `presented`: your endpoint asked for the certificate and accepted it.\n- `not_requested`: your endpoint did not ask for a certificate.\n- `rejected`: your endpoint rejected the certificate. If your workspace allows deliveries without the certificate, we sent the test again without it, and the other fields show the result of that second request.",
     )] = None
 
 

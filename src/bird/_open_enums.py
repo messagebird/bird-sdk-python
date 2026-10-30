@@ -557,6 +557,22 @@ class QuotaSource:
     PLAN: Final = "plan"
 
 
+class QuotaType:
+    """Values of QuotaType known at this SDK version (open enum)."""
+
+    BOOLEAN: Final = "boolean"
+    INTEGER: Final = "integer"
+
+
+class QuotaUnit:
+    """Values of QuotaUnit known at this SDK version (open enum)."""
+
+    BYTES: Final = "bytes"
+    COUNT: Final = "count"
+    DAYS: Final = "days"
+    MICROUNITS: Final = "microunits"
+
+
 class SMSErrorCode:
     """Values of SMSErrorCode known at this SDK version (open enum)."""
 
@@ -1121,6 +1137,8 @@ __all__ = [
     "PreferenceChannel",
     "PreferenceOrigin",
     "QuotaSource",
+    "QuotaType",
+    "QuotaUnit",
     "SMSErrorCode",
     "SMSKeywordOperation",
     "SMSMessagingProfileCallbackEvent",

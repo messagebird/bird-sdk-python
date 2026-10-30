@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.113.0
+
+- **Breaking:** workspace quota values gain a required `type` field, exported as `QuotaType`: integer for a count or amount, or boolean for a feature switch whose limit is 1 (on) or 0 (off). Set it when constructing a workspace quota value.
+- **Breaking:** `unit` on workspace quota values now reports what the limit is measured in (count, bytes, days or microunits, and null for a boolean quota), and the display text it used to carry moves to the new required `label` field. Read `label` where you showed `unit`, and set both when constructing a workspace quota value. `QuotaUnit` exports the known units.
+- When your workspace presents an mTLS client certificate, webhook test results now report whether the endpoint accepted it: `presented`, `not_requested` or `rejected`. The result is absent when no certificate is presented or the test fails before the endpoint answers.
+
 ## 0.112.0
 
 - Apple Messages sends gain `skip_typing`. Set it after you send `typing_start` for the conversation, and Bird sends the first part without its own typing indicator and one-second pause. When Bird splits a message into parts, such as text around a link, later parts keep their indicator.
