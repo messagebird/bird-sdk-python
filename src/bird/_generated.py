@@ -11235,7 +11235,7 @@ class WhatsAppTemplateLanguageState(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec`; the language keeps sending on the maximum price WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec` or `message_send_ttl_seconds`; the language keeps sending on the maximum price and time-to-live WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
 
@@ -11547,6 +11547,12 @@ class WhatsAppTemplateLanguageUpsert(BaseModel):
     optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpecWrite], Field(
         description="This language's maximum price. Omit it to keep the current one. A new language written without it uses Meta's standard rate. Send `null` to return to the standard rate. Changing only the price updates Meta without a new review. A send at a maximum price needs the business account's `marketing_messages_onboarding_status` to be `onboarded`. Otherwise it fails with WhatsApp error 131061.",
     )] = None
+    message_send_ttl_seconds: Annotated[Optional[int], Field(
+        description="How long WhatsApp keeps trying to deliver a message from this language, in seconds. WhatsApp drops a message it cannot deliver in that time. Omit it to keep the current value. Send `null` to use WhatsApp's default: 10 minutes for authentication, 30 days for utility and marketing. A new language written without it uses WhatsApp's default. The range depends on the language's `category`: 30 to 900 for authentication, 30 to 43200 for utility, and 43200 to 1209600 for marketing. A value outside 30 to 1209600 fails request validation; one inside it but outside the category's range fails with `WhatsAppTemplateTTLOutOfRange`. On a marketing template, the value applies while the business account's `marketing_messages_onboarding_status` is `onboarded`. Changing only this value updates WhatsApp without a new review.",
+        examples=[600],
+        ge=30,
+        le=1209600,
+    )] = None
     components: Annotated[Optional[List[WhatsAppTemplateComponentWrite]], Field(
         description="The template's content blocks for this language. Header, footer and buttons are optional. Every variable needs an example value, which is what Meta reviews against. May be omitted or empty on a draft; a body block is required before the language can be submitted.",
         max_length=10,
@@ -11731,7 +11737,7 @@ class WhatsAppTemplateVersionLanguage(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec`; the language keeps sending on the maximum price WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec` or `message_send_ttl_seconds`; the language keeps sending on the maximum price and time-to-live WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
 
@@ -11933,6 +11939,10 @@ class WhatsAppTemplateLanguage(BaseModel):
     optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpec], Field(
         description="This language's maximum price, or `null` when Meta's standard rate applies.",
     )] = None
+    message_send_ttl_seconds: Annotated[Optional[int], Field(
+        description="How long WhatsApp keeps trying to deliver a message from this language, in seconds, or `null` when the language uses WhatsApp's default (10 minutes for authentication, 30 days otherwise).",
+        examples=[600],
+    )] = None
     language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
@@ -11970,7 +11980,7 @@ class WhatsAppTemplateLanguage(BaseModel):
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
-        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec`; the language keeps sending on the maximum price WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
+        description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec` or `message_send_ttl_seconds`; the language keeps sending on the maximum price and time-to-live WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
         description="When this content was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, which Bird ships already approved rather than submitting on your behalf.",
@@ -13523,7 +13533,7 @@ class AMBMessageBubble(BaseModel):
         description="Layout of an Apple interactive message bubble.",
     )] = None
     image_identifier: Annotated[Optional[str], Field(
-        description="Identifier of an image in interactive_data.data.images. Apple ignores it for custom iMessage apps.",
+        description="Identifier of an image in `interactive.images`, or `interactive_reply.images` on a reply. Apple ignores it for custom iMessage apps.",
         min_length=1,
     )] = None
     image_title: Annotated[Optional[str], Field(
@@ -13562,7 +13572,7 @@ class AMBNativeImage(BaseModel):
 class AMBQuickReplyItem(BaseModel):
     model_config = ConfigDict(extra="allow")
     identifier: Annotated[str, Field(
-        description="Opaque choice identifier returned in interactive_data.data.quick_reply.selected_identifier.",
+        description="Opaque choice identifier returned in `interactive_reply.quick_reply.selected_identifier`.",
         min_length=1,
     )]
     title: Annotated[str, Field(description="Label shown on the button.", min_length=1)]
@@ -13584,7 +13594,7 @@ class AMBNativeQuickReply(BaseModel):
 class AMBListPickerItem(BaseModel):
     model_config = ConfigDict(extra="allow")
     identifier: Annotated[str, Field(
-        description="Opaque item identifier returned in interactive_data.data.list_picker.sections.",
+        description="Opaque item identifier returned in `interactive_reply.list_picker.sections[].items[]`.",
         min_length=1,
     )]
     title: Annotated[str, Field(description="Label shown on the row.", min_length=1)]
@@ -13592,7 +13602,7 @@ class AMBListPickerItem(BaseModel):
         description="Secondary line shown under the title.",
     )] = None
     image_identifier: Annotated[Optional[str], Field(
-        description="Identifier of an image in interactive_data.data.images, shown next to this row. A key with no matching entry in `images` is refused with a `422` `AMBInteractiveImageInvalid`.",
+        description="Identifier of an image in `interactive.images`, or `interactive_reply.images` on a reply, shown next to this row. A key with no matching entry in `images` is refused with a `422` `AMBInteractiveImageInvalid`.",
         min_length=1,
     )] = None
     order: Annotated[Optional[int], Field(
@@ -13657,7 +13667,7 @@ class AMBLocation(BaseModel):
 class AMBTimeSlot(BaseModel):
     model_config = ConfigDict(extra="allow")
     identifier: Annotated[str, Field(
-        description="Opaque slot identifier. Apple may instead return only a localized label in interactive_data.reply_message.title.",
+        description="Opaque slot identifier. Apple may instead return only a localized label in `interactive_reply.reply_message.title`.",
         min_length=1,
     )]
     start_at: Annotated[str, Field(
@@ -13693,7 +13703,7 @@ class AMBNativeEvent(BaseModel):
         min_length=1,
     )]
     image_identifier: Annotated[Optional[str], Field(
-        description="Identifier of the event image in interactive_data.data.images.",
+        description="Identifier of the event image in `interactive.images`.",
         min_length=1,
     )] = None
     title: Annotated[Optional[str], Field(
@@ -14122,7 +14132,7 @@ class AMBNativeInboundEvent(BaseModel):
         description="Time slots returned by Apple. May be empty when the device supplies only a selected label.",
     )] = None
     image_identifier: Annotated[Optional[str], Field(
-        description="Identifier of the event image in interactive_data.data.images.",
+        description="Identifier of the event image in `interactive_reply.images`.",
         min_length=1,
     )] = None
     title: Annotated[Optional[str], Field(description="Event title.")] = None
@@ -26359,7 +26369,7 @@ class VoiceSequenceNodeID(RootModel[str]):
 class VoiceLegInboundRouteSequence(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sequence"], Field(
-        description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.",
+        description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.\n- `ring_group`: the call rang one of your ring groups.",
     )]
     sequence_id: Annotated[str, Field(
         description="The sequence that handled the leg. Recorded as it was at the time, so it may name a sequence you have since changed or deleted.",
@@ -26375,8 +26385,25 @@ class VoiceLegInboundRouteSequence(BaseModel):
     )]
 
 
-class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence]):
-    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence
+class VoiceRingGroupID(RootModel[str]):
+    root: str
+
+
+class VoiceLegInboundRouteRingGroup(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["ring_group"], Field(
+        description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.\n- `ring_group`: the call rang one of your ring groups.",
+    )]
+    ring_group_id: Annotated[str, Field(
+        description="The ring group the leg rang. Recorded as it was at the time, so it may name a group you have since deleted.",
+        examples=["vrg_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vrg_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceLegInboundRoute(RootModel[VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence | VoiceLegInboundRouteRingGroup]):
+    root: VoiceLegInboundRouteReject | VoiceLegInboundRouteTrunk | VoiceLegInboundRouteForward | VoiceLegInboundRouteSequence | VoiceLegInboundRouteRingGroup
 
 
 class VoiceMediaQuality(BaseModel):
@@ -26413,7 +26440,7 @@ class VoiceLegMediaEncryption(str, Enum):
 class VoiceLegMediaPath(BaseModel):
     model_config = ConfigDict(extra="allow")
     encryption: Annotated[Annotated[Union[VoiceLegMediaEncryption, str], Field(union_mode="left_to_right")], Field(
-        description="How the audio between us and your side of the leg was encrypted: your SIP trunk's equipment, or the browser that placed the call. On a leg with neither, such as an incoming call a Sequence answered, it describes the carrier's side. Use it to confirm that a call on a trunk with `preferred` media encryption was actually encrypted: such a trunk delivers plain audio to a gateway not reached over TLS or behind an `exit_region`.\n\n- `none`: plain RTP.\n- `sdes`: SRTP with keys exchanged in the SDP over TLS signalling (SDES, RFC 4568). The audio between us and the carrier stays plain RTP.\n- `dtls`: DTLS-SRTP, which every call placed from a browser uses.\n\nAbsent when we did not record it: on a leg whose audio bypassed us, on an encrypted offer to a SIP trunk whose media encryption is `off`, on a leg placed without an SDP offer in its INVITE, on an incoming leg that was not answered, and on legs recorded before this field existed.",
+        description="How the audio between Bird and your SIP trunk equipment or browser was encrypted. For a leg without either, such as an incoming call answered by a Sequence, this describes the carrier's side. Use this field to check whether a call on a trunk with `preferred` media encryption was encrypted. Audio can be plain when the gateway does not use TLS or when encryption is unavailable through an exit.\n\n- `none`: plain RTP.\n- `sdes`: SRTP with keys exchanged in the SDP over TLS signalling (SDES, RFC 4568). The audio between us and the carrier stays plain RTP.\n- `dtls`: DTLS-SRTP, used for calls placed from a browser.\n\nAbsent when we did not record it: on a leg whose audio bypassed us, on an encrypted offer to a SIP trunk whose media encryption is `off`, on a leg placed without an SDP offer in its INVITE, on an incoming leg that was not answered, and on legs recorded before this field existed.",
     )]
 
 
@@ -27120,7 +27147,7 @@ class VoiceTrunkMedia(BaseModel):
     "How the trunk carries call audio. Set it through the trunk update operation."
     model_config = ConfigDict(extra="allow")
     encryption: Annotated[VoiceTrunkMediaEncryption, Field(
-        description="Whether audio between your equipment and Bird is encrypted with SRTP, keyed with SDES (`a=crypto`) over TLS signalling. Audio between Bird and the carrier network stays plain RTP.\n\n`preferred` encrypts when it can. A call your equipment places is encrypted when it offers `RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over TLS, and carried plain when it offers plain RTP. A call Bird delivers is encrypted to a gateway reached over TLS (`sips:` or `;transport=tls`) and plain to the rest. Deliveries through a gateway `exit_region`, and on a trunk with `media_bypass`, stay plain.\n\n`required` refuses a plain call with `488 Not Acceptable Here` and delivers encrypted to every gateway, so every gateway must use TLS.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an offer without a usable key, and DTLS-SRTP are refused with `488` and a `Warning` header naming why. `required` cannot be set alongside `media_bypass` or a gateway `exit_region`, since their audio does not pass through the relay that encrypts it. `off` encrypts nothing and relays an SRTP offer as it is. Calls from a web browser are always encrypted with DTLS-SRTP, whatever this says.",
+        description="Controls SRTP encryption between your equipment and Bird. SRTP keys use SDES\n(`a=crypto`) over TLS signalling. Audio between Bird and the carrier uses\nplain RTP.\n\nWith `preferred`, a call you place is encrypted when your equipment offers\n`RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over\nTLS. A plain RTP offer stays plain. Calls delivered to a TLS gateway (`sips:`\nor `;transport=tls`) use encryption when available. Calls delivered through a\ngateway without TLS or with `media_bypass` use plain audio.\n\nWith `required`, a plain call is refused with `488 Not Acceptable Here`.\nDelivered calls require encrypted media, so your gateways must use TLS.\nYou cannot combine `required` with `media_bypass` because bypassed audio\ndoes not pass through the relay that encrypts it.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an\noffer without a usable key, and DTLS-SRTP are refused with `488` and a\n`Warning` header naming the reason.\n\nWith `off`, Bird does not encrypt audio and relays an SRTP offer unchanged.\nBrowser calls use DTLS-SRTP regardless of this setting.",
     )]
 
 
@@ -27240,7 +27267,7 @@ class VoiceTrunkMediaUpdate(BaseModel):
     "A change to how the trunk carries call audio. An omitted member is left unchanged."
     model_config = ConfigDict(extra="allow")
     encryption: Annotated[Optional[VoiceTrunkMediaEncryption], Field(
-        description="Whether audio between your equipment and Bird is encrypted with SRTP, keyed with SDES (`a=crypto`) over TLS signalling. Audio between Bird and the carrier network stays plain RTP.\n\n`preferred` encrypts when it can. A call your equipment places is encrypted when it offers `RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over TLS, and carried plain when it offers plain RTP. A call Bird delivers is encrypted to a gateway reached over TLS (`sips:` or `;transport=tls`) and plain to the rest. Deliveries through a gateway `exit_region`, and on a trunk with `media_bypass`, stay plain.\n\n`required` refuses a plain call with `488 Not Acceptable Here` and delivers encrypted to every gateway, so every gateway must use TLS.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an offer without a usable key, and DTLS-SRTP are refused with `488` and a `Warning` header naming why. `required` cannot be set alongside `media_bypass` or a gateway `exit_region`, since their audio does not pass through the relay that encrypts it. `off` encrypts nothing and relays an SRTP offer as it is. Calls from a web browser are always encrypted with DTLS-SRTP, whatever this says.",
+        description="Controls SRTP encryption between your equipment and Bird. SRTP keys use SDES\n(`a=crypto`) over TLS signalling. Audio between Bird and the carrier uses\nplain RTP.\n\nWith `preferred`, a call you place is encrypted when your equipment offers\n`RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over\nTLS. A plain RTP offer stays plain. Calls delivered to a TLS gateway (`sips:`\nor `;transport=tls`) use encryption when available. Calls delivered through a\ngateway without TLS or with `media_bypass` use plain audio.\n\nWith `required`, a plain call is refused with `488 Not Acceptable Here`.\nDelivered calls require encrypted media, so your gateways must use TLS.\nYou cannot combine `required` with `media_bypass` because bypassed audio\ndoes not pass through the relay that encrypts it.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an\noffer without a usable key, and DTLS-SRTP are refused with `488` and a\n`Warning` header naming the reason.\n\nWith `off`, Bird does not encrypt audio and relays an SRTP offer unchanged.\nBrowser calls use DTLS-SRTP regardless of this setting.",
     )] = None
 
 
@@ -27411,6 +27438,7 @@ class VoiceCallRouteType(str, Enum):
     trunk = "trunk"
     forward = "forward"
     sequence = "sequence"
+    ring_group = "ring_group"
 
 
 class VoiceNumberProviderAllocation(BaseModel):
@@ -27462,14 +27490,14 @@ class VoiceNumberDirections(BaseModel):
 class VoiceCallRouteReject(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["reject"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
 
 
 class VoiceCallRouteTrunk(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["trunk"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     trunk_id: Annotated[str, Field(
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -27481,7 +27509,7 @@ class VoiceCallRouteTrunk(BaseModel):
 class VoiceCallRouteForward(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["forward"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     forward_to: Annotated[str, Field(
         description="The number calls are forwarded to, in E.164 format. It has to be one of your verified caller IDs. That is checked when you set it and again on every call it forwards, so a caller ID you later remove stops forwarding rather than carrying on.",
@@ -27496,7 +27524,7 @@ class VoiceCallRouteForward(BaseModel):
 class VoiceCallRouteSequence(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sequence"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     sequence_id: Annotated[str, Field(
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -27511,8 +27539,21 @@ class VoiceCallRouteSequence(BaseModel):
     )]
 
 
-class VoiceCallRoute(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteSequence]):
-    root: VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteSequence
+class VoiceCallRouteRingGroup(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["ring_group"], Field(
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+    )]
+    ring_group_id: Annotated[str, Field(
+        description="The ring group that rings. It must be one of this workspace's ring groups, or its default group of everyone online.",
+        examples=["vrg_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vrg_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class VoiceCallRoute(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteSequence | VoiceCallRouteRingGroup]):
+    root: VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteSequence | VoiceCallRouteRingGroup
 
 
 class VoiceInboundConfiguration(BaseModel):
@@ -27579,8 +27620,8 @@ class VoiceNumberList(BaseModel):
     )]
 
 
-class VoiceCallRouteWritable(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward]):
-    root: VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward
+class VoiceCallRouteWritable(RootModel[VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteRingGroup]):
+    root: VoiceCallRouteReject | VoiceCallRouteTrunk | VoiceCallRouteForward | VoiceCallRouteRingGroup
 
 
 class VoiceInboundConfigurationPut(BaseModel):
@@ -27769,6 +27810,99 @@ class VoiceVerifiedNumberVerifyRequest(BaseModel):
         min_length=6,
         pattern="^\\d{6}$",
     )] = None
+
+
+class VoiceRingGroup(BaseModel):
+    "A set of workspace users that an inbound call rings in the browser phone. Every workspace also has a default group, which rings the workspace's online users and cannot be changed."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vrg_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vrg_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="The ring group's name.",
+        examples=["Support"],
+        max_length=100,
+        min_length=1,
+    )]
+    is_default: Annotated[bool, Field(
+        description="Whether this is the workspace's default group, which rings the users who are online in the browser phone.",
+        examples=[False],
+    )]
+    online_member_count: Annotated[int, Field(
+        description="How many of the group's members are connected to the browser phone and accepting calls, read live. A member on a call counts, though a call to the group skips them until it ends. For the default group, the count includes every connected user who accepts calls.",
+        examples=[3],
+        ge=0,
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the ring group was created. Null for the default group.",
+        examples=["2026-10-01T12:00:00Z"],
+    )]
+    updated_at: Annotated[Optional[str], Field(
+        description="When the ring group's name or members last changed. Null for the default group.",
+        examples=["2026-10-01T12:00:00Z"],
+    )]
+
+
+class VoiceRingGroupList(BaseModel):
+    "The workspace's ring groups. Not paginated: a workspace holds at most 50 ring groups besides its default group."
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[VoiceRingGroup], Field(
+        description="The default group first, then the other ring groups, oldest first.",
+    )]
+
+
+class VoiceRingGroupCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="The ring group's name.",
+        examples=["Support"],
+        max_length=100,
+        min_length=1,
+    )]
+
+
+class VoiceRingGroupUpdate(BaseModel):
+    "A change to the ring group. An omitted field is left unchanged."
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="The ring group's new name.",
+        examples=["Tier 2 support"],
+        max_length=100,
+        min_length=1,
+    )] = None
+
+
+class VoiceRingGroupMember(BaseModel):
+    "A user added to a ring group. A member who later leaves the workspace stays listed until removed, but the group never rings them."
+    model_config = ConfigDict(extra="allow")
+    user_id: Annotated[str, Field(
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    created_at: Annotated[Optional[str], Field(
+        description="When the user joined the ring group. Null for the default group, whose members are the users online now.",
+        examples=["2026-10-01T12:00:00Z"],
+    )]
+
+
+class VoiceRingGroupMemberList(BaseModel):
+    "The ring group's members. Not paginated: a ring group holds at most 200 members, and the default group's members are the workspace's online users."
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[VoiceRingGroupMember], Field(
+        description="The members, in the order they joined; the default group's online users, by user ID.",
+    )]
+
+
+class VoiceRingGroupMemberCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    user_id: Annotated[str, Field(
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
 
 
 class EsimZoneID(RootModel[str]):

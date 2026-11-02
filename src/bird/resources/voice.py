@@ -6,6 +6,7 @@ from bird.resources.voice_destinations_gen import AsyncVoiceDestinations, VoiceD
 from bird.resources.voice_calls_gen import AsyncVoiceCalls, VoiceCalls
 from bird.resources.voice_legs_gen import AsyncVoiceLegs, VoiceLegs
 from bird.resources.voice_numbers_gen import AsyncVoiceNumbers, VoiceNumbers
+from bird.resources.voice_ring_groups import AsyncVoiceRingGroups, VoiceRingGroups
 from bird.resources.voice_settings_gen import AsyncVoiceSettingsResource, VoiceSettingsResource
 from bird.resources.voice_session_credentials_gen import (
     AsyncVoiceSessionCredentials,
@@ -24,6 +25,7 @@ class Voice:
         self.destinations = VoiceDestinations(client)
         self.session_credentials = VoiceSessionCredentials(client)
         self.calls = VoiceCalls(client)
+        self.ring_groups = VoiceRingGroups(client)
 
 
 class AsyncVoice:
@@ -36,3 +38,4 @@ class AsyncVoice:
         self.destinations = AsyncVoiceDestinations(client)
         self.session_credentials = AsyncVoiceSessionCredentials(client)
         self.calls = AsyncVoiceCalls(client)
+        self.ring_groups = AsyncVoiceRingGroups(client)

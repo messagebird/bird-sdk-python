@@ -83,6 +83,46 @@ def voice_trunks_gateways_delete() -> None:
     client.voice.trunks.gateways.delete("TRUNK_ID", "GATEWAY_ID")
 
 
+def voice_ring_groups_list() -> None:
+    groups = client.voice.ring_groups.list()
+    for group in groups.data:
+        print(group.id, group.name, group.online_member_count)
+
+
+def voice_ring_groups_get() -> None:
+    group = client.voice.ring_groups.get("RING_GROUP_ID")
+    print(group.id, group.name, group.online_member_count)
+
+
+def voice_ring_groups_create() -> None:
+    group = client.voice.ring_groups.create(name="Support")
+    print(group.id, group.name)
+
+
+def voice_ring_groups_update() -> None:
+    group = client.voice.ring_groups.update("RING_GROUP_ID", name="Tier 2 support")
+    print(group.id, group.name)
+
+
+def voice_ring_groups_delete() -> None:
+    client.voice.ring_groups.delete("RING_GROUP_ID")
+
+
+def voice_ring_groups_members_list() -> None:
+    members = client.voice.ring_groups.members.list("RING_GROUP_ID")
+    for member in members.data:
+        print(member.user_id)
+
+
+def voice_ring_groups_members_create() -> None:
+    member = client.voice.ring_groups.members.create("RING_GROUP_ID", user_id="USER_ID")
+    print(member.user_id)
+
+
+def voice_ring_groups_members_delete() -> None:
+    client.voice.ring_groups.members.delete("RING_GROUP_ID", "USER_ID")
+
+
 def voice_numbers_list() -> None:
     for number in client.voice.numbers.list():
         print(number.id, number.phone_number, number.country_code)

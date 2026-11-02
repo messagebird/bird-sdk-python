@@ -220,13 +220,19 @@ from bird._generated import (
     VoiceTrunk,
     VoiceTrunkGateway,
     VoiceTrunkGatewayList,
+    VoiceRingGroup,
+    VoiceRingGroupList,
+    VoiceRingGroupMember,
+    VoiceRingGroupMemberList,
     VoiceNumber,
     VoiceVerifiedNumber,
     VoiceDestinationList,
     VoiceSessionCredential,
     VoiceLegList,
     VoiceCallRouteTrunk,
+    VoiceCallRouteRingGroup,
     VoiceCallRouteWritable,
+    VoiceLegInboundRouteRingGroup,
     VoiceSettingsInboundConfigurationPut,
     VoiceSettings,
     WebhookEvent,
@@ -397,6 +403,13 @@ from bird.resources.voice_trunks_gen import (
 from bird.resources.voice_trunks_gateways_gen import (
     VoiceTrunksGatewaysCreateParams,
     VoiceTrunksGatewaysUpdateParams,
+)
+from bird.resources.voice_ring_groups_gen import (
+    VoiceRingGroupsCreateParams,
+    VoiceRingGroupsUpdateParams,
+)
+from bird.resources.voice_ring_groups_members_gen import (
+    VoiceRingGroupsMembersCreateParams,
 )
 from bird._event_types import WebhookEventType
 from bird.resources.amb_business_accounts_submissions_gen import (
@@ -1244,7 +1257,9 @@ __all__ = [
     "VoiceNumbersListParams",
     "VoiceNumbersUpdateParams",
     "VoiceCallRouteTrunk",
+    "VoiceCallRouteRingGroup",
     "VoiceCallRouteWritable",
+    "VoiceLegInboundRouteRingGroup",
     "VoiceSettingsInboundConfigurationPut",
     "VoiceSettings",
     "VoiceSettingsUpdateParams",
@@ -1258,6 +1273,13 @@ __all__ = [
     "VoiceTrunk",
     "VoiceTrunkGateway",
     "VoiceTrunkGatewayList",
+    "VoiceRingGroupsCreateParams",
+    "VoiceRingGroupsUpdateParams",
+    "VoiceRingGroupsMembersCreateParams",
+    "VoiceRingGroup",
+    "VoiceRingGroupList",
+    "VoiceRingGroupMember",
+    "VoiceRingGroupMemberList",
     "VoiceNumber",
     "VoiceVerifiedNumber",
     "VoiceDestinationList",

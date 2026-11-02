@@ -82,6 +82,7 @@ class WhatsappTemplatesVersionsLanguagesSetParams(TypedDict, total=False):
     """Params for ``client.whatsapp.templates.versions.languages.set``. Every key is optional."""
 
     optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None
+    message_send_ttl_seconds: int | None
     components: Sequence[WhatsAppTemplateComponentWrite]
     revision: int
 
@@ -149,11 +150,12 @@ class WhatsappTemplatesVersionsLanguages(Resource):
         language: str,
         *,
         optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None | Omit = omit,
+        message_send_ttl_seconds: int | None | Omit = omit,
         components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
         revision: int | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppTemplateLanguageSaved:
-        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. `optimization_spec` is the exception: omit it to keep the language's maximum price, or send `null` to return to Meta's standard rate. A new language written without it uses the standard rate. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
+        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. `optimization_spec` and `message_send_ttl_seconds` are the exceptions: omit either to keep the language's current value, or send `null` to return to Meta's standard rate or WhatsApp's default time-to-live. A new language written without them uses both defaults. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
 
         ```python
         saved = client.whatsapp.templates.versions.languages.set(
@@ -174,6 +176,8 @@ class WhatsappTemplatesVersionsLanguages(Resource):
         _body: dict[str, Any] = {}
         if not isinstance(optimization_spec, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["optimization_spec"] = optimization_spec
+        if not isinstance(message_send_ttl_seconds, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["message_send_ttl_seconds"] = message_send_ttl_seconds
         if components is not None:
             _body["components"] = components
         if revision is not None:
@@ -295,11 +299,12 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
         language: str,
         *,
         optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None | Omit = omit,
+        message_send_ttl_seconds: int | None | Omit = omit,
         components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
         revision: int | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppTemplateLanguageSaved:
-        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. `optimization_spec` is the exception: omit it to keep the language's maximum price, or send `null` to return to Meta's standard rate. A new language written without it uses the standard rate. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
+        """Writes one language of the draft, whole: send the language's complete `components` every time, because this replaces rather than merges. `optimization_spec` and `message_send_ttl_seconds` are the exceptions: omit either to keep the language's current value, or send `null` to return to Meta's standard rate or WhatsApp's default time-to-live. A new language written without them uses both defaults. Only the draft is writable. A submitted version is immutable, and a language under review at WhatsApp refuses the write until that review finishes. A body block is required before the language can be submitted, and every variable in a block needs an example value, which is what WhatsApp reviews against. Pass `revision` to make the write a compare-and-set against the copy you read; omit it for last-write-wins, which is what a single writer wants.
 
         ```python
         saved = await client.whatsapp.templates.versions.languages.set(
@@ -320,6 +325,8 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
         _body: dict[str, Any] = {}
         if not isinstance(optimization_spec, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["optimization_spec"] = optimization_spec
+        if not isinstance(message_send_ttl_seconds, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["message_send_ttl_seconds"] = message_send_ttl_seconds
         if components is not None:
             _body["components"] = components
         if revision is not None:
