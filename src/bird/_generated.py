@@ -5763,7 +5763,7 @@ class SMSInReplyToMessage(BaseModel):
         pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     text: Annotated[Optional[str], Field(
-        description="Text of the outbound message as Bird stored it. Authentication messages read `**REDACTED**`. Absent once that message is past the read window.",
+        description="Text of the outbound message as Bird stored it, with sensitive template values masked. Authentication messages without declared sensitive variables read `**REDACTED**`. Absent once that message is past the read window.",
         examples=["Reply YES to confirm your appointment on Friday."],
     )] = None
     sent_at: Annotated[Optional[str], Field(
@@ -5801,7 +5801,7 @@ class SMSMessage(BaseModel):
         min_length=1,
     )]
     text: Annotated[Optional[str], Field(
-        description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text, and on a binary message, which returns `binary` instead. For a template send, this is the rendered text after parameter substitution. When `category` is `authentication` (a message carrying a one-time code), this is `**REDACTED**`: the code still reaches the recipient, but the API does not retain it for later reads.",
+        description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text, and on a binary message, which returns `binary` instead. For a template send, this is the rendered text after parameter substitution. System template messages preserve the surrounding text and mask sensitive codes with one asterisk per digit. Authentication messages without declared sensitive variables return `**REDACTED**`. The recipient receives the real code; message history retains only its masked representation.",
         examples=["Your order has shipped and is on its way."],
         min_length=1,
     )] = None
@@ -27490,14 +27490,14 @@ class VoiceNumberDirections(BaseModel):
 class VoiceCallRouteReject(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["reject"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
 
 
 class VoiceCallRouteTrunk(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["trunk"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     trunk_id: Annotated[str, Field(
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -27509,7 +27509,7 @@ class VoiceCallRouteTrunk(BaseModel):
 class VoiceCallRouteForward(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["forward"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     forward_to: Annotated[str, Field(
         description="The number calls are forwarded to, in E.164 format. It has to be one of your verified caller IDs. That is checked when you set it and again on every call it forwards, so a caller ID you later remove stops forwarding rather than carrying on.",
@@ -27524,7 +27524,7 @@ class VoiceCallRouteForward(BaseModel):
 class VoiceCallRouteSequence(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sequence"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     sequence_id: Annotated[str, Field(
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -27542,7 +27542,7 @@ class VoiceCallRouteSequence(BaseModel):
 class VoiceCallRouteRingGroup(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["ring_group"], Field(
-        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members. Requires preview access to configure.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
+        description="Which answer a number carries.\n\n- `reject`: refuses the call.\n- `trunk`: delivers the call to one of your SIP trunks.\n- `forward`: places a call to one of your verified caller IDs and connects the two.\n- `sequence`: runs the configured sequence from its selected voice-call entry.\n- `ring_group`: rings the group's online members.\n\nIt selects the answer's own shape, so a new way to answer a call arrives as a\nnew value alongside a new set of fields.",
     )]
     ring_group_id: Annotated[str, Field(
         description="The ring group that rings. It must be one of this workspace's ring groups, or its default group of everyone online.",
