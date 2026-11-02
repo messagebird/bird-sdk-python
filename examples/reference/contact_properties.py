@@ -1,11 +1,6 @@
-"""Example source for the generated contact_properties methods.
+"""Examples for generated contact_properties methods.
 
-Each bird:snippet region is harvested for the docs site + README; the keys match
-the surface catalog (contact_properties.<leaf>). Hand-written and type-checked
-(pyright includes examples/); nothing regenerates over it. The override methods —
-contact_properties.create/update — keep their examples inline in
-src/bird/resources/contact_properties.py, since nothing regenerates over a hand
-method.
+The snippet regions supply the documentation and generated method examples.
 """
 
 from bird import Bird

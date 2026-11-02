@@ -39,6 +39,7 @@ from bird._types import (
     WhatsappSendParams,
 )
 from bird.resources.webhooks import WebhooksCreateParams
+from bird.resources.email_gen import EmailContentParams, EmailRecipientsParams
 from bird.resources.compliance_attachments import ComplianceAttachment, ComplianceFile
 from bird.resources.whatsapp_messages import WhatsappMedia
 from bird.resources.whatsapp_business_accounts_gen import (
@@ -125,6 +126,7 @@ from bird._generated import (
     EmailMessage,
     EmailMessageBatchResponse,
     EmailRecipient,
+    EmailMessageContent,
     EmailRecipientBounceType,
     EmailRecipientRejectionReason,
     EmailRecipientStatus,
@@ -1047,6 +1049,9 @@ __all__ = [
     "EmailBroadcastClickedLinkList",
     "EmailBroadcastStatus",
     "EmailRecipient",
+    "EmailMessageContent",
+    "EmailContentParams",
+    "EmailRecipientsParams",
     "EmailRecipientStatus",
     "EmailRecipientBounceType",
     "EmailRecipientRejectionReason",

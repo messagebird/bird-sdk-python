@@ -10,9 +10,22 @@ from bird import Bird
 client = Bird()
 
 
+def email_content() -> None:
+    content = client.email.content(
+        "em_01krdgeqcxet5s7t44vh8rt9mg", recipient_id="er_01krdgeqcxet5s7t44vh8rt9mg"
+    )
+    print(content.html, content.text)
+
+
+def email_recipients() -> None:
+    for recipient in client.email.recipients("em_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(recipient.id, recipient.subject)
+
+
 def email_get() -> None:
     message = client.email.get("em_abc123")
     print(message.id, message.status, message.delivered_count)
+    print(message.subject, message.subject_recipient_id)
 
 
 def email_cancel() -> None:

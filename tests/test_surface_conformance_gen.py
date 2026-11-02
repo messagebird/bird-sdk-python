@@ -345,6 +345,8 @@ def test_surface_conformance() -> None:
     assert callable(client.organization.workspaces.get)
     assert callable(client.organization.workspaces.update)
     assert callable(client.organization.workspaces.delete)
+    assert callable(client.email.content)
+    assert callable(client.email.recipients)
     assert callable(client.realtime.publish)
     assert callable(client.realtime.publish_batch)
     assert callable(client.realtime.channels.list)

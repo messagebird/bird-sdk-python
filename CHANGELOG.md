@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.116.0
+
+- Export the email content and recipient query types from the package entry point for typed message-history reads.
+- Add `email.content` and `email.recipients` SDK methods, with `recipient_id` selection for stored content and `copy_of_recipient_id` for personalized copies, and resolved subjects in email responses.
+- **Breaking:** published-template sends reject `null` for a required caller parameter. Supply its value in `template.parameters`; an empty string remains valid for a text parameter.
+
 ## 0.115.1
 
 - SMS message `text` and reply context `in_reply_to_message.text` documentation describe the retained body and masked authentication codes.

@@ -3224,6 +3224,10 @@ class EmailAddress(BaseModel):
     )] = None
 
 
+class RecipientID(RootModel[str]):
+    root: str
+
+
 class LanguageTag(RootModel[str]):
     root: str
 
@@ -3306,9 +3310,14 @@ class EmailMessage(BaseModel):
     cc: Annotated[Optional[List[EmailAddress]], Field(description="CC recipients.")] = None
     bcc: Annotated[Optional[List[EmailAddress]], Field(description="BCC recipients.")] = None
     subject: Annotated[str, Field(
-        description="The subject line as delivered. For a send that used a template, the stored subject is the template's, so this reports it with the send's `parameters` substituted in, which is what the recipient saw.",
+        description="The resolved subject. For a template send with recipient snapshots, this is the subject accepted for the first To recipient in the original request. It remains available when body storage is disabled. Legacy messages use their message-wide subject and caller parameters. For sends with recipient snapshots, `subject_recipient_id` identifies the recipient represented by `subject` and is present for scheduled and canceled messages too.",
         min_length=1,
     )]
+    subject_recipient_id: Annotated[Optional[str], Field(
+        examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     category: Annotated[EmailMessageCategory, Field(
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )]
@@ -3488,7 +3497,7 @@ class EmailTemplateSend(BaseModel):
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Values for caller parameters, keyed by name. A parameter name is a single word.\n\nCaller parameters have `system` set to false or absent in the template's\n`variables` list. Supply each required caller parameter used by the\nresolved send language; omitting one returns `422`. A version's list\ncovers all its languages, and values unused by the resolved language are\nignored.\n\nThe `bird` namespace is reserved for values filled by Bird, so a send that\nsets it is rejected. `parameters` is capped at 16 KB once serialized.",
+        description="Values for caller parameters, keyed by name. A parameter name is a single word.\n\nCaller parameters have `system` set to false or absent in the template's\n`variables` list. Supply each required caller parameter used by the\nresolved send language; omitting one or supplying null returns `422`. A version's list\ncovers all its languages, and values unused by the resolved language are\nignored.\n\nThe `bird` namespace is reserved for values filled by Bird, so a send that\nsets it is rejected. `parameters` is capped at 16 KB once serialized.\n\nBird resolves the referenced\n`bird.contact` attributes from each original To recipient's matching contact\nin this workspace. Each To receives its own personalized email; Cc and Bcc receive\na copy of each To's email and do not need matching contacts. A missing To\ncontact rejects the send with `422` (`E04099`), including when Liquid uses\na default or condition. Empty name fields on an existing contact render\nempty unless Liquid supplies a default; configured contact-property\nfallbacks still apply. Values are saved at acceptance and reused for\ndelivery and content history. Individual, batch, and scheduled sends\nsupport this behavior.",
     )] = None
 
 
@@ -3665,10 +3674,6 @@ class EmailMessageBatchResponse(BaseModel):
     )]
 
 
-class RecipientID(RootModel[str]):
-    root: str
-
-
 class RecipientRole(str, Enum):
     to = "to"
     cc = "cc"
@@ -3704,6 +3709,7 @@ class EmailRecipientBounceType(str, Enum):
 
 
 class EmailRecipient(BaseModel):
+    "One email delivery. For a contact-personalized template send, `copy_of_recipient_id` links a Cc or Bcc delivery to the To recipient whose saved values it carries. Each Cc and Bcc address receives one copy per To recipient. Its visible To header uses that To mailbox unless a different visible mailbox was specified for this copy. The link is absent for To recipients and sends without personalized copies."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -3726,8 +3732,16 @@ class EmailRecipient(BaseModel):
     name: Annotated[Optional[str], Field(
         description="Display name provided for this recipient on the send, or null if none was given.",
     )] = None
+    subject: Annotated[Optional[str], Field(
+        description="Resolved subject accepted for this recipient, available independently of body storage. Legacy messages report their message-wide subject. Omitted if a retained recipient snapshot is unavailable.",
+    )] = None
+    copy_of_recipient_id: Annotated[Optional[str], Field(
+        examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     status: Annotated[EmailRecipientStatus, Field(
-        description="Delivery status for this recipient:\n\n- `accepted`: The send has been taken and is being prepared for delivery.\n- `processed`: This recipient's message is on its way out.\n- `deferred`: The recipient's mailbox provider asked for a retry, and delivery attempts continue.\n- `delivered`: The recipient's mail server accepted the message.\n- `bounced`: Delivery permanently failed (see `bounce_type` for hard vs soft).\n- `complained`: The recipient reported the message as spam.\n- `rejected`: Delivery was never attempted (see `rejection_reason` for why).",
+        description="Delivery status for this recipient:\n\n- `accepted`: The send has been taken and is being prepared for delivery.\n- `processed`: This recipient's message is on its way out.\n- `deferred`: The recipient's mailbox provider asked for a retry, and delivery attempts continue.\n- `delivered`: The recipient's mail server accepted the message.\n- `bounced`: Delivery permanently failed (see `bounce_type` for hard vs soft).\n- `complained`: The recipient reported the message as spam.\n- `rejected`: Delivery was never attempted. Check `rejection_reason`, or the message status for a schedule canceled before delivery.",
         min_length=1,
     )]
     rejection_reason: Annotated[Optional[EmailRecipientRejectionReason], Field(
@@ -3921,6 +3935,21 @@ class EmailEventList(BaseModel):
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
     )]
+
+
+class EmailMessageContent(BaseModel):
+    "The body content of a sent email message, as delivered. A send that used a template reports its stored body with the accepted caller parameters and the selected recipient's saved contact values substituted in. A contextual send with multiple recipients requires the recipient_id query parameter."
+    model_config = ConfigDict(extra="allow")
+    html: Annotated[Optional[str], Field(
+        description="The HTML body of the message as delivered, if it was stored.",
+        examples=["<p>Hi Jane,</p><p>Your order #1234 has shipped and is on its way.</p>"],
+        min_length=1,
+    )] = None
+    text: Annotated[Optional[str], Field(
+        description="The plain-text body of the message as delivered, if it was stored.",
+        examples=["Hi Jane,\n\nYour order #1234 has shipped and is on its way."],
+        min_length=1,
+    )] = None
 
 
 class EmailBroadcastStatus(str, Enum):
@@ -4782,9 +4811,14 @@ class EmailBroadcastTestResult(BaseModel):
     cc: Annotated[Optional[List[EmailAddress]], Field(description="CC recipients.")] = None
     bcc: Annotated[Optional[List[EmailAddress]], Field(description="BCC recipients.")] = None
     subject: Annotated[str, Field(
-        description="The subject line as delivered. For a send that used a template, the stored subject is the template's, so this reports it with the send's `parameters` substituted in, which is what the recipient saw.",
+        description="The resolved subject. For a template send with recipient snapshots, this is the subject accepted for the first To recipient in the original request. It remains available when body storage is disabled. Legacy messages use their message-wide subject and caller parameters. For sends with recipient snapshots, `subject_recipient_id` identifies the recipient represented by `subject` and is present for scheduled and canceled messages too.",
         min_length=1,
     )]
+    subject_recipient_id: Annotated[Optional[str], Field(
+        examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     category: Annotated[EmailMessageCategory, Field(
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )]
@@ -6423,7 +6457,7 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     sensitive: Annotated[Optional[bool], Field(
-        description="Whether this slot's value is redacted from stored message content. A placeholder replaces the sensitive value in message history; transport queues can still carry the text needed for delivery.",
+        description="Whether this slot requires redacted message history. Published email template sends that store recipient snapshots reject sensitive inputs before acceptance. Other channels retain their own sensitive-input delivery and retention rules.",
     )] = None
     system: Annotated[Optional[bool], Field(
         description="Whether the value comes from Bird rather than from the send. Absent means false. System slots are identified by the reserved `bird` key or a dotted path beneath it. They appear on email templates, and, in the template parameters preview, on WhatsApp templates whose parameter bindings read contact data; every SMS slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
@@ -19805,10 +19839,10 @@ class EmailTemplateCreate(BaseModel):
         description="Whether the template is for `transactional` email or `marketing` email.",
     )]
     source: Annotated[Literal["html"], Field(
-        description="The authoring format the template is written in, fixed at creation.\n`html` is finished markup you provide, optionally personalized with\nLiquid. Liquid supports variables, filters, and control flow such\nas `{% if %}` conditionals and `{% for %}` loops. A few constructs are\nrejected when you submit, and the error names exactly what to change:\n\n- Partial includes (`{% include %}`, `{% render %}`).\n- The `increment`, `decrement`, and `ifchanged` tags.\n- The `money`, `format_date`, `format_time`, `json`, `inspect`, and `type` filters.\n- Comparing against `empty`/`blank` (use `.size == 0` instead).\n- Blocks nested far deeper than real email markup needs.\n\nA broadcast's template additionally cannot use a `{% for %}` loop,\nbecause a broadcast supplies one value per contact property, so there\nis nothing to iterate. Send with the messages API instead if the\ntemplate needs one.",
+        description="The authoring format the template is written in, fixed at creation.\n`html` is finished markup you provide, optionally personalized with\nLiquid. Liquid supports variables, filters, and control flow such\nas `{% if %}` conditionals and `{% for %}` loops. A few constructs are\nrejected when you submit, and the error names exactly what to change:\n\n- Partial includes (`{% include %}`, `{% render %}`).\n- The `increment`, `decrement`, and `ifchanged` tags.\n- The `money`, `format_date`, `format_time`, `json`, `inspect`, and `type` filters.\n- Comparing against `empty`/`blank` (use `.size == 0` instead).\n- Blocks nested far deeper than real email markup needs.\n\nBroadcast template parameters accept scalar values; arrays and objects are unsupported.\nBroadcasts support `{% for %}` over a local collection created with `split`.\nBroadcasts without caller-supplied parameters also support literal ranges and\n`{% tablerow %}`. When a broadcast uses caller parameters, ranges and\n`{% tablerow %}` are unsupported.",
     )]
     languages: Annotated[Optional[Dict[str, EmailTemplateLanguageContent]], Field(
-        description="The initial draft's content, keyed by language tag in BCP-47 form such as\n`en` or `pt-BR`. A template holds up to 25 languages, and a send picks one\nof them.\n\nOmit this to create an empty draft and add content later.\n\nThe example's `{{ first_name }}` is a parameter, filled from\n`template.parameters` at send time. A `{{ bird.contact.<attribute> }}`\nplaceholder reads a contact record instead. A send to an email address\nhas no contact record, so it refuses such a template. A broadcast fills\nit from each recipient's contact, and a preview from the `contact` or\n`parameters` you supply.",
+        description="The initial draft's content, keyed by language tag in BCP-47 form such as\n`en` or `pt-BR`. A template holds up to 25 languages, and a send picks one\nof them.\n\nOmit this to create an empty draft and add content later.\n\nThe example's `{{ first_name }}` is a parameter, filled from\n`template.parameters` at send time. A `{{ bird.contact.<attribute> }}`\nplaceholder reads a contact attribute. Broadcasts resolve each audience\ncontact during preparation; previews use the selected contact or sample\nvalues. Missing attributes use their configured fallbacks, while explicit\nempty strings remain empty.\n\nPublic API sends, including batch and scheduled sends, look up each To\naddress in this workspace when the selected language reads contact\nattributes. A missing contact returns `422` (`E04099`), even if Liquid\nsupplies a default. Each To receives its own personalized email, with Cc\nand Bcc copied on each. Resolved values are saved at acceptance for\ndelivery and later content reads.",
     )] = None
     default_language: Annotated[Optional[str], Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",

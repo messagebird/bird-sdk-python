@@ -9,6 +9,8 @@ from urllib.parse import quote
 from bird._generated import (
     EmailHealth,
     EmailMessage,
+    EmailMessageContent,
+    EmailRecipient,
 )
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
@@ -39,6 +41,20 @@ class EmailHealthParams(TypedDict, total=False):
     to: str
 
 
+class EmailContentParams(TypedDict, total=False):
+    """Query params for ``client.email.content``. Every key is optional."""
+
+    recipient_id: str
+
+
+class EmailRecipientsParams(TypedDict, total=False):
+    """Query params for ``client.email.recipients``. Every key is optional."""
+
+    limit: int
+    starting_after: str
+    ending_before: str
+
+
 class EmailBase(Resource):
     def get(
         self,
@@ -51,6 +67,7 @@ class EmailBase(Resource):
         ```python
         message = client.email.get("em_abc123")
         print(message.id, message.status, message.delivered_count)
+        print(message.subject, message.subject_recipient_id)
         ```
         """
         return self._get(
@@ -144,6 +161,54 @@ class EmailBase(Resource):
             options,
         )
 
+    def content(
+        self,
+        message_id: str,
+        *,
+        recipient_id: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailMessageContent:
+        """Read the stored HTML and text bodies of a sent message. Content exists only if the message had content storage enabled, and only for 30 days after sending. A broadcast message can return `404` even when workspace content storage is enabled. Verify email previews preserve the message with the verification code masked. A `404` means content is unavailable. A scheduled send of a workspace template, rather than a built-in one, stores its content when it sends, so it answers `404` until then. A `425` means the content is still being stored, and the call can be retried. A `410` means it has expired.
+
+        ```python
+        content = client.email.content(
+            "em_01krdgeqcxet5s7t44vh8rt9mg", recipient_id="er_01krdgeqcxet5s7t44vh8rt9mg"
+        )
+        print(content.html, content.text)
+        ```
+        """
+        return self._get(
+            f"/v1/email/messages/{quote(message_id, safe='')}/content",
+            {
+                "recipient_id": recipient_id,
+            },
+            EmailMessageContent,
+            options,
+        )
+
+    def recipients(
+        self,
+        message_id: str,
+        *,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailRecipient]:
+        """List a message's per-recipient delivery state as a cursor page: each `to`/`cc`/`bcc` address with its role, current `status`, bounce or rejection detail, and open and click counts. This is how you find which specific addresses failed when the message's own `status` is mixed, such as `partial_failure`. It works for a broadcast-sent message too, which has exactly one recipient: the address that copy of the broadcast went to.
+
+        ```python
+        for recipient in client.email.recipients("em_01krdgeqcxet5s7t44vh8rt9mg"):
+            print(recipient.id, recipient.subject)
+        ```
+        """
+        query = {
+            "limit": limit,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return SyncPage(self._client, f"/v1/email/messages/{quote(message_id, safe='')}/recipients", query, EmailRecipient, options)
+
 
 class AsyncEmailBase(AsyncResource):
     async def get(
@@ -157,6 +222,7 @@ class AsyncEmailBase(AsyncResource):
         ```python
         message = await client.email.get("em_abc123")
         print(message.id, message.status, message.delivered_count)
+        print(message.subject, message.subject_recipient_id)
         ```
         """
         return await self._get(
@@ -249,3 +315,51 @@ class AsyncEmailBase(AsyncResource):
             EmailHealth,
             options,
         )
+
+    async def content(
+        self,
+        message_id: str,
+        *,
+        recipient_id: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailMessageContent:
+        """Read the stored HTML and text bodies of a sent message. Content exists only if the message had content storage enabled, and only for 30 days after sending. A broadcast message can return `404` even when workspace content storage is enabled. Verify email previews preserve the message with the verification code masked. A `404` means content is unavailable. A scheduled send of a workspace template, rather than a built-in one, stores its content when it sends, so it answers `404` until then. A `425` means the content is still being stored, and the call can be retried. A `410` means it has expired.
+
+        ```python
+        content = await client.email.content(
+            "em_01krdgeqcxet5s7t44vh8rt9mg", recipient_id="er_01krdgeqcxet5s7t44vh8rt9mg"
+        )
+        print(content.html, content.text)
+        ```
+        """
+        return await self._get(
+            f"/v1/email/messages/{quote(message_id, safe='')}/content",
+            {
+                "recipient_id": recipient_id,
+            },
+            EmailMessageContent,
+            options,
+        )
+
+    def recipients(
+        self,
+        message_id: str,
+        *,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailRecipient]:
+        """List a message's per-recipient delivery state as a cursor page: each `to`/`cc`/`bcc` address with its role, current `status`, bounce or rejection detail, and open and click counts. This is how you find which specific addresses failed when the message's own `status` is mixed, such as `partial_failure`. It works for a broadcast-sent message too, which has exactly one recipient: the address that copy of the broadcast went to.
+
+        ```python
+        async for recipient in client.email.recipients("em_01krdgeqcxet5s7t44vh8rt9mg"):
+            print(recipient.id, recipient.subject)
+        ```
+        """
+        query = {
+            "limit": limit,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return AsyncPage(self._client, f"/v1/email/messages/{quote(message_id, safe='')}/recipients", query, EmailRecipient, options)

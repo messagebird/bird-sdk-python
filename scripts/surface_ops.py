@@ -252,6 +252,8 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/threads/{thread_id}/messages/{message_id}/attachments": {"get"},
     "/v1/organization/workspaces": {"get", "post"},
     "/v1/organization/workspaces/{workspace_id}": {"delete", "get", "patch"},
+    "/v1/email/messages/{message_id}/content": {"get"},
+    "/v1/email/messages/{message_id}/recipients": {"get"},
     "/v1/realtime/apps/{realtime_app_id}/events": {"post"},
     "/v1/realtime/apps/{realtime_app_id}/batch-events": {"post"},
     "/v1/realtime/apps/{realtime_app_id}/channels": {"get"},
