@@ -1001,6 +1001,15 @@ class WhatsAppNumberThroughputLevel:
     STANDARD: Final = "standard"
 
 
+class WhatsAppStatsMessageCategory:
+    """Values of WhatsAppStatsMessageCategory known at this SDK version (open enum)."""
+
+    AUTHENTICATION: Final = "authentication"
+    MARKETING: Final = "marketing"
+    SERVICE: Final = "service"
+    UTILITY: Final = "utility"
+
+
 class WhatsAppTemplateBidStrategy:
     """Values of WhatsAppTemplateBidStrategy known at this SDK version (open enum)."""
 
@@ -1180,6 +1189,7 @@ __all__ = [
     "WhatsAppNumberQualityRating",
     "WhatsAppNumberStatus",
     "WhatsAppNumberThroughputLevel",
+    "WhatsAppStatsMessageCategory",
     "WhatsAppTemplateBidStrategy",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",

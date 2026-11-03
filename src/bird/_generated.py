@@ -81,7 +81,7 @@ class QuotaScope(str, Enum):
 
 
 class QuotaErrorContext(BaseModel):
-    "The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies."
+    "The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies. Bird sets the mTLS limits, so for those, contact your Bird representative."
     model_config = ConfigDict(extra="allow")
     quota_key: Annotated[str, Field(
         description="Stable key of the quota that refused the change.",
@@ -162,7 +162,7 @@ class ErrorBody(BaseModel):
         description="The rate-limit policy that refused the request. Present only on `rate_limit_error` responses from a rate-limit policy. A workspace-targeted request is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both are exhausted.",
     )] = None
     quota: Annotated[Optional[QuotaErrorContext], Field(
-        description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies.",
+        description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies. Bird sets the mTLS limits, so for those, contact your Bird representative.",
     )] = None
 
 
@@ -1953,10 +1953,11 @@ class SMSInboundStatsByOperatorResponse(BaseModel):
     )]
 
 
-class WhatsAppTemplateCategory(str, Enum):
+class WhatsAppStatsMessageCategory(str, Enum):
     authentication = "authentication"
     utility = "utility"
     marketing = "marketing"
+    service = "service"
 
 
 class WhatsAppStatsSummaryPeriod(BaseModel):
@@ -2199,10 +2200,10 @@ class WhatsAppTemplateID(RootModel[str]):
 
 
 class WhatsAppTemplateCategoryStatsPoint(BaseModel):
-    "Lifecycle counts, derived rates, and engagement for a single WhatsApp template category over the requested period."
+    "Lifecycle counts, derived rates, and engagement for a single WhatsApp message category over the requested period. A template send counts under its template's category; a free-form send counts under `service`."
     model_config = ConfigDict(extra="allow")
-    category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
-        description="The template category this row aggregates.",
+    category: Annotated[Annotated[Union[WhatsAppStatsMessageCategory, str], Field(union_mode="left_to_right")], Field(
+        description="The category this row aggregates. `service` aggregates free-form messages.",
     )]
     delivery: WhatsAppDeliveryStats
     engagement: WhatsAppEngagementStats
@@ -2210,7 +2211,7 @@ class WhatsAppTemplateCategoryStatsPoint(BaseModel):
 
 
 class WhatsAppStatsByTemplateCategoryResponse(BaseModel):
-    "Per-template-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
+    "Per-message-category breakdown for the requested period, ranked by accepted volume descending and capped at the requested `limit` (default 50, max 200)."
     model_config = ConfigDict(extra="allow")
     period: Annotated[WhatsAppStatsSummaryPeriod, Field(
         description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
@@ -7234,39 +7235,176 @@ class AttachmentUpload(BaseModel):
     )] = None
 
 
-class AssetKindFilter(str, Enum):
-    image = "image"
-    video = "video"
-    audio = "audio"
-    document = "document"
-
-
-class AssetContentTypeFilter(str, Enum):
-    image_png = "image/png"
-    image_jpeg = "image/jpeg"
-    image_gif = "image/gif"
-    video_mp4 = "video/mp4"
-    video_webm = "video/webm"
-    video_quicktime = "video/quicktime"
-    audio_mpeg = "audio/mpeg"
-    audio_mp4 = "audio/mp4"
-    audio_ogg = "audio/ogg"
-    audio_wav = "audio/wav"
-    application_pdf = "application/pdf"
-
-
-class AssetDeletedFilter(str, Enum):
-    exclude = "exclude"
-    include = "include"
-    only = "only"
+class AssetUploadFile(BaseModel):
+    "Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes."
+    model_config = ConfigDict(extra="allow")
+    filename: Annotated[str, Field(
+        description="Original filename, including its extension.",
+        examples=["invoice.pdf"],
+        max_length=255,
+        min_length=1,
+    )]
+    content_type: Annotated[str, Field(
+        description="Media type of the original file. Supported values are `image/png`, `image/jpeg`, `image/gif`, `video/mp4`, `video/webm`, `video/quicktime`, `audio/mpeg`, `audio/mp4`, `audio/ogg`, `audio/wav`, and `application/pdf`.\n\nSupply the exact value without parameters. Unsupported values return `E20001`. Completion checks this against the file's contents.",
+        examples=["application/pdf"],
+        min_length=1,
+    )]
+    size_bytes: Annotated[int, Field(
+        description="Exact size of the original file in bytes.",
+        examples=[1024],
+        ge=1,
+        le=25000000,
+    )]
+    sha256: Annotated[str, Field(
+        description="SHA-256 of the original bytes, encoded as lowercase hexadecimal.",
+        examples=["4e2090a479f7ce6b17ad31f991988f12571bcafbd4a441cc4063644fc1400ae0"],
+        max_length=64,
+        min_length=64,
+        pattern="^[0-9a-f]{64}$",
+    )]
 
 
 class AssetFolderID(RootModel[str]):
     root: str
 
 
+class AssetUploadSessionCreate(BaseModel):
+    "Start one upload intent. Keep client_reference unchanged when retrying this request. Changing the file or metadata requires a new reference. Optional folder_id must identify an existing folder in this workspace."
+    model_config = ConfigDict(extra="allow")
+    client_reference: Annotated[str, Field(
+        description="Caller-generated UUID for this upload intent. Retries with identical input recover the same session while its receipt is retained.",
+        examples=["4ca4145c-782a-4d03-bc80-a27e3e431780"],
+        max_length=36,
+        min_length=36,
+    )]
+    file: Annotated[AssetUploadFile, Field(
+        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+    )]
+    name: Annotated[Optional[str], Field(
+        description="Display name. Omitted or blank names default to the sanitized filename.",
+        max_length=255,
+    )] = None
+    alt_text: Annotated[Optional[str], Field(
+        description="Default alternative text for the asset.",
+        max_length=1000,
+    )] = None
+    folder_id: Annotated[Optional[str], Field(
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+
+
+class AssetUploadSessionID(RootModel[str]):
+    root: str
+
+
+class AssetUploadSessionState(str, Enum):
+    pending = "pending"
+    finalizing = "finalizing"
+    completed = "completed"
+    rejected = "rejected"
+    cancelled = "cancelled"
+    expired = "expired"
+
+
 class AssetID(RootModel[str]):
     root: str
+
+
+class AssetUploadReceipt(BaseModel):
+    "Saved publication result. Retrying completion returns this receipt even if the asset has since been removed or become unavailable."
+    model_config = ConfigDict(extra="allow")
+    asset_id: Annotated[str, Field(
+        examples=["ast_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ast_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    reused_existing: Annotated[bool, Field(
+        description="Whether the upload reused an existing active asset with identical source bytes. Reused assets keep their original metadata and folder.",
+    )]
+    completed_at: Annotated[str, Field(
+        description="When publication completed.",
+        min_length=1,
+    )]
+
+
+class AssetUploadSessionError(BaseModel):
+    "Stable error code from the most recent failed completion attempt. The operation's error response carries its message and recovery steps."
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[str, Field(
+        description="Bird error code for the failed attempt.",
+        min_length=1,
+    )]
+
+
+class AssetUploadInstruction(BaseModel):
+    "Send the original file bytes to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds."
+    model_config = ConfigDict(extra="allow")
+    method: Annotated[Literal["PUT"], Field(
+        description="HTTP method for transferring the file.",
+        min_length=3,
+    )]
+    url: Annotated[str, Field(
+        description="Temporary HTTPS upload URL. It can be reused for the same fixed file until expiry.",
+        min_length=1,
+    )]
+    required_headers: Annotated[Dict[str, str], Field(
+        description="Headers the upload request must send exactly as provided.",
+    )]
+    content_length: Annotated[int, Field(
+        description="Required HTTP content length in bytes.",
+        ge=1,
+    )]
+    expires_at: Annotated[str, Field(
+        description="Upload instruction expiry, bounded by the session and signing credentials.",
+        min_length=1,
+    )]
+
+
+class AssetUploadSessionInstruction(BaseModel):
+    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its file and metadata are frozen. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["aus_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aus_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    state: Annotated[AssetUploadSessionState, Field(
+        description="Upload progress. Pending accepts a transfer; finalizing is checking and publishing it. Completed has a saved result. Rejected, cancelled and expired allow no new upload instruction or publication. An already issued upload URL can remain usable until its expiry.",
+    )]
+    expires_at: Annotated[str, Field(
+        description="Absolute session expiry. Completion must finish before this deadline; starting it or refreshing an upload instruction does not extend it.",
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Frozen display name for a newly published asset.",
+        min_length=1,
+    )]
+    alt_text: Annotated[Optional[str], Field(
+        description="Frozen alternative text, or null when omitted.",
+    )]
+    folder_id: Annotated[Optional[str], Field(
+        description="Frozen destination folder, or null for the library root.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    file: Annotated[AssetUploadFile, Field(
+        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+    )]
+    result: Annotated[Optional[AssetUploadReceipt], Field(
+        description="Saved publication receipt, or null until completed.",
+    )]
+    last_error: Annotated[Optional[AssetUploadSessionError], Field(
+        description="Last completion error, or null when no failure is recorded.",
+    )]
+    next: Annotated[List[NextAction], Field(
+        description="Available next steps for this session.",
+    )]
+    upload: Annotated[Optional[AssetUploadInstruction], Field(
+        description="Send the original file bytes to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds.",
+    )] = None
 
 
 class AssetKind(str, Enum):
@@ -7327,6 +7465,122 @@ class Asset(BaseModel):
     deleted_at: Annotated[Optional[str], Field(
         description="When the asset was removed from the library, or null if it is still listed. A removed asset keeps serving at its original URL.",
     )]
+
+
+class AssetUploadSessionDetails(BaseModel):
+    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its file and metadata are frozen. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["aus_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aus_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    state: Annotated[AssetUploadSessionState, Field(
+        description="Upload progress. Pending accepts a transfer; finalizing is checking and publishing it. Completed has a saved result. Rejected, cancelled and expired allow no new upload instruction or publication. An already issued upload URL can remain usable until its expiry.",
+    )]
+    expires_at: Annotated[str, Field(
+        description="Absolute session expiry. Completion must finish before this deadline; starting it or refreshing an upload instruction does not extend it.",
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Frozen display name for a newly published asset.",
+        min_length=1,
+    )]
+    alt_text: Annotated[Optional[str], Field(
+        description="Frozen alternative text, or null when omitted.",
+    )]
+    folder_id: Annotated[Optional[str], Field(
+        description="Frozen destination folder, or null for the library root.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    file: Annotated[AssetUploadFile, Field(
+        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+    )]
+    result: Annotated[Optional[AssetUploadReceipt], Field(
+        description="Saved publication receipt, or null until completed.",
+    )]
+    last_error: Annotated[Optional[AssetUploadSessionError], Field(
+        description="Last completion error, or null when no failure is recorded.",
+    )]
+    next: Annotated[List[NextAction], Field(
+        description="Available next steps for this session.",
+    )]
+    asset: Annotated[Optional[Asset], Field(
+        description="Canonical asset when available, or null before completion or when unavailable.",
+    )]
+
+
+class AssetUploadSessionPrepared(BaseModel):
+    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its file and metadata are frozen. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["aus_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aus_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    state: Annotated[Literal["pending"], Field(
+        description="The session is awaiting transfer and completion.",
+        min_length=1,
+    )]
+    expires_at: Annotated[str, Field(
+        description="Absolute session expiry. Completion must finish before this deadline; starting it or refreshing an upload instruction does not extend it.",
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Frozen display name for a newly published asset.",
+        min_length=1,
+    )]
+    alt_text: Annotated[Optional[str], Field(
+        description="Frozen alternative text, or null when omitted.",
+    )]
+    folder_id: Annotated[Optional[str], Field(
+        description="Frozen destination folder, or null for the library root.",
+        examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    file: Annotated[AssetUploadFile, Field(
+        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+    )]
+    result: Annotated[Optional[AssetUploadReceipt], Field(
+        description="Saved publication receipt, or null until completed.",
+    )]
+    last_error: Annotated[Optional[AssetUploadSessionError], Field(
+        description="Last completion error, or null when no failure is recorded.",
+    )]
+    next: Annotated[List[NextAction], Field(
+        description="Available next steps for this session.",
+    )]
+    upload: AssetUploadInstruction
+
+
+class AssetKindFilter(str, Enum):
+    image = "image"
+    video = "video"
+    audio = "audio"
+    document = "document"
+
+
+class AssetContentTypeFilter(str, Enum):
+    image_png = "image/png"
+    image_jpeg = "image/jpeg"
+    image_gif = "image/gif"
+    video_mp4 = "video/mp4"
+    video_webm = "video/webm"
+    video_quicktime = "video/quicktime"
+    audio_mpeg = "audio/mpeg"
+    audio_mp4 = "audio/mp4"
+    audio_ogg = "audio/ogg"
+    audio_wav = "audio/wav"
+    application_pdf = "application/pdf"
+
+
+class AssetDeletedFilter(str, Enum):
+    exclude = "exclude"
+    include = "include"
+    only = "only"
 
 
 class AssetList(BaseModel):
@@ -8632,6 +8886,12 @@ class VerificationChannelEntry(BaseModel):
     channel: Annotated[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")], Field(
         description="The channel a passcode is delivered over. Open enum: new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
     )]
+
+
+class WhatsAppTemplateCategory(str, Enum):
+    authentication = "authentication"
+    utility = "utility"
+    marketing = "marketing"
 
 
 class VerificationStatus(str, Enum):

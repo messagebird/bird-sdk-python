@@ -9,6 +9,15 @@ verification.
 from __future__ import annotations
 
 from bird._client import AsyncBird, Bird
+from bird._generated import (
+    AssetUploadInstruction,
+    AssetUploadReceipt,
+    AssetUploadSessionDetails,
+    AssetUploadSessionInstruction,
+    AssetUploadSessionPrepared,
+    AssetUploadSessionState,
+)
+from bird.resources.assets_uploads_gen import AssetUploadFile, AssetsUploadsCreateParams
 from bird.resources.organization_workspaces_gen import (
     OrganizationWorkspacesCreateParams,
     OrganizationWorkspacesListParams,
@@ -663,6 +672,7 @@ from bird._open_enums import (
     WhatsAppNumberQualityRating,
     WhatsAppNumberStatus,
     WhatsAppNumberThroughputLevel,
+    WhatsAppStatsMessageCategory,
     WhatsAppTemplateBidStrategy,
     WhatsAppTemplateCategory,
     WhatsAppTemplateLanguageStatus,
@@ -777,6 +787,14 @@ __all__ = [
     "AssetsFoldersCreateParams",
     "AssetsFoldersListParams",
     "AssetsFoldersUpdateParams",
+    "AssetUploadSessionState",
+    "AssetUploadFile",
+    "AssetsUploadsCreateParams",
+    "AssetUploadInstruction",
+    "AssetUploadReceipt",
+    "AssetUploadSessionDetails",
+    "AssetUploadSessionInstruction",
+    "AssetUploadSessionPrepared",
     "AssetKind",
     "AssetReferenceUsage",
     "AMBBusinessAccount",
@@ -1361,6 +1379,7 @@ __all__ = [
     "WhatsAppNumberQualityRating",
     "WhatsAppNumberStatus",
     "WhatsAppNumberThroughputLevel",
+    "WhatsAppStatsMessageCategory",
     "WhatsAppTemplateBidStrategy",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",

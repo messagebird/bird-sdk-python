@@ -285,7 +285,7 @@ class WhatsappStatsBase(Resource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppStatsByTemplateCategoryResponse:
-        """Outbound WhatsApp counts grouped by Meta's template category (`authentication`, `utility` and `marketing` today, and the vocabulary is open), ranked by accepted volume. Category is what WhatsApp prices a message on, so this is the breakdown that explains a spend change. A free-form send carries no category, so rows sum to less than the period's accepted total; take the denominator from `whatsapp.stats.summary`. Rows are the whole workspace's: the breakdown takes no dimension filter. Cap the rows with `limit` (default 50, max 200).
+        """Outbound WhatsApp counts grouped by the category a message was sent under, ranked by accepted volume. A template send takes its template's category when it was sent (`authentication`, `utility` or `marketing`); a free-form send is `service`. The vocabulary is open. Meta can bill a message under a different pricing category, so these rows do not reconcile with Meta charges. Rows are the whole workspace's: the breakdown takes no dimension filter. Cap the rows with `limit` (default 50, max 200).
 
         ```python
         stats = client.whatsapp.stats.by_template_category(from_="2026-08-01", to="2026-08-31")
@@ -569,7 +569,7 @@ class AsyncWhatsappStatsBase(AsyncResource):
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppStatsByTemplateCategoryResponse:
-        """Outbound WhatsApp counts grouped by Meta's template category (`authentication`, `utility` and `marketing` today, and the vocabulary is open), ranked by accepted volume. Category is what WhatsApp prices a message on, so this is the breakdown that explains a spend change. A free-form send carries no category, so rows sum to less than the period's accepted total; take the denominator from `whatsapp.stats.summary`. Rows are the whole workspace's: the breakdown takes no dimension filter. Cap the rows with `limit` (default 50, max 200).
+        """Outbound WhatsApp counts grouped by the category a message was sent under, ranked by accepted volume. A template send takes its template's category when it was sent (`authentication`, `utility` or `marketing`); a free-form send is `service`. The vocabulary is open. Meta can bill a message under a different pricing category, so these rows do not reconcile with Meta charges. Rows are the whole workspace's: the breakdown takes no dimension filter. Cap the rows with `limit` (default 50, max 200).
 
         ```python
         stats = await client.whatsapp.stats.by_template_category(from_="2026-08-01", to="2026-08-31")

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.117.0
+
+- Add media-library upload-session methods to create, inspect, refresh, complete and cancel an upload. Creation returns session metadata and an optional temporary upload instruction. A successful prepare returns a pending session with a required upload instruction. Your application transfers the original file bytes with HTTPS before completing the session; these methods do not transfer the file themselves. Retries recover the same intent and saved result.
+- WhatsApp statistics by message category include free-form messages as a `service` row, and the `category` filter on summary, daily and hourly statistics accepts `service`. The category is exported as the open enum `WhatsAppStatsMessageCategory`.
+
 ## 0.116.0
 
 - Export the email content and recipient query types from the package entry point for typed message-history reads.
