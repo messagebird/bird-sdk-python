@@ -941,6 +941,7 @@ class WhatsAppMetaHealthEntityType:
 class WhatsAppNumberErrorCode:
     """Values of WhatsAppNumberErrorCode known at this SDK version (open enum)."""
 
+    BILLING_CLOSE: Final = "billing_close"
     BUSINESS_ACCOUNT_LOCKED: Final = "business_account_locked"
     BUSINESS_VERIFICATION_REQUIRED: Final = "business_verification_required"
     CREDIT_CURRENCY_MISMATCH: Final = "credit_currency_mismatch"

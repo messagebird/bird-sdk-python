@@ -3498,7 +3498,7 @@ class EmailTemplateSend(BaseModel):
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Values for caller parameters, keyed by name. A parameter name is a single word.\n\nCaller parameters have `system` set to false or absent in the template's\n`variables` list. Supply each required caller parameter used by the\nresolved send language; omitting one or supplying null returns `422`. A version's list\ncovers all its languages, and values unused by the resolved language are\nignored.\n\nThe `bird` namespace is reserved for values filled by Bird, so a send that\nsets it is rejected. `parameters` is capped at 16 KB once serialized.\n\nBird resolves the referenced\n`bird.contact` attributes from each original To recipient's matching contact\nin this workspace. Each To receives its own personalized email; Cc and Bcc receive\na copy of each To's email and do not need matching contacts. A missing To\ncontact rejects the send with `422` (`E04099`), including when Liquid uses\na default or condition. Empty name fields on an existing contact render\nempty unless Liquid supplies a default; configured contact-property\nfallbacks still apply. Values are saved at acceptance and reused for\ndelivery and content history. Individual, batch, and scheduled sends\nsupport this behavior.",
+        description="Values for the template's caller parameters, keyed by single-word name. Caller parameters are those with `system` false or absent in the template's `variables`. Supply every required one the resolved language uses; omitting one or sending `null` returns `422`, and values the resolved language does not use are ignored. The `bird` namespace is reserved, so a send that sets it is rejected, and the object is capped at 16 KB serialized.\n\nReferenced `bird.contact` attributes come from each To recipient's contact in this workspace, so each To receives its own email, and Cc and Bcc receive a copy of each without needing a contact of their own. A To with no contact rejects the send with `422` (`E04099`), even when Liquid sets a default or condition. Empty name fields on an existing contact render empty unless Liquid supplies a default, and configured contact-property fallbacks still apply. Values are saved at acceptance and reused for delivery and content history, for individual, batch and scheduled sends alike.",
     )] = None
 
 
@@ -3569,11 +3569,11 @@ class EmailMessageSendRequest(BaseModel):
         description="Custom email headers, such as `References`, `In-Reply-To`, and `X-*` headers. Reserved headers and values containing carriage returns or line feeds return `422`. Set addressing and subject through their dedicated fields. Transactional sends accept `List-Unsubscribe` and `List-Unsubscribe-Post`. Marketing sends use Bird-managed unsubscribe by default.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Structured `{name, value}` labels for **filtering and analytics**. Tags become first-class query dimensions:\n\n- Filter the list endpoint by tag name.\n- Slice analytics rollups by tag.\n- Surface in webhook payloads.\n\nCap: 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`, `template_id`). For arbitrary structured context that you do not need as a filter dimension, use `metadata` instead.",
+        description="Structured `{name, value}` labels, up to 20 per send. You can filter the list endpoint by tag name, slice analytics by tag, and read them in webhook payloads. Use them for low-cardinality dimensions such as `category`, `experiment_variant` or `template_id`, and `metadata` for context you do not filter by.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
-        description="Arbitrary JSON object returned on API reads and included in webhook payloads. You can query its paths in analytics, such as `metadata.order_id`, but it is not a dashboard filter. The serialized object is limited to 2 KB. Use metadata for per-send context such as order IDs, customer references, and structured event data. For low-cardinality filterable labels, use `tags` instead.",
+        description="JSON object returned on reads and in webhook payloads, up to 2 KB serialized. Analytics can query its paths, such as `metadata.order_id`, but the dashboard cannot filter by it. Use it for per-send context such as order IDs and customer references, and `tags` for low-cardinality labels you filter by.",
     )] = None
     reference: Annotated[Optional[str], Field(
         description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
@@ -3582,7 +3582,7 @@ class EmailMessageSendRequest(BaseModel):
         min_length=1,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="Parameter values used to personalize inline content, shared across all recipients of this send. Tokens such as `{{ animal }}` are replaced with matching values; missing values render empty. Include this object, even as `{}`, to use Liquid, or omit it to leave tokens unchanged. Use single-word names other than `bird`. Cap: 16 KB serialized. For a stored template, use `template.parameters` instead. See [inline personalization](https://bird.com/docs/guides/email/sending-email#content) for validation and URL encoding examples.",
+        description="Values for the Liquid tokens in inline content, shared by every recipient: `{{ animal }}` takes the `animal` value, and a missing value renders empty. Include the object, even as `{}`, to render Liquid, or omit it to leave tokens unchanged. Names are single words other than `bird`, and the object is capped at 16 KB serialized. A stored template takes `template.parameters` instead. [Inline personalization](https://bird.com/docs/guides/email/sending-email#content) covers validation and URL encoding.",
     )] = None
     template: Annotated[Optional[EmailTemplateSend], Field(
         description="Send a stored template instead of inline content. When set, omit `subject`, `html` and `text`, because the template supplies them. Personalize with `template.parameters`. Add `scheduled_at` to send it later.",
@@ -3601,11 +3601,11 @@ class EmailMessageSendRequest(BaseModel):
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachment]], Field(
-        description="Files to attach, up to 20 per message. A message can be at most 20 MB once it has been generated, and we refuse a send that would go over. That figure covers the HTML body, the text body and every attachment and inline image, all measured after base64 encoding, which adds roughly a third. So 15 MB of raw files already accounts for most of the budget, and the body competes for the same space. A batch send is held to the same 20 MB per message, and the whole request body is capped at 20 MB as well.",
+        description="Files to attach, up to 20 per message. A generated message is capped at 20 MB, and a send over it is refused. The cap counts the HTML and text bodies and every attachment and inline image after base64 encoding, which adds about a third, so 15 MB of raw files uses most of it. Each batch item has the same cap, and the whole request body is capped at 20 MB too.",
         max_length=20,
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
-        description="Schedule the message to send at a future time instead of immediately. Must be at least 30 seconds and at most 30 days ahead. Outside that range the request is rejected with `422`. The message returns with status `accepted` and shows as `scheduled` on reads until it sends. Cancel it before then with the message cancel endpoint. Scheduled sends count against your plan's monthly scheduled-email allowance. Exceeding it is rejected with a `422`. For a stored template, the published version, language and parameter values are pinned when we accept the request, so a later publication does not change what sends. If the template is deleted before the message is due, the message is rejected with `generation_failure`. We also check sender eligibility and send-volume allowance when the message is due. Batch items take this field too, so one batch can mix scheduled and immediate messages.",
+        description="Send at this future time instead of immediately, at least 30 seconds and at most 30 days ahead; outside that range returns `422`. The message returns `accepted` and reads as `scheduled` until it sends, and the message cancel endpoint cancels it before then. Scheduled sends count against your plan's monthly scheduled-email allowance, and a send over it returns `422`. A stored template's published version, language and parameter values are pinned at acceptance, so a later publication does not change what sends; deleting the template before the message is due rejects it with `generation_failure`. Sender eligibility and send-volume allowance are checked again when it is due. Batch items take this field too, so one batch can mix scheduled and immediate messages.",
     )] = None
 
 
@@ -5965,13 +5965,13 @@ class SMSSendOptions(BaseModel):
     "Settings that change how Bird processes this message. Each option applies to this send only; omit one to use the value of the messaging profile in `messaging_profile_id`, or its default when the profile sets none."
     model_config = ConfigDict(extra="allow")
     smart_encoding: Annotated[Optional[bool], Field(
-        description="Replace characters outside the GSM-7 alphabet with their closest GSM-7 equivalent before sending: typically curly quotes, dashes, ellipses, fullwidth forms, and non-breaking spaces.\n\nOne such character forces the whole body into `UCS2`, which more than halves the characters that fit in a segment, so replacing them often lowers the segment count and the cost.\n\nDisabled by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet afterwards, such as an emoji or a non-Latin script, is sent exactly as you supplied it. Read the message back to see what was applied: `text` is the body as sent.",
+        description="Replace characters outside the GSM-7 alphabet, typically curly quotes, dashes, ellipses, fullwidth forms and non-breaking spaces, with their closest GSM-7 equivalent before sending. One such character forces the whole body into `UCS2`, which more than halves the characters per segment, so replacing them often lowers the segment count and the cost. Off by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet, such as an emoji or a non-Latin script, is sent exactly as supplied. The message's `text` on a read is the body as sent.",
     )] = None
     ignore_suppression: Annotated[Optional[bool], Field(
-        description="Send this message even if the recipient is suppressed for the sender, including after replying STOP. Bird skips every suppression reason and records the flag on the message; communication preferences the recipient revoked still apply. Only `authentication` and `transactional` messages can use it; setting it to `true` on a `marketing` or `service` message returns `422`. Bird must enable it for your workspace first; until then, a message that uses it is refused with `422`. Omit it to use the setting of the messaging profile in `messaging_profile_id`.",
+        description="Send even if the recipient is suppressed for the sender, including after replying STOP: Bird skips every suppression reason and records the flag on the message, while communication preferences the recipient revoked still apply. Only `authentication` and `transactional` messages take it; `true` on a `marketing` or `service` message returns `422`, as does any use before Bird enables it for your workspace. Omit it to use the setting of the profile in `messaging_profile_id`.",
     )] = None
     callback_url: Annotated[Optional[str], Field(
-        description="An HTTPS URL that receives this message's events instead of your webhook endpoints. It must be a public address: a private, loopback or link-local host returns `422`. Bird fixes the URL when it accepts the message, so later profile changes do not reroute it. Each event is a signed POST, retried on failure, and signed with your workspace callback signing secret, which `rotateWebhookCallbackSigningSecret` creates and returns once. While a URL applies, this message's events skip your plain webhook endpoints, and a failed callback never falls back to them. MCP Events subscriptions and connector endpoints still receive them. The `callback_events` of the messaging profile in `messaging_profile_id` choose which events go to the URL. Omit the field to use the callback URL of that profile; send `null` to send this message's events to your webhook subscriptions.",
+        description="An HTTPS URL that receives this message's events instead of your webhook endpoints; a private, loopback or link-local host returns `422`. The URL is fixed when Bird accepts the message, so later profile changes do not reroute it. Each event is a POST, retried on failure and signed with your workspace callback signing secret, which `rotateWebhookCallbackSigningSecret` creates and returns once. While the URL applies, the message's events skip your plain webhook endpoints, with no fallback when the callback fails; MCP Events subscriptions and connector endpoints still receive them. The `callback_events` of the profile in `messaging_profile_id` choose which events go to the URL. Omit it to use that profile's callback URL, or send `null` to send the events to your webhook subscriptions.",
         examples=["https://receipts.example.com/bird/sms"],
         max_length=2048,
     )] = None
@@ -6028,12 +6028,12 @@ class SMSMessageSendRequest(BaseModel):
     )] = None
     from_: Annotated[Optional[str], Field(
         alias="from",
-        description="Sender to send from. It must be a sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code it holds, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. A sender the workspace does not hold returns a `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and when sending a workspace template, unless `messaging_profile_id` is set and the profile selects a sender for the destination country or has a default sender. Omitting it otherwise returns `422`. A built-in template selects its sender automatically and rejects `from`.",
+        description="Sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. Any other sender returns `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and a workspace-template send, unless the profile in `messaging_profile_id` selects a sender for the destination country or has a default sender; omitting it otherwise returns `422`. A built-in template selects its sender itself and rejects `from`.",
         examples=[+15557654321],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
-        description="Free-text message body. Required unless `template` is supplied (the two are mutually exclusive). At least 1 character, up to a 12-segment cap (roughly 1836 GSM-7 or 804 UCS-2 characters). Bird does not truncate; a body exceeding 12 segments is rejected with a 422. The cap applies to segments because GSM-7 and UCS-2 encodings differ in characters per segment.",
+        description="Free-text message body, required unless `template` is set; the two are mutually exclusive. From 1 character up to 12 segments, roughly 1836 GSM-7 or 804 UCS-2 characters, since the two encodings fit different numbers of characters in a segment. Bird does not truncate: a longer body returns `422`.",
         examples=["Your verification code is 123456."],
         min_length=1,
     )] = None
@@ -6044,7 +6044,7 @@ class SMSMessageSendRequest(BaseModel):
         description="Content classification: why you are sending. Required on a free-text send unless the messaging profile in `messaging_profile_id` sets a default category; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
-        description="How long, in seconds (60-172800), the message may wait for delivery, counted from acceptance. Bird does not submit the message to the carrier after this deadline and passes the remaining time to the carrier where the route supports it. A message that misses the deadline before reaching the carrier ends `rejected` or `failed`, not `expired`; `expired` comes only from a carrier report. Omit it to use the validity period of the messaging profile in `messaging_profile_id`, or the carrier's own validity rules when the profile sets none.",
+        description="How long, in seconds (60-172800), the message may wait for delivery after acceptance. Bird does not submit it to the carrier after that deadline, and passes the remaining time to the carrier where the route supports it. A message that misses the deadline before reaching the carrier ends `rejected` or `failed`; `expired` comes only from a carrier report. Omit it to use the validity period of the profile in `messaging_profile_id`, or the carrier's own rules when the profile sets none.",
         ge=60,
         le=172800,
     )] = None
@@ -6061,7 +6061,7 @@ class SMSMessageSendRequest(BaseModel):
         min_length=1,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
-        description="Structured `{name, value}` labels for filtering and analytics. Tags become first-class query dimensions: filter the list endpoint by tag name, slice analytics by tag, and surface in webhook payloads. Maximum 20 tags per send. Use tags for low-cardinality dimensions (`category`, `experiment_variant`). For arbitrary structured context you do not need as a filter dimension, use `metadata` instead.",
+        description="Structured `{name, value}` labels, up to 20 per send. You can filter the list endpoint by tag name, slice analytics by tag, and read them in webhook payloads. Use them for low-cardinality dimensions such as `category` or `experiment_variant`, and `metadata` for context you do not filter by.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
@@ -6074,7 +6074,7 @@ class SMSMessageSendRequest(BaseModel):
         description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     messaging_profile_id: Annotated[Optional[str], Field(
-        description="The messaging profile that supplies this message's sender and defaults. When `from` is omitted, Bird sends from the profile's sender for the destination country, or its default sender. An omitted `category` on a free-text send takes the profile's default category, and `smart_encoding`, `cost_center` and `validity_period` take the profile's settings. So do `options.callback_url` and `options.ignore_suppression`, which apply to the message. Values you set on the message take precedence. A built-in template sends from Bird's system sender and ignores the profile's senders. A profile that does not exist in this workspace returns `422` `SMSMessagingProfileNotFound`; a `from` bound to a different profile returns `422` `SMSMessagingProfileSenderBound`.",
+        description="The messaging profile that supplies this message's sender and defaults. Without `from`, Bird sends from the profile's sender for the destination country, or its default sender. An omitted `category` on a free-text send, `smart_encoding`, `cost_center`, `validity_period`, `options.callback_url` and `options.ignore_suppression` take the profile's settings, and values set on the message take precedence. A built-in template sends from Bird's system sender and ignores the profile's senders. A profile that does not exist in this workspace returns `422` `SMSMessagingProfileNotFound`, and a `from` bound to a different profile returns `422` `SMSMessagingProfileSenderBound`.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
         description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
@@ -12132,7 +12132,7 @@ class WhatsAppTemplateLanguageSummary(BaseModel):
         min_length=2,
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
-        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review, or submitted while Bird confirms the result with WhatsApp.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Not yet approved or rejected.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -12247,7 +12247,7 @@ class WhatsAppTemplateLanguage(BaseModel):
         description="This language's content blocks, in display order, exactly as submitted or as they stand in the draft.",
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
-        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Under review, or submitted while Bird confirms the result with WhatsApp.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Not yet approved or rejected.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -12283,6 +12283,10 @@ class WhatsAppTemplateLanguage(BaseModel):
     approved_at: Annotated[Optional[str], Field(
         description="When Meta approved this exact content. It is a permanent mark on the content rather than a status, so a later pause or archival does not clear it. Null for a built-in template's language, whose approval predates Bird holding a date for it.",
         examples=["2026-07-21T08:15:00Z"],
+    )] = None
+    whatsapp_manager_url: Annotated[Optional[str], Field(
+        description="Opens this language in Meta's WhatsApp Manager, for people with access to the business portfolio. Null until WhatsApp holds the language, which can take a minute after submitting, and null again once WhatsApp has deleted it. Always null for a built-in template's language.",
+        examples=["https://business.facebook.com/latest/whatsapp_manager/template_details/?asset_id=102290129340398&id=1143800821515747"],
     )] = None
     updated_at: Annotated[Optional[str], Field(
         description="When this language last changed. Null for a built-in template's language, which Bird ships rather than stores.",
@@ -12656,6 +12660,7 @@ class WhatsAppNumberErrorCode(str, Enum):
     business_account_locked = "business_account_locked"
     business_verification_required = "business_verification_required"
     credit_currency_mismatch = "credit_currency_mismatch"
+    billing_close = "billing_close"
     permission_denied = "permission_denied"
     invalid_request = "invalid_request"
     internal_error = "internal_error"
@@ -27007,10 +27012,16 @@ class NumberOwnership(BaseModel):
         description="Whether the ownership paperwork is accepted or is no longer required. This can remain true while an external verifier asks for a correction or activation is pending. Read `status` and `next` for the current step, and `blocked_at` for the ownership block on outbound SMS and inbound and outbound voice.",
     )]
     status: Annotated[NumberOwnershipStatus, Field(
-        description="Current ownership registration approval status. Operational activation is separate:\n`blocked_at` records the ownership block on number use, and `next` describes remaining work.\n\n- `needs_input` means ownership details or a submission correction are needed, including when Bird closed a submission but accepts corrected details.\n- `under_review` means your current answers are being reviewed. Until the submission is approved, you can still change any answer; a changed answer is reviewed again.\n- `approval_pending` means your paperwork is accepted but registration approval is still pending.\n- `approved` means ownership registration is approved. Number activation can still be pending while `blocked_at` is non-null.\n- `not_required` means no active ownership requirement applies, including after a requirement is withdrawn.\n- `rejected` means the submission was closed without accepting another one, or the verifier correction deadline passed. Corrections are no longer accepted for this submission. Contact support.\n- `unknown` means current approval status could not be determined. Read `blocked_at` for any recorded ownership block. Retry the read.",
+        description="Current ownership registration approval status. Operational activation is separate:\n`blocked_at` records the ownership block on number use, and `next` describes remaining work.\n\n- `needs_input` means ownership details or a submission correction are needed, including when Bird closed a submission but accepts corrected details.\n- `under_review` means your current answers are being reviewed. Until the submission is approved, you can still change any answer; a changed answer is reviewed again.\n- `approval_pending` means your paperwork is accepted but registration approval is still pending.\n- `approved` means ownership registration is approved. Number activation can still be pending while `blocked_at` is non-null.\n- `not_required` means no active ownership requirement applies, including after a requirement is withdrawn.\n- `rejected` means the submission was closed without accepting another one, or the verifier correction deadline passed. Corrections are no longer accepted for this submission. Contact support.\n- `unknown` means current approval status could not be determined. Read `blocked_at` for any recorded ownership block; if `unavailable_at` is present, contact support, otherwise retry the read.",
     )]
     blocked_at: Annotated[Optional[str], Field(
         description="When ownership requirements began blocking outbound SMS and inbound and outbound voice calls. Null when that block is clear. Accepted paperwork can still await activation with a block in place. A number bought before ownership requirements were introduced can have outstanding paperwork without a block.",
+    )] = None
+    unavailable_at: Annotated[Optional[str], Field(
+        description="When the number became unavailable. It cannot be activated; contact support. Absent while the number is available.",
+    )] = None
+    registration_due_at: Annotated[Optional[str], Field(
+        description="The deadline for completing the number's ownership details. A number with incomplete or inaccurate details can be removed sooner. Absent when no deadline is known or while `unavailable_at` is set.",
     )] = None
     next: Annotated[List[NextAction], Field(
         description="Actions that advance ownership registration or activation, in order. Empty when neither needs further action. A `wait` step means no customer action is needed now, including while accepted paperwork awaits activation. Read this list again after each change.",
