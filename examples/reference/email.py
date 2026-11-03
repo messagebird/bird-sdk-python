@@ -156,7 +156,7 @@ def mailbox_list() -> None:
 
 
 def mailbox_create() -> None:
-    mailbox = client.email.mailboxes.create(display_name="Acme Support")
+    mailbox = client.email.mailboxes.create(name="Acme Support")
     print(mailbox.id)
 
 
@@ -197,9 +197,9 @@ def mailbox_labels() -> None:
 
 def mailbox_update() -> None:
     mailbox = client.email.mailboxes.update(
-        "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
+        "mbx_01krdgeqcxet5s7t44vh8rt9mg", name="Billing"
     )
-    print(mailbox.display_name)
+    print(mailbox.name)
 
 def mailbox_receive_rule_list() -> None:
     for rule in client.email.mailboxes.receive_rules.list("mbx_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -230,8 +230,13 @@ def mailbox_thread_get() -> None:
 
 def mailbox_thread_update() -> None:
     thread = client.email.threads.update(
-        "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
+        "thr_01krdgeqcxet5s7t44vh8rt9mg", folder="archive"
     )
+    print(thread.id)
+
+
+def mailbox_thread_restore() -> None:
+    thread = client.email.threads.restore("thr_01krdgeqcxet5s7t44vh8rt9mg")
     print(thread.id)
 
 

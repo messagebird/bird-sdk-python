@@ -245,6 +245,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/mailboxes/{mailbox_id}/receive-rules/{rule_id}": {"delete"},
     "/v1/email/threads": {"get"},
     "/v1/email/threads/{thread_id}": {"delete", "get", "patch"},
+    "/v1/email/threads/{thread_id}/restore": {"post"},
     "/v1/email/threads/{thread_id}/messages": {"get"},
     "/v1/email/threads/{thread_id}/messages/{message_id}": {"get"},
     "/v1/email/threads/{thread_id}/messages/{message_id}/body": {"get"},

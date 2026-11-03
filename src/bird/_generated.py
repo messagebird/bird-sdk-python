@@ -21087,9 +21087,14 @@ class Mailbox(BaseModel):
         description="An address we generate on our receiving domain, either when the mailbox is created on a domain not set up for receiving with us or later, when you set up forwarding for the mailbox. Forward mail for `address` here from your current email provider, and it lands in this mailbox. Replies still go out from `address`. Immutable once set. It stops receiving while the mailbox is deleted, works again with the same value after a restore, and keeps working if you later enable or disable receiving on the domain. `null` until set up; always `null` on the shared domain, which receives directly.",
         examples=["k7q2mzxw4h6p5ra3@eu1.inbound.bird.com"],
     )]
-    display_name: Annotated[Optional[str], Field(
-        description="Display name used as the sender name on mail from this mailbox. `null` when unset.",
+    name: Annotated[Optional[str], Field(
+        description="Sender name shown alongside the address in outgoing mail. `null` when unset.",
         examples=["Acme Concierge"],
+        max_length=255,
+    )]
+    display_name: Annotated[Optional[str], Field(
+        description="Name shown to your team in the dashboard and tools. Defaults to `name` when no override is set. When `name` is unset, outgoing mail uses this value as the sender name.",
+        examples=["Customer Support"],
         max_length=255,
     )]
     default_reply_to: Annotated[Optional[str], Field(
@@ -21197,8 +21202,13 @@ class MailboxCreate(BaseModel):
         max_length=255,
         min_length=1,
     )] = None
+    name: Annotated[Optional[str], Field(
+        description="Sender name shown alongside the address in outgoing mail. Must contain a non-whitespace character and cannot contain carriage returns or line feeds.",
+        max_length=255,
+        min_length=1,
+    )] = None
     display_name: Annotated[Optional[str], Field(
-        description="Display name used as the sender name on mail from this mailbox.",
+        description="Name shown to your team in the dashboard and tools. Defaults to `name` when omitted. When `name` is unset, outgoing mail uses this value as the sender name.",
         examples=["Acme Concierge"],
         max_length=255,
         min_length=1,
@@ -21238,8 +21248,13 @@ class MailboxUpdateRetentionTier(str, Enum):
 class MailboxUpdate(BaseModel):
     "Fields to update on a mailbox. Omitted fields are unchanged. Fields set to `null` are cleared. The address and domain are immutable."
     model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        description="Sender name shown alongside the address in outgoing mail. Must contain a non-whitespace character and cannot contain carriage returns or line feeds. `null` clears it.",
+        max_length=255,
+        min_length=1,
+    )] = None
     display_name: Annotated[Optional[str], Field(
-        description="Display name used as the sender name on mail from this mailbox. `null` clears it.",
+        description="Name shown to your team in the dashboard and tools. `null` clears the override and uses `name`. When `name` is unset, outgoing mail uses this value as the sender name.",
         max_length=255,
     )] = None
     default_reply_to: Annotated[Optional[str], Field(
@@ -21404,6 +21419,20 @@ class ReceiveRuleCreate(BaseModel):
     )] = None
 
 
+class EmailThreadFolder(str, Enum):
+    inbox = "inbox"
+    archive = "archive"
+    spam = "spam"
+    blocked = "blocked"
+    sent = "sent"
+    trash = "trash"
+
+
+class EmailThreadReadState(str, Enum):
+    read = "read"
+    unread = "unread"
+
+
 class ThreadID(RootModel[str]):
     root: str
 
@@ -21471,8 +21500,14 @@ class EmailThread(BaseModel):
         description="Direction of the most recent message: `inbound` for a received message, `outbound` for a sent one.",
         min_length=1,
     )]
+    folder: Annotated[EmailThreadFolder, Field(
+        description="Primary conversation folder. The supported folders are inbox, archive, spam, blocked, sent, and trash. Blocked and sent are assigned automatically. The sent filter also includes sent conversations that received replies and still sit in the inbox; moving them with PATCH removes them from the sent filter.",
+    )]
+    read: Annotated[bool, Field(
+        description="Whether every retained received message is read, including trash, spam and blocked messages. Outbound messages do not affect this state.",
+    )]
     labels: Annotated[List[str], Field(
-        description="Labels on this conversation. Exactly one system placement label is always present, set by the message that started the conversation:\n\n- `inbox`: The conversation is in the inbox.\n- `archive`: The conversation was filed away and is done for now.\n- `spam`: The conversation's opening message is filed in Spam.\n- `blocked`: The conversation's opening message was rejected by the mailbox's receive policy or rules.\n\nMove a conversation by updating its labels. Add `spam` to file it as spam, add `archive` to clean it out of the inbox, and add `inbox`, or remove `spam`, `blocked`, or `archive`, to bring it back. An archived conversation returns to the inbox by itself when a new message arrives. Custom labels share the same list, and a conversation has at most 20 labels in total.",
+        description="Custom labels applied to this conversation. Folder and read state are separate fields.",
         max_length=20,
     )]
     created_at: Annotated[str, Field(
@@ -21512,8 +21547,14 @@ class EmailThreadList(BaseModel):
     )]
 
 
-class EmailLabelsUpdate(BaseModel):
-    "Label changes to apply. Labels in `add` are applied and labels in `remove` are taken off; other labels are left untouched. Adding a label that is already present, or removing one that is not, has no effect. System labels express state changes. On a conversation, adding `spam` files it as spam. Adding `archive` files it away without deleting it. Adding `inbox`, or removing `spam`, `blocked`, or `archive`, returns it to the inbox. Removing `unread` marks all retained received messages as read in one call. On a message, adding or removing `unread` flips read state. Adding or removing `trash` moves it to or out of the trash. The API rejects changes that contradict this model. A request cannot add more than one placement label. It cannot add `blocked`, because blocking a sender is a receive-rule decision. Removing `inbox` requires adding a destination. A conversation cannot add `trash` or `unread`; removing `unread` is the mark-all-read shortcut, and `trash` uses the `DELETE` verb. A message cannot use placement labels; move its conversation instead. A sent message cannot use `unread`. Custom labels are 1-64 characters with no commas, control characters, or leading or trailing whitespace. System label names and a small reserved set (`all`, `archived`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `junk`, `muted`, `none`, `outbox`, `pinned`, `read`, `scheduled`, `snoozed`, `starred`) cannot be used as custom labels, in any casing. A conversation or message has at most 20 labels, system labels included."
+class EmailThreadWritableFolder(str, Enum):
+    inbox = "inbox"
+    archive = "archive"
+    spam = "spam"
+
+
+class EmailThreadLabelsUpdate(BaseModel):
+    "Custom labels to add or remove. System and reserved names are refused; use read and folder for thread state. The resulting custom-label set must contain at most 20 labels; larger sets return 422."
     model_config = ConfigDict(extra="allow")
     add: Annotated[Optional[List[str]], Field(
         description="Labels to apply.",
@@ -21526,10 +21567,16 @@ class EmailLabelsUpdate(BaseModel):
 
 
 class EmailThreadUpdateRequest(BaseModel):
-    "Changes to apply to a thread. Omitted fields are left unchanged."
+    "Changes to apply to a thread. Omitted fields are left unchanged. Folder changes accept inbox, archive or spam and reject trashed threads with 422; first use [Restore a thread from trash](/docs/api/reference/restore-email-thread). Read and custom-label updates remain available in trash."
     model_config = ConfigDict(extra="allow")
-    labels: Annotated[Optional[EmailLabelsUpdate], Field(
-        description="Label changes to apply. Labels in `add` are applied and labels in `remove` are taken off; other labels are left untouched. Adding a label that is already present, or removing one that is not, has no effect. System labels express state changes. On a conversation, adding `spam` files it as spam. Adding `archive` files it away without deleting it. Adding `inbox`, or removing `spam`, `blocked`, or `archive`, returns it to the inbox. Removing `unread` marks all retained received messages as read in one call. On a message, adding or removing `unread` flips read state. Adding or removing `trash` moves it to or out of the trash. The API rejects changes that contradict this model. A request cannot add more than one placement label. It cannot add `blocked`, because blocking a sender is a receive-rule decision. Removing `inbox` requires adding a destination. A conversation cannot add `trash` or `unread`; removing `unread` is the mark-all-read shortcut, and `trash` uses the `DELETE` verb. A message cannot use placement labels; move its conversation instead. A sent message cannot use `unread`. Custom labels are 1-64 characters with no commas, control characters, or leading or trailing whitespace. System label names and a small reserved set (`all`, `archived`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `junk`, `muted`, `none`, `outbox`, `pinned`, `read`, `scheduled`, `snoozed`, `starred`) cannot be used as custom labels, in any casing. A conversation or message has at most 20 labels, system labels included.",
+    read: Annotated[Optional[bool], Field(
+        description="Mark all retained received messages read or unread. Includes trash, spam and blocked messages; unread_count continues to exclude them.",
+    )] = None
+    folder: Annotated[Optional[EmailThreadWritableFolder], Field(
+        description="Folder a caller can choose through PATCH. Use DELETE to move a thread to trash and [Restore a thread from trash](/docs/api/reference/restore-email-thread) (POST /v1/email/threads/{thread_id}/restore) to recover it.",
+    )] = None
+    labels: Annotated[Optional[EmailThreadLabelsUpdate], Field(
+        description="Custom labels to add or remove. System and reserved names are refused; use read and folder for thread state. The resulting custom-label set must contain at most 20 labels; larger sets return 422.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
         description="Contact to link this conversation to, or null to unlink the current contact.",
@@ -21671,7 +21718,7 @@ class EmailThreadMessage(BaseModel):
         description="Aggregate delivery status of a sent message:\n\n- `scheduled`: Acknowledgement only; the separate schedule is linked by scheduled_message_id.\n- `accepted`: Accepted for sending.\n- `sent`: Handed off to the provider.\n- `delivered`: All attempted recipients delivered.\n- `failed`: Terminal failure.\n\nNull for received messages.",
     )]
     recipients: Annotated[Optional[List[EmailThreadMessageRecipient]], Field(
-        description="Terminal per-recipient delivery outcomes of a sent message, filled in as each one becomes known and kept for the mailbox's full retention tier. Null for received messages and before any recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.",
+        description="Terminal delivery outcomes for the visible To and Cc recipients of a sent message, filled in as each one becomes known and kept for the mailbox's full retention tier. Bcc recipients are omitted; aggregate status still includes every attempted recipient. Null for received messages and before any visible recipient reaches a terminal state. Per-recipient event detail lives on the sent-message log (`source`) for 30 days.",
     )]
     authentication: Annotated[Optional[EmailThreadMessageAuthentication], Field(
         description="DMARC result for the domain in the received message's `From` header.\n\n- `pass`: SPF or DKIM passed and aligned with that domain.\n- `fail`: DMARC was evaluated and did not pass.\n- `unknown`: no trustworthy verdict is available.\n\nThis follows `dmarc_pass` and does not verify a particular person. The receiving provider currently supplies no DMARC result, so received messages report `unknown`.\n\nNull for sent messages. This field is readable for the mailbox's full\nretention tier, so the verdict is still available after the 30-day\nreceived-message log has expired.",
@@ -21748,8 +21795,12 @@ class EmailThreadMessageAttachmentList(BaseModel):
     data: List[EmailThreadMessageAttachment]
 
 
+class EmailRecipientAddress(RootModel[str]):
+    root: str
+
+
 class EmailThreadMessageReplyRequest(BaseModel):
-    "A reply to a conversation message. Recipients are derived from the message being replied to: its Reply-To address when present, otherwise its From address. Set `reply_all` to also include the original To and Cc recipients (minus the mailbox's own address). The subject and threading headers are set automatically. At least one of `html` or `text` must be provided."
+    "A reply to a conversation message. For a received message, recipients are derived from its Reply-To address when present, otherwise its From address. For a message the mailbox sent, recipients are derived from its original To line. Set `reply_all` to also include the original To and Cc recipients (minus the mailbox's own address). Add `cc` or `bcc` to copy further recipients. The subject and threading headers are set automatically. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
     scheduled_at: Annotated[Optional[str], Field(
         description="Send between 30 seconds and 30 days ahead, sharing the scheduled-email allowance. The scheduled send is listed separately and enters the conversation only at dispatch. Sender, mailbox and send-volume eligibility are rechecked then; refusal fails the schedule record without adding a conversation message. Retention starts at dispatch. Attachments are not supported on scheduled messages; send now or schedule without attachments.",
@@ -21761,6 +21812,14 @@ class EmailThreadMessageReplyRequest(BaseModel):
     text: Annotated[Optional[str], Field(
         description="Plain-text body of the reply. At least one of html or text must be provided.",
         max_length=524288,
+    )] = None
+    cc: Annotated[Optional[List[str]], Field(
+        description="Additional Cc recipients, merged with recipients derived by `reply_all`. Addresses already on the derived To line are dropped (case-insensitive). The merged Cc set must contain at most 50 addresses; larger sets return 422.",
+        max_length=50,
+    )] = None
+    bcc: Annotated[Optional[List[str]], Field(
+        description="Blind-copy recipients. Addresses already on the derived To or merged Cc line are dropped (case-insensitive). Bcc addresses are omitted from conversation participants, visible recipient headers, and the 202 response. Bcc delivery outcomes are excluded from the message's `recipients` list.",
+        max_length=50,
     )] = None
     reply_all: Annotated[Optional[bool], Field(
         description="Also send the reply to the original To and Cc recipients, minus the mailbox's own address.",

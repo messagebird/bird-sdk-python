@@ -16,7 +16,7 @@ from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
-class EmailLabelsUpdate(TypedDict, total=False):
+class EmailThreadLabelsUpdate(TypedDict, total=False):
     add: Sequence[str]
     remove: Sequence[str]
 
@@ -26,8 +26,9 @@ class EmailThreadsListParams(TypedDict, total=False):
 
     mailbox_id: str
     contact_id: str
-    label: Sequence[str]
-    has_unread: bool
+    folder: str
+    read_state: str
+    labels: Sequence[str]
     participant: str
     subject: str
     after: str
@@ -40,7 +41,9 @@ class EmailThreadsListParams(TypedDict, total=False):
 class EmailThreadsUpdateParams(TypedDict, total=False):
     """Params for ``client.email.threads.update``. Every key is optional."""
 
-    labels: EmailLabelsUpdate
+    read: bool
+    folder: str
+    labels: EmailThreadLabelsUpdate
     contact_id: str | None
 
 
@@ -56,8 +59,9 @@ class EmailThreadsBase(Resource):
         *,
         mailbox_id: str | None = None,
         contact_id: str | None = None,
-        label: Sequence[str] | None = None,
-        has_unread: bool | None = None,
+        folder: str | None = None,
+        read_state: str | None = None,
+        labels: Sequence[str] | None = None,
         participant: str | None = None,
         subject: str | None = None,
         after: str | None = None,
@@ -67,7 +71,7 @@ class EmailThreadsBase(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailThread]:
-        """List mailbox conversations as a cursor page, most recently active first. `label` selects the view: inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
+        """List mailbox conversations as a cursor page, most recently active first. `folder` selects the view: inbox (default), archive, spam, blocked, sent, or trash. `labels` matches custom labels. Filter by mailbox, contact, participant address, or subject substring.
 
         ```python
         for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -77,8 +81,9 @@ class EmailThreadsBase(Resource):
         query = {
             "mailbox_id": mailbox_id,
             "contact_id": contact_id,
-            "label": label,
-            "has_unread": has_unread,
+            "folder": folder,
+            "read_state": read_state,
+            "labels": labels,
             "participant": participant,
             "subject": subject,
             "after": after,
@@ -113,20 +118,26 @@ class EmailThreadsBase(Resource):
         self,
         thread_id: str,
         *,
-        labels: EmailLabelsUpdate | None = None,
+        read: bool | None = None,
+        folder: str | None = None,
+        labels: EmailThreadLabelsUpdate | None = None,
         contact_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailThread:
-        """Add or remove labels on a conversation, or link and unlink a contact. Adding `spam` files it as spam, `archive` clears it out of the inbox, and `inbox` brings it back.
+        """Set read state, move a conversation with folder, add or remove custom labels, or link and unlink a contact. Use `email.threads.delete` to trash a conversation and `email.threads.restore` to recover it. Restore a trashed conversation before changing its folder. Blocked and sent are assigned automatically.
 
         ```python
         thread = client.email.threads.update(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", folder="archive"
         )
         print(thread.id)
         ```
         """
         _body: dict[str, Any] = {}
+        if read is not None:
+            _body["read"] = read
+        if folder is not None:
+            _body["folder"] = folder
         if labels is not None:
             _body["labels"] = labels
         if not isinstance(contact_id, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -147,7 +158,7 @@ class EmailThreadsBase(Resource):
         permanent: bool | None = None,
         options: RequestOptions | None = None,
     ) -> None:
-        """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with `?permanent=true`.
+        """Move a conversation and all its messages to trash. Restore retained messages during the 30-day trash window with `email.threads.restore`, or delete permanently with `?permanent=true` without a restore window.
 
         ```python
         client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
@@ -161,6 +172,26 @@ class EmailThreadsBase(Resource):
             },
         )
 
+    def restore(
+        self,
+        thread_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> EmailThread:
+        """Restore messages that remain within their trash deadline and the mailbox retention period. Preserves folder and read state. Repeating the operation does not change messages already restored; canceled scheduled sends remain canceled.
+
+        ```python
+        thread = client.email.threads.restore("thr_01krdgeqcxet5s7t44vh8rt9mg")
+        print(thread.id)
+        ```
+        """
+        return self._action(
+            "POST",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/restore",
+            EmailThread,
+            options,
+        )
+
 
 class AsyncEmailThreadsBase(AsyncResource):
     def list(
@@ -168,8 +199,9 @@ class AsyncEmailThreadsBase(AsyncResource):
         *,
         mailbox_id: str | None = None,
         contact_id: str | None = None,
-        label: Sequence[str] | None = None,
-        has_unread: bool | None = None,
+        folder: str | None = None,
+        read_state: str | None = None,
+        labels: Sequence[str] | None = None,
         participant: str | None = None,
         subject: str | None = None,
         after: str | None = None,
@@ -179,7 +211,7 @@ class AsyncEmailThreadsBase(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailThread]:
-        """List mailbox conversations as a cursor page, most recently active first. `label` selects the view: inbox (default), archive, spam, blocked, or a custom label. Filter by mailbox, contact, participant address, or subject substring.
+        """List mailbox conversations as a cursor page, most recently active first. `folder` selects the view: inbox (default), archive, spam, blocked, sent, or trash. `labels` matches custom labels. Filter by mailbox, contact, participant address, or subject substring.
 
         ```python
         async for thread in client.email.threads.list(mailbox_id="mbx_01krdgeqcxet5s7t44vh8rt9mg"):
@@ -189,8 +221,9 @@ class AsyncEmailThreadsBase(AsyncResource):
         query = {
             "mailbox_id": mailbox_id,
             "contact_id": contact_id,
-            "label": label,
-            "has_unread": has_unread,
+            "folder": folder,
+            "read_state": read_state,
+            "labels": labels,
             "participant": participant,
             "subject": subject,
             "after": after,
@@ -225,20 +258,26 @@ class AsyncEmailThreadsBase(AsyncResource):
         self,
         thread_id: str,
         *,
-        labels: EmailLabelsUpdate | None = None,
+        read: bool | None = None,
+        folder: str | None = None,
+        labels: EmailThreadLabelsUpdate | None = None,
         contact_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailThread:
-        """Add or remove labels on a conversation, or link and unlink a contact. Adding `spam` files it as spam, `archive` clears it out of the inbox, and `inbox` brings it back.
+        """Set read state, move a conversation with folder, add or remove custom labels, or link and unlink a contact. Use `email.threads.delete` to trash a conversation and `email.threads.restore` to recover it. Restore a trashed conversation before changing its folder. Blocked and sent are assigned automatically.
 
         ```python
         thread = await client.email.threads.update(
-            "thr_01krdgeqcxet5s7t44vh8rt9mg", labels={"add": ["archive"]}
+            "thr_01krdgeqcxet5s7t44vh8rt9mg", folder="archive"
         )
         print(thread.id)
         ```
         """
         _body: dict[str, Any] = {}
+        if read is not None:
+            _body["read"] = read
+        if folder is not None:
+            _body["folder"] = folder
         if labels is not None:
             _body["labels"] = labels
         if not isinstance(contact_id, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -259,7 +298,7 @@ class AsyncEmailThreadsBase(AsyncResource):
         permanent: bool | None = None,
         options: RequestOptions | None = None,
     ) -> None:
-        """Move a conversation and all its messages to trash (purged after 30 days), or delete permanently with `?permanent=true`.
+        """Move a conversation and all its messages to trash. Restore retained messages during the 30-day trash window with `email.threads.restore`, or delete permanently with `?permanent=true` without a restore window.
 
         ```python
         await client.email.threads.delete("thr_01krdgeqcxet5s7t44vh8rt9mg", permanent=True)
@@ -271,4 +310,24 @@ class AsyncEmailThreadsBase(AsyncResource):
             {
                 "permanent": permanent,
             },
+        )
+
+    async def restore(
+        self,
+        thread_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> EmailThread:
+        """Restore messages that remain within their trash deadline and the mailbox retention period. Preserves folder and read state. Repeating the operation does not change messages already restored; canceled scheduled sends remain canceled.
+
+        ```python
+        thread = await client.email.threads.restore("thr_01krdgeqcxet5s7t44vh8rt9mg")
+        print(thread.id)
+        ```
+        """
+        return await self._action(
+            "POST",
+            f"/v1/email/threads/{quote(thread_id, safe='')}/restore",
+            EmailThread,
+            options,
         )

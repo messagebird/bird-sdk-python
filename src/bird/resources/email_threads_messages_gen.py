@@ -54,6 +54,8 @@ class EmailThreadsMessagesReplyParams(TypedDict, total=False):
     scheduled_at: str
     html: str
     text: str
+    cc: Sequence[str]
+    bcc: Sequence[str]
     reply_all: bool
     tags: Sequence[Tag]
     metadata: Mapping[str, Any]
@@ -146,6 +148,8 @@ class EmailThreadsMessages(Resource):
         scheduled_at: str | None = None,
         html: str | None = None,
         text: str | None = None,
+        cc: Sequence[str] | None = None,
+        bcc: Sequence[str] | None = None,
         reply_all: bool | None = None,
         tags: Sequence[Tag] | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -154,7 +158,7 @@ class EmailThreadsMessages(Resource):
         cancel_on_reply: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
-        """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically.
+        """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically. Add cc or bcc to copy further recipients.
 
         ```python
         reply = client.email.threads.messages.reply(
@@ -170,6 +174,8 @@ class EmailThreadsMessages(Resource):
                 "scheduled_at": scheduled_at,
                 "html": html,
                 "text": text,
+                "cc": cc,
+                "bcc": bcc,
                 "reply_all": reply_all,
                 "tags": tags,
                 "metadata": metadata,
@@ -295,6 +301,8 @@ class AsyncEmailThreadsMessages(AsyncResource):
         scheduled_at: str | None = None,
         html: str | None = None,
         text: str | None = None,
+        cc: Sequence[str] | None = None,
+        bcc: Sequence[str] | None = None,
         reply_all: bool | None = None,
         tags: Sequence[Tag] | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -303,7 +311,7 @@ class AsyncEmailThreadsMessages(AsyncResource):
         cancel_on_reply: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailThreadMessage:
-        """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically.
+        """Reply to a specific conversation message from the mailbox's own address. To reply to a conversation, target its newest received message. Recipients, subject, and threading headers are derived automatically. Add cc or bcc to copy further recipients.
 
         ```python
         reply = await client.email.threads.messages.reply(
@@ -319,6 +327,8 @@ class AsyncEmailThreadsMessages(AsyncResource):
                 "scheduled_at": scheduled_at,
                 "html": html,
                 "text": text,
+                "cc": cc,
+                "bcc": bcc,
                 "reply_all": reply_all,
                 "tags": tags,
                 "metadata": metadata,

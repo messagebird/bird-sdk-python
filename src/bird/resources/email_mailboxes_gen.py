@@ -37,6 +37,7 @@ class EmailMailboxesCreateParams(TypedDict, total=False):
 
     local_part: str
     domain: str
+    name: str
     display_name: str
     default_reply_to: str
     receive_policy: str
@@ -47,6 +48,7 @@ class EmailMailboxesCreateParams(TypedDict, total=False):
 class EmailMailboxesUpdateParams(TypedDict, total=False):
     """Params for ``client.email.mailboxes.update``. Every key is optional."""
 
+    name: str | None
     display_name: str | None
     default_reply_to: str | None
     receive_policy: str
@@ -77,7 +79,7 @@ class EmailMailboxesBase(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[Mailbox]:
-        """List the workspace's mailboxes as a cursor page, newest first. Search addresses and display names with q, or filter by exact address, state, or domain.
+        """List the workspace's mailboxes as a cursor page, newest first. Search address, name and display_name with q, or filter by exact address, state, or domain.
 
         ```python
         for mailbox in client.email.mailboxes.list():
@@ -101,6 +103,7 @@ class EmailMailboxesBase(Resource):
         *,
         local_part: str | None = None,
         domain: str | None = None,
+        name: str | None = None,
         display_name: str | None = None,
         default_reply_to: str | None = None,
         receive_policy: str | None = None,
@@ -111,7 +114,7 @@ class EmailMailboxesBase(Resource):
         """Create a mailbox: a durable agent identity that owns an email address, groups mail into conversations, and remembers conversations for its retention tier.
 
         ```python
-        mailbox = client.email.mailboxes.create(display_name="Acme Support")
+        mailbox = client.email.mailboxes.create(name="Acme Support")
         print(mailbox.id)
         ```
         """
@@ -120,6 +123,7 @@ class EmailMailboxesBase(Resource):
             {
                 "local_part": local_part,
                 "domain": domain,
+                "name": name,
                 "display_name": display_name,
                 "default_reply_to": default_reply_to,
                 "receive_policy": receive_policy,
@@ -159,6 +163,7 @@ class EmailMailboxesBase(Resource):
         self,
         mailbox_id: str,
         *,
+        name: str | None | Omit = omit,
         display_name: str | None | Omit = omit,
         default_reply_to: str | None | Omit = omit,
         receive_policy: str | None = None,
@@ -171,12 +176,14 @@ class EmailMailboxesBase(Resource):
 
         ```python
         mailbox = client.email.mailboxes.update(
-            "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
+            "mbx_01krdgeqcxet5s7t44vh8rt9mg", name="Billing"
         )
-        print(mailbox.display_name)
+        print(mailbox.name)
         ```
         """
         _body: dict[str, Any] = {}
+        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["name"] = name
         if not isinstance(display_name, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["display_name"] = display_name
         if not isinstance(default_reply_to, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -318,7 +325,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[Mailbox]:
-        """List the workspace's mailboxes as a cursor page, newest first. Search addresses and display names with q, or filter by exact address, state, or domain.
+        """List the workspace's mailboxes as a cursor page, newest first. Search address, name and display_name with q, or filter by exact address, state, or domain.
 
         ```python
         async for mailbox in client.email.mailboxes.list():
@@ -342,6 +349,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         local_part: str | None = None,
         domain: str | None = None,
+        name: str | None = None,
         display_name: str | None = None,
         default_reply_to: str | None = None,
         receive_policy: str | None = None,
@@ -352,7 +360,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         """Create a mailbox: a durable agent identity that owns an email address, groups mail into conversations, and remembers conversations for its retention tier.
 
         ```python
-        mailbox = await client.email.mailboxes.create(display_name="Acme Support")
+        mailbox = await client.email.mailboxes.create(name="Acme Support")
         print(mailbox.id)
         ```
         """
@@ -361,6 +369,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
             {
                 "local_part": local_part,
                 "domain": domain,
+                "name": name,
                 "display_name": display_name,
                 "default_reply_to": default_reply_to,
                 "receive_policy": receive_policy,
@@ -400,6 +409,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         self,
         mailbox_id: str,
         *,
+        name: str | None | Omit = omit,
         display_name: str | None | Omit = omit,
         default_reply_to: str | None | Omit = omit,
         receive_policy: str | None = None,
@@ -412,12 +422,14 @@ class AsyncEmailMailboxesBase(AsyncResource):
 
         ```python
         mailbox = await client.email.mailboxes.update(
-            "mbx_01krdgeqcxet5s7t44vh8rt9mg", display_name="Billing"
+            "mbx_01krdgeqcxet5s7t44vh8rt9mg", name="Billing"
         )
-        print(mailbox.display_name)
+        print(mailbox.name)
         ```
         """
         _body: dict[str, Any] = {}
+        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["name"] = name
         if not isinstance(display_name, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["display_name"] = display_name
         if not isinstance(default_reply_to, Omit):  # None clears (JSON null); omit leaves it unchanged

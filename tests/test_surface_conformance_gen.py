@@ -335,6 +335,7 @@ def test_surface_conformance() -> None:
     assert callable(client.email.threads.get)
     assert callable(client.email.threads.update)
     assert callable(client.email.threads.delete)
+    assert callable(client.email.threads.restore)
     assert callable(client.email.threads.messages.list)
     assert callable(client.email.threads.messages.get)
     assert callable(client.email.threads.messages.body)
