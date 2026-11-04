@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.121.0
+
+- Testing a webhook now returns `kind`, whether the test sent an event or read a connector's platform, and `field`, the connector field the platform's answer shows is wrong, each when it applies; creating or updating a connector webhook returns `next` with the step to test it when the response includes the connector's `destination`.
+
 ## 0.120.0
 
 - Add `Bird(client_cert=..., client_key=...)`, also read from `BIRD_CLIENT_CERT=... BIRD_CLIENT_KEY=...`, to present a client certificate on every request. Without a base URL from `base_url=...` or `BIRD_BASE_URL=...`, it also sends requests to the region's mTLS endpoint.

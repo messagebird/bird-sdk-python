@@ -22182,6 +22182,9 @@ class WebhookEndpoint(BaseModel):
     destination: Annotated[Optional[WebhookDestination], Field(
         description="How each delivery to the endpoint is built.",
     )] = None
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this endpoint. The responses that create or update a connector endpoint suggest testing it, which checks its fields with the connected platform. Other responses that return one endpoint return an empty list, and lists omit it.",
+    )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
@@ -22307,6 +22310,9 @@ class WebhookEndpointCreated(BaseModel):
     destination: Annotated[Optional[WebhookDestination], Field(
         description="How each delivery to the endpoint is built.",
     )] = None
+    next: Annotated[Optional[List[NextAction]], Field(
+        description="What to do next with this endpoint. The responses that create or update a connector endpoint suggest testing it, which checks its fields with the connected platform. Other responses that return one endpoint return an empty list, and lists omit it.",
+    )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
     secret: Annotated[str, Field(
@@ -22314,9 +22320,6 @@ class WebhookEndpointCreated(BaseModel):
         examples=["whsec_base64encodedvalue"],
         min_length=1,
     )]
-    next: Annotated[Optional[List[NextAction]], Field(
-        description="What to do next with this endpoint. Empty: deliveries start as the events happen, with nothing left to set up.",
-    )] = None
 
 
 class WebhookDestinationType(str, Enum):
@@ -22409,6 +22412,11 @@ class WebhookTestRequest(BaseModel):
         description="Event type to simulate. Any type from the event catalog is accepted, whether or not the endpoint subscribes to it; an unknown type returns a `422`. When omitted, the endpoint's first subscribed event type is used.",
         examples=["email.delivered"],
     )] = None
+
+
+class WebhookTestKind(str, Enum):
+    delivery = "delivery"
+    probe = "probe"
 
 
 class EventAMBMessageData(BaseModel):
@@ -26436,8 +26444,11 @@ class WebhookEvent(RootModel[EventAMBAccepted | EventAMBConversationClosed | Eve
 
 class WebhookTestResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
+    kind: Annotated[Optional[WebhookTestKind], Field(
+        description="What the test did. `delivery` sent the test event to the endpoint. `probe` read the connected platform instead, which checks a connector endpoint's fields, sends no event and starts nothing; the status, HTTP details and latency are then the platform's answer to that read. Absent when the test stopped before sending anything, with `error` saying why.",
+    )] = None
     status: Annotated[WebhookTestResponseStatus, Field(
-        description="Whether your endpoint accepted the test event. `delivered` means it returned a `2xx` status; `failed` means it returned a non-`2xx` status or could not be reached (see `error` for the latter).",
+        description="Whether the test succeeded. For a `delivery`, `delivered` means your endpoint returned a `2xx` status to the test event. For a `probe`, `delivered` means the platform accepted the endpoint's fields, though no event was sent. `failed` means a non-`2xx` status or no answer at all (see `error` for the latter).",
         min_length=1,
     )]
     response_status_code: Annotated[Optional[int], Field(
@@ -26449,7 +26460,7 @@ class WebhookTestResponse(BaseModel):
         examples=["OK"],
     )] = None
     response_duration_ms: Annotated[int, Field(
-        description="Round-trip delivery latency in milliseconds.",
+        description="Round-trip latency of the request the test sent, in milliseconds; `0` when it sent none.",
         examples=[142],
         ge=0,
     )]
@@ -26457,8 +26468,13 @@ class WebhookTestResponse(BaseModel):
         description="Webhook delivery body. `type` identifies the event variant, `timestamp` is when the event occurred, and `data` contains the event-specific payload. See the [webhooks guide](/docs/guides/webhooks) for signature verification.",
     )] = None
     error: Annotated[Optional[str], Field(
-        description="A short explanation of why the event could not be delivered. Present only when your endpoint could not be reached.",
+        description="A short explanation of a failed test that got no HTTP answer: the endpoint or platform could not be reached, or the test stopped before sending anything, such as for a connector endpoint whose connection no longer exists (then `kind` is absent).",
         examples=["connection refused"],
+        min_length=1,
+    )] = None
+    field: Annotated[Optional[str], Field(
+        description="For a connector endpoint, the request field that the platform's answer shows is wrong, such as `destination.connector.credentials.api_key`. Correct it with [Update a webhook endpoint](/docs/api/reference/update-webhook). Present only when `status` is `failed` and the connector maps that answer to a field.",
+        examples=["destination.connector.credentials.api_key"],
         min_length=1,
     )] = None
     client_certificate: Annotated[Optional[WebhookTestClientCertificate], Field(

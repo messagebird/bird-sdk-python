@@ -145,7 +145,7 @@ class WebhooksBase(Resource):
         event_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookTestResponse:
-        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds. The sample carries `type` and `test: true`, plus the endpoint's filter equality values in `data` when a filter is configured. A test reaches a paused endpoint without being recorded in the delivery attempts. For a connector endpoint, the test goes through the same request builder as a live delivery, with the stub as the event. A status outside 2xx is the receiver's own answer: report it and the response body to the user, who can see why their receiver refused it. An unreachable result means Bird got no response: it could not connect, or the receiver did not answer within 10 seconds.
+        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds. The sample carries `type` and `test: true`, plus the endpoint's filter equality values in `data` when a filter is configured. A test reaches a paused endpoint without being recorded in the delivery attempts. For a connector endpoint, the test goes through the same request builder as a live delivery, with the stub as the event, unless the connector reads the platform instead: then `kind` is `probe`, no event is sent and nothing starts on the platform, and the status and body are the platform's answer to the read, so a `delivered` probe proves the fields, not a delivery. When the platform's answer identifies a wrong field, `field` names it, ready to correct with the update operation. A status outside 2xx is the receiver's own answer: report it and the response body to the user, who can see why their receiver refused it. An unreachable result means Bird got no response: it could not connect, or the receiver did not answer within 10 seconds.
 
         ```python
         result = client.webhooks.test(
@@ -273,7 +273,7 @@ class WebhooksBase(Resource):
         status: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpoint:
-        """Change an endpoint's URL, description, subscribed event types, or delivery status. Only the fields sent change: `events` replaces the whole subscription set, and `status` pauses or re-enables delivery. Events fired while paused are not delivered.
+        """Change an endpoint's URL, description, subscribed event types, or delivery status. Only the fields sent change: `events` replaces the whole subscription set, and `status` pauses or re-enables delivery. Events fired while paused are not delivered. Saving does not contact a connector's platform: run the test step in `next` to check changed fields with it.
 
         ```python
         endpoint = client.webhooks.update(
@@ -364,7 +364,7 @@ class AsyncWebhooksBase(AsyncResource):
         event_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookTestResponse:
-        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds. The sample carries `type` and `test: true`, plus the endpoint's filter equality values in `data` when a filter is configured. A test reaches a paused endpoint without being recorded in the delivery attempts. For a connector endpoint, the test goes through the same request builder as a live delivery, with the stub as the event. A status outside 2xx is the receiver's own answer: report it and the response body to the user, who can see why their receiver refused it. An unreachable result means Bird got no response: it could not connect, or the receiver did not answer within 10 seconds.
+        """Send a signed synthetic event and get the outcome synchronously: whether the endpoint accepted, the HTTP status it returned, and the round-trip latency. An unreachable endpoint comes back as a failed status in the body rather than a request error. The receiver has 10 seconds. The sample carries `type` and `test: true`, plus the endpoint's filter equality values in `data` when a filter is configured. A test reaches a paused endpoint without being recorded in the delivery attempts. For a connector endpoint, the test goes through the same request builder as a live delivery, with the stub as the event, unless the connector reads the platform instead: then `kind` is `probe`, no event is sent and nothing starts on the platform, and the status and body are the platform's answer to the read, so a `delivered` probe proves the fields, not a delivery. When the platform's answer identifies a wrong field, `field` names it, ready to correct with the update operation. A status outside 2xx is the receiver's own answer: report it and the response body to the user, who can see why their receiver refused it. An unreachable result means Bird got no response: it could not connect, or the receiver did not answer within 10 seconds.
 
         ```python
         result = await client.webhooks.test(
@@ -492,7 +492,7 @@ class AsyncWebhooksBase(AsyncResource):
         status: str | None = None,
         options: RequestOptions | None = None,
     ) -> WebhookEndpoint:
-        """Change an endpoint's URL, description, subscribed event types, or delivery status. Only the fields sent change: `events` replaces the whole subscription set, and `status` pauses or re-enables delivery. Events fired while paused are not delivered.
+        """Change an endpoint's URL, description, subscribed event types, or delivery status. Only the fields sent change: `events` replaces the whole subscription set, and `status` pauses or re-enables delivery. Events fired while paused are not delivered. Saving does not contact a connector's platform: run the test step in `next` to check changed fields with it.
 
         ```python
         endpoint = await client.webhooks.update(
