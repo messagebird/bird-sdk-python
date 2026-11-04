@@ -20023,6 +20023,12 @@ class EmailTemplateSummary(BaseModel):
         max_length=35,
         min_length=2,
     )]
+    live_default_language: Annotated[Optional[str], Field(
+        description="The live version's default language. While the template's `language_source_required` is false, a send that names no language gets it, and a broadcast that selects no language gets the default of the published version it sends. A single send that names a language also gets it when the template's `on_missing_language` is `fallback` and the live version stocks no form of that language, even one only the draft has added: a request for `pt-BR` is served by the live version's `pt-BR`, then by its `pt` or another `pt` variant, and only then by this default. Null if the template has never been published. A built-in `system` template is always published and reports the same language as `default_language`.",
+        examples=["en"],
+        max_length=35,
+        min_length=2,
+    )]
     languages: Annotated[Dict[str, EmailTemplateLanguageState], Field(
         description="Every language this template has, keyed by language tag, each with its state. Enough to show which templates need attention in a list without a request per row.",
     )]
@@ -20199,6 +20205,12 @@ class EmailTemplate(BaseModel):
     default_language: Annotated[str, Field(
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    live_default_language: Annotated[Optional[str], Field(
+        description="The live version's default language. While `language_source_required` is false, a send that names no language gets it, and a broadcast that selects no language gets the default of the published version it sends. A single send that names a language also gets it when `on_missing_language` is `fallback` and the live version stocks no form of that language, even one only the draft has added: a request for `pt-BR` is served by the live version's `pt-BR`, then by its `pt` or another `pt` variant, and only then by this default. Null if the template has never been published. A built-in `system` template is always published and reports the same language as `default_language`.",
+        examples=["en"],
         max_length=35,
         min_length=2,
     )]
