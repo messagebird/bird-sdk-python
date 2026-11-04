@@ -14961,7 +14961,7 @@ class AMBConversation(BaseModel):
         description="Routing from a later customer message that differs from `routing`, waiting for a teammate to apply or dismiss it. Null when there is none. Only recorded while the inbox status is open; resolving the conversation or moving its queue clears it.",
     )]
     last_message: Annotated[Optional[AMBConversationLastMessage], Field(
-        description="Most recent message, or null when its identity has not been recorded.",
+        description="Most recent message, or null when no message identity has been recorded for the conversation, for example one opened by an invitation acceptance before its first message.",
     )]
     id: Annotated[str, Field(
         examples=["acv_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -14977,7 +14977,7 @@ class AMBConversation(BaseModel):
         description="Apple's native conversation state, which determines whether replies can be sent. A customer close or an Apple 410 response closes it; a newer inbound message reopens it. This API has no native close operation. Use `inbox_status` to resolve workspace inbox work independently.",
     )]
     origin: Annotated[AMBConversationOrigin, Field(
-        description="How the conversation started. `entry_point` means the customer opened it from one of your configured Apple Messages for Business entry points. `invitation` means the customer accepted an invitation and sent a message. This is set once when the conversation is created and never changes.",
+        description="How the conversation started. `entry_point` means the customer opened it from one of your configured Apple Messages for Business entry points. `invitation` means the customer accepted an invitation, which opened the conversation, or whose first message opened it when the acceptance could not (for example while the business was disconnected). This is set once when the conversation is created and never changes.",
     )]
     device_capabilities: Annotated[List[str], Field(
         description="The device capability tokens recorded for this conversation. When an inbound message creates, reopens, or updates an open conversation, a non-empty list replaces the previous tokens. Empty lists and delayed messages that leave the conversation closed preserve the previous tokens. An empty stored list means the device's capabilities are unknown. Implemented message types may still be sent, but device rendering support has not been confirmed. Authentication requires an explicitly advertised AUTH2 capability.",
@@ -27368,6 +27368,10 @@ class BillingResolvedPrice(BaseModel):
     )] = None
     pricing_model: Annotated[BillingPricingModel, Field(
         description="How this product is priced.\n\n- `plan`: it comes with the organization's subscribed plan, with usage tracked\n  against that plan's included allowance.\n- `metered`: it is billed per unit beyond any included allowance.\n- `rate_card`: the per-unit price varies by attributes of the usage, such as\n  destination, instead of being flat.\n- `unit_subscription`: it is a standalone add-on billed as its own recurring\n  subscription, independent of the plan.\n- `custom`: a pricing arrangement that does not fit the other models.\n- `counter`: usage is recorded without enforcing a spending cap or blocking\n  requests.",
+    )]
+    included: Annotated[bool, Field(
+        description="Whether your organization's next unit of this `unit_subscription` product, with the requested `dimensions`, is free because a plan includes it. It reflects the organization's current active entitlements, whatever `plan_id` is requested, so it does not describe a candidate plan. A unit with dimensions that no included pattern matches is not free. `unit_price` and `gross_price` stay the published price a unit pays beyond the included units. Always `false` for other pricing models.",
+        examples=[False],
     )]
     billing_interval: Annotated[Optional[BillingInterval], Field(
         description="The recurring interval one subscription charge covers.",

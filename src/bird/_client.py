@@ -3,7 +3,9 @@
 Both resolve configuration the same way — the API key from the ``api_key``
 argument or ``BIRD_API_KEY``; the base URL from ``base_url``, ``BIRD_BASE_URL``,
 or the region (explicit ``region`` or inferred from the ``bk_{region}_…`` or ``bm_{region}_…`` key
-prefix). They add the escape-hatch verb methods over the request
+prefix). A client certificate (``client_cert`` and ``client_key``, or ``BIRD_CLIENT_CERT``
+and ``BIRD_CLIENT_KEY``) is presented on every request and moves the region's host to
+its mTLS endpoint. They add the escape-hatch verb methods over the request
 lifecycle in ``_base_client``; resource namespaces attach on top.
 """
 
@@ -11,6 +13,7 @@ from __future__ import annotations
 
 import os
 import re
+import ssl
 from typing import Any, Mapping
 
 import httpx
@@ -66,7 +69,9 @@ def _infer_region(api_key: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _resolve(api_key: str | None, base_url: str | None, region: str | None) -> tuple[str | None, str | None]:
+def _resolve(
+    api_key: str | None, base_url: str | None, region: str | None, *, mtls: bool = False
+) -> tuple[str | None, str | None]:
     """Resolve the key and base URL. Both may be None for a receiver-only client
     (webhook verification needs neither); the missing-key error is raised at the
     first API call instead of here."""
@@ -75,13 +80,53 @@ def _resolve(api_key: str | None, base_url: str | None, region: str | None) -> t
     if not base_url:
         region = region or (_infer_region(api_key) if api_key else None)
         if region:
-            base_url = f"https://{region}.platform.bird.com"
+            base_url = f"https://mtls.{region}.platform.bird.com" if mtls else f"https://{region}.platform.bird.com"
         elif api_key:
             raise BirdError(
                 "could not determine region: pass region= or base_url=, "
                 "or use a bk_{region}_{token} or bm_{region}_{token} API key"
             )
     return api_key, base_url
+
+
+def _client_certificate(
+    client_cert: str | os.PathLike[str] | None,
+    client_key: str | os.PathLike[str] | None,
+    http_client: httpx.Client | httpx.AsyncClient | None,
+) -> ssl.SSLContext | None:
+    """Load the client certificate into an SSL context, or return None when none is
+    set. The environment applies only when no ``http_client`` is passed, so the pool
+    a ``with_options`` copy shares never meets a second certificate."""
+    if http_client is None:
+        client_cert = client_cert or os.environ.get("BIRD_CLIENT_CERT")
+        client_key = client_key or os.environ.get("BIRD_CLIENT_KEY")
+    if not client_cert and not client_key:
+        return None
+    if http_client is not None:
+        raise BirdError(
+            "client_cert= cannot apply to an http_client= you pass; configure the certificate on that client instead"
+        )
+    if not client_cert:
+        raise BirdError("a client key needs its certificate: pass client_cert= or set BIRD_CLIENT_CERT")
+    if not client_key:
+        raise BirdError("a client certificate needs its key: pass client_key= or set BIRD_CLIENT_KEY")
+    for path in (client_cert, client_key):
+        if not os.path.isfile(path):
+            raise BirdError(f"client certificate file not found: {os.fspath(path)}")
+
+    def refuse_encrypted() -> str:
+        raise BirdError(f"client key {os.fspath(client_key)} is encrypted; pass an unencrypted PEM key")
+
+    # httpx's own context, so the server is verified against the same roots as a client without a certificate.
+    context = httpx.create_ssl_context()
+    try:
+        # Without a password callable, OpenSSL prompts for an encrypted key's passphrase on stdin.
+        context.load_cert_chain(client_cert, client_key, password=refuse_encrypted)
+    except OSError as err:  # ssl.SSLError is an OSError too
+        raise BirdError(
+            f"load client certificate {os.fspath(client_cert)} with key {os.fspath(client_key)}: {err}"
+        ) from err
+    return context
 
 
 def _decode(response: httpx.Response, cast_to: type[pydantic.BaseModel] | None) -> Any:
@@ -103,6 +148,11 @@ def _with_overrides(
     region — is set, matching the constructor's precedence."""
     merged: dict[str, Any] = {**config, "http_client": live_client}
     given = {key: value for key, value in overrides.items() if not isinstance(value, Omit)}
+    if config.get("_mtls") and "http_client" in given:
+        raise BirdError(
+            "with_options cannot replace the http_client of a client with a client certificate. "
+            "Construct a new client instead."
+        )
     # api_key drives the region: a new key (or region) without an explicit
     # base_url must re-resolve the endpoint, not inherit the parent's resolved one.
     if ("api_key" in given or "region" in given) and "base_url" not in given:
@@ -160,8 +210,13 @@ class Bird(SyncAPIClient):
         default_headers: Mapping[str, str] | None = None,
         default_query: Mapping[str, Any] | None = None,
         http_client: httpx.Client | None = None,
+        client_cert: str | os.PathLike[str] | None = None,
+        client_key: str | os.PathLike[str] | None = None,
+        _mtls: bool = False,
     ) -> None:
-        api_key, base_url = _resolve(api_key, base_url, region)
+        certificate = _client_certificate(client_cert, client_key, http_client)
+        mtls = _mtls or certificate is not None
+        api_key, base_url = _resolve(api_key, base_url, region, mtls=mtls)
         if not api_key and not webhook_secret:
             raise BirdError(
                 "configure api_key= (or BIRD_API_KEY) for API calls, "
@@ -182,9 +237,10 @@ class Bird(SyncAPIClient):
             "default_headers": default_headers,
             "default_query": default_query,
             "http_client": http_client,
+            "_mtls": mtls,
         }
-        # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "realtime_encryption_master_key", "email_defaults", "region")}
+        # region and _mtls are kept so with_options() can re-resolve correctly, but they aren't base-client args.
+        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "realtime_encryption_master_key", "email_defaults", "region", "_mtls")}
         # The extra credentials some operations require, keyed by the security scheme
         # that names them. A generated method names its schemes; the base client
         # resolves them from here.
@@ -192,7 +248,11 @@ class Bird(SyncAPIClient):
             "RealtimeKey": ("X-Realtime-Key", realtime_key, "pass realtime_key= when constructing the client"),
             "RealtimeSecret": ("X-Realtime-Secret", realtime_secret, "pass realtime_secret= when constructing the client"),
         }
+        if certificate is not None:
+            base["http_client"] = httpx.Client(verify=certificate)
         super().__init__(**base)
+        if certificate is not None:
+            self._owns_client = True
         self.webhook_secret = webhook_secret
         self.email = Email(self, email_defaults)
         self.amb = Amb(self)
@@ -308,8 +368,13 @@ class AsyncBird(AsyncAPIClient):
         default_headers: Mapping[str, str] | None = None,
         default_query: Mapping[str, Any] | None = None,
         http_client: httpx.AsyncClient | None = None,
+        client_cert: str | os.PathLike[str] | None = None,
+        client_key: str | os.PathLike[str] | None = None,
+        _mtls: bool = False,
     ) -> None:
-        api_key, base_url = _resolve(api_key, base_url, region)
+        certificate = _client_certificate(client_cert, client_key, http_client)
+        mtls = _mtls or certificate is not None
+        api_key, base_url = _resolve(api_key, base_url, region, mtls=mtls)
         if not api_key and not webhook_secret:
             raise BirdError(
                 "configure api_key= (or BIRD_API_KEY) for API calls, "
@@ -330,9 +395,10 @@ class AsyncBird(AsyncAPIClient):
             "default_headers": default_headers,
             "default_query": default_query,
             "http_client": http_client,
+            "_mtls": mtls,
         }
-        # region is kept so with_options() can re-resolve correctly, but it isn't a base-client arg.
-        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "realtime_encryption_master_key", "email_defaults", "region")}
+        # region and _mtls are kept so with_options() can re-resolve correctly, but they aren't base-client args.
+        base = {k: v for k, v in self._config.items() if k not in ("webhook_secret", "realtime_key", "realtime_secret", "realtime_encryption_master_key", "email_defaults", "region", "_mtls")}
         # The extra credentials some operations require, keyed by the security scheme
         # that names them. A generated method names its schemes; the base client
         # resolves them from here.
@@ -340,7 +406,11 @@ class AsyncBird(AsyncAPIClient):
             "RealtimeKey": ("X-Realtime-Key", realtime_key, "pass realtime_key= when constructing the client"),
             "RealtimeSecret": ("X-Realtime-Secret", realtime_secret, "pass realtime_secret= when constructing the client"),
         }
+        if certificate is not None:
+            base["http_client"] = httpx.AsyncClient(verify=certificate)
         super().__init__(**base)
+        if certificate is not None:
+            self._owns_client = True
         self.webhook_secret = webhook_secret
         self.email = AsyncEmail(self, email_defaults)
         self.amb = AsyncAmb(self)

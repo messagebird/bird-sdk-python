@@ -223,15 +223,16 @@ asyncio.run(main())
 
 ## Configuration
 
-| Option                             | Description                                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `api_key`                          | API key; falls back to `BIRD_API_KEY`.                                                                    |
-| `region` / `base_url`              | Region (or explicit base URL); falls back to the key prefix / `BIRD_BASE_URL`.                            |
-| `timeout`, `max_retries`           | Request timeout and retry budget; overridable per call via `options`.                                     |
-| `webhook_secret`                   | Signing secret for `webhooks.unwrap`.                                                                     |
-| `realtime_key` / `realtime_secret` | Realtime app credentials, sent as `X-Realtime-Key` / `X-Realtime-Secret` on every `client.realtime` call. |
-| `email_defaults`                   | Client-wide `send` defaults.                                                                              |
-| `http_client`                      | Inject your own `httpx.Client` / `AsyncClient`.                                                           |
+| Option                             | Description                                                                                                                                                                                                             |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_key`                          | API key; falls back to `BIRD_API_KEY`.                                                                                                                                                                                  |
+| `region` / `base_url`              | Region (or explicit base URL); falls back to the key prefix / `BIRD_BASE_URL`.                                                                                                                                          |
+| `timeout`, `max_retries`           | Request timeout and retry budget; overridable per call via `options`.                                                                                                                                                   |
+| `webhook_secret`                   | Signing secret for `webhooks.unwrap`.                                                                                                                                                                                   |
+| `realtime_key` / `realtime_secret` | Realtime app credentials, sent as `X-Realtime-Key` / `X-Realtime-Secret` on every `client.realtime` call.                                                                                                               |
+| `email_defaults`                   | Client-wide `send` defaults.                                                                                                                                                                                            |
+| `http_client`                      | Inject your own `httpx.Client` / `AsyncClient`.                                                                                                                                                                         |
+| `client_cert` / `client_key`       | Paths of a PEM client certificate chain and its unencrypted key. Fall back to `BIRD_CLIENT_CERT` / `BIRD_CLIENT_KEY`. Presented on every request, and the region resolves to its mTLS endpoint. Not with `http_client`. |
 
 `client.with_options(...)` derives a new client (reusing the connection pool); every method also takes a trailing `options` for per-call `timeout` / `max_retries` / `idempotency_key` / `extra_headers`.
 
