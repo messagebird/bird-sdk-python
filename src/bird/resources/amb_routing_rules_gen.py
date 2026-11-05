@@ -11,7 +11,7 @@ from bird._generated import (
     AMBRoutingRuleList,
     AMBRoutingRuleUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
@@ -178,7 +178,7 @@ class AmbRoutingRules(Resource):
             _body["precedence"] = precedence
         if is_default is not None:
             _body["is_default"] = is_default
-        body = to_wire_exclude_unset(AMBRoutingRuleCreate, _body)
+        body = to_wire(AMBRoutingRuleCreate, _body)
         return self._write(
             "POST",
             "/v1/amb/routing-rules",
@@ -317,7 +317,7 @@ class AsyncAmbRoutingRules(AsyncResource):
             _body["precedence"] = precedence
         if is_default is not None:
             _body["is_default"] = is_default
-        body = to_wire_exclude_unset(AMBRoutingRuleCreate, _body)
+        body = to_wire(AMBRoutingRuleCreate, _body)
         return await self._write(
             "POST",
             "/v1/amb/routing-rules",

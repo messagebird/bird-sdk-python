@@ -168,6 +168,12 @@ if event.root.type == "email.delivered":
 
 > Endpoint management (registering/listing webhook endpoints) is not in this release; it returns once the delivery substrate stabilises.
 
+## Request fields
+
+`client.broadcasts.update` now takes a typed nested `template` instead of the replaced flat `language`, `parameters`, and `parameter_overrides` keywords. Import `EmailBroadcastTemplateUpdate` from `bird`. For example, replace `template="emt_…", language="en"` with `template=EmailBroadcastTemplateUpdate(id="emt_…", language="en")`. An empty `EmailBroadcastTemplateUpdate()` sends `{"template":{}}`; `None` clears the template and an omitted keyword retains it. The HTTP body is unchanged.
+
+For nullable fields, `None` sends explicit null, including inside objects and lists. Optional non-nullable keyword parameters keep `None` as omission. Import `omit` with `from bird import omit` to omit a nullable keyword argument; inside a dictionary, leave the key absent. A null supplied for a non-nullable nested field raises `BirdError` before sending.
+
 ## Errors
 
 Every failure raises a typed exception rooted at `BirdError`. `APIError` covers anything that goes wrong issuing a request — including transport failures — so a single `except APIError` is enough; `APIStatusError` carries the HTTP `status_code`. When the Bird API sent the error, it also carries a readable `message`, a stable `code` such as `E01001`, and a `doc_url` to that code's page, which says what went wrong and what to do. Every code is listed at [bird.com/docs/api/errors](https://bird.com/docs/api/errors). When a response has no code or docs link, such as one from a proxy, `code` and `doc_url` are `None`.

@@ -11,7 +11,7 @@ from bird._generated import (
     VoiceVerifiedNumberUpdate,
     VoiceVerifiedNumberVerifyRequest,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -43,10 +43,12 @@ class VoiceVerifiedNumbersCreateParams(_VoiceVerifiedNumbersCreateRequired, tota
     name: str
 
 
-class VoiceVerifiedNumbersUpdateParams(TypedDict, total=False):
-    """Params for ``client.voice.verified_numbers.update``. Every key is optional."""
-
+class _VoiceVerifiedNumbersUpdateRequired(TypedDict):
     name: str | None
+
+
+class VoiceVerifiedNumbersUpdateParams(_VoiceVerifiedNumbersUpdateRequired, total=False):
+    """Params for ``client.voice.verified_numbers.update``. ``name`` is required."""
 
 
 class VoiceVerifiedNumbers(Resource):
@@ -158,7 +160,7 @@ class VoiceVerifiedNumbers(Resource):
         self,
         verified_number_id: str,
         *,
-        name: str | None | Omit = omit,
+        name: str | None,
         options: RequestOptions | None = None,
     ) -> VoiceVerifiedNumber:
         """Set or clear the label on a verified number; send `name` as null to clear it. The number and its verification state are unchanged, and the label never appears on a call.
@@ -169,9 +171,8 @@ class VoiceVerifiedNumbers(Resource):
         ```
         """
         _body: dict[str, Any] = {}
-        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
-            _body["name"] = name
-        body = to_wire_exclude_unset(VoiceVerifiedNumberUpdate, _body)
+        _body["name"] = name
+        body = to_wire(VoiceVerifiedNumberUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/voice/verified-numbers/{quote(verified_number_id, safe='')}",
@@ -304,7 +305,7 @@ class AsyncVoiceVerifiedNumbers(AsyncResource):
         self,
         verified_number_id: str,
         *,
-        name: str | None | Omit = omit,
+        name: str | None,
         options: RequestOptions | None = None,
     ) -> VoiceVerifiedNumber:
         """Set or clear the label on a verified number; send `name` as null to clear it. The number and its verification state are unchanged, and the label never appears on a call.
@@ -315,9 +316,8 @@ class AsyncVoiceVerifiedNumbers(AsyncResource):
         ```
         """
         _body: dict[str, Any] = {}
-        if not isinstance(name, Omit):  # None clears (JSON null); omit leaves it unchanged
-            _body["name"] = name
-        body = to_wire_exclude_unset(VoiceVerifiedNumberUpdate, _body)
+        _body["name"] = name
+        body = to_wire(VoiceVerifiedNumberUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/voice/verified-numbers/{quote(verified_number_id, safe='')}",

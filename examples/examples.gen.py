@@ -6,6 +6,8 @@ from typing import Any
 from bird import Bird
 from bird import APIStatusError, RateLimitError, ValidationError
 from bird import AsyncBird
+from bird import Bird
+from bird import EmailBroadcastTemplateUpdate
 from bird import EmailMessage
 from bird import VoiceCallRouteTrunk, VoiceCallRouteWritable, VoiceSettingsInboundConfigurationPut
 from datetime import datetime, timedelta, timezone
@@ -560,8 +562,9 @@ async def _ex_93() -> None:
 async def _ex_94() -> None:
     broadcast = client.broadcasts.update(
         "eb_01krdgeqcxet5s7t44vh8rt9mg",
-        template="emt_01krdgeqcxet5s7t44vh8rt9mg",
-        parameters={},
+        template=EmailBroadcastTemplateUpdate(
+            id="emt_01krdgeqcxet5s7t44vh8rt9mg", parameters={},
+        ),
     )
     print(broadcast.status)
 

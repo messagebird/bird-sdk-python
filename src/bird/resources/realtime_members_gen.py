@@ -10,7 +10,7 @@ from bird._generated import (
 )
 from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 
 
 class _RealtimeMemberSendRequired(TypedDict):
@@ -20,7 +20,7 @@ class _RealtimeMemberSendRequired(TypedDict):
 class RealtimeMemberSendParams(_RealtimeMemberSendRequired, total=False):
     """Params for ``client.realtime.members.send``. ``event`` is required."""
 
-    data: Any
+    data: Any | None
 
 
 class RealtimeMembers(Resource):
@@ -30,7 +30,7 @@ class RealtimeMembers(Resource):
         member_id: str,
         *,
         event: str,
-        data: Any | None = None,
+        data: Any | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> None:
         """
@@ -43,13 +43,11 @@ class RealtimeMembers(Resource):
         )
         ```
         """
-        body = to_wire(
-            RealtimeMemberPublish,
-            {
-                "event": event,
-                "data": data,
-            },
-        )
+        _body: dict[str, Any] = {}
+        _body["event"] = event
+        if not isinstance(data, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["data"] = data
+        body = to_wire(RealtimeMemberPublish, _body)
         self._write_none(
             "POST",
             f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/members/{quote(member_id, safe='')}/events",
@@ -85,7 +83,7 @@ class AsyncRealtimeMembers(AsyncResource):
         member_id: str,
         *,
         event: str,
-        data: Any | None = None,
+        data: Any | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> None:
         """
@@ -98,13 +96,11 @@ class AsyncRealtimeMembers(AsyncResource):
         )
         ```
         """
-        body = to_wire(
-            RealtimeMemberPublish,
-            {
-                "event": event,
-                "data": data,
-            },
-        )
+        _body: dict[str, Any] = {}
+        _body["event"] = event
+        if not isinstance(data, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["data"] = data
+        body = to_wire(RealtimeMemberPublish, _body)
         await self._write_none(
             "POST",
             f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/members/{quote(member_id, safe='')}/events",

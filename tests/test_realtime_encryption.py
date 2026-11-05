@@ -8,12 +8,13 @@ import base64
 import builtins
 import json
 import pathlib
+from typing import Any
 
 import httpx
 import pytest
 import respx
 
-from bird import AsyncBird, Bird, BirdError
+from bird import AsyncBird, Bird, BirdError, RealtimeBatchEventParams, omit
 from bird._realtime_crypto import (
     decode_master_key,
     derive_shared_secret,
@@ -144,6 +145,51 @@ def test_publish_seals_the_payload_before_it_leaves_the_process() -> None:
     assert body["channels"] == [CHANNEL]
     assert sorted(body["data"]) == ["ciphertext", "nonce"]
     assert _opened(body["data"]) == {"id": 42, "status": "shipped"}
+
+
+@respx.mock
+@pytest.mark.parametrize("state", ["unset", "null", "value"])
+@pytest.mark.parametrize("method", ["publish", "publish_batch", "members.send"])
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_encrypted_payload_preserves_presence(
+    state: str, method: str, asynchronous: bool,
+) -> None:
+    path = {
+        "publish": "events",
+        "publish_batch": "batch-events",
+        "members.send": "members/member_1/events",
+    }[method]
+    response = httpx.Response(204) if method == "members.send" else httpx.Response(200, json={})
+    route = respx.post(f"{APP_BASE}/{path}").mock(return_value=response)
+    data = omit if state == "unset" else None if state == "null" else {"items": [None, "value"]}
+    bird = AsyncBird if asynchronous else Bird
+    with_client: Any = bird(
+        api_key="bk_eu1_secret", realtime_key="rk_test", realtime_secret="rs_test",
+        realtime_encryption_master_key=MASTER,
+    )
+    if method == "publish_batch":
+        event: RealtimeBatchEventParams = {"event": "changed", "channel": CHANNEL}
+        if state != "unset":
+            event["data"] = data
+        result = with_client.realtime.publish_batch(APP, events=[event])
+    elif method == "members.send":
+        result = with_client.realtime.members.send(APP, "member_1", event="changed", data=data)
+    else:
+        result = with_client.realtime.publish(APP, event="changed", channels=[CHANNEL], data=data)
+    if asynchronous:
+        await result
+        await with_client.close()
+    else:
+        with_client.close()
+    body = json.loads(route.calls.last.request.content)
+    if method == "publish_batch":
+        body = body["events"][0]
+    if state == "unset":
+        assert "data" not in body
+    elif method == "members.send":
+        assert body["data"] == data
+    else:
+        assert _opened(body["data"]) == data
 
 
 @respx.mock

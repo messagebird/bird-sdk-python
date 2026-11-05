@@ -10,7 +10,7 @@ from bird._generated import (
     EmailThread,
     EmailThreadUpdateRequest,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -142,7 +142,7 @@ class EmailThreadsBase(Resource):
             _body["labels"] = labels
         if not isinstance(contact_id, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["contact_id"] = contact_id
-        body = to_wire_exclude_unset(EmailThreadUpdateRequest, _body)
+        body = to_wire(EmailThreadUpdateRequest, _body)
         return self._write(
             "PATCH",
             f"/v1/email/threads/{quote(thread_id, safe='')}",
@@ -282,7 +282,7 @@ class AsyncEmailThreadsBase(AsyncResource):
             _body["labels"] = labels
         if not isinstance(contact_id, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["contact_id"] = contact_id
-        body = to_wire_exclude_unset(EmailThreadUpdateRequest, _body)
+        body = to_wire(EmailThreadUpdateRequest, _body)
         return await self._write(
             "PATCH",
             f"/v1/email/threads/{quote(thread_id, safe='')}",

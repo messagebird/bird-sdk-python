@@ -10,7 +10,7 @@ from bird._generated import (
     Number,
     NumberUpdate,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -118,7 +118,7 @@ class NumbersBase(Resource):
             _body["name"] = name
         if not isinstance(reference, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["reference"] = reference
-        body = to_wire_exclude_unset(NumberUpdate, _body)
+        body = to_wire(NumberUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/numbers/{quote(number_id, safe='')}",
@@ -245,7 +245,7 @@ class AsyncNumbersBase(AsyncResource):
             _body["name"] = name
         if not isinstance(reference, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["reference"] = reference
-        body = to_wire_exclude_unset(NumberUpdate, _body)
+        body = to_wire(NumberUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/numbers/{quote(number_id, safe='')}",

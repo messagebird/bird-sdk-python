@@ -11,7 +11,7 @@ from bird._generated import (
     WhatsAppGroupCreate,
     WhatsAppGroupUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -174,7 +174,7 @@ class WhatsappGroupsBase(Resource):
             _body["description"] = description
         if not isinstance(profile_picture_url, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["profile_picture_url"] = profile_picture_url
-        body = to_wire_exclude_unset(WhatsAppGroupUpdate, _body)
+        body = to_wire(WhatsAppGroupUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/whatsapp/groups/{quote(group_id, safe='')}",
@@ -321,7 +321,7 @@ class AsyncWhatsappGroupsBase(AsyncResource):
             _body["description"] = description
         if not isinstance(profile_picture_url, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["profile_picture_url"] = profile_picture_url
-        body = to_wire_exclude_unset(WhatsAppGroupUpdate, _body)
+        body = to_wire(WhatsAppGroupUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/whatsapp/groups/{quote(group_id, safe='')}",

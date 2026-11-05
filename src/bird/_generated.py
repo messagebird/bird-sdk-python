@@ -38,13 +38,16 @@ class NextAction(BaseModel):
         min_length=1,
     )]
     operation: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The operationId to call. Present only when `kind` is `operation`. The operation's own schema says how to call it; this says only which one, and what to address it with.",
         min_length=1,
     )] = None
     params: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The parameters that address the operation, by name: `{\"sender_id\": \"…\"}` for an operation on `/v1/sms/senders/{sender_id}/requirements`. A parameter the operation takes in its query string is given the same way, so an operation addressed as `?subject_id=` carries `{\"subject_id\": \"…\"}`. Every parameter the call needs is here, whether its value came from the thing you were acting on or is fixed for this step, so you can make the call from this object alone. Present only when `kind` is `operation` and the operation names a subject. A request body, when the operation takes one, is described by the operation's own schema and never appears here.",
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A URL to open. Present only when `kind` is `external`, and only when the step has one. An external step whose `description` says to go and do something with no URL to open is normal.",
     )] = None
 
@@ -133,6 +136,7 @@ class ErrorBody(BaseModel):
         min_length=1,
     )]
     param: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Identifies the offending field. Omitted when not applicable.",
         min_length=1,
     )] = None
@@ -145,23 +149,29 @@ class ErrorBody(BaseModel):
         min_length=1,
     )]
     vendor_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Verbatim error code from an external system, such as an SMTP response code or a payment decline code. Present only when the code may help you resolve the error.",
         min_length=1,
     )] = None
     details: Annotated[Optional[List[ErrorDetail]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-field validation errors. Present only on validation_error responses.",
     )] = None
     remediation: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A human-readable next step to resolve this error. Present when a recovery is known.",
         min_length=1,
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The steps that resolve this error. Perform them in order, re-reading after each; a `wait` or `terminal` step is always last. Present for errors with a well-defined recovery, such as unmet preconditions and conflicts.",
     )] = None
     rate_limit: Annotated[Optional[RateLimitErrorContext], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The rate-limit policy that refused the request. Present only on `rate_limit_error` responses from a rate-limit policy. A workspace-targeted request is checked against its organization's limit and any limit set for its workspace; the organization limit is reported when both are exhausted.",
     )] = None
     quota: Annotated[Optional[QuotaErrorContext], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The quota limit that refused a resource change. A change in a workspace is checked against its organization's limit and its workspace's limit, whether set manually or derived from the organization's automatic allocation; the organization limit is reported when both refuse. When scope is workspace, follow the response remediation instead of the error code's organization-wide recovery guidance. An organization administrator can adjust the workspace limit or the automatic allocation; the shared organization limit still applies. Bird sets the mTLS limits, so for those, contact your Bird representative.",
     )] = None
 
@@ -251,6 +261,7 @@ class CountryCode(RootModel[str]):
 class WorkspaceNotificationEmails(BaseModel):
     model_config = ConfigDict(extra="allow")
     operational: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Addresses for operational notifications about this workspace (sending domain authentication failures, webhook endpoint degradation). When empty, these notifications go to the organization owners. Maximum 10 addresses.",
     )] = None
 
@@ -653,6 +664,7 @@ class EmailDeliveryStats(BaseModel):
     "Delivery counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). Lifecycle counts identify distinct recipients that reached the named stage in scope; `oob_bounces` counts distinct failure events. Period summaries count each identity once per metric across the whole window, so adding time-bucket distinct counts can overstate the summary. Event time determines attribution; send time does not. A recipient delivered on Monday counts in Monday's row. A recipient who bounced and then succeeded on a retry can appear in both `bounced` and `delivered`. Very large counts are close estimates rather than exact tallies.\n\nThese counts are successive lifecycle stages, so a recipient can appear in more than one:\n\n- `rejected`: Happens before any send attempt, from suppression, policy, or a generation failure.\n- `deferred`: A temporary in-flight delay that is still being retried.\n- `bounced`: A delivery failure, with its own hard, soft, admin, block, and undetermined sub-types.\n- `complained`: Post-delivery spam feedback.\n\nEach rate is a fraction in the range 0 to 1 and is null when its denominator is zero. `accepted` is reported only where it can be attributed (time buckets and the period summary). Breakdown rows omit it."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct recipients accepted for delivery after suppression filtering. Reported on time buckets and the period summary. Breakdown rows leave it out, because their rollups do not have it.",
         examples=[14820],
         ge=0,
@@ -807,12 +819,15 @@ class EmailLatencyStats(BaseModel):
     "Latency percentiles (p50, p95, p99) in milliseconds for the bucket. On the summary endpoint these are computed across the whole period rather than per bucket. Three families are reported:\n\n- `processing`: Time from accepting the send to handing the message off for delivery. Measured per processed recipient; null when no recipient in the bucket has reached the processed stage.\n- `delivery`: Time from handoff to the receiving mail server accepting the message, dominated by recipient-side delivery behavior. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n- `total`: End-to-end time from accepting the send to delivery, and the number most worth watching against your own delivery targets. Measured per delivered recipient; null when no deliveries occurred in the bucket.\n\nEach family is reported independently. A family is omitted when no qualifying\nevent contributed a latency measurement in the bucket. This also applies when\nthe workspace has not recorded latency for that stage yet. The `processing`\nfamily can therefore be present while `delivery` and `total` are absent. A\nclient must handle a missing family, and a null p50/p95/p99 within a present\nfamily, by rendering a placeholder rather than assuming a number."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[Optional[EmailLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
     )] = None
     delivery: Annotated[Optional[EmailLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
     )] = None
     total: Annotated[Optional[EmailLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family over the bucket. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -901,7 +916,9 @@ class EmailStatsSummary(BaseModel):
     delivery: EmailDeliveryStats
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
-    comparison: Optional[EmailStatsComparison] = None
+    comparison: Annotated[Optional[EmailStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsPoint(BaseModel):
@@ -1106,6 +1123,7 @@ class EmailTagStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket rate series for this tag over the window. Present only when `include_trend=true`.",
     )] = None
 
@@ -1232,6 +1250,7 @@ class EmailMailboxProviderStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailDeliveryLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket rate series for this mailbox provider over the window. Present only when `include_trend=true`.",
     )] = None
 
@@ -1276,6 +1295,7 @@ class EmailRecipientDomainStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket rate series for this recipient domain over the window. Present only when `include_trend=true`.",
     )] = None
 
@@ -1522,12 +1542,15 @@ class SMSLatencyStats(BaseModel):
     "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to carrier handoff.\n- `delivery`: From carrier handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying event contributes a measurement.\nIndividual percentiles can also be null."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[Optional[SMSLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     delivery: Annotated[Optional[SMSLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     total: Annotated[Optional[SMSLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -1594,7 +1617,9 @@ class SMSStatsSummary(BaseModel):
     )]
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
-    comparison: Optional[SMSStatsComparison] = None
+    comparison: Annotated[Optional[SMSStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class SMSDeliveryCounts(BaseModel):
@@ -1671,6 +1696,7 @@ class SMSCountryStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle counts for this country, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
     )] = None
 
@@ -1702,6 +1728,7 @@ class SMSCarrierStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle counts for this carrier, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
     )] = None
 
@@ -1733,6 +1760,7 @@ class SMSCategoryStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle counts for this category, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
     )] = None
 
@@ -1764,6 +1792,7 @@ class SMSTagStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle-count series for this tag over the window, bucketed by `trend_grain`. Sparse, so only buckets with activity are present rather than zero-filled, unlike the daily and hourly series. Present only when `include_trend=true`.",
     )] = None
 
@@ -1818,6 +1847,7 @@ class SMSErrorCodeStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle counts for this error code, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
     )] = None
 
@@ -1872,7 +1902,9 @@ class SMSInboundStatsSummaryResponse(BaseModel):
         examples=[4210],
         ge=0,
     )]
-    comparison: Optional[SMSInboundStatsComparison] = None
+    comparison: Annotated[Optional[SMSInboundStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class SMSInboundStatsPoint(BaseModel):
@@ -2063,12 +2095,15 @@ class WhatsAppLatencyStats(BaseModel):
     "Latency percentiles in milliseconds for the requested scope:\n\n- `processing`: From acceptance to WhatsApp handoff.\n- `delivery`: From WhatsApp handoff to delivery confirmation.\n- `total`: From acceptance to delivery confirmation.\n\nEach family is omitted when no qualifying message contributes a measurement.\nIndividual percentiles can also be null. `delivery` is measured on a best-effort basis, so\nit can be absent for a scope whose `processing` and `total` are present."
     model_config = ConfigDict(extra="allow")
     processing: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     delivery: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     total: Annotated[Optional[WhatsAppLatencyQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -2139,7 +2174,9 @@ class WhatsAppStatsSummary(BaseModel):
     delivery: WhatsAppDeliveryStats
     engagement: WhatsAppEngagementStats
     latency: WhatsAppLatencyStats
-    comparison: Optional[WhatsAppStatsComparison] = None
+    comparison: Annotated[Optional[WhatsAppStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class WhatsAppDeliveryCounts(BaseModel):
@@ -2360,7 +2397,9 @@ class WhatsAppInboundStatsSummaryResponse(BaseModel):
         examples=[4210],
         ge=0,
     )]
-    comparison: Optional[WhatsAppInboundStatsComparison] = None
+    comparison: Annotated[Optional[WhatsAppInboundStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class WhatsAppInboundStatsPoint(BaseModel):
@@ -2514,6 +2553,7 @@ class AMBStatsComparison(BaseModel):
     "The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change."
     model_config = ConfigDict(extra="allow")
     monthly_active_contacts: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
         ge=0,
     )] = None
@@ -2527,6 +2567,7 @@ class AMBStatsComparison(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     delta: Annotated[AMBStatsComparisonDelta, Field(
@@ -2538,6 +2579,7 @@ class AMBStatsSummary(BaseModel):
     "Outbound Apple Messages for Business counts and latency percentiles for the full requested period. Counts and percentiles are computed over the whole period rather than combined from the returned time-series values."
     model_config = ConfigDict(extra="allow")
     monthly_active_contacts: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="New monthly active contact charges activated by replies submitted in this window. Each business-scoped contact counts once per UTC calendar month. Omitted for message-kind, intent, group, category or tag filters. Read from retained activation records independently of the message rollup data_as_of boundary; tenant purges remove these records.",
         ge=0,
     )] = None
@@ -2554,9 +2596,11 @@ class AMBStatsSummary(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
     comparison: Annotated[Optional[AMBStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with computed changes for the message counts and rates listed in `delta`. Present only when `compare=previous_period` is requested. Monthly active contacts and latency values are returned for both periods without a computed change.",
     )] = None
 
@@ -2590,6 +2634,7 @@ class AMBMessageKindStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -2628,6 +2673,7 @@ class AMBCategoryStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -2666,6 +2712,7 @@ class AMBTagStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -2709,6 +2756,7 @@ class AMBErrorCodeStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -2772,6 +2820,7 @@ class AMBInboundStatsSummary(BaseModel):
         ge=0,
     )]
     comparison: Annotated[Optional[AMBInboundStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The received-message count for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
     )] = None
 
@@ -2864,6 +2913,7 @@ class AMBConversationStatsSummary(BaseModel):
         description="Conversation lifecycle counts for the requested scope, attributed to when each event occurred. A conversation can start, reopen, and close more than once over its life, so `started`, `reopened`, and `closed` can each exceed `conversations`, the number of distinct conversations touched in scope. Very large counts are close estimates rather than exact tallies.",
     )]
     comparison: Annotated[Optional[AMBConversationStatsComparison], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The same statistics for the equal-length, inclusive period ending immediately before the requested start, together with the change between the two periods. Present only when `compare=previous_period` is requested. The change is already computed, so a percentage difference needs no second request.",
     )] = None
 
@@ -2983,6 +3033,7 @@ class WorkspaceCreate(BaseModel):
 class OrganizationWorkspaceUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Must include at least one letter or number.",
         examples=["Acme Corp"],
         max_length=100,
@@ -3025,11 +3076,13 @@ class RealtimePublish(BaseModel):
         description="Arbitrary JSON payload delivered as the event data: an object, array, or scalar. Cap: 10 KB serialized.",
     )] = None
     exclude_connection_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
         examples=[123.4567],
         min_length=1,
     )] = None
     include: Annotated[Optional[List[RealtimeChannelInclude]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-channel attributes to return alongside the publish, reflecting each channel's state at publish time. `member_count` is available only for presence channels. `connection_count` requires the app's connection-counting flag. Requesting attributes counts as one additional message toward usage.",
     )] = None
 
@@ -3038,9 +3091,11 @@ class RealtimeChannelListItem(BaseModel):
     "One occupied channel. A listed channel is occupied by definition; counts appear only when requested via `include` and applicable."
     model_config = ConfigDict(extra="allow")
     member_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct members (presence channels only; requires `include=member_count`).",
     )] = None
     connection_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Connections currently subscribed to this channel (requires `include=connection_count` and the app's connection-counting flag). Channel-scoped: distinct from the app-wide peak connections metric.",
     )] = None
     name: Annotated[str, Field(
@@ -3056,6 +3111,7 @@ class RealtimePublishResult(BaseModel):
     "The result of a Realtime publish. The event was accepted and fanned out to the requested channels; delivery to connected clients is asynchronous."
     model_config = ConfigDict(extra="allow")
     data: Annotated[Optional[List[RealtimeChannelListItem]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-channel attributes at publish time, present only when the request asked for them via `include`; one item per distinct target channel, sorted by name.",
     )] = None
 
@@ -3080,11 +3136,13 @@ class RealtimeBatchEvent(BaseModel):
         description="Arbitrary JSON payload delivered as the event data: an object, array, or scalar. Cap: 10 KB serialized.",
     )] = None
     exclude_connection_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
         examples=[123.4567],
         min_length=1,
     )] = None
     include: Annotated[Optional[List[RealtimeChannelInclude]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Attributes of this event's channel to return alongside the publish (same semantics and validation errors as on the channel endpoints). Requesting attributes counts as one additional message toward usage.",
     )] = None
 
@@ -3103,9 +3161,11 @@ class RealtimeBatchPublishResultItem(BaseModel):
     "Attributes of one batch item's channel at publish time. Items are positional: the n-th item corresponds to the n-th event in the request."
     model_config = ConfigDict(extra="allow")
     member_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct members (presence channels only; requires `include=member_count`).",
     )] = None
     connection_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Connections currently subscribed to this channel (requires `include=connection_count` and the app's connection-counting flag). Channel-scoped: distinct from the app-wide peak connections metric.",
     )] = None
     channel: Annotated[str, Field(
@@ -3121,6 +3181,7 @@ class RealtimeBatchPublishResult(BaseModel):
     "The result of a Realtime batch publish. The events were accepted for delivery; delivery to connected clients is asynchronous."
     model_config = ConfigDict(extra="allow")
     data: Annotated[Optional[List[RealtimeBatchPublishResultItem]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-event channel attributes at publish time, present only when at least one event asked for them via `include`. Positional: one item per event, in request order.",
     )] = None
 
@@ -3137,9 +3198,11 @@ class RealtimeChannelInfo(BaseModel):
     "State of a single channel. Counts appear only when requested and applicable."
     model_config = ConfigDict(extra="allow")
     member_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct members (presence channels only; requires `include=member_count`).",
     )] = None
     connection_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Connections currently subscribed to this channel (requires `include=connection_count` and the app's connection-counting flag). Channel-scoped: distinct from the app-wide peak connections metric.",
     )] = None
     occupied: Annotated[bool, Field(
@@ -3217,6 +3280,7 @@ class EmailAddress(BaseModel):
         min_length=5,
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Display name shown alongside the address in mail clients.",
         examples=["Jane Doe"],
         max_length=256,
@@ -3264,6 +3328,7 @@ class EmailAttachmentRef(BaseModel):
     "Attachment metadata returned on API reads. Download the file during its retention window with `GET /v1/email/messages/{message_id}/attachments/{attachment_id}`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["ea_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^ea_[0-9a-hjkmnp-tv-z]{26}$",
@@ -3274,6 +3339,7 @@ class EmailAttachmentRef(BaseModel):
         min_length=1,
     )]
     content_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Resolved MIME type at send time.",
         examples=["application/pdf"],
     )] = None
@@ -3283,6 +3349,7 @@ class EmailAttachmentRef(BaseModel):
         ge=0,
     )]
     inline: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="True when the attachment was sent inline via a `content_id` reference in the HTML body, false for regular file attachments.",
         examples=[False],
     )] = None
@@ -3308,13 +3375,20 @@ class EmailMessage(BaseModel):
         max_length=50,
         min_length=1,
     )]
-    cc: Annotated[Optional[List[EmailAddress]], Field(description="CC recipients.")] = None
-    bcc: Annotated[Optional[List[EmailAddress]], Field(description="BCC recipients.")] = None
+    cc: Annotated[Optional[List[EmailAddress]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="CC recipients.",
+    )] = None
+    bcc: Annotated[Optional[List[EmailAddress]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="BCC recipients.",
+    )] = None
     subject: Annotated[str, Field(
         description="The resolved subject. For a template send with recipient snapshots, this is the subject accepted for the first To recipient in the original request. It remains available when body storage is disabled. Legacy messages use their message-wide subject and caller parameters. For sends with recipient snapshots, `subject_recipient_id` identifies the recipient represented by `subject` and is present for scheduled and canceled messages too.",
         min_length=1,
     )]
     subject_recipient_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
@@ -3391,17 +3465,21 @@ class EmailMessage(BaseModel):
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     broadcast_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels on this message, each one a `name` and a `value`, that you can filter and search messages by. Use tags for anything you want to find messages by later, and `metadata` for data you only want handed back to you.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
@@ -3411,6 +3489,7 @@ class EmailMessage(BaseModel):
         description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachmentRef]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Attachment metadata for the send. Empty when no attachments were included. Raw content is not echoed. When content storage is enabled, download an attachment by its `id` via the message's attachment endpoint.",
     )] = None
     track_opens: Annotated[bool, Field(
@@ -3437,6 +3516,7 @@ class EmailMessage(BaseModel):
         description="When all recipients reached a terminal delivered state, or null if not yet fully delivered.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
     )] = None
 
@@ -3480,11 +3560,13 @@ class EmailTemplateSend(BaseModel):
     "A reference to the template to send. Identify the template by its `id` or its `slug`, supplying exactly one of the two, and give the values for its caller parameters in `parameters`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template to send, by its slug handle. A workspace template (for example `welcome-email`) or a built-in `system` template (for example `bird_welcome`).",
         examples=["welcome-email"],
         max_length=63,
@@ -3492,12 +3574,14 @@ class EmailTemplateSend(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Values for the template's caller parameters, keyed by single-word name. Caller parameters are those with `system` false or absent in the template's `variables`. Supply every required one the resolved language uses; omitting one or sending `null` returns `422`, and values the resolved language does not use are ignored. The `bird` namespace is reserved, so a send that sets it is rejected, and the object is capped at 16 KB serialized.\n\nReferenced `bird.contact` attributes come from each To recipient's contact in this workspace, so each To receives its own email, and Cc and Bcc receive a copy of each without needing a contact of their own. A To with no contact rejects the send with `422` (`E04099`), even when Liquid sets a default or condition. Empty name fields on an existing contact render empty unless Liquid supplies a default, and configured contact-property fallbacks still apply. Values are saved at acceptance and reused for delivery and content history, for individual, batch and scheduled sends alike.",
     )] = None
 
@@ -3516,10 +3600,12 @@ class EmailAttachment(BaseModel):
         min_length=1,
     )]
     content_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The file's MIME type. If omitted, the API infers it from the extension in `filename`. The API rejects executable and script types based on this value.",
         examples=["application/pdf"],
     )] = None
     content_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An RFC 2392 Content-ID for an inline file. Reference it from the HTML body with `<img src=\"cid:{content_id}\"/>`. Omit it to send a downloadable attachment.",
         examples=["invoice-logo"],
         max_length=128,
@@ -3540,71 +3626,89 @@ class EmailMessageSendRequest(BaseModel):
         min_length=1,
     )]
     cc: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
         max_length=50,
     )] = None
     bcc: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
         max_length=50,
     )] = None
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Message subject line. Required for inline sends. Omit it when sending a `template` (the template supplies the subject).",
         max_length=998,
         min_length=1,
     )] = None
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="HTML body. At least one of html or text must be provided.",
         max_length=524288,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Plain-text body. At least one of html or text must be provided.",
         max_length=524288,
     )] = None
     reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Reply-To addresses, each a plain email string, an RFC 5322 mailbox string, or an object with an optional display name. RFC 5322 allows multiple. Every recipient reply hits all listed addresses, so 1-2 is typical. The 25 cap exists to prevent header sizes that some receiving mail servers reject.",
         max_length=25,
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers, such as `References`, `In-Reply-To`, and `X-*` headers. Reserved headers and values containing carriage returns or line feeds return `422`. Set addressing and subject through their dedicated fields. Transactional sends accept `List-Unsubscribe` and `List-Unsubscribe-Post`. Marketing sends use Bird-managed unsubscribe by default.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` labels, up to 20 per send. You can filter the list endpoint by tag name, slice analytics by tag, and read them in webhook payloads. Use them for low-cardinality dimensions such as `category`, `experiment_variant` or `template_id`, and `metadata` for context you do not filter by.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="JSON object returned on reads and in webhook payloads, up to 2 KB serialized. Analytics can query its paths, such as `metadata.order_id`, but the dashboard cannot filter by it. Use it for per-send context such as order IDs and customer references, and `tags` for low-cardinality labels you filter by.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Values for the Liquid tokens in inline content, shared by every recipient: `{{ animal }}` takes the `animal` value, and a missing value renders empty. Include the object, even as `{}`, to render Liquid, or omit it to leave tokens unchanged. Names are single words other than `bird`, and the object is capped at 16 KB serialized. A stored template takes `template.parameters` instead. [Inline personalization](https://bird.com/docs/guides/email/sending-email#content) covers validation and URL encoding.",
     )] = None
     template: Annotated[Optional[EmailTemplateSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send a stored template instead of inline content. When set, omit `subject`, `html` and `text`, because the template supplies them. Personalize with `template.parameters`. Add `scheduled_at` to send it later.",
     )] = None
     track_opens: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to track open events for this message.",
     )] = None
     track_clicks: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to track click events for this message.",
     )] = None
     ip_pool_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the IP pool to send from (`ipp_` prefix), or `ipp_shared` to route through the shared pool explicitly. Omit to use the sending domain's default pool in this workspace, or the organization's default when the domain has none. An unknown pool, or a pool with no dedicated IPs available to send from, is rejected with a `422`.",
         pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
     )] = None
     category: Annotated[Optional[EmailMessageCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachment]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Files to attach, up to 20 per message. A generated message is capped at 20 MB, and a send over it is refused. The cap counts the HTML and text bodies and every attachment and inline image after base64 encoding, which adds about a third, so 15 MB of raw files uses most of it. Each batch item has the same cap, and the whole request body is capped at 20 MB too.",
         max_length=20,
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send at this future time instead of immediately, at least 30 seconds and at most 30 days ahead; outside that range returns `422`. The message returns `accepted` and reads as `scheduled` until it sends, and the message cancel endpoint cancels it before then. Scheduled sends count against your plan's monthly scheduled-email allowance, and a send over it returns `422`. A stored template's published version, language and parameter values are pinned at acceptance, so a later publication does not change what sends; deleting the template before the message is due rejects it with `generation_failure`. Sender eligibility and send-volume allowance are checked again when it is due. Batch items take this field too, so one batch can mix scheduled and immediate messages.",
     )] = None
 
@@ -3664,6 +3768,7 @@ class EmailMessageBatchItem(BaseModel):
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When this item is scheduled to send, for an item created with a future send time. Absent for an item that sends immediately.",
     )] = None
 
@@ -3734,9 +3839,11 @@ class EmailRecipient(BaseModel):
         description="Display name provided for this recipient on the send, or null if none was given.",
     )] = None
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Resolved subject accepted for this recipient, available independently of body storage. Legacy messages report their message-wide subject. Omitted if a retained recipient snapshot is unavailable.",
     )] = None
     copy_of_recipient_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
@@ -3793,6 +3900,7 @@ class EmailRecipientList(BaseModel):
         description="Page of recipient objects for this email send.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next, given what this page reports. Present only where the read computes it: an\nempty list means the answer you were looking for is here and there is nothing further to\ndo. Absent entirely on reads that do not report next actions.",
     )] = None
     next_cursor: Annotated[Optional[str], Field(
@@ -3922,6 +4030,7 @@ class EmailEventList(BaseModel):
         description="Page of timeline events for this email send, in chronological order.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next, given what this page reports. Present only where the read computes it: an\nempty list means the answer you were looking for is here and there is nothing further to\ndo. Absent entirely on reads that do not report next actions.",
     )] = None
     next_cursor: Annotated[Optional[str], Field(
@@ -3942,11 +4051,13 @@ class EmailMessageContent(BaseModel):
     "The body content of a sent email message, as delivered. A send that used a template reports its stored body with the accepted caller parameters and the selected recipient's saved contact values substituted in. A contextual send with multiple recipients requires the recipient_id query parameter."
     model_config = ConfigDict(extra="allow")
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The HTML body of the message as delivered, if it was stored.",
         examples=["<p>Hi Jane,</p><p>Your order #1234 has shipped and is on its way.</p>"],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The plain-text body of the message as delivered, if it was stored.",
         examples=["Hi Jane,\n\nYour order #1234 has shipped and is on its way."],
         min_length=1,
@@ -3958,6 +4069,8 @@ class EmailBroadcastStatus(str, Enum):
     scheduled = "scheduled"
     accepted = "accepted"
     sending = "sending"
+    waiting_for_funds = "waiting_for_funds"
+    paused = "paused"
     sent = "sent"
     canceling = "canceling"
     canceled = "canceled"
@@ -4001,10 +4114,38 @@ class EmailBroadcastTemplate(BaseModel):
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
     )] = None
     parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete map of per-language parameter values, keyed by a BCP-47 language tag of at most 35 characters such as `es` or `pt-BR`. Each language holds only the names whose value differs for that language; a name it leaves out uses the value in `parameters`, including later changes to it. A value that is present always applies, even when it is `\"\"`, `0`, `false`, `null` or equal to the `parameters` value. To return a name to the `parameters` value, send the map without it. Sending this map, even as `{}`, applies language rules to the broadcast: `parameters` must hold every input the default language's content, sender name, reply-to or headers use, and an input only the selected language uses may come from that language's entry instead. A broadcast that never sends it keeps the selected-language rules. Values for the default language, or for a language the broadcast does not send, are kept but not used. Omission retains the map unless the template ID changes, which clears it; an empty object removes every override, null is invalid and a language with no names is removed. Tags are stored in canonical BCP-47 form, so two spellings of one tag are refused. The compact map is limited to 16384 UTF-8 bytes, and `parameters` and every language together are limited to 128 distinct names.",
+    )] = None
+
+
+class EmailBroadcastFundingHoldReason(str, Enum):
+    automatic_top_up = "automatic_top_up"
+    funds_required = "funds_required"
+    wait_expired = "wait_expired"
+
+
+class EmailBroadcastFundingHold(BaseModel):
+    "Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nFunding recovery is declared ahead of server support. The send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nThe automatic wait lasts at most 20 minutes from the first time sending stops for funds. Later stops and top-ups do not extend it. Resuming a paused broadcast starts a new wait for any later stop."
+    model_config = ConfigDict(extra="allow")
+    reason: Annotated[EmailBroadcastFundingHoldReason, Field(
+        description="Why sending stopped for funds.\n\n- `automatic_top_up`: Sending stopped while automatic top-up was active. Sending can continue automatically when a funding check succeeds before `wait_until`.\n- `funds_required`: Sending stopped because your balance cannot pay for more email. While `waiting_for_funds`, a manual or automatic top-up can restart sending before `wait_until`. If the broadcast is `paused`, add funds if needed, then resume it.\n- `wait_expired`: Status is `paused`. The automatic wait ended before sending continued. Add funds if needed, then resume the broadcast.",
+    )]
+    wait_until: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When the automatic wait ends, or ended. Absent when the broadcast paused without waiting.",
+        examples=["2026-09-02T08:35:03Z"],
+        min_length=1,
+    )] = None
+    paused_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When the broadcast paused. Present only while `status` is `paused`.",
+        examples=["2026-09-02T08:35:03Z"],
+        min_length=1,
     )] = None
 
 
@@ -4068,21 +4209,26 @@ class EmailBroadcastParameterProblem(BaseModel):
         description="How a broadcast input diagnostic affects sending.\n\n- `error`: the broadcast cannot send until the problem is fixed.",
     )]
     pointer: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A JSON pointer to the request or broadcast field the problem is about, such as `/template/parameters/first_name` or `/from`. Absent when the problem is not about one field.",
         examples=["/template/parameters/first_name"],
     )] = None
     site: Annotated[Optional[Annotated[Union[EmailBroadcastParameterProblemSite, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The part of the email where the input is used.\n\n- `subject`: the subject line.\n- `html`: the HTML body, including its inbox preview text.\n- `text`: the plain-text body.\n- `from_name`: the sender display name.\n- `reply_to`: the reply-to addresses.\n\nA custom header is reported as `header:` followed by the header name as the broadcast sets it, for example `header:X-Campaign`.",
     )] = None
     budget: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The rendering limit that was exceeded, such as `output_bytes` or `nesting`, when `code` is `render_budget_exceeded`. It is reported with `limit` on problems from sending a broadcast, in `failure_parameters`.",
         examples=["output_bytes"],
         min_length=1,
     )] = None
     limit: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The value of the limit named by `budget`.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4099,15 +4245,18 @@ class EmailBroadcastFailureParameters(BaseModel):
         description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
     )]
     pointer: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A JSON pointer to the broadcast field the failure is about, such as `/template/parameters/first_name` or `/template`.",
         examples=["/template/parameters/first_name"],
     )] = None
     observed_version_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     problems: Annotated[Optional[List[EmailBroadcastParameterProblem]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Up to 20 of the problems found. A recipient problem names its contact in `contact_id`.",
         max_length=20,
     )] = None
@@ -4140,14 +4289,17 @@ class EmailBroadcast(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     display_label: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Label for selecting this broadcast on list and single-broadcast reads. With `email_management` read access, uses the retained subject from the template version resolved when execution starts, then its non-generated name. Draft and scheduled broadcasts use the name. Omitted when no authoritative label is available; clients can show a localized Untitled broadcast fallback. Without that access, uses the canonical broadcast ID. Absent from mutation responses.",
         examples=["Weekly news"],
     )] = None
     from_: Annotated[Optional[EmailAddress], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="An email address with an optional display name.",
     )] = None
     audience_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4156,11 +4308,13 @@ class EmailBroadcast(BaseModel):
         description="The template this broadcast sends, and the language it sends in. A broadcast sends the template's published version, and the exact version is fixed when the broadcast is prepared for sending, so publishing a new version afterwards does not change what this broadcast sends. Null on a draft that has not chosen a template yet.",
     )] = None
     html_bytes: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Size of the HTML body this broadcast sends, in bytes, or 0 when its content has no HTML part. Measured on the template version the broadcast sends, using the selected language. Recipient merge values can change its size. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which measure the content. Absent too when the broadcast has no template or its content can no longer be read.",
         examples=[18432],
         ge=0,
     )] = None
     text_bytes: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Size of the plain-text body this broadcast sends, in bytes, or 0 when its content has no plain-text part. Measured, and absent, the same way as `html_bytes`.",
         examples=[2104],
         ge=0,
@@ -4170,21 +4324,29 @@ class EmailBroadcast(BaseModel):
         min_length=1,
     )]
     ip_pool_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The IP pool this broadcast sends from, or `ipp_shared` when it sends through the shared pool. Absent when it sends on your organization's default pool.",
         pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
     )] = None
     reply_to: Annotated[Optional[List[EmailAddress]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where replies to this broadcast go, if you want them somewhere other than the `from` address. Absent when you have not set one.",
         max_length=25,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Any custom email headers set on the broadcast. Returned on a single broadcast read and on the broadcast that creating, updating, sending or canceling one returns, and absent from the list. The unsubscribe headers we add ourselves are not included.",
     )] = None
     status: Annotated[EmailBroadcastStatus, Field(
-        description="Where the broadcast itself has got to, separate from what happened to individual recipients: for that, read `sent_count`, `delivered_count`, `bounced_count` and `complained_count` below. When it is `failed`, `failure_reason` says why.",
+        description="Where the broadcast itself has got to, separate from what happened to individual recipients: for that, read `sent_count`, `delivered_count`, `bounced_count` and `complained_count` below. When it is `failed`, `failure_reason` says why. When it is `waiting_for_funds` or `paused`, `funding_hold` says why and what happens next.",
         examples=["sent"],
     )]
+    funding_hold: Annotated[Optional[EmailBroadcastFundingHold], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nFunding recovery is declared ahead of server support. The send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nThe automatic wait lasts at most 20 minutes from the first time sending stops for funds. Later stops and top-ups do not extend it. Resuming a paused broadcast starts a new wait for any later stop.",
+    )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this broadcast, given the state it is in. Each entry names one action and\nsays why it is worth taking. Present on reads that compute it: an empty list means there is\nnothing to do, and the field is absent entirely on responses that do not report next actions.",
     )] = None
     failure_reason: Annotated[Optional[EmailBroadcastFailureReason], Field(
@@ -4201,62 +4363,75 @@ class EmailBroadcast(BaseModel):
         ge=0,
     )]
     sent_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending or canceling it, none of which read the counters. List and single-broadcast reads return 0 when no delivery events are recorded. When counters are unavailable, those reads still return 200 and omit the counters. Read the broadcast again for the numbers.",
         examples=[4820],
         ge=0,
     )] = None
     delivered_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many recipients' messages were accepted by their mail server. Absent when `sent_count` is.",
         examples=[4712],
         ge=0,
     )] = None
     bounced_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many recipients the message could not be delivered to at all. Absent when `sent_count` is.",
         examples=[96],
         ge=0,
     )] = None
     complained_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many recipients marked the message as spam. Absent when `sent_count` is.",
         examples=[12],
         ge=0,
     )] = None
     open_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many times the message was opened, added up across every recipient. One recipient opening it twice counts twice. Absent when `sent_count` is.",
         examples=[3104],
         ge=0,
     )] = None
     click_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many times a link in the message was clicked, added up across every recipient. One recipient clicking twice counts twice. Absent when `sent_count` is.",
         examples=[812],
         ge=0,
     )] = None
     sending_ips: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The IP addresses this broadcast's messages went out from, up to 100 of them. A broadcast is spread across every address in its pool, so more than one can appear. The receiving mail systems name the address when they deliver, bounce or defer a message, so this stays absent until the first of those comes back. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which read them. For delivery and latency broken down per address, read the sending-IP stats.",
     )] = None
     unique_opens_non_prefetched: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many distinct recipients opened the message at least once, excluding opens auto-fetched by inbox privacy features (such as Apple Mail Privacy Protection and the Gmail image proxy). A recipient who opened several times, or whose inbox prefetched the message, counts once. Absent when `sent_count` is.",
         examples=[2140],
         ge=0,
     )] = None
     unique_clicks: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many distinct recipients clicked a link in the message at least once. A recipient who clicked several times counts once. Absent when `sent_count` is.",
         examples=[693],
         ge=0,
     )] = None
     out_of_band_bounces: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many recipients bounced after the message had already been accepted for delivery. A recipient who bounced this way more than once counts once. Absent when `sent_count` is.",
         examples=[14],
         ge=0,
     )] = None
     delivered_recipients: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many distinct recipients a delivery landed for. This is the denominator to measure `unique_opens_non_prefetched`, `unique_clicks` and `complained_count` against. It differs from `delivered_count`, which reports how many recipients are currently in the delivered state: a recipient who was delivered to and then complained moves to `complained_count` and leaves `delivered_count`, but stays here, because the message did reach them. Absent when `sent_count` is.",
         examples=[4724],
         ge=0,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels on this broadcast, each one a `name` and a `value`, that you can filter and search broadcasts by. Use tags for anything you want to find broadcasts by later, and `metadata` for data you only want handed back to you.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Any JSON you want to keep on the broadcast. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
     )] = None
     track_opens: Annotated[bool, Field(
@@ -4273,11 +4448,13 @@ class EmailBroadcast(BaseModel):
         min_length=1,
     )]
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When the broadcast is due to send, and absent when it is not scheduled.",
         examples=["2026-09-02T08:00:00Z"],
     )] = None
     started_at: Annotated[Optional[str], Field(
-        description="When the broadcast started sending. Absent until then. Compare with `sent_at`, which is when the broadcast finished sending.",
+        json_schema_extra={"x-bird-nullable": False},
+        description="When the broadcast started sending. Absent until then. Older broadcasts waiting or paused for funds may lack that timestamp; they report their send authorization time, or creation time if that is also missing, so late-resume confirmation uses the same conservative time as the server. Compare with `sent_at`, which is when the broadcast finished sending.",
         examples=["2026-09-02T08:00:03.771Z"],
     )] = None
     sent_at: Annotated[Optional[str], Field(
@@ -4285,9 +4462,11 @@ class EmailBroadcast(BaseModel):
         examples=["2026-09-02T08:11:47.902Z"],
     )]
     canceled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When the broadcast was canceled, and absent if it never was. This is when cancellation was requested, so it is set as soon as the status is `canceling` and does not move while the remaining sends stop and the status becomes `canceled`.",
     )] = None
     failure_parameters: Annotated[Optional[EmailBroadcastFailureParameters], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values.",
     )] = None
 
@@ -4320,15 +4499,18 @@ class EmailBroadcastTemplateCreate(BaseModel):
         pattern="^emt_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The BCP-47 language tag that goes to the whole audience, such as `en` or `pt-BR`. It must be an exact match for a language on the template's published version, so `fr-CA` does not select `fr`. If you leave it out, the broadcast uses the version's default language, unless the template has `language_source_required` set, in which case sending fails until you select a language. Send `template.language` in an update to change or clear it later.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
     )] = None
     parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete map of per-language parameter values, keyed by a BCP-47 language tag of at most 35 characters such as `es` or `pt-BR`. Each language holds only the names whose value differs for that language; a name it leaves out uses the value in `parameters`, including later changes to it. A value that is present always applies, even when it is `\"\"`, `0`, `false`, `null` or equal to the `parameters` value. To return a name to the `parameters` value, send the map without it. Sending this map, even as `{}`, applies language rules to the broadcast: `parameters` must hold every input the default language's content, sender name, reply-to or headers use, and an input only the selected language uses may come from that language's entry instead. A broadcast that never sends it keeps the selected-language rules. Values for the default language, or for a language the broadcast does not send, are kept but not used. Omission retains the map unless the template ID changes, which clears it; an empty object removes every override, null is invalid and a language with no names is removed. Tags are stored in canonical BCP-47 form, so two spellings of one tag are refused. The compact map is limited to 16384 UTF-8 bytes, and `parameters` and every language together are limited to 128 distinct names.",
     )] = None
 
@@ -4346,49 +4528,62 @@ class EmailBroadcastCreateRequest(BaseModel):
     "A broadcast sends one email to a whole audience. Every field here is optional, so you can create an empty draft and fill it in later. To actually send, a broadcast needs three things: a `from` address on a verified domain, an `audience_id`, and a `template`.\n\nLeave `send` false, which is the default, and you get a draft. Update it as often as you like, then send it when you are ready. Set `send` to true and the broadcast goes out as soon as it is created, or at `scheduled_at` if you set one."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[Optional[EmailAddressInput], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
     )] = None
     audience_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     template: Annotated[Optional[EmailBroadcastTemplateCreate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template a new broadcast sends, and which of that template's languages goes out.",
     )] = None
     reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where replies to this broadcast should go. Give each address as a plain address, as `Jane <jane@acme.com>` to include a display name, or as an object with an address and a name. You can list more than one.",
         max_length=25,
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels on this broadcast, each one a `name` and a `value`, up to 20 of them. You can filter the broadcast list by a tag, break your stats down by one, and read them back off webhook payloads. Use tags for anything you want to find broadcasts by later, and `metadata` for data you only want handed back to you.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Any JSON you want to keep on the broadcast. We store it, hand it back when you read the broadcast, and include it in webhook payloads, and you can break stats down by a path inside it such as `metadata.order_id`. It can be up to 2 KB once serialized.",
     )] = None
     track_opens: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to track opens for this broadcast.",
     )] = None
     track_clicks: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to track link clicks for this broadcast.",
     )] = None
     ip_pool_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The IP pool to send this broadcast from. Pass a pool ID, or `ipp_shared` to send through the shared pool on purpose. Leave it out and the broadcast uses your organization's default pool. A pool we do not recognize, or one with no IPs available to send from, is refused with a `422`.",
         pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
     )] = None
     category: Annotated[Optional[EmailBroadcastCreateRequestCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What kind of email this is. A broadcast sets this itself rather than taking it from its template, and it decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing`, the default, is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way still reaches people who have already unsubscribed from you.",
     )] = None
     send: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to send the broadcast as soon as it is created. Set it to true and the broadcast goes out immediately, or at `scheduled_at` if you set one. Leave it false, which is the default, and you get a draft you can update and send later.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. It requires `send` to be true, so a `scheduled_at` on its own is refused rather than saved on the draft.",
     )] = None
 
@@ -4397,6 +4592,7 @@ class EmailBroadcastTemplateUpdate(BaseModel):
     "A change to the template, language, or parameter maps a broadcast sends. Omitted properties retain their values unless the template ID changes. A changed ID clears the old language, parameters and parameter overrides before applying supplied replacements; repeating the same ID retains them."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Select this template. Changing the ID clears the old language, parameters and parameter overrides before supplied replacements. Repeating the same ID retains those values and clears the selected template version, so the next preparation uses the template's latest published version. Omit id to retain the selected template. Adding parameters to a draft created before parameters existed may clear its selected version so it uses the template's latest published version. To clear a draft's selection, set template itself to null.",
         examples=["emt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -4409,9 +4605,11 @@ class EmailBroadcastTemplateUpdate(BaseModel):
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
     )] = None
     parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete map of per-language parameter values, keyed by a BCP-47 language tag of at most 35 characters such as `es` or `pt-BR`. Each language holds only the names whose value differs for that language; a name it leaves out uses the value in `parameters`, including later changes to it. A value that is present always applies, even when it is `\"\"`, `0`, `false`, `null` or equal to the `parameters` value. To return a name to the `parameters` value, send the map without it. Sending this map, even as `{}`, applies language rules to the broadcast: `parameters` must hold every input the default language's content, sender name, reply-to or headers use, and an input only the selected language uses may come from that language's entry instead. A broadcast that never sends it keeps the selected-language rules. Values for the default language, or for a language the broadcast does not send, are kept but not used. Omission retains the map unless the template ID changes, which clears it; an empty object removes every override, null is invalid and a language with no names is removed. Tags are stored in canonical BCP-47 form, so two spellings of one tag are refused. The compact map is limited to 16384 UTF-8 bytes, and `parameters` and every language together are limited to 128 distinct names.",
     )] = None
 
@@ -4425,10 +4623,12 @@ class EmailBroadcastUpdateRequest(BaseModel):
     "Changes a broadcast that is still a draft or is scheduled. Whatever you send here is applied, and anything you leave out keeps the value it already had. Once a broadcast has started sending it can no longer be edited."
     model_config = ConfigDict(extra="allow")
     from_: Annotated[Optional[EmailAddressInput], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
     )] = None
     audience_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["adn_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^adn_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4442,19 +4642,24 @@ class EmailBroadcastUpdateRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels on this broadcast, each one a `name` and a `value`, that you can filter and search broadcasts by. What you send replaces the tags the draft already had rather than adding to them.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Any JSON you want to keep on the broadcast, up to 2 KB once serialized. What you send replaces the metadata the draft already had rather than merging into it.",
     )] = None
     track_opens: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to track opens for this broadcast.",
     )] = None
     track_clicks: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to track link clicks for this broadcast.",
     )] = None
     ip_pool_id: Annotated[Optional[str], Field(
@@ -4462,6 +4667,7 @@ class EmailBroadcastUpdateRequest(BaseModel):
         pattern="^ipp_([0-9a-hjkmnp-tv-z]{26}|shared)$",
     )] = None
     category: Annotated[Optional[EmailBroadcastUpdateRequestCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What kind of email this is. It decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing` is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way reaches people who have already unsubscribed from you.",
     )] = None
 
@@ -4480,6 +4686,7 @@ class EmailBroadcastCounts(BaseModel):
         examples=["draft"],
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next, given where the broadcast is. On a broadcast that has already sent this names\nthe reads that carry delivery outcomes, which these counts never do. An empty list means there\nis nothing to do; the field is absent entirely on responses that do not report next actions.",
     )] = None
     total: Annotated[int, Field(
@@ -4534,8 +4741,13 @@ class EmailBroadcastCountAllowance(BaseModel):
     )]
 
 
+class EmailBroadcastInsufficientFundsBehavior(str, Enum):
+    wait_for_top_up = "wait_for_top_up"
+    pause = "pause"
+
+
 class EmailBroadcastSendQuota(BaseModel):
-    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit."
+    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\nThe optional `can_start` and `on_insufficient_funds` fields are declared ahead of server support for funding recovery. If `can_start` is absent, use `allowed` to check the current allowance and do not assume automatic waiting or resumability. An absent field is different from `can_start: false`, which explicitly says the broadcast cannot start.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit. `on_insufficient_funds` says what happens if the balance runs out mid-send. Like `limit_reason`, it is present only when you have `org:billing` read access."
     model_config = ConfigDict(extra="allow")
     recipients: Annotated[int, Field(
         description="Number of contacts the broadcast could reach now. Excludes contacts without an email address and contacts suppressed for the broadcast's category. Matches the sendable count from the broadcast's audience counts.",
@@ -4543,7 +4755,7 @@ class EmailBroadcastSendQuota(BaseModel):
         ge=0,
     )]
     allowed: Annotated[int, Field(
-        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients would receive the broadcast. This happens if the audience exceeds the full email limit, which rejects the send, or if the remaining allowance cannot cover a batch.",
+        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients are currently covered. This happens if the audience exceeds the full email limit, which rejects the send, or if the remaining allowance cannot cover a batch. When `can_start` is present, use it to decide whether a balance-limited broadcast can start and wait for funds. If it is absent, a zero allowance does not provide a way to send.",
         examples=[5000],
         ge=0,
     )]
@@ -4551,25 +4763,39 @@ class EmailBroadcastSendQuota(BaseModel):
         description="The email limit that prevents a broadcast from reaching its full audience.\n\n- `none`: the email send allowance covers every recipient.\n- `monthly`: the monthly email limit for the billing period.\n- `daily`: the daily email limit, which resets at the end of each UTC day.\n\nWhen both email limits apply, the response reports the more restrictive one. If you pass `send_at`, the check evaluates both at that time.",
     )]
     limit: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The email limit identified by `limited_by`, in emails. Omitted when no email limit restricts the send.",
         examples=[50000],
         ge=0,
     )] = None
     remaining: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The allowance remaining under the email limit identified by `limited_by`, in emails, at `send_at`, or now if you omit it. If the window resets by `send_at`, the check uses its full allowance. Omitted when no email limit restricts the send.",
         examples=[7000],
         ge=0,
     )] = None
     resets_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When usage resets to 0 for the email limit identified by `limited_by`, evaluated at `send_at`, or now if you omit it.\n\nA broadcast sent before this time uses the same window and the allowance left after other sends. A broadcast sent at or after this time uses a new window. If `recipients` exceeds the full `limit`, the send is rejected in any window with that limit. Pass the later time as `send_at` to check whether the other email limit still restricts the send.\n\nOmitted when no email limit restricts the send, when the reset is at or before `send_at`, or when the billing period has ended and the next one has not started.",
         examples=["2026-09-01T00:00:00Z"],
         min_length=1,
     )] = None
     limit_reason: Annotated[Optional[EmailSendAllowanceLimitReason], Field(
-        description="What sets the monthly email limit and how to raise it.\n\n- `plan`: the organization's monthly email limit. This is the plan's included volume unless we have set a different limit for the organization. If the limit matches the included volume, a plan with more included volume raises it. Otherwise, contact Bird support.\n- `overage_off`: email overage is turned off, so sending stops at the included volume. Turn email overage back on to raise the monthly email limit.\n- `overdue_payment`: an overdue payment pauses email overage, so sending stops at the included volume. Pay the overdue invoice to raise the monthly email limit.\n- `unfunded`: the wallet cannot cover email overage, or its funding cannot be confirmed, so sending stops at the included volume. Top up the wallet if it lacks funds. Email overage resumes once sufficient funding is confirmed.\n- `overage_ceiling`: email overage is billed up to a configured multiple of the included volume. A plan with more included volume raises the email overage ceiling.\n- `custom_limit`: we have set a monthly email limit for the organization that differs from the plan's included volume. Contact Bird support to change it. These limits currently report as `plan`. This enum value is declared in advance so reporting them as `custom_limit` will not be a breaking change.",
+        json_schema_extra={"x-bird-nullable": False},
+        description="What sets the monthly email limit and how to raise it.\n\n- `plan`: the organization's monthly email limit. This is the plan's included volume unless we have set a different limit for the organization. If the limit matches the included volume, a plan with more included volume raises it. Otherwise, contact Bird support.\n- `overage_off`: email overage is turned off, so sending stops at the included volume. Turn email overage back on to raise the monthly email limit.\n- `overdue_payment`: an overdue payment pauses email overage, so sending stops at the included volume. Pay the overdue invoice to raise the monthly email limit.\n- `unfunded`: funding for email overage could not be confirmed, so sending stops at the included volume. Top up the wallet if it lacks funds. If it has sufficient funds, retry the allowance check. Email overage resumes once sufficient funding is confirmed.\n- `overage_ceiling`: email overage is billed up to a configured multiple of the included volume. A plan with more included volume raises the email overage ceiling.\n- `custom_limit`: we have set a monthly email limit for the organization that differs from the plan's included volume. Contact Bird support to change it. These limits currently report as `plan`. This enum value is declared in advance so reporting them as `custom_limit` will not be a breaking change.",
     )] = None
     broadcasts: Annotated[Optional[EmailBroadcastCountAllowance], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The organization's broadcast count allowance for the current window. This counts broadcasts rather than emails. The window is the billing period, or the UTC day when no current billing period is available.\n\nSending or scheduling a draft uses one broadcast from the window current when you submit the request. The scheduled send time does not determine the window. Sending an already scheduled broadcast again uses no additional broadcast allowance. `send_at` on the send-quota request does not change this allowance.",
+    )] = None
+    on_insufficient_funds: Annotated[Optional[EmailBroadcastInsufficientFundsBehavior], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Declared ahead of server support for funding recovery. When returned in the send-allowance response, this describes what a broadcast does if your balance runs out while it is sending. Recipients already sent to are not affected either way.\n\n- `wait_for_top_up`: The broadcast waits up to 20 minutes for a manual or automatic top-up. It checks once a minute and continues by itself when funds cover the next batch of recipients, then pauses if the wait ends. Waiting does not change your automatic top-up settings or initiate a payment.\n- `pause`: The broadcast pauses until you add funds and resume it.",
+    )] = None
+    can_start: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When present, whether the organization's email limits let this broadcast start at `send_at`, or now if you omit it. A balance that cannot pay for the next batch does not make this `false`: once started, the broadcast waits or pauses until funds return, as `on_insufficient_funds` describes.\n\nIt is `false` when no recipient would be sent, including when the audience exceeds the full daily or monthly limit or none of that limit remains. A `true` value does not reserve allowance or promise that every recipient is sent. Other checks still apply when you send.",
+        examples=[True],
     )] = None
 
 
@@ -4616,6 +4842,7 @@ class EmailBroadcastValidationRequest(BaseModel):
         description="Replaces the template, language or parameters for this request. Null removes the template for this request.",
     )] = None
     from_: Annotated[Optional[EmailAddressInput], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
     )] = None
@@ -4625,6 +4852,7 @@ class EmailBroadcastValidationRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
 
@@ -4643,6 +4871,7 @@ class EmailBroadcastResolution(BaseModel):
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     requested_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
@@ -4659,6 +4888,7 @@ class EmailBroadcastResolution(BaseModel):
         min_length=1,
     )]
     default_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
@@ -4673,6 +4903,7 @@ class EmailBroadcastValidationResult(BaseModel):
         description="Whether the current template and supplied broadcast inputs pass validation, including checks that the sender and audience can be used. Sending also checks permissions, limits, the audience's recipients and their values, so `true` does not guarantee the broadcast sends.",
     )]
     resolution: Annotated[Optional[EmailBroadcastResolution], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The published template version and language a validation or preview checked. It does not fix the version a later send uses.",
     )] = None
     problems: Annotated[List[EmailBroadcastParameterProblem], Field(
@@ -4682,9 +4913,11 @@ class EmailBroadcastValidationResult(BaseModel):
         description="Names supplied in `template.parameters`, or in the selected language's `template.parameter_overrides` entry, that the selected content and envelope do not use. Rendering the selected content ignores them. With `template.parameter_overrides`, this can include a name in `base_parameters` that only the default language uses, and `template.parameters` must still hold its value.",
     )]
     base_parameters: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Input names `template.parameters` must hold, returned with `resolution`. Without `template.parameter_overrides` these are the inputs the selected language uses. With it they are every input the default language's content or the envelope uses, including names the selected language does not use.",
     )] = None
     override_parameters: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Input names only the selected language uses, returned with `resolution`. Each may come from that language's entry in `template.parameter_overrides` or from `template.parameters`. Always empty without `template.parameter_overrides`.",
     )] = None
 
@@ -4696,6 +4929,7 @@ class EmailBroadcastPreviewRequest(BaseModel):
         description="Replaces the template, language or parameters for this request. Null removes the template for this request.",
     )] = None
     from_: Annotated[Optional[EmailAddressInput], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
     )] = None
@@ -4705,9 +4939,11 @@ class EmailBroadcastPreviewRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4725,6 +4961,7 @@ class EmailBroadcastPreviewResult(BaseModel):
         description="The published template version and language a validation or preview checked. It does not fix the version a later send uses.",
     )]
     contact_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4764,6 +5001,7 @@ class EmailBroadcastTestRequest(BaseModel):
         description="Replaces the template, language or parameters for this request. Null removes the template for this request.",
     )] = None
     from_: Annotated[Optional[EmailAddressInput], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="A sender or recipient address. Accepts a plain email string (`jane@acme.com`), an RFC 5322 mailbox string with an embedded display name (`Jane Doe <jane@acme.com>`), or an object carrying the address and an optional display name. All forms can be mixed freely within one request. Responses always return the object form.",
     )] = None
@@ -4773,9 +5011,11 @@ class EmailBroadcastTestRequest(BaseModel):
         min_length=1,
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4809,13 +5049,20 @@ class EmailBroadcastTestResult(BaseModel):
         max_length=50,
         min_length=1,
     )]
-    cc: Annotated[Optional[List[EmailAddress]], Field(description="CC recipients.")] = None
-    bcc: Annotated[Optional[List[EmailAddress]], Field(description="BCC recipients.")] = None
+    cc: Annotated[Optional[List[EmailAddress]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="CC recipients.",
+    )] = None
+    bcc: Annotated[Optional[List[EmailAddress]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="BCC recipients.",
+    )] = None
     subject: Annotated[str, Field(
         description="The resolved subject. For a template send with recipient snapshots, this is the subject accepted for the first To recipient in the original request. It remains available when body storage is disabled. Legacy messages use their message-wide subject and caller parameters. For sends with recipient snapshots, `subject_recipient_id` identifies the recipient represented by `subject` and is present for scheduled and canceled messages too.",
         min_length=1,
     )]
     subject_recipient_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["er_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^er_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4892,17 +5139,21 @@ class EmailBroadcastTestResult(BaseModel):
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     broadcast_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels on this message, each one a `name` and a `value`, that you can filter and search messages by. Use tags for anything you want to find messages by later, and `metadata` for data you only want handed back to you.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Any JSON you kept on the message. We store it and hand it back in webhook payloads, and that is all it does. If you want to search or filter by it, use `tags` instead.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
@@ -4912,6 +5163,7 @@ class EmailBroadcastTestResult(BaseModel):
         description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachmentRef]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Attachment metadata for the send. Empty when no attachments were included. Raw content is not echoed. When content storage is enabled, download an attachment by its `id` via the message's attachment endpoint.",
     )] = None
     track_opens: Annotated[bool, Field(
@@ -4938,6 +5190,7 @@ class EmailBroadcastTestResult(BaseModel):
         description="When all recipients reached a terminal delivered state, or null if not yet fully delivered.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
     )] = None
 
@@ -4945,6 +5198,7 @@ class EmailBroadcastTestResult(BaseModel):
 class EmailBroadcastSendNowRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. Leave it out to send straight away.",
     )] = None
 
@@ -5001,9 +5255,11 @@ class Contact(BaseModel):
         max_length=254,
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom property values for this contact, available in broadcast templates as `bird.contact.<key>`. Each key is a property created via the contact properties API, and each value is a string, number, boolean, or RFC 3339 datetime matching the property's declared type (strings up to `500` characters). Total size is capped at 2 KB serialized. Values stored under a property that was later archived remain readable here.",
     )] = None
     audiences: Annotated[Optional[List[AudienceRef]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The audiences this contact belongs to, most-recently-joined first. Only present when listing contacts; omitted from every other contact operation.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -5034,27 +5290,33 @@ class ContactList(BaseModel):
 class ContactCreateRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's email address. Trimmed and lowercased before it is stored and checked for uniqueness. Unique within the workspace. Supply an email address, a phone number, or both.",
         max_length=254,
     )] = None
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's phone number in E.164 format, including the leading `+` and country code. Spaces and punctuation are accepted and stripped; the number is stored in its canonical form, which may differ from what you send, and is unique within the workspace. An empty string is treated as if the field were omitted. Supply an email address, a phone number, or both.",
         examples=[+31612345678],
         max_length=32,
     )] = None
     first_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's first name.",
         max_length=100,
     )] = None
     last_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's last name.",
         max_length=100,
     )] = None
     external_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own identifier for this contact, such as a user ID in your system. Unique within the workspace when set.",
         max_length=254,
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom property values for this contact. Each key must be a registered contact property, including an archived one. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters, and a `null` value is ignored. An unregistered key returns a validation error. The serialized data is limited to 2 KB.",
     )] = None
 
@@ -5063,21 +5325,27 @@ class ContactBatchEntry(BaseModel):
     "A contact to create or update. Field values are validated individually during processing, so an invalid contact returns a failed result while valid contacts are saved. The request must still contain an object with the declared field types. Omitted fields keep their stored values on an existing contact."
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Email address, up to 254 characters. Trimmed and lowercased before matching. Invalid addresses fail this contact.",
     )] = None
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Phone number with a country code, up to 32 characters. Spaces and punctuation are accepted. An empty string is treated as omitted.",
     )] = None
     first_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="First name, up to 100 characters.",
     )] = None
     last_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Last name, up to 100 characters.",
     )] = None
     external_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your identifier for the contact, up to 254 characters. Unique within the workspace when set.",
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom contact property values. Keys must be registered contact properties, including archived ones. Values must match their declared type. Strings can contain up to 500 characters and the serialized map is limited to 2 KB. Invalid values fail this contact. Null values remove keys when updating and are ignored when creating.",
     )] = None
 
@@ -5101,14 +5369,17 @@ class ContactUpsertRequest(BaseModel):
         min_length=1,
     )]
     audience_ids: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Audiences every contact in this request is added to. Contacts that are already members are left in place. Every listed audience must exist, or the whole request fails with a validation error and nothing is written.",
         max_length=10,
         min_length=1,
     )] = None
     match_on: Annotated[Optional[ContactMatchKey], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A contact identifier a batch entry can be matched on.",
     )] = None
     data_mode: Annotated[Optional[ContactUpsertRequestDataMode], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How a supplied `data` object is applied to an existing contact. The default `merge` mode adds the supplied keys to the contact's stored custom values. A key with a `null` value deletes that key. The `replace` mode overwrites the whole stored `data` map with the supplied map. In both modes a contact that omits `data` keeps its stored values unchanged, so an import that touches one attribute never wipes the others.",
     )] = None
 
@@ -5152,10 +5423,12 @@ class ContactUpsertError(BaseModel):
         min_length=1,
     )]
     param: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The field in this entry that caused the failure, such as `data` or `email`. Omitted when the failure names no field.",
         min_length=1,
     )] = None
     details: Annotated[Optional[List[ErrorDetail]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-field problems with this entry, in the same shape as the top-level error `details`. A contact property failure names the property as `data.<key>`, such as `data.plan`. Omitted when the failure has no per-field problems.",
     )] = None
 
@@ -5179,11 +5452,14 @@ class ContactUpsertResultItem(BaseModel):
         min_length=1,
     )]
     contact_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    error: Optional[ContactUpsertError] = None
+    error: Annotated[Optional[ContactUpsertError], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class ContactUpsertResult(BaseModel):
@@ -5216,6 +5492,7 @@ class ContactUpdateRequest(BaseModel):
         max_length=254,
     )] = None
     data: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom property values to merge into the contact's existing data. Supplied keys are set, keys with a `null` value are removed, and omitted keys remain unchanged. Each key must be a registered contact property, including an archived one. Each value must match the property's declared type: string, number, boolean, or RFC 3339 datetime. Strings can contain up to `500` characters. An unregistered key returns a validation error. The serialized result is limited to 2 KB.",
     )] = None
 
@@ -5376,21 +5653,25 @@ class PreferenceCreate(BaseModel):
         description="What the statement says: `granted` records consent to receive messages, `revoked` records an opt-out. There is no third state: a person who never stated anything simply has no preference on record.",
     )]
     coverage: Annotated[Optional[PreferenceCoverage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How much traffic the statement covers. Defaults to `non_transactional`, which keeps transactional messages such as receipts and verification codes flowing. Apple Messages for Business phone invitations have no transactional exemption, so either value covers them.",
     )] = None
     sender_scope: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account; on Apple Messages for Business it is the Apple business ID used for invitations. Not supported on email, where preferences are always channel-wide.",
         examples=[+15557654321],
         max_length=255,
         min_length=1,
     )] = None
     source: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form note on where the statement came from: a form name, an import batch, a campaign. Stored verbatim and returned on the preference.",
         examples=["signup-form-v2"],
         max_length=255,
         min_length=1,
     )] = None
     consented_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When the person consented, on a `granted` statement. Required evidence when granting over a stored opt-out: the grant applies only if this is later than the opt-out it reverses. May not be in the future.",
     )] = None
 
@@ -5445,10 +5726,12 @@ class ContactProperty(BaseModel):
         description="The value type every contact must use for a property. Cannot be changed after creation.\n\n`datetime` values are RFC 3339 timestamps with an explicit offset. Examples include `2024-01-15T09:30:00Z` and `2024-01-15T11:30:00+02:00`. A bare date or a time with no offset is rejected. The value is normalized to UTC with second precision on write, so `2024-01-15T11:30:00+02:00` is stored and returned as `2024-01-15T09:30:00Z`, and any fractional seconds are dropped.",
     )]
     fallback_value: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to `500` characters), or `null` when no fallback is set.",
         max_length=500,
     )] = None
     archived: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the property is archived. Archived properties disappear from pickers and cannot be used in new template versions. Published templates keep sending. Stored values remain available to read and update. Unarchive the property to restore it.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -5486,7 +5769,7 @@ class ContactPropertyCreateRequest(BaseModel):
         description="The value type every contact must use for a property. Cannot be changed after creation.\n\n`datetime` values are RFC 3339 timestamps with an explicit offset. Examples include `2024-01-15T09:30:00Z` and `2024-01-15T11:30:00+02:00`. A bare date or a time with no offset is rejected. The value is normalized to UTC with second precision on write, so `2024-01-15T11:30:00+02:00` is stored and returned as `2024-01-15T09:30:00Z`, and any fractional seconds are dropped.",
     )]
     fallback_value: Annotated[Optional[Any], Field(
-        description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to `500` characters), or `null` for no fallback; a value of another type returns a validation error.",
+        description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime string matching the declared type (strings up to `500` characters); a value of another type returns a validation error. Omit or set to `null` for no fallback.",
         max_length=500,
     )] = None
 
@@ -5494,7 +5777,7 @@ class ContactPropertyCreateRequest(BaseModel):
 class ContactPropertyUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     fallback_value: Annotated[Optional[Any], Field(
-        description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime matching the declared type (strings up to `500` characters); a value of another type returns a validation error. Set to `null` to remove the fallback.",
+        description="Default used when a contact has no value for this property and the template does not supply an inline fallback. A string, number, boolean, or RFC 3339 datetime string matching the declared type (strings up to `500` characters); a value of another type returns a validation error. Set to `null` to remove the fallback; omit to leave it unchanged.",
         max_length=500,
     )] = None
 
@@ -5507,10 +5790,12 @@ class AudienceCreateRequest(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Longer description of who this audience is.",
         max_length=500,
     )] = None
     type: Annotated[Optional[Literal["static"]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the audience's recipients are determined. `static` is an explicit member list you manage by adding and removing contacts.",
     )] = None
 
@@ -5518,6 +5803,7 @@ class AudienceCreateRequest(BaseModel):
 class AudienceUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="New display name for the audience. Omit to keep the current name. The name cannot be cleared, and a whitespace-only value returns a validation error.",
         max_length=100,
         min_length=1,
@@ -5545,6 +5831,7 @@ class AudienceMembershipResponse(BaseModel):
     "Exact audience membership at evaluation time. Membership is absent when the count is unavailable."
     model_config = ConfigDict(extra="allow")
     membership: Annotated[Optional[AudienceMembershipSummary], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Exact count of all audience members at the source evaluation instant, including contacts without email and unsubscribed contacts.",
     )] = None
 
@@ -5600,6 +5887,7 @@ class AudienceMember(BaseModel):
         min_length=1,
     )]
     audiences: Annotated[Optional[List[AudienceRef]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The audiences this contact belongs to, including the one being listed, most-recently-joined first.",
     )] = None
 
@@ -5674,6 +5962,7 @@ class SMSBinary(BaseModel):
     "An 8-bit binary SMS payload, sent as one segment. `udh` plus `data` must fit 140 octets."
     model_config = ConfigDict(extra="allow")
     udh: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="User data header as hexadecimal, 1-16 octets. Required on a send: a binary send without it returns `422`. Its first octet must count the octets after it, every information element must fit inside it, and concatenation elements (`00`, `08`) are refused because the message is one segment.",
         examples=["0605041582158A"],
         pattern="^([0-9A-Fa-f]{2}){1,16}$",
@@ -5759,9 +6048,11 @@ class SMSMessageEffectiveOptions(BaseModel):
         description="Whether Bird replaced characters outside the GSM-7 alphabet in this message's body with their closest equivalent before sending it. When `true`, `text` is the body as sent and `segments` describes that body.",
     )]
     ignore_suppression: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="`true` when the send may reach the recipient even if they are suppressed for the sender, including after replying STOP. Only `authentication` and `transactional` messages can set it. Absent otherwise.",
     )] = None
     callback_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The callback URL that applies to this message, which receives its events instead of your webhook endpoints. Absent when the message has none, in which case its events go to your webhook subscriptions.",
     )] = None
 
@@ -5798,10 +6089,12 @@ class SMSInReplyToMessage(BaseModel):
         pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text of the outbound message as Bird stored it, with sensitive template values masked. Authentication messages without declared sensitive variables read `**REDACTED**`. Absent once that message is past the read window.",
         examples=["Reply YES to confirm your appointment on Friday."],
     )] = None
     sent_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Time Bird handed the outbound message to the carrier; the matching window counts from here. Absent once that message is past the read window.",
         examples=["2026-10-22T10:14:04.001Z"],
     )] = None
@@ -5836,11 +6129,13 @@ class SMSMessage(BaseModel):
         min_length=1,
     )]
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text, and on a binary message, which returns `binary` instead. For a template send, this is the rendered text after parameter substitution. System template messages preserve the surrounding text and mask sensitive codes with one asterisk per digit. Authentication messages without declared sensitive variables return `**REDACTED**`. The recipient receives the real code; message history retains only its masked representation.",
         examples=["Your order has shipped and is on its way."],
         min_length=1,
     )] = None
     binary: Annotated[Optional[SMSBinary], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The payload of a binary send, in place of `text`. Absent on every other message.",
     )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
@@ -5876,6 +6171,7 @@ class SMSMessage(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5887,32 +6183,40 @@ class SMSMessage(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` filter labels applied to this message.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON metadata stored on the message and echoed in webhook payloads.",
     )] = None
     options: Annotated[Optional[SMSMessageEffectiveOptions], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The settings applied to this message, with any option you omitted filled in with the default in force when you sent it. Absent on received messages, and on any outbound message for which no settings were recorded.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `validity_period` applied to the message, in seconds: the send's own, or else its messaging profile's. Absent when neither set one.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none, and on inbound messages.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message: the send's own, or else its messaging profile's. Absent when neither set one, and on inbound messages.",
         examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that handled the message. Absent until a delivery receipt identifies it, and on a received message the carrier reports it only where a carrier fee applies.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent until the carrier is identified.",
         examples=[311480],
     )] = None
@@ -5920,6 +6224,7 @@ class SMSMessage(BaseModel):
         description="Failure detail for a message that could not be delivered or was rejected.",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="On an outbound message, the country of the recipient's number. On a received message, the country of the sender's number, or of your number that received it when the sender is not a phone number, such as a short code or an alphanumeric sender. The same value as the message's `sms.*` events' `country_code`. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -5927,6 +6232,7 @@ class SMSMessage(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="On a received message, the outbound message it was paired with through its messaging profile's outbound matching. Absent on outbound messages and on received messages that were not paired.",
     )] = None
     created_at: Annotated[str, Field(
@@ -5965,9 +6271,11 @@ class SMSSendOptions(BaseModel):
     "Settings that change how Bird processes this message. Each option applies to this send only; omit one to use the value of the messaging profile in `messaging_profile_id`, or its default when the profile sets none."
     model_config = ConfigDict(extra="allow")
     smart_encoding: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replace characters outside the GSM-7 alphabet, typically curly quotes, dashes, ellipses, fullwidth forms and non-breaking spaces, with their closest GSM-7 equivalent before sending. One such character forces the whole body into `UCS2`, which more than halves the characters per segment, so replacing them often lowers the segment count and the cost. Off by default, because it alters the body you composed. The replacement is all-or-nothing: a body that still holds a character outside the alphabet, such as an emoji or a non-Latin script, is sent exactly as supplied. The message's `text` on a read is the body as sent.",
     )] = None
     ignore_suppression: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send even if the recipient is suppressed for the sender, including after replying STOP: Bird skips every suppression reason and records the flag on the message, while communication preferences the recipient revoked still apply. Only `authentication` and `transactional` messages take it; `true` on a `marketing` or `service` message returns `422`, as does any use before Bird enables it for your workspace. Omit it to use the setting of the profile in `messaging_profile_id`.",
     )] = None
     callback_url: Annotated[Optional[str], Field(
@@ -5976,9 +6284,11 @@ class SMSSendOptions(BaseModel):
         max_length=2048,
     )] = None
     track_clicks: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: link click tracking. Defaults to `false`. Currently unavailable; setting this to `true` returns `422 SMSUnsupportedFeature`.",
     )] = None
     max_price_per_segment: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: per-segment price ceiling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
 
@@ -5987,11 +6297,13 @@ class SMSTemplateSend(BaseModel):
     "A send-by-template reference. Identify the template by `id` or `slug`, or use the deprecated `name` for a legacy built-in template. Supply exactly one reference, optionally select a language, and pass variable values in `parameters`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["smt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^smt_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The workspace or built-in template to send, by its immutable slug. Read the template's live version to see its variables.",
         examples=["bird_otp_verification_ttl"],
         max_length=63,
@@ -5999,16 +6311,19 @@ class SMSTemplateSend(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Deprecated. Use `slug` instead. This resolves legacy built-in catalogue names and never matches a workspace template's display name.",
         min_length=1,
     )] = None
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.",
         examples=["fr"],
         max_length=35,
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A missing key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
     )] = None
 
@@ -6022,82 +6337,103 @@ class SMSMessageSendRequest(BaseModel):
         min_length=1,
     )]
     to_country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The ISO 3166-1 alpha-2 country whose national numbering plan `to` is written in, such as `NL` for `0612345678`. Bird converts `to` to E.164 before checking the destination, price and sender. An E.164 `to` is still accepted when its country calling code matches this country; a mismatch, or a national number that is not valid in this country, returns a `422` `SMSInvalidRecipient`. Omit it to send `to` in E.164.",
         examples=["NL"],
         pattern="^[A-Z]{2}$",
     )] = None
     from_: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="Sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. Any other sender returns `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and a workspace-template send, unless the profile in `messaging_profile_id` selects a sender for the destination country or has a default sender; omitting it otherwise returns `422`. A built-in template selects its sender itself and rejects `from`.",
         examples=[+15557654321],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-text message body, required unless `template` is set; the two are mutually exclusive. From 1 character up to 12 segments, roughly 1836 GSM-7 or 804 UCS-2 characters, since the two encodings fit different numbers of characters in a segment. Bird does not truncate: a longer body returns `422`.",
         examples=["Your verification code is 123456."],
         min_length=1,
     )] = None
     binary: Annotated[Optional[SMSBinary], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send an 8-bit binary payload instead of `text` or `template`. Requires `category` `transactional` and refuses `options.smart_encoding`. It is sent and charged as one segment.",
     )] = None
     category: Annotated[Optional[SMSMessageCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Content classification: why you are sending. Required on a free-text send unless the messaging profile in `messaging_profile_id` sets a default category; omit it on a template send, where the category is derived from the template. Where the destination country requires the sender to be registered, a category outside what that registration covers returns a `422` `SenderCategoryNotPermitted`.",
     )] = None
     validity_period: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How long, in seconds (60-172800), the message may wait for delivery after acceptance. Bird does not submit it to the carrier after that deadline, and passes the remaining time to the carrier where the route supports it. A message that misses the deadline before reaching the carrier ends `rejected` or `failed`; `expired` comes only from a carrier report. Omit it to use the validity period of the profile in `messaging_profile_id`, or the carrier's own rules when the profile sets none.",
         ge=60,
         le=172800,
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your accounting identifier for this message, such as a department code. Stored on the message and its usage record, returned on reads, and echoed in webhook payloads. Omit it to use the cost center of the messaging profile in `messaging_profile_id`. Accepting it does not change how the message is priced.",
         examples=["CC001234"],
         max_length=64,
         min_length=1,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` labels, up to 20 per send. You can filter the list endpoint by tag name, slice analytics by tag, and read them in webhook payloads. Use them for low-cardinality dimensions such as `category` or `experiment_variant`, and `metadata` for context you do not filter by.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON object stored on the message, returned on API reads, and echoed in webhook payloads. Maximum 2 KB serialized. Use metadata for per-send context like internal IDs and foreign keys. For low-cardinality filterable labels, use `tags` instead.",
     )] = None
     options: Annotated[Optional[SMSSendOptions], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What Bird does to this message on its way out, such as `smart_encoding`. The message being relayed stays at the top level: its recipient, sender, content, and the delivery instructions the carrier acts on.",
     )] = None
     media_urls: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The messaging profile that supplies this message's sender and defaults. Without `from`, Bird sends from the profile's sender for the destination country, or its default sender. An omitted `category` on a free-text send, `smart_encoding`, `cost_center`, `validity_period`, `options.callback_url` and `options.ignore_suppression` take the profile's settings, and values set on the message take precedence. A built-in template sends from Bird's system sender and ignores the profile's senders. A profile that does not exist in this workspace returns `422` `SMSMessagingProfileNotFound`, and a `from` bound to a different profile returns `422` `SMSMessagingProfileSenderBound`.",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: send-later scheduling. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     template: Annotated[Optional[SMSTemplateSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send using a stored template instead of free text. The category is derived from the template, so `category` and `media_urls` are rejected. A workspace template requires `from`; a built-in template selects its sender and rejects `from`.",
     )] = None
     broadcast_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: broadcast correlation. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     campaign_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: campaign correlation for analytics. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     audience_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: audience-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: contact-targeted sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     topic_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: topic-gated sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
     personalization: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview feature: per-recipient substitution for batch sends. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
     )] = None
 
@@ -6168,10 +6504,12 @@ class SMSEvent(BaseModel):
         min_length=1,
     )]
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that handled the message. Present on `sms.sent` and `sms.delivered` once identified, absent otherwise.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Present on `sms.sent` and `sms.delivered` once identified, absent otherwise.",
         examples=[311480],
     )] = None
@@ -6219,6 +6557,7 @@ class SMSTemplateLanguageState(BaseModel):
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
     )]
     draft: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the draft has an unpublished change for this language. When true beside `live`, sends keep using the older published text until submit.",
     )] = None
 
@@ -6458,9 +6797,11 @@ class TemplateVariable(BaseModel):
         min_length=1,
     )]
     sensitive: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this slot requires redacted message history. Published email template sends that store recipient snapshots reject sensitive inputs before acceptance. Other channels retain their own sensitive-input delivery and retention rules.",
     )] = None
     system: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the value comes from Bird rather than from the send. Absent means false. System slots are identified by the reserved `bird` key or a dotted path beneath it. They appear on email templates, and, in the template parameters preview, on WhatsApp templates whose parameter bindings read contact data; every SMS slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
     )] = None
 
@@ -6894,6 +7235,7 @@ class SMSKeywordRuleCreate(BaseModel):
         min_length=1,
     )] = None
     keywords: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Extra keywords to match, on top of the ones Bird already ships for this operation and country. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. You cannot remove one of Bird's keywords, and a keyword Bird has bound to another operation cannot be reused here. Required for `custom`, which inherits none.",
     )] = None
     reply: Annotated[Optional[str], Field(
@@ -6902,6 +7244,7 @@ class SMSKeywordRuleCreate(BaseModel):
         min_length=1,
     )] = None
     confirmed_self_managed: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set this with `reply: null` to confirm you send this reply from your own system, which switches Bird's auto-reply off for the rule. Required to send no reply, and rejected when a reply is given, so the two can never disagree.",
         examples=[True],
     )] = None
@@ -6911,6 +7254,7 @@ class SMSKeywordRuleUpdate(BaseModel):
     "Changes the reply and the added keywords. What a rule applies to (its operation, country, language and number) is fixed once created: those decide which inbound messages reach it, so changing one would make it a different rule. Delete it and create the one you want."
     model_config = ConfigDict(extra="allow")
     keywords: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.",
     )] = None
     reply: Annotated[Optional[str], Field(
@@ -6919,6 +7263,7 @@ class SMSKeywordRuleUpdate(BaseModel):
         min_length=1,
     )] = None
     confirmed_self_managed: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set this with `reply: null` to confirm you send this reply from your own system. Required to switch the auto-reply off, and rejected when a reply is given.",
         examples=[True],
     )] = None
@@ -6983,15 +7328,19 @@ class ComplianceItemState(str, Enum):
 class ComplianceRequirementField(BaseModel):
     model_config = ConfigDict(extra="allow")
     parent_key: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Parent field grouping this named document. Absent for an ordinary field.",
     )] = None
     document_key: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stable document key within the parent field. Absent for an ordinary field.",
     )] = None
     parent_label: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Display name of the parent field grouping this document. Absent for an ordinary field.",
     )] = None
     parent_help_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The parent field's own description, shared by every document in the group. Each document's `help_text` describes that document alone. Absent for an ordinary field and when the parent has no description.",
     )] = None
     key: Annotated[str, Field(
@@ -7085,6 +7434,7 @@ class Attachment(BaseModel):
     )]
     size_bytes: Annotated[int, Field(description="The file's size in bytes.")]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A short note describing what the file shows.",
         max_length=255,
     )] = None
@@ -7096,6 +7446,7 @@ class Attachment(BaseModel):
         min_length=1,
     )]
     preview_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional signed URL for inline viewing on an isolated storage origin. Valid for one hour; fetch the attachment again to refresh it.",
     )] = None
     download_url_expires_at: Annotated[str, Field(
@@ -7123,6 +7474,7 @@ class ComplianceIdentityAnswer(BaseModel):
         description="When this party last filed the detail. Filing it is what records it here, so it is never a statement that a reviewer agreed with the value. Filing the same value again can carry a previous approval of it forward instead of putting it in front of a reviewer. `null` for a detail recorded before the container began tracking submissions.",
     )]
     state: Annotated[Optional[Annotated[Union[ComplianceItemState, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where review has got to on this exact value. Absent when no registration has ruled on it, which covers a detail nobody has reached yet and one filed before the container recorded which submission it came from.\n\nOne value can be filed on several registrations and decided differently on each, and one verdict is reported for it. A live approval wins, because it is proof the value is acceptable. Failing that a refusal wins over a registration still waiting, since waiting is nobody having looked yet rather than evidence against a refusal. An approval past its validity period is neither: it reads as `expired` and ranks below a refusal, above anything still waiting. `not_applicable` is reported last, because it is a statement about a requirement rather than about the value.",
     )] = None
     reason: Annotated[Optional[str], Field(
@@ -7230,6 +7582,7 @@ class AttachmentUpload(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A short note describing what the file shows.",
         max_length=255,
     )] = None
@@ -7281,14 +7634,17 @@ class AssetUploadSessionCreate(BaseModel):
         description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Display name. Omitted or blank names default to the sanitized filename.",
         max_length=255,
     )] = None
     alt_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Default alternative text for the asset.",
         max_length=1000,
     )] = None
     folder_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["asf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
@@ -7403,6 +7759,7 @@ class AssetUploadSessionInstruction(BaseModel):
         description="Available next steps for this session.",
     )]
     upload: Annotated[Optional[AssetUploadInstruction], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send the original file bytes to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds.",
     )] = None
 
@@ -7608,6 +7965,7 @@ class AssetUpdate(BaseModel):
     "Fields to change on an asset. Omit a field to leave it as it is. The asset's bytes and URL are fixed and cannot be changed."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The asset's display name.",
         max_length=255,
         min_length=1,
@@ -7731,6 +8089,7 @@ class AssetFolderUpdate(BaseModel):
     "Fields to change on a folder. Omit a field to leave it as it is. Renaming a folder or moving it changes nothing about the assets inside it, including their URLs."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The folder's display name. Must be unique among folders sharing the same parent, compared without regard to case. Cannot contain `/`.",
         max_length=255,
         min_length=1,
@@ -7804,6 +8163,7 @@ class ComplianceGeneralReasons(RootModel[List[str]]):
 class ComplianceRequirement(BaseModel):
     model_config = ConfigDict(extra="allow")
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this country's requirements, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nWhether anything is asked of you is `needs_input`, and this says what to do about it: send your\nanswers where none have been filed, or replace the ones that were refused. Which items those\nare, and why each was refused, is on the item in `fields`. For feedback about the\nwhole submission, read `reason` and `general_reasons` and update the details that need correction.",
     )] = None
     subject_kind: ComplianceSubjectKind
@@ -7867,6 +8227,7 @@ class ComplianceSubmissionIdentity(BaseModel):
     "Registers this on behalf of a party you have not stored yet, creating it as part\nof the submission so you do not need a separate call. Exclusive with\n`identity_id`.\n\nEach time you send this you get a new party. Single-value identity answers filed for one\nare reused by registrations naming the same party. Documents and lists are\nsupplied separately for each registration. Send this once and use the\n`identity_id` from the response for the countries that follow."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to call the party. Optional: left out, it takes the legal entity name you supplied. If this country's form does not ask for one, send a name here.",
         examples=["Goldcrest Communications SAS"],
         max_length=200,
@@ -7883,22 +8244,26 @@ class ComplianceAnswer(BaseModel):
         min_length=1,
     )]
     value: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The answer, for a requirement answered inline. Send every answer as a string whatever its data type, so a number goes as `\"1500\"` and a yes-or-no as `\"true\"`.",
         examples=[90012768],
         min_length=1,
     )] = None
     attachment_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The uploaded document, for a requirement that takes one. Upload the file as an attachment first, then send the id it returns.",
         examples=["tca_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     values: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The answers, for a requirement whose `max_items` is set and which is answered inline. Send each as a string whatever its data type, and send them in the order you mean them to be read. At most `max_items` of them.",
         max_length=50,
         min_length=1,
     )] = None
     attachment_ids: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The uploaded documents, for a requirement whose `max_items` is set and which takes documents. Upload each file first and send the ids it returns, in order. At most `max_items` of them.",
         max_length=50,
         min_length=1,
@@ -7927,12 +8292,14 @@ class ComplianceSubmissionCreate(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )]
     identity_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An existing party this registration is for. It fills in the business details you left out from what that party already holds, and each single-value answer you file about the party is written back onto it for next time, whatever the verdict. Documents and multi-value answers are asked fresh each time. Send this or `identity`, never both. An id belonging to another organization is rejected; nothing is created here. When `subject_kind` is `identity`, send neither: `subject_id` already names the party.",
         examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     identity: Annotated[Optional[ComplianceSubmissionIdentity], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Registers this on behalf of a party you have not stored yet, creating it as part\nof the submission so you do not need a separate call. Exclusive with\n`identity_id`.\n\nEach time you send this you get a new party. Single-value identity answers filed for one\nare reused by registrations naming the same party. Documents and lists are\nsupplied separately for each registration. Send this once and use the\n`identity_id` from the response for the countries that follow.",
     )] = None
     answers: Annotated[List[ComplianceAnswer], Field(
@@ -7989,6 +8356,7 @@ class ComplianceSubmissionItem(BaseModel):
 class ComplianceSubmission(BaseModel):
     model_config = ConfigDict(extra="allow")
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this submission, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nA submission reports the answers you filed; whether the country's requirements are met is\nreported by the requirements read. So this points there rather than repeating a verdict it\ndoes not own.",
     )] = None
     id: Annotated[str, Field(
@@ -8097,6 +8465,7 @@ class SMSOriginatorStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle counts for this originator, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
     )] = None
 
@@ -8129,6 +8498,7 @@ class SMSCostCenterStatsPoint(BaseModel):
     delivery: SMSDeliveryStats
     latency: SMSLatencyStats
     trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket lifecycle counts for this cost center, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
     )] = None
 
@@ -8287,6 +8657,7 @@ class SMSSender(BaseModel):
     )]
     source_kind: Annotated[Union[SMSSenderSourceKind, str], Field(union_mode="left_to_right")]
     sender_type: Annotated[Optional[SMSSenderType], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The kind of sender identity this is, which decides what each destination country asks of it. It is finer than source_kind: a short code and an ordinary long code are both numbers but follow different rules.",
     )] = None
     country_code: Annotated[Optional[str], Field(
@@ -8297,6 +8668,7 @@ class SMSSender(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     number_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number this sender sends from, as returned in the `id` field of `GET /v1/numbers`. Present only when `source_kind` is `number` or `shared_number`; an alphanumeric sender has no number behind it. Exactly one sender exists per number, so this is also how you go the other way: `GET /v1/sms/senders?number_id={id}` returns this sender.",
         examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -8304,6 +8676,7 @@ class SMSSender(BaseModel):
     )] = None
     status: SMSSenderStatus
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this sender, given the state it is in. Present on reads that\ncompute it: an empty list means there is nothing to do, and the field is absent entirely\non responses that do not report next actions.\n\nThis routes rather than advises. A sender only knows about itself, so where the work is\nper-country it names the requirements read rather than guessing which country you meant.",
     )] = None
     destinations: SMSSenderDestinations
@@ -8407,6 +8780,7 @@ class SMSSenderRequirement(BaseModel):
         description="Where this sender stands with this country's registration programme. The `approved` and `not_required` statuses satisfy it. Every other status leaves it unsatisfied: the `registration_required` status means the required registration has not started, the `pending` status means something required is still owed by you, and `under_review` means it is all with us. Read `next` for what to do about any of it.\n\nRegistration blocks sending when `registration_mode` is `required`. Optional registration can be pending while sending remains available with `sender_id_behavior` set to `overwritten`. Check `destination_enabled` too, which is independent of registration progress.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this country, given the state it is in. Each entry names one action\nand says why it is worth taking, so you can act on this response without working out the\norder yourself. Present on reads that compute it: an empty list means there is nothing to\ndo, and the field is absent entirely on responses that do not report next actions.\n\nThis routes rather than advises: it names where to go to act on this country, and the\nresource it names carries what to do there. So a country under carrier review names the\nverification to read, rather than restating a verdict that resource owns.",
     )] = None
     destination_enabled: Annotated[bool, Field(
@@ -8446,6 +8820,7 @@ class SMSSenderRequirement(BaseModel):
         description="Longest time approval usually takes, in business days. Null when the country publishes no estimate.",
     )] = None
     registration_types: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Registration categories this country's program accepts.",
     )] = None
 
@@ -8488,6 +8863,7 @@ class SMSCountryRegistrationCreate(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )]
     category: Annotated[Optional[SMSMessageCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Message category to register the sender for. Omit to register the sender for all categories.",
     )] = None
 
@@ -8513,9 +8889,11 @@ class SMSCountryRegistration(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )]
     registration_mode: Annotated[Optional[SMSRegistrationMode], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Current registration policy for this destination and sender type. Omitted if the policy or sender is no longer available.",
     )] = None
     sender_id_behavior: Annotated[Optional[SMSSenderIDBehavior], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Expected sender ID behavior for this registration's message categories. Optional registration preserves the sender ID once approved. Required registration can still use an overwritten sender ID after approval. Omitted if the policy or sender is no longer available.",
     )] = None
     program: Annotated[Optional[Annotated[Union[SMSRegistrationProgram, str], Field(union_mode="left_to_right")]], Field(
@@ -8554,6 +8932,7 @@ class PhoneNumberLookupRequest(BaseModel):
         min_length=1,
     )]
     type: Annotated[Optional[List[LookupProperty]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Properties to add to the base lookup. Omit this field or send an empty\narray to request only the base lookup.\n\nEach delivered property is billed in addition to the base lookup. A\nproperty that could not be answered is returned with its status and is\nnot billed.",
     )] = None
 
@@ -8627,6 +9006,7 @@ class LookupClassification(BaseModel):
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     value: Annotated[Optional[LookupClassificationValue], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The allocated service of the range. Present only when `status` is `ok`.",
     )] = None
 
@@ -8636,6 +9016,7 @@ class LookupPresence(BaseModel):
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     reachable: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the number is registered on a network and able to receive traffic. A `false` value means the network answered and reported the number as currently unreachable. This differs from the API being unable to find out. Present only when `status` is `ok`.",
     )] = None
 
@@ -8645,6 +9026,7 @@ class LookupRoaming(BaseModel):
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     is_roaming: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the number is currently roaming outside its home network. Present only when `status` is `ok`.",
     )] = None
     mcc: Annotated[Optional[str], Field(
@@ -8686,15 +9068,18 @@ class LookupPorting(BaseModel):
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     ported: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the number has ever moved network. `false` is a positive finding rather than a lack of one: the registry was consulted and holds no move for this number. Present only when `status` is `ok`.",
     )] = None
     last_ported_at: Annotated[Optional[str], Field(
         description="When the number last moved network. Absent when it has never ported or when no date is on record.",
     )] = None
     last_ported_at_is_approximate: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether `last_ported_at` is an approximation. Some registries record the period of a move without its exact day.",
     )] = None
     history: Annotated[Optional[List[LookupPortingEvent]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Every move on record, oldest first. Absent when the number has never ported or when its registry publishes no history.",
     )] = None
 
@@ -8704,6 +9089,7 @@ class LookupScore(BaseModel):
     model_config = ConfigDict(extra="allow")
     status: Annotated[Union[LookupPropertyStatus, str], Field(union_mode="left_to_right")]
     value: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Credibility from 0 (low) to 100 (high). A low score means the number looks less credible than a typical subscriber line in the same range. Treat it as one signal instead of a verdict. It is a composite and is not derivable from the other properties. Present only when `status` is `ok`.",
         ge=0,
         le=100,
@@ -8735,21 +9121,27 @@ class PhoneNumberLookup(BaseModel):
     )]
     line_type: LookupLineType
     classification: Annotated[Optional[LookupClassification], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The allocated service of the number's range. Absent unless you requested the `classification` property.",
     )] = None
     presence: Annotated[Optional[LookupPresence], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the number is live on its network. Absent unless you requested the `presence` property.",
     )] = None
     roaming: Annotated[Optional[LookupRoaming], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the number is roaming. Absent unless you requested the `roaming` property.",
     )] = None
     sim_swap: Annotated[Optional[LookupSimSwap], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When the number's SIM last changed. Absent unless you requested the `sim_swap` property.",
     )] = None
     porting: Annotated[Optional[LookupPorting], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number's porting record. Absent unless you requested the `porting` property.",
     )] = None
     score: Annotated[Optional[LookupScore], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number's credibility score. Absent unless you requested the `score` property.",
     )] = None
 
@@ -8805,9 +9197,11 @@ class EmailLookup(BaseModel):
         description="Notable characteristics of the address. Empty when none apply.",
     )]
     reason: Annotated[Optional[Annotated[Union[EmailLookupReason, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An explanation for the assessment. Can accompany an undeliverable, risky, or typo result; omitted when no recognized reason is available.",
     )] = None
     did_you_mean: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address this one looks like a misspelling of. Absent unless a correction was found, which in practice means `result` is `typo`. Offer it to whoever typed the original rather than sending to it unasked, because it is a guess and the address they meant may be neither one.",
         max_length=254,
         min_length=3,
@@ -8844,9 +9238,11 @@ class EmailLookupBatchItem(BaseModel):
         description="Notable characteristics of the address. Empty when none apply.",
     )]
     reason: Annotated[Optional[Annotated[Union[EmailLookupReason, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An explanation for the assessment. Can accompany an undeliverable, risky, or typo result; omitted when no recognized reason is available.",
     )] = None
     did_you_mean: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address this one looks like a misspelling of. Absent unless a correction was found, which in practice means `result` is `typo`. Offer it to whoever typed the original rather than sending to it unasked, because it is a guess and the address they meant may be neither one.",
         max_length=254,
         min_length=3,
@@ -8870,11 +9266,13 @@ class VerificationTo(BaseModel):
     "The recipient to verify. Provide an `email`, a `phone_number`, or both; at least one is required. The addresses also identify the verification: a check must supply exactly the set used on the create call, so a verification created with both addresses is not found by either one alone."
     model_config = ConfigDict(extra="allow")
     email: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The recipient's email address. Case does not matter; the address is lowercased before use.",
         examples=["user@example.com"],
         min_length=1,
     )] = None
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The recipient's phone number in E.164 format, with the leading `+` and country code (for example `+15551234567`). A number in any other format is rejected as an invalid recipient (`422`).",
         examples=[+15551234567],
         min_length=1,
@@ -8936,6 +9334,7 @@ class Verification(BaseModel):
         description="The channel the most recent passcode was sent on, or `null` before the first send. Open enum; new channels may be added over time, so treat any unrecognized value as a future channel rather than an error.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The key/value pairs attached when the verification was created.",
     )] = None
     expires_at: Annotated[str, Field(
@@ -8953,26 +9352,32 @@ class VerificationOptions(BaseModel):
     "Per-request overrides applied to this verification only."
     model_config = ConfigDict(extra="allow")
     code_length: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Passcode length for this verification. Omit to use the configured length.",
         ge=4,
         le=8,
     )] = None
     channels: Annotated[Optional[List[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Reorder or narrow the delivery channels for this request. List channel names in the order to try them; a channel you omit is not used for this request, and a channel not already enabled for the recipient is ignored. A list that leaves no usable channel fails the request with `422`. Omit the field to use the configured order.",
     )] = None
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )] = None
     autofill_origin: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The website this verification's passcodes are entered on, such as `https://login.example.com`, replacing the configured origin for this verification only. Write it as `https://` and a lowercase host, with no port, path or trailing slash; an internationalized host uses its `xn--` form. Any other form is rejected with `422`, naming the form to send when there is one. Each SMS passcode then ends with a line such as `@login.example.com #123456`, which browsers read to offer the code on that site and which can add an SMS segment in languages that need Unicode encoding. Each email passcode carries an `OTP-Token` header with the code and this website, unless `autofill_top_level_origin` is set. An `android_app_hash` replaces the SMS line. A retry of a verification still in progress keeps the origin it started with.",
     )] = None
     autofill_top_level_origin: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="For a passcode entered in a cross-origin frame, such as a payment form embedded in a shop's checkout, the website of the top-level page in the browser tab. `autofill_origin` then names the frame. The SMS line names both sites, as in `@shop.example #123456 @pay.example`, and email passcodes carry no `OTP-Token` header, which can name only one site. It uses the same format as `autofill_origin`. The request is rejected with `422` when the value is not in that format, when no `autofill_origin` is set in the request or the configuration, or when it equals that origin. Autofill works only when this page embeds the frame directly.",
     )] = None
     android_app_hash: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The Android app that reads this verification's SMS passcodes through Google's SMS Retriever API, replacing the configured hash for this verification only. Send the 11-character app hash computed from the app's package name and signing certificate, such as `FA+9qCX9VSu`; any other form is rejected with `422`. Each SMS passcode is then a short message ending with the hash on its own line, within the API's 140-byte limit, and names no website. Email passcodes don't change: they carry the `OTP-Token` header exactly as they would without a hash. A retry of a verification still in progress keeps the hash it started with.",
     )] = None
 
@@ -8983,9 +9388,11 @@ class VerificationCreateRequest(BaseModel):
         description="The recipient to verify. Provide an `email`, a `phone_number`, or both; at least one is required. The addresses also identify the verification: a check must supply exactly the set used on the create call, so a verification created with both addresses is not found by either one alone.",
     )]
     options: Annotated[Optional[VerificationOptions], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-request overrides applied to this verification only.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification.",
     )] = None
 
@@ -9085,15 +9492,18 @@ class WhatsAppTemplateExampleParameter(BaseModel):
         description="The kind of value this parameter accepts.",
     )]
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An example value for a text parameter. Present when `type` is `text`.",
         examples=[123456],
         min_length=1,
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address of the file a media header shows, as it was given when the header was authored rather than WhatsApp's copy of it. Present when `type` is `image`, `video`, `gif` or `document`.",
         examples=["https://www.example.com/holiday/banner.jpg"],
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The named placeholder this example fills. Present whenever the template declares named parameters, which is what a send must name; absent only for a positional template, whose values go in `{{n}}` order.",
         examples=["first_name"],
         min_length=1,
@@ -9121,26 +9531,31 @@ class WhatsAppTemplateButton(BaseModel):
         min_length=1,
     )]
     otp_type: Annotated[Optional[Annotated[Union[WhatsAppTemplateButtonOtpType, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.",
         examples=["copy_code"],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The button's label. Absent on an authentication template's passcode button until the language has been submitted, since WhatsApp writes that label itself. Absent on a `request_contact_info` draft for a related reason: WhatsApp fixes that label, so a draft that carried it reads back without it. Once the language is submitted, this carries the label WhatsApp wrote, which is `Share Contact Info` in every language today.",
         examples=["Copy code"],
         min_length=1,
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address the button opens, with any variable placeholder shown inline. Present on link buttons.",
         examples=["https://www.example.com/orders/{{1}}"],
         min_length=1,
     )] = None
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number the button dials. Present on dial buttons.",
         examples=[+14155550100],
         min_length=1,
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Example values for this button's variables, in placeholder order. Present when the button address has variables, and on a `copy_code` button, where the single value is the sample coupon code WhatsApp reviewed.",
     )] = None
 
@@ -9165,19 +9580,23 @@ class WhatsAppTemplateCardComponent(BaseModel):
         min_length=1,
     )]
     format: Annotated[Optional[Annotated[Union[WhatsAppTemplateCardComponentFormat, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The card header's content type. Present on a card's header block.",
         examples=["image"],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The block's text content, with any variable placeholders shown inline.",
         examples=["Chronograph, brown leather"],
         min_length=1,
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Example values for this block's variables, in placeholder order.",
     )] = None
     buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The buttons this card carries. Present on a card's buttons block.",
     )] = None
 
@@ -9215,29 +9634,36 @@ class WhatsAppTemplateComponent(BaseModel):
         min_length=1,
     )]
     format: Annotated[Optional[Annotated[Union[WhatsAppTemplateComponentFormat, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The header block's content type. Present on a header block. A `text` header carries a line of copy. The `image`, `video`, `gif`, and `document` formats each show a file whose address is in the block's `example_parameters`. The `location` format shows a map. It carries no content because the coordinates belong to the message rather than the template.",
         examples=["text"],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The block's text content, with any variable placeholders shown inline. Present when the block carries text. An authentication template's body and footer are written by WhatsApp from the two settings below rather than by you, so their text is absent until the language has been submitted and WhatsApp has supplied it.",
         examples=["Your verification code is {{1}}."],
         min_length=1,
     )] = None
     add_security_recommendation: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this authentication template's body ends with WhatsApp's advice not to share the code. Present on an authentication template's body block.",
     )] = None
     code_expiration_minutes: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How long the passcode stays valid, which WhatsApp states in this footer. Present on an authentication template's footer block. Omitting it on a write leaves the footer off entirely.",
         examples=[60],
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Example values for this block's variables, in placeholder order (one per `{{n}}`). Use them to see what a filled message looks like. Present when the block has variables.",
     )] = None
     buttons: Annotated[Optional[List[WhatsAppTemplateButton]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The buttons attached to this block. Present when the block carries buttons.",
     )] = None
     cards: Annotated[Optional[List[WhatsAppTemplateCard]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The cards this block scrolls through, in display order. Present on a `carousel` block.",
     )] = None
 
@@ -9261,26 +9687,31 @@ class WhatsAppAddress(BaseModel):
     "Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Phone number in E.164 format, when known.",
         examples=[+15550001111],
         min_length=1,
     )] = None
     bsuid: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Business-scoped user ID, Meta's identifier for the WhatsApp user. Present only on the WhatsApp-user side of the message.",
         examples=["NL.xxxx"],
         min_length=1,
     )] = None
     group_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The group this address was addressed as, or reached through. It appears on a message's `to` and nowhere else: never on `from`, and never on an event's `recipient`. Outbound, it stands in for the recipient, because a group send names no single phone number. Inbound, it qualifies one: `to` carries the business `phone_number` that received the message and the group it arrived through, while `from` stays the participant who wrote it. Its presence on `to` is what tells a group message from a one-to-one one, in either direction.",
         examples=["wag_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wag_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     username: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present only on a message received from a WhatsApp user, on `from`; never on an outbound send's `to`, where the profile is not known. Absent when the contact has not adopted one, and on a message received before this workspace started recording them. Same form as a number's own username (`WhatsAppNumberProfile.username`), without a leading `@`; a message cannot be addressed by it.",
         min_length=1,
     )] = None
     display_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present only on a message received from a WhatsApp user, on `from`; never on an outbound send's `to`, where the profile is not known. Absent when the message carries no profile, and on a message received before this workspace started recording them.",
         min_length=1,
     )] = None
@@ -9302,11 +9733,13 @@ class WhatsAppLocationSend(BaseModel):
         le=180,
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Place name, shown above the address.",
         examples=["Ferry Building"],
         max_length=1000,
     )] = None
     address: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Street address; shown only with `name`.",
         examples=["1 Ferry Building, San Francisco, CA 94111"],
         max_length=1000,
@@ -9319,24 +9752,29 @@ class WhatsAppMessageTemplateComponentParameter(BaseModel):
         description="Value kind; determines which field to supply.",
     )]
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Placeholder value for a `text` parameter.",
         min_length=1,
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Public HTTPS media-header URL, fetched at send time. For `image`, `video`, `gif`, or `document` parameters.",
         examples=["https://cdn.example.com/receipts/a1b2c3.png"],
         min_length=1,
     )] = None
     filename: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Document name with extension; rejected on other parameter types.",
         examples=["invoice-a1b2c3.pdf"],
         max_length=100,
         min_length=1,
     )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Map point for a `location` header parameter.",
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Placeholder name, such as `first_name`; required on every named parameter. Omit for positional templates and supply values in `{{n}}` order.",
         min_length=1,
     )] = None
@@ -9357,6 +9795,7 @@ class WhatsAppMessageTemplateCardComponent(BaseModel):
         min_length=1,
     )]
     parameters: Annotated[Optional[List[WhatsAppMessageTemplateComponentParameter]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The values that fill this part's placeholders, in placeholder order.",
     )] = None
 
@@ -9383,9 +9822,11 @@ class WhatsAppMessageTemplateComponent(BaseModel):
         min_length=1,
     )]
     parameters: Annotated[Optional[List[WhatsAppMessageTemplateComponentParameter]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Placeholder values in `{{n}}` order, or named. Required except for `carousel`, which uses `cards`. Omit button parts without variables.",
     )] = None
     cards: Annotated[Optional[List[WhatsAppMessageTemplateCard]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="For `carousel` only: one entry per approved card, in approval order.",
         max_length=10,
         min_length=2,
@@ -9412,6 +9853,7 @@ class WhatsAppMessageTemplate(BaseModel):
         min_length=2,
     )]
     bid_multiplier: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `bid_multiplier` the message was sent with. Absent when the send named none, which bids at 1. Also absent on messages sent before Bird stored it.",
         examples=[0.8],
     )] = None
@@ -9438,20 +9880,24 @@ class WhatsAppImage(BaseModel):
     "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     caption: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text shown beneath the image. Absent when the sender wrote none.",
         examples=["Your receipt for order A1B2C3"],
     )] = None
@@ -9461,20 +9907,24 @@ class WhatsAppVideo(BaseModel):
     "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     caption: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text shown beneath the video. Absent when the sender wrote none.",
         examples=["How to set it up"],
     )] = None
@@ -9484,20 +9934,24 @@ class WhatsAppAudio(BaseModel):
     "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     voice: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this is a voice note rather than an attached audio file. A voice note auto-downloads in the WhatsApp client and can be transcribed for the recipient.",
         examples=[True],
     )] = None
@@ -9507,20 +9961,24 @@ class WhatsAppSticker(BaseModel):
     "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     animated: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the sticker is animated. Absent on an outbound message.",
         examples=[False],
     )] = None
@@ -9530,24 +9988,29 @@ class WhatsAppDocument(BaseModel):
     "Fields shared by every media content object on a WhatsApp message."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the stored file, to pass as `media_id` when fetching it. Absent on a message sent through Bird, whose file we never stored.",
         examples=["waf_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^waf_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where to fetch the media. On an inbound message, or one from the WhatsApp Business app, this is a Bird URL you fetch with your API key. The file expires with the message, 30 days after it arrives, and the link returns `404` from then on. If the file is gone while the message is still readable, the link returns `410`. On a message sent through Bird it is the URL the sender supplied, whose availability is the sender's to guarantee.",
         examples=["https://platform.bird.com/v1/whatsapp/messages/wam_01kya19eknftrs2s6p82asmvnh/media/waf_01kyb2m4xq7whs0d8n3prv6tez"],
     )] = None
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type WhatsApp reported for the file, for example `image/jpeg`. Absent on messages sent through Bird.",
         examples=["image/jpeg"],
     )] = None
     caption: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text shown beneath the document. Absent when the sender wrote none.",
         examples=["Signed contract"],
     )] = None
     filename: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The sender's own name for the file.",
         examples=["contract-a1b2c3.pdf"],
     )] = None
@@ -9557,22 +10020,27 @@ class WhatsAppLocation(BaseModel):
     "Location content of a WhatsApp message: a point on the map the recipient can open in their maps app."
     model_config = ConfigDict(extra="allow")
     latitude: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Latitude in decimal degrees.",
         examples=[52.3702],
     )] = None
     longitude: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Longitude in decimal degrees.",
         examples=[4.8952],
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Name of the place. Absent when the sender shared a plain pin.",
         examples=["Bird HQ"],
     )] = None
     address: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Street address of the place. Shown only when `name` is also set.",
         examples=["Keizersgracht 117, Amsterdam"],
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Link to the place, which WhatsApp includes mainly for business locations. Present on an inbound message when the sender's client supplied one, and absent on a message you sent, since sending a location does not support this field.",
         examples=["https://www.google.com/maps/place/Statue+of+Liberty/@40.6246301,-74.5291919,124716m/"],
     )] = None
@@ -9582,32 +10050,59 @@ class WhatsAppContactName(BaseModel):
     "The contact's name, in the parts their device supplied. Every part is optional: WhatsApp sends what the card holds and omits the rest."
     model_config = ConfigDict(extra="allow")
     formatted_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The whole name as the contact's device renders it.",
         examples=["Barbara J. Johnson"],
     )] = None
-    first_name: Annotated[Optional[str], Field(examples=["Barbara"])] = None
-    middle_name: Annotated[Optional[str], Field(examples=["Joana"])] = None
-    last_name: Annotated[Optional[str], Field(examples=["Johnson"])] = None
-    prefix: Annotated[Optional[str], Field(examples=["Dr."])] = None
-    suffix: Annotated[Optional[str], Field(examples=["Esq."])] = None
+    first_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Barbara"],
+    )] = None
+    middle_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Joana"],
+    )] = None
+    last_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Johnson"],
+    )] = None
+    prefix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Dr."],
+    )] = None
+    suffix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Esq."],
+    )] = None
 
 
 class WhatsAppContactOrg(BaseModel):
     "Where the contact works, as their card records it."
     model_config = ConfigDict(extra="allow")
-    company: Annotated[Optional[str], Field(examples=["Lucky Shrub"])] = None
-    department: Annotated[Optional[str], Field(examples=["Engineering"])] = None
-    title: Annotated[Optional[str], Field(examples=["Software Engineer"])] = None
+    company: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Lucky Shrub"],
+    )] = None
+    department: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Engineering"],
+    )] = None
+    title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Software Engineer"],
+    )] = None
 
 
 class WhatsAppContactPhone(BaseModel):
     "One phone number on a shared contact card."
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number as the card holds it, normalized to E.164 where we can parse it. A card is whatever the contact's device stored, so a number that no country's numbering plan accepts, an extension among them, is passed through exactly as it arrived rather than dropped. Parse defensively: most values are E.164 and none is guaranteed to be.",
         examples=[+16505551234],
     )] = None
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["cell"],
     )] = None
@@ -9616,8 +10111,12 @@ class WhatsAppContactPhone(BaseModel):
 class WhatsAppContactEmail(BaseModel):
     "One email address on a shared contact card."
     model_config = ConfigDict(extra="allow")
-    email: Annotated[Optional[str], Field(examples=["barbara@example.com"])] = None
+    email: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["barbara@example.com"],
+    )] = None
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["Personal"],
     )] = None
@@ -9627,10 +10126,12 @@ class WhatsAppContactUrl(BaseModel):
     "One website on a shared contact card."
     model_config = ConfigDict(extra="allow")
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address as the card holds it, which is often bare rather than a full URL, so it is passed through as text rather than validated.",
         examples=["luckyshrub.example.com"],
     )] = None
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["Company"],
     )] = None
@@ -9639,16 +10140,33 @@ class WhatsAppContactUrl(BaseModel):
 class WhatsAppContactAddress(BaseModel):
     "One postal address on a shared contact card."
     model_config = ConfigDict(extra="allow")
-    street: Annotated[Optional[str], Field(examples=["1 Hacker Way"])] = None
-    city: Annotated[Optional[str], Field(examples=["Menlo Park"])] = None
-    state: Annotated[Optional[str], Field(examples=["CA"])] = None
-    zip: Annotated[Optional[str], Field(examples=[94025])] = None
-    country: Annotated[Optional[str], Field(examples=["United States"])] = None
+    street: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["1 Hacker Way"],
+    )] = None
+    city: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Menlo Park"],
+    )] = None
+    state: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["CA"],
+    )] = None
+    zip: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=[94025],
+    )] = None
+    country: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["United States"],
+    )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country as the card holds it, left exactly as WhatsApp sent it: it describes a postal address rather than a routing destination.",
         examples=["US"],
     )] = None
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The label attached to this value, for example `CELL`, `Home` or `iPhone`. Free text: WhatsApp defines no vocabulary. A label on a received card is lowercased; one this workspace sent reads back exactly as sent.",
         examples=["Home"],
     )] = None
@@ -9663,30 +10181,42 @@ class WhatsAppContactCard(BaseModel):
     "A contact card on this message: one the contact shared, or one this workspace sent.\n\nNothing here is required. WhatsApp sends the parts the card holds and omits the rest, and a card that arrives with only an `origin` is still meaningful, so an empty card reads back empty rather than being dropped."
     model_config = ConfigDict(extra="allow")
     origin: Annotated[Optional[Annotated[Union[WhatsAppContactCardOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the card arrived. `contact_request` means the contact tapped a button this workspace sent asking for their number, which is the only signal that the message answers that ask; `other` means they shared a card in the chat. Open enum: treat an unrecognized value as a way of sharing added since. Set on a card the contact shared; absent on one this workspace sent.",
         examples=["contact_request"],
         min_length=1,
     )] = None
     vcard: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's card in vCard format. WhatsApp sends it on a card shared in the chat and omits it on a button tap, which carries the number alone. Set on a card the contact shared; absent on one this workspace sent.",
         examples=["BEGIN:VCARD\nVERSION:3.0\nN:Johnson;Barbara;;;\nTEL;type=CELL:+16505551234\nEND:VCARD\n"],
     )] = None
     name: Annotated[Optional[WhatsAppContactName], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's name, when the card carries one.",
     )] = None
     org: Annotated[Optional[WhatsAppContactOrg], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the contact works, when the card carries it.",
     )] = None
     birthday: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact's birthday, which WhatsApp sends as `YYYY-MM-DD`. Passed through as text rather than typed as a date: the value comes off the contact's own device unvalidated, and a card we could not parse would otherwise have to lose the field or fail the whole read.",
         examples=["1999-01-23"],
     )] = None
     phone_numbers: Annotated[Optional[List[WhatsAppContactPhone]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The numbers on the card. A button tap carries the contact's own number here, which is the point of asking.",
     )] = None
-    emails: Optional[List[WhatsAppContactEmail]] = None
-    urls: Optional[List[WhatsAppContactUrl]] = None
-    addresses: Optional[List[WhatsAppContactAddress]] = None
+    emails: Annotated[Optional[List[WhatsAppContactEmail]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    urls: Annotated[Optional[List[WhatsAppContactUrl]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    addresses: Annotated[Optional[List[WhatsAppContactAddress]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class WhatsAppInteractiveType(str, Enum):
@@ -9712,10 +10242,12 @@ class WhatsAppInteractiveHeader(BaseModel):
         description="Which kind of header this is, and which field carries it.",
     )]
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The line of text shown above the body.",
         examples=["New workshop dates announced"],
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The URL of the file shown above the body, as the send supplied it. Interactive content is outbound only, so Bird neither stores nor proxies the file.",
         examples=["https://cdn.example.com/banners/workshop.png"],
     )] = None
@@ -9763,9 +10295,11 @@ class WhatsAppInteractiveButton(BaseModel):
         description="Which kind of button this is, and which field carries it.",
     )]
     quick_reply: Annotated[Optional[WhatsAppInteractiveQuickReplyButton], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The button's label and the handle it sends back.",
     )] = None
     cta_url: Annotated[Optional[WhatsAppInteractiveCtaUrl], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The button's label and the address it opens.",
     )] = None
 
@@ -9784,6 +10318,7 @@ class WhatsAppInteractiveListRow(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The second line under the label. Absent when the row carried none.",
         examples=["Next day to 2 days"],
     )] = None
@@ -9822,6 +10357,7 @@ class WhatsAppInteractiveCard(BaseModel):
         description="The image or video shown at the top of the card.",
     )]
     body_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The card's own text. Absent when the card carried none.",
         examples=["*Blue Echeveria*"],
     )] = None
@@ -9837,6 +10373,7 @@ class WhatsAppInteractive(BaseModel):
         description="Which kind of interactive message this is, and which field carries it.",
     )]
     header: Annotated[Optional[WhatsAppInteractiveHeader], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What was shown above the body. Absent when the message carried no header.",
     )] = None
     body_text: Annotated[str, Field(
@@ -9845,19 +10382,24 @@ class WhatsAppInteractive(BaseModel):
         min_length=1,
     )]
     footer_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The small print below the body. Absent when the message carried none.",
         examples=["Lucky Shrub, your gateway to succulents"],
     )] = None
     buttons: Annotated[Optional[List[WhatsAppInteractiveButton]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The buttons the message offered, in the order shown.",
     )] = None
     list: Annotated[Optional[WhatsAppInteractiveList], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The menu the message offered.",
     )] = None
     cta_url: Annotated[Optional[WhatsAppInteractiveCtaUrl], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The link button the message offered.",
     )] = None
     cards: Annotated[Optional[List[WhatsAppInteractiveCard]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The cards the message offered, in the order they appeared, left to right.",
     )] = None
 
@@ -9874,9 +10416,11 @@ class WhatsAppInteractiveReply(BaseModel):
         description="Which kind of tap this reply came from, and which field carries it.",
     )]
     button: Annotated[Optional[WhatsAppInteractiveQuickReplyButton], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The button the contact tapped, as you declared it. On a reply to a template's quick-reply button, `slug` is the button's payload, which WhatsApp sets to the button's own label.",
     )] = None
     list: Annotated[Optional[WhatsAppInteractiveListRow], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The row the contact chose, as you declared it. `description` is present only when the row carried one.",
     )] = None
 
@@ -9970,63 +10514,81 @@ class WhatsAppMessage(BaseModel):
         description="Recipient of the message. On outbound messages, the WhatsApp contact; on inbound, the business number.",
     )]
     template: Annotated[Optional[WhatsAppMessageTemplate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template the message was sent from. For authentication templates the filled-in values are not returned.",
     )] = None
     text: Annotated[Optional[WhatsAppText], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text the message carried.",
     )] = None
     image: Annotated[Optional[WhatsAppImage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Image the message carried.",
     )] = None
     video: Annotated[Optional[WhatsAppVideo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Video the message carried.",
     )] = None
     audio: Annotated[Optional[WhatsAppAudio], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Audio the message carried.",
     )] = None
     sticker: Annotated[Optional[WhatsAppSticker], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sticker the message carried.",
     )] = None
     document: Annotated[Optional[WhatsAppDocument], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Document the message carried.",
     )] = None
     location: Annotated[Optional[WhatsAppLocation], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Location the message carried.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Contact cards on this message: cards the contact shared, either by tapping a button that asked for their number or by sending one from their address book, or the cards this workspace sent.",
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractive], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Interactive content the message carried. Outbound only: a contact cannot send one. A tap on a reply button or a list row reads back as `interactive_reply` on the contact's inbound message; a `cta_url` link sends nothing back, and the two request kinds are answered by an inbound `location` or `contact_cards` message.",
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one answers. On an inbound message it is what WhatsApp reports as the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. An outbound message echoes the `in_reply_to_message_id` it was sent with. Absent when the message answers nothing, and absent on an inbound message whose target we cannot match to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What the contact tapped, on a message answering an interactive message or a template's quick-reply button. Inbound only.",
     )] = None
     unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set when a message that did not come from a Bird send carries content we do not model, naming the WhatsApp content type so the message is not silently empty. Never on a message sent through Bird.",
     )] = None
     reactions: Annotated[Optional[List[WhatsAppReaction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Emoji reactions standing on this message right now, one per sender. Absent when the message has none. A reaction that was replaced by a different emoji, or taken back, is not listed; the message's reaction log keeps that history. WhatsApp accepts a reaction on a message up to 30 days old, and we keep provider ids for 15, so a reaction placed on a message older than that cannot be matched to it and does not appear here.",
     )] = None
     status: WhatsAppMessageStatus
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live. Absent when your workspace sent the message through Bird, or the contact sent it to Bird.",
     )] = None
     recipient_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many recipients a group send was addressed to, taken when the send\nwas accepted. It is the group's membership at that moment, not its\nmembership now: someone joining through the invite link while the message\nis in flight does not receive it and does not change this count.\n\nAbsent on a one-to-one message, along with `delivered_count` and\n`read_count`. A message with one recipient has no fan-out to report, and\nits delivery is what `status`, `delivered_at` and `read_at` already say.\nAbsent for the same reason on a group message sent before Bird recorded\nthe count, and on a send to a group nobody had joined yet: there is no\ndenominator to report, and none can be recovered after the fact, since\nmembership has moved on. `to.group_id` is what tells a group message from\na one-to-one one in every case, including those two. With no denominator\nto resolve against, `status` is read as stored, the way a one-to-one\nmessage's is: it reaches `sent` when the message is handed to WhatsApp and\nstops there, because delivery is confirmed per participant and a send with\nno participants collects no confirmations.\n\nIt is also the denominator `status` is resolved against: on a group\nmessage `status` reports the furthest point *every* recipient has\nreached, so it turns `delivered` only once `delivered_count` equals this\nnumber, and stays `sent` while some have confirmed and others have not.\n`failed` and `rejected` are never per recipient: there is one hand-off to\nthe WhatsApp network and one way for that to be refused. `delivered_at`\nand `read_at` are the first recipient's, not the last.",
         ge=1,
     )] = None
     delivered_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many of the `recipient_count` recipients WhatsApp has confirmed the\nmessage reached. A recipient who reported only a read counts here too:\nWhatsApp skips the delivery receipt when someone is already looking at\nthe chat, so waiting for one would leave that person uncounted for ever.\n\nAbsent on a one-to-one message, which has no fan-out to count, and on a\ngroup message with no `recipient_count` to count against.",
         ge=0,
     )] = None
     read_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many of the `recipient_count` recipients have opened the message.\nRead receipts do not move `status`, which has no `read` value; they\nsurface here and in `read_at`.\n\nAbsent on a one-to-one message, which has no fan-out to count, and on a\ngroup message with no `recipient_count` to count against.",
         ge=0,
     )] = None
@@ -10050,12 +10612,15 @@ class WhatsAppMessage(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` filter labels applied to this message.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON metadata stored on the message.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none, and on inbound messages.",
         examples=["INV-1234"],
         max_length=255,
@@ -10086,11 +10651,13 @@ class WhatsAppTemplateSend(BaseModel):
     "Supply exactly one of `id` or `slug`, optionally a language, and fill required placeholders through `components`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["wat_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wat_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Template slug, such as `bird_otp`.",
         examples=["bird_otp"],
         max_length=63,
@@ -10098,18 +10665,21 @@ class WhatsAppTemplateSend(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="BCP-47 tag (`en-US`; `en_US` also accepted). Defaults to the template's default language unless `language_source_required` is set. Missing variants follow `on_missing_language`. The resolved language determines pricing and is echoed in the accepted message.",
         examples=["en-US"],
         max_length=35,
         min_length=2,
     )] = None
     bid_multiplier: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Multiplies `optimization_spec.bid_amount` × country multiplier for this message. Range 0.01–100; default 1. Requires `optimization_spec` on a marketing template language.",
         examples=[0.8],
         ge=0.01,
         le=100,
     )] = None
     components: Annotated[Optional[List[WhatsAppMessageTemplateComponent]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Copy each language component's `example_parameters` into that part's `parameters`, replacing examples with real values. Map `buttons` to one `button` part per button with examples, in order; map `carousel` to `cards`, built likewise. A location header requires a `location` parameter. Omit other blocks without examples.",
     )] = None
 
@@ -10124,6 +10694,7 @@ class WhatsAppTextSend(BaseModel):
         min_length=1,
     )]
     preview_url: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview the first link in `body`. Omitted on reads.",
     )] = None
 
@@ -10137,6 +10708,7 @@ class WhatsAppImageSend(BaseModel):
         min_length=1,
     )]
     caption: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text shown beneath the image.",
         examples=["Your receipt for order A1B2C3"],
         max_length=1024,
@@ -10152,6 +10724,7 @@ class WhatsAppVideoSend(BaseModel):
         min_length=1,
     )]
     caption: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text shown beneath the video.",
         examples=["How to set it up"],
         max_length=1024,
@@ -10167,6 +10740,7 @@ class WhatsAppAudioSend(BaseModel):
         min_length=1,
     )]
     voice: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send as a voice note; requires an `.ogg` file with the OPUS codec.",
     )] = None
 
@@ -10190,11 +10764,13 @@ class WhatsAppDocumentSend(BaseModel):
         min_length=1,
     )]
     caption: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text shown beneath the document.",
         examples=["Your invoice for order A1B2C3"],
         max_length=1024,
     )] = None
     filename: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Recipient-visible filename with extension.",
         examples=["invoice-a1b2c3.pdf"],
         max_length=100,
@@ -10227,7 +10803,7 @@ class WhatsAppInteractiveHeaderSend1(BaseModel):
         max_length=60,
         min_length=1,
     )]
-    url: Optional[Any] = None
+    url: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveHeaderSend2Type(str, Enum):
@@ -10239,7 +10815,7 @@ class WhatsAppInteractiveHeaderSend2Type(str, Enum):
 class WhatsAppInteractiveHeaderSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: WhatsAppInteractiveHeaderSend2Type
-    text: Optional[Any] = None
+    text: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
     url: Annotated[str, Field(
         description="Public HTTPS URL fetched at send time for `image`, `video`, or `document` headers. The corresponding free-form media limits apply.",
         examples=["https://cdn.example.com/banners/workshop.png"],
@@ -10296,13 +10872,17 @@ class WhatsAppInteractiveButtonSend1(BaseModel):
     quick_reply: Annotated[WhatsAppInteractiveQuickReplyButtonSend, Field(
         description="Label and reply identifier for `quick_reply`.",
     )]
-    cta_url: Optional[Any] = None
+    cta_url: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class WhatsAppInteractiveButtonSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["cta_url"]
-    quick_reply: Optional[Any] = None
+    quick_reply: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
         description="Label and destination for `cta_url`.",
     )]
@@ -10328,6 +10908,7 @@ class WhatsAppInteractiveListRowSend(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Detail shown below the label.",
         examples=["Next day to 2 days"],
         max_length=72,
@@ -10396,6 +10977,7 @@ class WhatsAppInteractiveCardSend1(BaseModel):
         description="The image or video at the top of the card.",
     )]
     body_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional text below the media, with at most two line breaks.",
         examples=["*Blue Echeveria*\n\nA rosette-shaped succulent with powdery blue leaves."],
         max_length=160,
@@ -10411,6 +10993,7 @@ class WhatsAppInteractiveCardSend2(BaseModel):
         description="The image or video at the top of the card.",
     )]
     body_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional text below the media, with at most two line breaks.",
         examples=["*Blue Echeveria*\n\nA rosette-shaped succulent with powdery blue leaves."],
         max_length=160,
@@ -10428,31 +11011,39 @@ class WhatsAppInteractiveSend1(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["button"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="For `list`: text only. For `button` and `cta_url`: text, image, video, or document. Unsupported for carousel and request kinds.",
     )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Small print below the body. Unsupported for carousel and request kinds.",
         examples=["Dates are subject to change."],
         max_length=60,
         min_length=1,
     )] = None
     buttons: Any
-    list: Optional[Any] = None
-    cta_url: Optional[Any] = None
-    cards: Optional[Any] = None
+    list: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
+    cta_url: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    cards: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveSend2Header(BaseModel):
     model_config = ConfigDict(extra="allow")
-    type: Optional[Literal["text"]] = None
-    url: Optional[Any] = None
+    type: Annotated[Optional[Literal["text"]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    url: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveSend2(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["list"]
-    header: Optional[WhatsAppInteractiveSend2Header] = None
+    header: Annotated[Optional[WhatsAppInteractiveSend2Header], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     body_text: Annotated[str, Field(
         description="Required main text. Maximum 1024 characters, or 4096 for `list`.",
         examples=["Your workshop is scheduled for 9am tomorrow."],
@@ -10460,49 +11051,66 @@ class WhatsAppInteractiveSend2(BaseModel):
         min_length=1,
     )]
     footer_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Small print below the body. Unsupported for carousel and request kinds.",
         examples=["Dates are subject to change."],
         max_length=60,
         min_length=1,
     )] = None
-    buttons: Optional[Any] = None
+    buttons: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     list: Annotated[WhatsAppInteractiveListSend, Field(
         description="Menu for a `list` message.",
     )]
-    cta_url: Optional[Any] = None
-    cards: Optional[Any] = None
+    cta_url: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    cards: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveSend3(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["cta_url"]
     header: Annotated[Optional[WhatsAppInteractiveHeaderSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="For `list`: text only. For `button` and `cta_url`: text, image, video, or document. Unsupported for carousel and request kinds.",
     )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
     footer_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Small print below the body. Unsupported for carousel and request kinds.",
         examples=["Dates are subject to change."],
         max_length=60,
         min_length=1,
     )] = None
-    buttons: Optional[Any] = None
-    list: Optional[Any] = None
+    buttons: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    list: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
     cta_url: Annotated[WhatsAppInteractiveCtaUrlSend, Field(
         description="Link button for a `cta_url` message.",
     )]
-    cards: Optional[Any] = None
+    cards: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveSend4(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["carousel"]
-    header: Optional[Any] = None
+    header: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
-    footer_text: Optional[Any] = None
-    buttons: Optional[Any] = None
-    list: Optional[Any] = None
-    cta_url: Optional[Any] = None
+    footer_text: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    buttons: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    list: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
+    cta_url: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     cards: Annotated[List[WhatsAppInteractiveCardSend], Field(
         description="2–10 carousel cards, in display order. No message-level header or footer.",
         max_length=10,
@@ -10513,25 +11121,41 @@ class WhatsAppInteractiveSend4(BaseModel):
 class WhatsAppInteractiveSend5(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["location_request_message"]
-    header: Optional[Any] = None
+    header: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
-    footer_text: Optional[Any] = None
-    buttons: Optional[Any] = None
-    list: Optional[Any] = None
-    cta_url: Optional[Any] = None
-    cards: Optional[Any] = None
+    footer_text: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    buttons: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    list: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
+    cta_url: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    cards: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveSend6(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Literal["request_contact_info"]
-    header: Optional[Any] = None
+    header: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     body_text: Annotated[Any, Field(max_length=1024)]
-    footer_text: Optional[Any] = None
-    buttons: Optional[Any] = None
-    list: Optional[Any] = None
-    cta_url: Optional[Any] = None
-    cards: Optional[Any] = None
+    footer_text: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    buttons: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    list: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
+    cta_url: Annotated[Optional[Any], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    cards: Annotated[Optional[Any], Field(json_schema_extra={"x-bird-nullable": False})] = None
 
 
 class WhatsAppInteractiveSend(RootModel[WhatsAppInteractiveSend1 | WhatsAppInteractiveSend2 | WhatsAppInteractiveSend3 | WhatsAppInteractiveSend4 | WhatsAppInteractiveSend5 | WhatsAppInteractiveSend6]):
@@ -10547,19 +11171,51 @@ class WhatsAppContactNameSend(BaseModel):
         max_length=256,
         min_length=1,
     )]
-    first_name: Annotated[Optional[str], Field(examples=["Barbara"], max_length=256)] = None
-    middle_name: Annotated[Optional[str], Field(examples=["Joana"], max_length=256)] = None
-    last_name: Annotated[Optional[str], Field(examples=["Johnson"], max_length=256)] = None
-    prefix: Annotated[Optional[str], Field(examples=["Dr."], max_length=64)] = None
-    suffix: Annotated[Optional[str], Field(examples=["Esq."], max_length=64)] = None
+    first_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Barbara"],
+        max_length=256,
+    )] = None
+    middle_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Joana"],
+        max_length=256,
+    )] = None
+    last_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Johnson"],
+        max_length=256,
+    )] = None
+    prefix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Dr."],
+        max_length=64,
+    )] = None
+    suffix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Esq."],
+        max_length=64,
+    )] = None
 
 
 class WhatsAppContactOrgSend(BaseModel):
     "Where the contact works, as the card should record it."
     model_config = ConfigDict(extra="allow")
-    company: Annotated[Optional[str], Field(examples=["Lucky Shrub"], max_length=128)] = None
-    department: Annotated[Optional[str], Field(examples=["Legal"], max_length=128)] = None
-    title: Annotated[Optional[str], Field(examples=["Lead Counsel"], max_length=128)] = None
+    company: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Lucky Shrub"],
+        max_length=128,
+    )] = None
+    department: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Legal"],
+        max_length=128,
+    )] = None
+    title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Lead Counsel"],
+        max_length=128,
+    )] = None
 
 
 class WhatsAppContactPhoneSend(BaseModel):
@@ -10572,6 +11228,7 @@ class WhatsAppContactPhoneSend(BaseModel):
         min_length=1,
     )]
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-text label shown beside the number, sent verbatim.",
         examples=["Mobile"],
         max_length=64,
@@ -10587,6 +11244,7 @@ class WhatsAppContactEmailSend(BaseModel):
         min_length=1,
     )]
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-text label shown beside the address, sent verbatim.",
         examples=["Work"],
         max_length=64,
@@ -10603,6 +11261,7 @@ class WhatsAppContactUrlSend(BaseModel):
         min_length=1,
     )]
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-text label shown beside the website, sent verbatim.",
         examples=["Company"],
         max_length=64,
@@ -10613,19 +11272,38 @@ class WhatsAppContactAddressSend(BaseModel):
     "One postal address to put on a contact card."
     model_config = ConfigDict(extra="allow")
     street: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["1 Lucky Shrub Way"],
         max_length=128,
     )] = None
-    city: Annotated[Optional[str], Field(examples=["Menlo Park"], max_length=128)] = None
-    state: Annotated[Optional[str], Field(examples=["CA"], max_length=128)] = None
-    zip: Annotated[Optional[str], Field(examples=[94025], max_length=128)] = None
-    country: Annotated[Optional[str], Field(examples=["United States"], max_length=128)] = None
+    city: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["Menlo Park"],
+        max_length=128,
+    )] = None
+    state: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["CA"],
+        max_length=128,
+    )] = None
+    zip: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=[94025],
+        max_length=128,
+    )] = None
+    country: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["United States"],
+        max_length=128,
+    )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country as it should appear on the address, commonly the ISO two-letter code.",
         examples=["US"],
         max_length=128,
     )] = None
     type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-text label shown beside the address, sent verbatim.",
         examples=["Office"],
         max_length=64,
@@ -10637,20 +11315,30 @@ class WhatsAppContactCardSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: WhatsAppContactNameSend
     org: Annotated[Optional[WhatsAppContactOrgSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the contact works.",
     )] = None
     birthday: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Valid calendar date in `YYYY-MM-DD` format.",
         examples=["1999-01-23"],
         pattern="^\\d{4}-\\d{2}-\\d{2}$",
     )] = None
     phone_numbers: Annotated[Optional[List[WhatsAppContactPhoneSend]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="E.164 numbers get a WhatsApp chat button; other formats get an invite button.",
         max_length=10,
     )] = None
-    emails: Annotated[Optional[List[WhatsAppContactEmailSend]], Field(max_length=10)] = None
-    urls: Annotated[Optional[List[WhatsAppContactUrlSend]], Field(max_length=10)] = None
+    emails: Annotated[Optional[List[WhatsAppContactEmailSend]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        max_length=10,
+    )] = None
+    urls: Annotated[Optional[List[WhatsAppContactUrlSend]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        max_length=10,
+    )] = None
     addresses: Annotated[Optional[List[WhatsAppContactAddressSend]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         max_length=10,
     )] = None
 
@@ -10664,57 +11352,72 @@ class WhatsAppMessageSendRequest(BaseModel):
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="Connected E.164 number owned by this workspace; for authored templates, use the same WhatsApp Business Account. Omit for Bird-managed templates and groups; required otherwise.",
         examples=[+13124495648],
         min_length=1,
     )] = None
     template: Annotated[Optional[WhatsAppTemplateSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Required outside the customer service window. Groups accept workspace-authored, non-authentication templates only.",
     )] = None
     text: Annotated[Optional[WhatsAppTextSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form text; requires an open customer service window.",
     )] = None
     image: Annotated[Optional[WhatsAppImageSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form image; requires an open customer service window.",
     )] = None
     video: Annotated[Optional[WhatsAppVideoSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form video; requires an open customer service window.",
     )] = None
     audio: Annotated[Optional[WhatsAppAudioSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form audio; requires an open customer service window.",
     )] = None
     sticker: Annotated[Optional[WhatsAppStickerSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form sticker; requires an open customer service window.",
     )] = None
     document: Annotated[Optional[WhatsAppDocumentSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form document; requires an open customer service window.",
     )] = None
     location: Annotated[Optional[WhatsAppLocationSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form location; requires an open customer service window.",
     )] = None
     interactive: Annotated[Optional[WhatsAppInteractiveSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Reply buttons, a list, a link button, media cards, or a location/contact request. Requires an open customer service window; unsupported for groups.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCardSend]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Up to five cards. Each name needs `formatted_name` and another name part. Requires an open customer service window.",
         max_length=5,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Message to quote, from this conversation (`to` and `from`) within the last 15 days.",
         examples=["wam_01kya19eknftrs2s6p82asmvnh"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Up to 20 `{name, value}` labels, filterable by name. Use for low-cardinality dimensions such as category; put other context in `metadata`.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-message JSON context, such as internal IDs, returned on reads. Maximum 2 KB serialized. Use `tags` for filterable labels.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Identifier matched exactly by the message list's `reference` filter; returned on reads and webhooks. May be shared by multiple messages. Put non-searchable context in `metadata`.",
         examples=["INV-1234"],
         max_length=255,
@@ -10726,6 +11429,7 @@ class WhatsAppReadReceiptRequest(BaseModel):
     "What to acknowledge on the inbound message. An absent body and `{}` mean the same thing: mark the message read and show nothing."
     model_config = ConfigDict(extra="allow")
     typing_indicator: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Show a typing indicator to the contact as well as marking the message read. WhatsApp clears it when you send your next message, or after 25 seconds, whichever comes first. Only ask for one if you are about to reply.",
         examples=[True],
     )] = None
@@ -10765,6 +11469,7 @@ class WhatsAppEvent(BaseModel):
         min_length=1,
     )]
     recipient: Annotated[Optional[WhatsAppAddress], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The participant this confirmation is about, on a group message. Present only on `whatsapp.delivered` and `whatsapp.read`, the two events a group send fans out: one per participant, so a group of eight produces up to eight of each. The rest describe the message as a whole and carry no recipient, because there is one hand-off to the WhatsApp network and one way for that to be refused. Absent on a one-to-one message, whose `to` already names its recipient. Never carries `group_id`: the group belongs to the message's `to`, not to a participant.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
@@ -10902,6 +11607,7 @@ class WhatsAppConversationRecipient(BaseModel):
         min_length=1,
     )]
     group_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["wag_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wag_[0-9a-hjkmnp-tv-z]{26}$",
@@ -11020,13 +11726,16 @@ class WhatsAppConversationUpdateRequest(BaseModel):
         pattern="^(me|usr_[0-9a-hjkmnp-tv-z]{26})$",
     )] = None
     inbox_status: Annotated[Optional[ConversationInboxStatus], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
     )] = None
     labels: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels chosen by your workspace. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nEach label must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace. Duplicate labels are rejected. The names `all`, `archived`, `assigned`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `pinned`, `read`, `snoozed`, `spam`, `starred`, `trash`, and `unread` are reserved in every casing.",
         max_length=20,
     )] = None
     read: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mark received inbound messages with created_at at or before this timestamp as read in the shared workspace inbox. Messages sharing the timestamp are included together. Later arrivals remain unread until another read update. This does not send a read receipt to the customer or change inbox status. Omit to leave read state unchanged.",
     )] = None
 
@@ -11141,6 +11850,7 @@ class WhatsAppGroupOperationResult(BaseModel):
         examples=[False],
     )]
     error: Annotated[Optional[WhatsAppGroupError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why a change to a group did not take effect. Meta documents no code vocabulary for a group refusal, since every sample payload carries an undocumented `code` beside its message, so this relays what it said rather than classifying it, the way a template submission failure does.",
     )] = None
 
@@ -11162,10 +11872,12 @@ class WhatsAppGroupOperation(BaseModel):
         examples=["2026-08-27T14:02:14Z"],
     )] = None
     results: Annotated[Optional[List[WhatsAppGroupOperationResult]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-field outcomes, on a `settings_update` that has settled. One entry per field the update carried, so a client can put a refusal next to the input it came from. Absent on every other operation type, which change one thing and report it on `status`.",
         max_length=3,
     )] = None
     last_error: Annotated[Optional[WhatsAppGroupError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why a change to a group did not take effect. Meta documents no code vocabulary for a group refusal, since every sample payload carries an undocumented `code` beside its message, so this relays what it said rather than classifying it, the way a template submission failure does.",
     )] = None
 
@@ -11179,16 +11891,19 @@ class WhatsAppGroupParticipant(BaseModel):
         min_length=1,
     )]
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Phone number in E.164 format. Absent when WhatsApp withholds it, which it does for anyone who has not shared their number with your business, so a group is normally a mix of participants with one and without.",
         examples=[+16505551234],
         min_length=1,
     )] = None
     username: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp username this person chose. Absent when they have none, and not an identifier to address them by: it is theirs to change, so it names them in a list rather than keying anything.",
         examples=["john.doe"],
         min_length=1,
     )] = None
     last_operation: Annotated[Optional[WhatsAppGroupOperation], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The last change asked of this group or participant, and where it got to. WhatsApp confirms a change on a webhook rather than in its reply, so an operation is `pending` until that arrives. While it is, another change to the same thing is refused with a `409` `WhatsAppGroupUpdateInProgress`; a change to a different participant is not, so several removals can be in flight at once. Absent on something nothing has been asked of yet.",
     )] = None
 
@@ -11251,6 +11966,7 @@ class WhatsAppGroup(BaseModel):
         examples=["https://chat.whatsapp.com/JZm4S9tCkQx2LpVr7Ny8Ab"],
     )] = None
     participants: Annotated[Optional[List[WhatsAppGroupParticipant]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Who is in the group, as of the last update WhatsApp sent, and the whole set rather than a page: WhatsApp holds a group to a handful of people, so there is never a page's worth to return. The business number that created the group is its admin and is not listed.",
     )] = None
     participant_count: Annotated[int, Field(
@@ -11259,6 +11975,7 @@ class WhatsAppGroup(BaseModel):
         ge=0,
     )]
     pinned_messages: Annotated[Optional[List[WhatsAppGroupPinnedMessage]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The group's pins, newest first. WhatsApp holds a few at once, and pinning past that unpins the oldest rather than refusing. No entry here is merely requested. An entry stays listed until it is unpinned, so one whose `pinned_until` has passed is still listed after WhatsApp has taken it off the chat.",
     )] = None
     profile_picture_url: Annotated[Optional[str], Field(
@@ -11266,9 +11983,11 @@ class WhatsAppGroup(BaseModel):
         examples=["https://media.example.com/whatsapp/groups/JZm4S9tCkQx2.jpg"],
     )] = None
     last_operation: Annotated[Optional[WhatsAppGroupOperation], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The last change asked of this group or participant, and where it got to. WhatsApp confirms a change on a webhook rather than in its reply, so an operation is `pending` until that arrives. While it is, another change to the same thing is refused with a `409` `WhatsAppGroupUpdateInProgress`; a change to a different participant is not, so several removals can be in flight at once. Absent on something nothing has been asked of yet.",
     )] = None
     suspended_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When WhatsApp suspended the group. Present only while the group is `suspended`, and gone once WhatsApp lifts the suspension.",
         examples=["2026-08-20T11:04:00Z"],
         min_length=1,
@@ -11312,11 +12031,13 @@ class WhatsAppGroupCreate(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The group's description, shown alongside the subject.",
         examples=["Jim would like to learn about new car purchase options for current year models."],
         max_length=2048,
     )] = None
     join_approval_mode: Annotated[Optional[WhatsAppGroupJoinApprovalMode], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether opening the invite link joins the group outright, or raises a join request for you to approve. Defaults to `auto_approve`. It cannot be changed once the group exists.",
     )] = None
 
@@ -11325,6 +12046,7 @@ class WhatsAppGroupUpdate(BaseModel):
     "The changes to make. Fields you omit are left as they are. WhatsApp applies each field separately, so one can be rejected while the others take effect; the group's `updated_at` moves when a change lands."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A new name for the group. Participants see the change in the group's chat.",
         examples=["Watch Enthusiasts"],
         max_length=128,
@@ -11363,6 +12085,7 @@ class WhatsAppGroupPinnedMessageCreate(BaseModel):
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     duration_days: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many days the message stays pinned before WhatsApp unpins it, from 1 to 30.",
         examples=[7],
         ge=1,
@@ -11389,11 +12112,13 @@ class WhatsAppGroupJoinRequest(BaseModel):
         min_length=1,
     )]
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Phone number in E.164 format. Absent when WhatsApp withholds it, which it does for anyone who has not shared their number with your business.",
         examples=[+16505551234],
         min_length=1,
     )] = None
     username: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp username this person chose. Absent when they have none, and theirs to change, so it names them in a list rather than keying anything.",
         examples=["john.doe"],
         min_length=1,
@@ -11485,6 +12210,7 @@ class WhatsAppTemplateRejection(BaseModel):
     "Why Meta refused a language's content, and what it says about fixing it. Present when `status` is `rejected`."
     model_config = ConfigDict(extra="allow")
     category: Annotated[Optional[Annotated[Union[WhatsAppTemplateRejectionCategory, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why Meta refused a language's content, in Meta's own vocabulary, lowercased. Read it with `reason`, which carries Meta's human-written detail, and `recommendation`, which carries its suggested fix. This is an open enum. Accept unrecognized values.",
     )] = None
     reason: Annotated[Optional[str], Field(
@@ -11515,6 +12241,7 @@ class WhatsAppTemplateLanguageState(BaseModel):
     "Where one language stands, without its content: content lives under a version, read that for it. An object rather than a bare status string, so detail beyond status can arrive later as a sibling property instead of a breaking change."
     model_config = ConfigDict(extra="allow")
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="On a template, where this language stands on the version currently in service. On a version, what that version's submission did with this language. Absent on a draft, which has not been submitted.",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
@@ -11526,9 +12253,11 @@ class WhatsAppTemplateLanguageState(BaseModel):
         examples=["2026-07-27T16:40:00Z"],
     )] = None
     rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec` or `message_send_ttl_seconds`; the language keeps sending on the maximum price and time-to-live WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
@@ -11570,6 +12299,7 @@ class WhatsAppTemplate(BaseModel):
         description="Whether the template is one of our built-in templates (`system`) or one your workspace created (`workspace`).",
     )]
     waba: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp Business Account that holds this template's languages at Meta. Absent on a built-in template: those live on a WABA that Bird manages centrally rather than on your account, so it is not yours to reconcile against and is not disclosed.",
         examples=[102290129340398],
     )] = None
@@ -11627,6 +12357,7 @@ class WhatsAppTemplate(BaseModel):
         description="When the template was last modified. Null for a built-in template, which Bird ships rather than stores.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this template, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nA `draft` template routes to opening its draft, a `pending` one to the version\nunder review, and a `rejected` or `inactive` one to a fresh draft. The template's\n`status` is the aggregate over its languages, so an entry may send you to the\nversion to see where each language actually stands.",
     )] = None
 
@@ -11668,6 +12399,7 @@ class WhatsAppTemplateOptimizationSpecWrite(BaseModel):
         description="How Meta bids for each delivery.\n\n- `lowest_cost_with_bid_cap`: Meta delivers at the lowest cost it can find, never above the bid.",
     )]
     bid_country_multiplier_overrides: Annotated[Optional[Dict[str, float]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Scales the bid for recipients in a country, keyed by ISO 3166-1 alpha-2 code. A country you leave out uses 1. Each write replaces the whole map.",
     )] = None
 
@@ -11704,15 +12436,18 @@ class WhatsAppTemplateExampleParameterWrite(BaseModel):
         description="The kind of value a template parameter accepts. `text` is an example filling a `{{n}}` placeholder. The other four are the sample file a media header shows, and each matches its header's `format`. Any other value is rejected.",
     )]
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The example value. Send it when `type` is `text`. May be empty on a draft; required before submission.",
         examples=[123456],
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address of the file a media header shows. Send it when `type` is `image`, `video`, `gif` or `document`. We fetch the file when the language is submitted and hand Meta our own copy, so the address only has to be reachable at submission. WhatsApp reviews the template with this file, and the message each recipient receives carries the file named on the send. May be empty on a draft, for a file not yet chosen; a reachable address is required before submission.",
         examples=["https://www.example.com/holiday/banner.jpg"],
         max_length=2000,
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The named placeholder this example fills. Send it only for a template written against named parameters rather than positional `{{n}}` ones. May be empty on a draft; required before submission.",
         examples=["first_name"],
     )] = None
@@ -11734,24 +12469,29 @@ class WhatsAppTemplateButtonWrite(BaseModel):
         description="A button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It belongs\n  only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number their\n  WhatsApp account carries. It belongs only on a utility or marketing\n  template, as that template's only button.\n\nAny other value is rejected.",
     )]
     otp_type: Annotated[Optional[Literal["copy_code"]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the recipient receives the passcode. Send it only on an `otp` button.",
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The button's label, which each button type treats differently.\n\n- `url`, `quick_reply`, `phone_number`: your own label. Required.\n- `otp`: omit it. WhatsApp writes this label itself and reveals it only\n  once the language has been submitted.\n- `copy_code`: omit it. WhatsApp fixes this label and does not let you\n  change it.\n- `request_contact_info`: omit it. WhatsApp fixes this label too and\n  writes `Share Contact Info`, which is also what a submitted button\n  reads back as, so a read button can be written back unchanged.\n\nA draft takes any label, so this may be empty on a draft and is required\nonly before submission. A label a fixed-label button may not carry is\nrefused rather than silently replaced: the submit comes back as\n`valid: false` with an `errors` entry naming this field, in every\nlanguage.",
         examples=["Track order"],
         max_length=25,
     )] = None
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The address a `url` button opens. An address with a placeholder is personalized per recipient, and one without is the same for everyone. At most one variable, and it must sit at the end of the address, written as `{{1}}`. A button address is numbered this way even on a template whose text uses named variables. A variable needs its example value in `example_parameters`. May be empty on a draft; required before submission.",
         examples=["https://www.example.com/orders/{{1}}"],
         max_length=2000,
     )] = None
     phone_number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number a `phone_number` button dials, in international format. Some countries publish numbers with a leading zero after the country calling code; WhatsApp strips that zero, so give a number that dials without it. May be empty on a draft; required before submission.",
         examples=[+14155550100],
         max_length=20,
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The value that fills the variable in `url`, which WhatsApp reviews in the filled address. Send only the value, so a `{{1}}` standing for an order number takes `A-4192`. Required whenever `url` carries a variable. Also required on a `copy_code` button as one `text` entry. The entry carries a sample coupon code of at most 20 characters for WhatsApp to review. Each recipient copies the code you provide when sending the message.",
     )] = None
 
@@ -11774,16 +12514,20 @@ class WhatsAppTemplateCardComponentWrite(BaseModel):
         description="A card block's type. A card carries a `header` showing an image or a video, and optionally a `body` and a `buttons` block. A card has no footer and cannot hold a carousel of its own, which is why a card's blocks are a narrower set than a template's.",
     )]
     format: Annotated[Optional[WhatsAppTemplateCardHeaderFormatWrite], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The card header's kind. Required on a card's `header` block and refused on any other.",
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The card block's text, with each variable written as a placeholder. Send it on a `body` block. If any card carries body text then every card must, so the cards keep an even height. May be empty on a draft; required before submission.",
         examples=["Chronograph, brown leather"],
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An example value per `{{n}}` in `text`, in placeholder order. Meta reviews the filled message rather than the template, so a block with variables and no examples is refused. A card's `header` block carries its file here as a single entry whose `type` matches the header's `format` and whose `url` addresses the file, the same way a template header does.",
     )] = None
     buttons: Annotated[Optional[List[WhatsAppTemplateButtonWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The buttons this card carries, at most two. Send it only on a card's `buttons` block. Every card must carry the same buttons in the same order. A card takes a `quick_reply`, `phone_number` or `url` button; a `copy_code` or `request_contact_info` button belongs on the template itself.",
         max_length=2,
     )] = None
@@ -11793,6 +12537,7 @@ class WhatsAppTemplateCardWrite(BaseModel):
     "One card in a carousel, as written to a draft."
     model_config = ConfigDict(extra="allow")
     components: Annotated[Optional[List[WhatsAppTemplateCardComponentWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="This card's content blocks, in display order. A card carries a `header` showing an image or a video, and optionally a `body` and a `buttons` block. Every card in the carousel must carry the same blocks, and the same buttons, in the same order, so a card with body text means every card needs body text. May be omitted or empty on a draft; a header block is required before submission.",
         max_length=3,
     )] = None
@@ -11805,27 +12550,34 @@ class WhatsAppTemplateComponentWrite(BaseModel):
         description="A content block's type. A `body` block is required on every language; `header`, `footer`, `buttons` and `carousel` are optional and appear at most once each. A `carousel` holds the cards a marketing template scrolls through, and is the one block type that nests: its cards carry blocks of their own. Any other value is rejected.",
     )]
     format: Annotated[Optional[WhatsAppTemplateHeaderFormatWrite], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The header's kind. Required on a `header` block and refused on any other.",
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The block's text, with each variable written as a placeholder. Send it on a `body`, a `footer`, and a `text` header. Four blocks refuse it. A `buttons` block carries text on the buttons themselves. A media or `location` header shows a file or map and has nowhere to put copy. A `carousel` carries text on its cards. For an authentication template's body and footer, WhatsApp writes the copy from the two settings below. May be empty on a draft; required before submission.",
         examples=["Your order {{order_id}} has shipped."],
     )] = None
     add_security_recommendation: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Ends an authentication template's body with WhatsApp's own advice not to share the code. Send it only on an authentication template's body block, whose copy is otherwise WhatsApp's to write.",
     )] = None
     code_expiration_minutes: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How long the passcode stays valid. Send it on an authentication template's footer block and WhatsApp writes the footer stating it; omit the footer block entirely to leave it off. WhatsApp enforces the range it accepts and refuses the submission otherwise.",
         examples=[60],
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An example value per `{{n}}` in `text`, in placeholder order. Meta reviews the filled message rather than the template, so a block with variables and no examples is refused. A media header also carries its file here as one entry. Its `type` matches the header's `format`, and its `url` addresses the file. A media header has no placeholder, so this entry is the header's own sample rather than a value that fills one.",
     )] = None
     buttons: Annotated[Optional[List[WhatsAppTemplateButtonWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The buttons this block carries. Send it only on a `buttons` block. Ten in total, of which at most two open a link and at most one dials a number. Quick replies must sit together rather than being interleaved with the other types, so `Quick reply, Quick reply, Link` is accepted where `Quick reply, Link, Quick reply` is refused. A template with four or more buttons, or one that mixes a quick reply with another type, cannot be opened on WhatsApp's desktop clients, and the recipient is asked to switch to their phone. May be omitted or empty on a draft; at least one button is required before submission.",
         max_length=10,
     )] = None
     cards: Annotated[Optional[List[WhatsAppTemplateCardWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The cards a `carousel` block scrolls through. Send it only on a `carousel` block, and only on a marketing template. Every card must carry the same blocks in the same order, and a card's header shows an `image` or a `video`. A `document` header works at the top of a template but not on a card. The number of cards is fixed once the language is approved. A template approved with three cards always sends three. Changing the count requires a new template rather than a new version of this one. May be omitted or hold fewer than two on a draft; at least two are required before submission.",
         max_length=10,
     )] = None
@@ -11848,10 +12600,12 @@ class WhatsAppTemplateLanguageUpsert(BaseModel):
         le=1209600,
     )] = None
     components: Annotated[Optional[List[WhatsAppTemplateComponentWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template's content blocks for this language. Header, footer and buttons are optional. Every variable needs an example value, which is what Meta reviews against. May be omitted or empty on a draft; a body block is required before the language can be submitted.",
         max_length=10,
     )] = None
     revision: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The revision you last read for this language, making the write a compare-and-set: a mismatch is refused with a conflict, leaving an edit you have not seen in place. Omit it for last-write-wins, which is what a single writer wants. Supplying it for a language that does not exist is also refused with a conflict rather than recreating the language. Inside a template's initial languages seed on create, a value here is refused, since no prior revision exists yet to compare against.",
         examples=[4],
         ge=1,
@@ -11874,12 +12628,14 @@ class WhatsAppTemplateCreate(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template's display name, shown wherever the template is listed. Free text, changeable at any time. Defaults to the slug when omitted.",
         examples=["Order update"],
         max_length=255,
         min_length=1,
     )] = None
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What the template is for. Free text.",
         examples=["Sent when a customer's order ships."],
         max_length=1000,
@@ -11894,12 +12650,15 @@ class WhatsAppTemplateCreate(BaseModel):
         min_length=2,
     )]
     on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How a send behaves when it asks for a language this template does not carry. Defaults to `fail`: a WhatsApp send that silently fell back would deliver approved copy the recipient did not expect, at a price the sender did not choose.",
     )] = None
     language_source_required: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether a send has to name a language. Set it to have a send that names none rejected, leaving the default language for sends that ask for it.",
     )] = None
     languages: Annotated[Optional[Dict[str, WhatsAppTemplateLanguageUpsert]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional seed for the template's first draft, keyed by BCP-47 language\ntag. Supplying it opens the draft and writes every language in one\ntransaction: any invalid entry fails the whole create, leaving no\ntemplate behind. Tags are canonicalised, so `pt-br` lands as `pt-BR`, and\ntwo keys canonicalising to one tag are rejected.\n\nOmit it to create the template with no draft, and add content later\nthrough the version and language paths. Nothing here reaches Meta:\ncontent is submitted, never created.",
     )] = None
 
@@ -11935,6 +12694,7 @@ class WhatsAppTemplateUpdate(BaseModel):
     "Partial update of a template's metadata and language policies. Only the fields you send are changed; the rest are left as they stand. The slug can change only before the first submission."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A new workspace-unique handle. Editable only before the first submission. After a change, the old slug no longer resolves; the template ID stays the same.",
         examples=["welcome-email"],
         max_length=63,
@@ -11942,6 +12702,7 @@ class WhatsAppTemplateUpdate(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template's display name. Editable at any time; it is not what a send references.",
         examples=["Order update"],
         max_length=255,
@@ -11952,15 +12713,18 @@ class WhatsAppTemplateUpdate(BaseModel):
         max_length=1000,
     )] = None
     default_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The language a send falls back to, and the one language the template is required to carry. Repointing it at a language the draft does not hold is refused, the same way removing the current default is: add the language first.",
         examples=["en"],
         max_length=35,
         min_length=2,
     )] = None
     on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How a send behaves when it asks for a language this template does not carry. Omitting it leaves the template's current setting alone. The `fail` default belongs to a create, and a partial update never reapplies it.",
     )] = None
     language_source_required: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether a send has to name a language.",
     )] = None
 
@@ -11995,6 +12759,7 @@ class WhatsAppTemplateVersionSummary(BaseModel):
         examples=["2026-07-20T10:31:00Z"],
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this version, given whether it has been submitted. Present on\nreads that compute it: an empty list means there is nothing to do, and the field is\nabsent entirely on responses that do not report next actions.\n\nA version with no `version_number` is the open draft, and routes to writing its\nlanguages and checking it. One that carries a number is frozen, so it routes to\nreading the verdicts it holds. `submitted_at` does not separate the two, because\nit is also null on a built-in template's version.",
     )] = None
 
@@ -12025,12 +12790,15 @@ class WhatsAppTemplateVersionLanguage(BaseModel):
         description="This language's content in this version, in display order.",
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What this submission did with this language. Absent on a draft, which has not been submitted. Whether the language can be sent right now is a different question, answered by the template's `languages` summary.",
     )] = None
     rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec` or `message_send_ttl_seconds`; the language keeps sending on the maximum price and time-to-live WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
 
@@ -12075,6 +12843,7 @@ class WhatsAppTemplateDuplicate(BaseModel):
         min_length=1,
     )]
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The copy's handle. The server assigns one when omitted. A `bird_` slug is rejected, and one already in use is a conflict.",
         examples=["acme_order_update"],
         max_length=63,
@@ -12082,16 +12851,19 @@ class WhatsAppTemplateDuplicate(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The copy's display name. Inherited from the source when omitted.",
         max_length=255,
         min_length=1,
     )] = None
     include_languages: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The languages the copy carries, when it should carry only some of them. Every entry must be a language the source holds. A copy narrows the set it inherits, it never adds to it. Omitted, the copy takes all of the source's languages.",
         max_length=100,
         min_length=1,
     )] = None
     default_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The copy's default language, which must be one of the languages the copy carries. Omitted, the copy keeps the source's default when `include_languages` still carries it. Otherwise it takes the first of the copy's languages sorted by canonical tag, which is the order the copy stores them in, not the order `include_languages` listed them.",
         examples=["pt-BR"],
         max_length=35,
@@ -12103,6 +12875,7 @@ class WhatsAppTemplateSubmit(BaseModel):
     "Options for a submit. Every field is optional, so an empty body submits the draft as it stands."
     model_config = ConfigDict(extra="allow")
     validate_only: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Check the draft without submitting it. Every language is checked and every problem reported, but nothing is frozen and nothing is sent to WhatsApp. A clean result does not guarantee WhatsApp approval: WhatsApp offers no way to ask in advance, so it can still refuse a submission these checks passed. Use a different idempotency key for the validation and the submission. Reusing one key with different request bodies is rejected.",
     )] = None
 
@@ -12118,6 +12891,7 @@ class WhatsAppTemplateSubmitResult(BaseModel):
         description="The version this submit froze, or null when nothing was frozen: a check run, or a submit that found problems.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this outcome. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that do\nnot report next actions.\n\nA failed check routes back to the languages that need an edit; a clean one routes to\nthe real submit, and then to polling the template for WhatsApp's verdicts.",
     )] = None
 
@@ -12132,6 +12906,7 @@ class WhatsAppTemplateLanguageSummary(BaseModel):
         min_length=2,
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Not yet approved or rejected.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
@@ -12145,6 +12920,7 @@ class WhatsAppTemplateLanguageSummary(BaseModel):
         min_length=1,
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this language, given the verdict it carries. Present on reads\nthat compute it: an empty list means there is nothing to do, and the field is absent\nentirely on responses that do not report next actions.\n\nApproval is per language, so this is where a rejection, a pause, or a reclaimed\nlanguage is answered. The template's own next actions cannot say, because they read\nthe aggregate.",
     )] = None
 
@@ -12193,6 +12969,7 @@ class WhatsAppTemplateQuality(BaseModel):
         description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
     )]
     previous_score: Annotated[Optional[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
     )] = None
     updated_at: Annotated[str, Field(
@@ -12218,9 +12995,11 @@ class WhatsAppTemplatePause(BaseModel):
         min_length=1,
     )]
     reason: Annotated[Optional[Annotated[Union[WhatsAppTemplatePauseReason, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's label for why it took a language out of service: its `other_info.title`, lowercased. `first_pause` and `second_pause` are the first and second pauses for a low quality rating, which last three and six hours. `rate_limiting_pause` is a pause WhatsApp applied to limit sending. `disabled` means WhatsApp stopped the language from sending after repeated pauses. This is an open enum. Accept unrecognized values.",
     )] = None
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's explanation of the pause or disablement, passed through unmodified. Absent when WhatsApp sent none.",
         examples=["Your WhatsApp message template has been paused."],
         min_length=1,
@@ -12247,6 +13026,7 @@ class WhatsAppTemplateLanguage(BaseModel):
         description="This language's content blocks, in display order, exactly as submitted or as they stand in the draft.",
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Not yet approved or rejected.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
@@ -12259,21 +13039,27 @@ class WhatsAppTemplateLanguage(BaseModel):
         min_length=1,
     )]
     category: Annotated[Optional[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
     )] = None
     previous_category: Annotated[Optional[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
     )] = None
     quality: Annotated[Optional[WhatsAppTemplateQuality], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating.",
     )] = None
     pause: Annotated[Optional[WhatsAppTemplatePause], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's record of why it paused or disabled one language. Set when WhatsApp pauses or disables the language and removed once the language can send again. Present only on the version currently in service.",
     )] = None
     rejection: Annotated[Optional[WhatsAppTemplateRejection], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why Meta refused this content, present when `status` is `rejected`. Absent otherwise.",
     )] = None
     error: Annotated[Optional[WhatsAppTemplateSubmissionError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the submission did not complete. Present when `status` is `submit_failed`. Also present when WhatsApp refused a change to `optimization_spec` or `message_send_ttl_seconds`; the language keeps sending on the maximum price and time-to-live WhatsApp already held. Absent otherwise, including on a rejection, whose reason is in `rejection`.",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
@@ -12329,6 +13115,7 @@ class WhatsAppTemplateLanguageDiscard(BaseModel):
     "Parameters for discarding one language's draft edits. Pass `revision` to guard against overwriting an edit you haven't seen."
     model_config = ConfigDict(extra="allow")
     revision: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The revision you last read for this language, making the discard a compare-and-set: a mismatch is refused with a conflict, leaving an edit you have not seen in place. Omit it for last-write-wins, which is what a single writer wants. Supplying it for a language the draft no longer holds is also refused with a conflict rather than recreating the language.",
         examples=[4],
         ge=1,
@@ -12575,11 +13362,13 @@ class WhatsAppAgentNotification(BaseModel):
         description="Where the notification stands. `accepted` from the moment Bird takes it, then one of the three final states once WhatsApp has answered.",
     )]
     skipped_reason: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's own account of why the agent chose to say nothing, passed through. Present only when `status` is `skipped`. Show it to the person who sent the notification; never match on its text.",
         examples=["The contact's conversation is currently held by the business."],
         min_length=1,
     )] = None
     error: Annotated[Optional[WhatsAppAgentNotificationError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the notification failed. Present only when `status` is `failed`.",
     )] = None
     created_at: Annotated[str, Field(
@@ -12673,6 +13462,7 @@ class WhatsAppNumberError(BaseModel):
         description="Standardized failure reason.",
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the connection failed: WhatsApp's own words, in the language of the account it refused, when WhatsApp answered; our own explanation when the number was refused before WhatsApp was asked; a generic sentence when WhatsApp refused without giving a reason. Absent when the attempt failed without ever reaching WhatsApp, which leaves `code` as the only account of the failure. Show it to the person who owns the number; never match on its text.",
         examples=["Cannot Create Certificate: Please ensure two-factor authentication is disabled."],
         min_length=1,
@@ -12712,6 +13502,7 @@ class WhatsAppNumber(BaseModel):
         pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     waba: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp Business Account this number is connected under. Present only for a number your workspace connected itself.",
         examples=[102290129340398],
         min_length=1,
@@ -12721,12 +13512,14 @@ class WhatsAppNumber(BaseModel):
         examples=[+15550001234],
     )]
     number_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The number you hold with us that this WhatsApp number was connected from, as its id in GET /v1/numbers. Absent for a number you brought yourself.",
         examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     verified_until: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When we expect WhatsApp to release this pre-verified number if you have not finished signup by then. Present only while the number is `awaiting_signup`. Absent for a number pre-verified before we started recording this moment, and for a number you brought yourself.",
         examples=["2026-11-19T10:22:31Z"],
         min_length=1,
@@ -12741,42 +13534,53 @@ class WhatsAppNumber(BaseModel):
         description="Whether the number sends under a WhatsApp Business Account we operate on your behalf (`system`) or one your workspace connected itself (`workspace`).",
     )]
     data_localization_region: Annotated[Optional[WhatsAppDataLocalizationRegion], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country this number's message content is stored at rest in, as its two-letter ISO 3166 code. Absent when it uses WhatsApp's default storage. It can differ from the region requested at connection when WhatsApp requires a particular country for the number.",
     )] = None
     status: Annotated[Annotated[Union[WhatsAppNumberStatus, str], Field(union_mode="left_to_right")], Field(
         description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this number, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nWhile `status` is `awaiting_signup` this carries the browser step that finishes\nthe connection, because embedded signup sits behind an OAuth screen no API call\ncan stand in for.",
     )] = None
     error: Annotated[Optional[WhatsAppNumberError], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why this number's connection was refused for good. Present only while `status` is `failed`. A retryable step records its cause on a still-`pending` number without setting this field, because that cause is not a refusal yet, so a connection you are still waiting on reports no error here.",
     )] = None
     finish_setup_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where a person finishes connecting this number, present only while `status` is `awaiting_signup`. Finishing means completing WhatsApp's embedded signup, which is a browser flow behind an OAuth screen: it cannot be done over the API, so open this link and have someone with access to the workspace complete it. The number is offered to them already verified. Once they finish, `status` moves on and this link is no longer returned.",
         examples=["https://bird.com/dashboard/w/ws_01krdgeqcxet5s7t44vh8rt9mg/whatsapp/numbers?finish_setup_number=wan_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
     )] = None
     quality_rating: Annotated[Optional[Annotated[Union[WhatsAppNumberQualityRating, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's quality rating for this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
     )] = None
     messaging_limit: Annotated[Optional[Annotated[Union[WhatsAppNumberMessagingLimit, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The messaging limit WhatsApp applied to this number's business portfolio as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
     )] = None
     throughput_level: Annotated[Optional[Annotated[Union[WhatsAppNumberThroughputLevel, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The send rate WhatsApp allowed this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
     )] = None
     is_official_business_account: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether WhatsApp grants this number Official Business Account status as of `meta_synced_at`. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf. WhatsApp grants the status per number, so two numbers on one WhatsApp Business Account can differ. The status also decides whether a rename is possible here: a number that has it cannot be renamed through `PATCH /v1/whatsapp/numbers/{number_id}/profile` at all, and has to be renamed through WhatsApp support instead.",
     )] = None
     is_on_business_app: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this number is also in use on the WhatsApp Business app, so the business keeps sending one-to-one messages from the app while you send through the API. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf.",
     )] = None
     meta_synced_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When this number's state was last read from WhatsApp. `status`, `quality_rating`, `messaging_limit`, `throughput_level`, and `is_official_business_account` all belong to that reading rather than representing live values. We re-read roughly hourly, so a change at WhatsApp can be up to an hour old here. Absent for a number we have never read back and for a number we operate on your behalf.",
         min_length=1,
     )] = None
     pre_verification_requested_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When we last asked WhatsApp to send this number a verification code, which we do only for a number your workspace connected itself from a number you hold with us. Absent for a number we operate on your behalf, and for one you connected through Embedded Signup with a code you read yourself. Wait a few hours after this before repairing a number whose verification failed: WhatsApp rotates the routes it verifies over during that period, and throttles a number asked repeatedly in a short window. Distinct from `updated_at`, which any change to the number moves.",
         min_length=1,
     )] = None
@@ -12918,54 +13722,67 @@ class WhatsAppNumberProfile(BaseModel):
     "The business profile WhatsApp shows to people this number messages. It is read from WhatsApp on each request rather than from a stored copy, so it is always current and a WhatsApp outage makes it briefly unavailable."
     model_config = ConfigDict(extra="allow")
     display_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The name WhatsApp verifies for this number. Once WhatsApp approves it, it appears at the top of a chat with this number; `display_name_status` is what says whether it has. Set when the number was connected, and changed from the dashboard or the CLI, as [WhatsApp phone numbers](/docs/guides/whatsapp/phone-number-setup) explains. This field still returns the current name until a requested change completes.",
         examples=["Lucky Shrub"],
     )] = None
     display_name_status: Annotated[Optional[Annotated[Union[WhatsAppDisplayNameStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where WhatsApp's review of the display name stands. A name still under review is not yet shown at the top of a chat.",
     )] = None
     new_display_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The display name whose change has been requested, whether or not WhatsApp is reviewing it. Absent when no change is pending.",
         examples=["Lucky Shrub Garden Center"],
     )] = None
     new_display_name_status: Annotated[Optional[Annotated[Union[WhatsAppDisplayNameStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the requested display name stands with WhatsApp, including whether it is being reviewed or was accepted for immediate use without a review. Absent when no change is pending. If WhatsApp accepts the name it becomes `display_name`. Every other outcome leaves the number on the name it already had: `declined` is WhatsApp refusing the name, and `expired` is a request that no longer stands and has to be made again.",
     )] = None
     username: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The username WhatsApp users can find this number by, without an `@`. Absent when the number has no username. Once set it cannot be removed through this API.",
         examples=["goldcrest.support"],
     )] = None
     username_status: Annotated[Optional[Annotated[Union[WhatsAppUsernameStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the username stands with WhatsApp. Absent when the number has no username.",
     )] = None
     about: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The short line shown under the business name in a chat.",
         examples=["Open Monday to Friday, 9am to 6pm CET."],
         max_length=139,
     )] = None
     address: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The business address shown on the profile.",
         examples=["Trompenburgstraat 2C, 1079 TX Amsterdam"],
         max_length=256,
     )] = None
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The longer description shown on the profile.",
         examples=["Bird is the platform for messaging with your customers."],
         max_length=256,
     )] = None
     email: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The contact email shown on the profile.",
         examples=["hello@bird.com"],
         max_length=128,
     )] = None
     vertical: Annotated[Optional[Annotated[Union[WhatsAppBusinessVertical, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The industry WhatsApp shows on the profile.",
     )] = None
     websites: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Up to two websites shown on the profile.",
         max_length=2,
     )] = None
     profile_picture_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A link to the profile picture WhatsApp currently shows. WhatsApp signs this link and it expires within days, so load it when you display it and never store it. It is served with permissive cross-origin headers, so a browser can load it directly.",
         examples=["https://pps.whatsapp.net/v/t61.24694-24/643148303_1005107588793925.jpg"],
     )] = None
@@ -13004,6 +13821,7 @@ class AMBBusinessAccount(BaseModel):
         description="Pending accounts need setup or review. Active accounts have recorded approval. Suspended accounts retain their recorded suspension. Configured, connected accounts can exchange messages regardless of review status; Apple decides whether to accept outgoing requests. Disconnected accounts retain their identity and history but cannot exchange new messages until reconnected.",
     )]
     status_reason: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Reason for the current operational suspension, when recorded. Review feedback is retained on the submission. May contain basic Markdown, such as emphasis and lists.",
         min_length=1,
     )] = None
@@ -13022,12 +13840,15 @@ class AMBBusinessAccount(BaseModel):
         min_length=1,
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Next setup actions on create, update and single-account reads. Active accounts return an empty array. Lists omit this field.",
     )] = None
     account_review_status: Annotated[Optional[Annotated[Union[AMBBusinessAccountReviewStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Latest review outcome recorded by Bird staff.",
     )] = None
     finish_setup_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Bird dashboard URL for completing setup. Present only when customer action is available.",
     )] = None
 
@@ -13156,16 +13977,19 @@ class AMBSuppression(BaseModel):
         min_length=1,
     )]
     source_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     source_event_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["aev_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^aev_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     source_end_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
@@ -13221,6 +14045,7 @@ class AMBBusinessAccountCreate(BaseModel):
         min_length=1,
     )]
     apple_business_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The Business ID Apple issued for this brand, if you already have it. Supplying it identifies the draft. Submit the completed evidence requirements explicitly when the business is ready for review.",
         examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
         min_length=1,
@@ -13230,12 +14055,14 @@ class AMBBusinessAccountCreate(BaseModel):
 class AMBBusinessAccountUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The brand name shown for this business record inside Bird.",
         examples=["Acme Retail"],
         max_length=100,
         min_length=1,
     )] = None
     apple_business_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The Business ID Apple issued for this brand. Accepted only while the account has not yet been submitted and is connected. Updating it does not submit the business.",
         examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
         min_length=1,
@@ -13285,6 +14112,7 @@ class AMBBusinessAccountSubmission(BaseModel):
     )]
     created_at: Annotated[str, Field(min_length=1)]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Read the parent business account for current eligibility and next actions. Present on create responses and each customer submission-list item; historical attempts do not establish current account state.",
     )] = None
     updated_at: Annotated[str, Field(min_length=1)]
@@ -13385,6 +14213,7 @@ class AMBChannelSettings(BaseModel):
 class AMBChannelSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     entry_points: Annotated[Optional[List[AMBEntryPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The entry points customers can use to open a conversation with this business. Sending this replaces the entire set; there is no way to add or remove a single entry point without resending the rest.",
     )] = None
     default_locale: Annotated[Optional[str], Field(
@@ -13393,6 +14222,7 @@ class AMBChannelSettingsUpdate(BaseModel):
         min_length=1,
     )] = None
     brand_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The brand name shown on the Bird-hosted landing page customers use to connect this business.",
         examples=["Acme Retail"],
         max_length=100,
@@ -13494,10 +14324,12 @@ class AMBRoutingRuleCreate1(BaseModel):
         min_length=1,
     )]
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins. Omit it to default to 0.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to make this the rule that catches a conversation matching nothing else. A business can have only one; creating a second while one exists returns a `409`.",
         examples=[False],
     )] = None
@@ -13523,10 +14355,12 @@ class AMBRoutingRuleCreate2(BaseModel):
         min_length=1,
     )]
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins. Omit it to default to 0.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to make this the rule that catches a conversation matching nothing else. A business can have only one; creating a second while one exists returns a `409`.",
         examples=[False],
     )] = None
@@ -13548,10 +14382,12 @@ class AMBRoutingRuleCreate3(BaseModel):
         min_length=1,
     )]
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Evaluation order among this business's rules. The highest-precedence rule a conversation matches wins. Omit it to default to 0.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to make this the rule that catches a conversation matching nothing else. A business can have only one; creating a second while one exists returns a `409`.",
         examples=[False],
     )] = None
@@ -13564,33 +14400,40 @@ class AMBRoutingRuleCreate(RootModel[AMBRoutingRuleCreate1 | AMBRoutingRuleCreat
 class AMBRoutingRuleUpdate1(BaseModel):
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     match_kind: Annotated[Optional[AMBRoutingRuleMatchKind], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What a routing rule matches against the entry point that started the conversation.\n\n- `intent` matches on the entry point's intent alone: `match_intent_id` is set and `match_group_id` is null.\n- `group` matches on the entry point's group alone: `match_group_id` is set and `match_intent_id` is null.\n- `both` matches only when the entry point carries the given intent and the given group together, so `match_intent_id` and `match_group_id` are both set. There are two match fields rather than one because `both` needs to carry an intent and a group at once.",
     )] = None
     match_intent_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The entry point intent to match, as sent in Apple's `intentID`. Requires `match_kind`: required when it is `intent` or `both`, and rejected when it is `group`.",
         examples=["order_status"],
         min_length=1,
     )] = None
     match_group_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The entry point group to match, as sent in Apple's `groupID`. Requires `match_kind`: required when it is `group` or `both`, and rejected when it is `intent`.",
         examples=["support"],
         min_length=1,
     )] = None
     queue: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Queue label used for routing and filtering conversations.",
         max_length=64,
         min_length=1,
     )] = None
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Change this rule's evaluation order among the business's other rules.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
         examples=[False],
     )] = None
@@ -13599,6 +14442,7 @@ class AMBRoutingRuleUpdate1(BaseModel):
 class AMBRoutingRuleUpdate2(BaseModel):
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
@@ -13606,20 +14450,24 @@ class AMBRoutingRuleUpdate2(BaseModel):
     match_kind: Literal["intent"]
     match_intent_id: Annotated[str, Field(min_length=1)]
     match_group_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The entry point group to match, as sent in Apple's `groupID`. Requires `match_kind`: required when it is `group` or `both`, and rejected when it is `intent`.",
         examples=["support"],
         min_length=1,
     )] = None
     queue: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Queue label used for routing and filtering conversations.",
         max_length=64,
         min_length=1,
     )] = None
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Change this rule's evaluation order among the business's other rules.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
         examples=[False],
     )] = None
@@ -13628,27 +14476,32 @@ class AMBRoutingRuleUpdate2(BaseModel):
 class AMBRoutingRuleUpdate3(BaseModel):
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     match_kind: Literal["group"]
     match_intent_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The entry point intent to match, as sent in Apple's `intentID`. Requires `match_kind`: required when it is `intent` or `both`, and rejected when it is `group`.",
         examples=["order_status"],
         min_length=1,
     )] = None
     match_group_id: Annotated[str, Field(min_length=1)]
     queue: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Queue label used for routing and filtering conversations.",
         max_length=64,
         min_length=1,
     )] = None
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Change this rule's evaluation order among the business's other rules.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
         examples=[False],
     )] = None
@@ -13657,6 +14510,7 @@ class AMBRoutingRuleUpdate3(BaseModel):
 class AMBRoutingRuleUpdate4(BaseModel):
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
@@ -13665,15 +14519,18 @@ class AMBRoutingRuleUpdate4(BaseModel):
     match_intent_id: Annotated[str, Field(min_length=1)]
     match_group_id: Annotated[str, Field(min_length=1)]
     queue: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Queue label used for routing and filtering conversations.",
         max_length=64,
         min_length=1,
     )] = None
     precedence: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Change this rule's evaluation order among the business's other rules.",
         examples=[10],
     )] = None
     is_default: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to true to make this the rule that catches a conversation matching nothing else, or to false to stop it from being the default.",
         examples=[False],
     )] = None
@@ -13714,19 +14571,26 @@ class AMBNativeAttachment(BaseModel):
     "One attachment. A send supplies source_url or attachment_id. attachment_id reuses a received, sent or uploaded attachment of the sending business account instead of source_url; supplying both is refused with a `422`. A read returns the attachment's name, media type and, once Apple holds it, its size. It returns attachment_id when Bird stores the attachment: received attachments with an Apple reference, and sent attachments once Apple holds them. Download the bytes with getAMBAttachmentContent by attachment_id, or with getAMBMessageAttachment by message and position."
     model_config = ConfigDict(extra="allow")
     attachment_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["aat_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^aat_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     source_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="HTTPS URL Bird downloads and uploads to Apple. Required on a send unless attachment_id is given. A non-HTTPS URL is refused with a `422` `AMBEndpointNotHTTPS`. In a template it may contain `{{ }}` placeholders; the rendered value must be HTTPS. Returned on reads of attachments you sent this way.",
         min_length=1,
     )] = None
-    name: Annotated[Optional[str], Field(description="Display filename.")] = None
+    name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Display filename.",
+    )] = None
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type of the attachment.",
     )] = None
     size: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Attachment size in bytes. Absent until Apple holds the attachment.",
         ge=1,
         le=99999999,
@@ -13737,12 +14601,15 @@ class AMBText(BaseModel):
     "A text message: a body, an optional subject, and files placed in the body. Next to `rich_link` or `interactive`, it is sent first as its own text bubble."
     model_config = ConfigDict(extra="allow")
     body: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text displayed in the message. Use one U+FFFC object replacement character per attachment to control placement.",
     )] = None
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Subject displayed above the message body.",
     )] = None
     attachments: Annotated[Optional[List[AMBNativeAttachment]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Ordered attachments. A send supplies each one by source_url or attachment_id.",
     )] = None
 
@@ -13754,6 +14621,7 @@ class AMBNativeRichLinkImage(BaseModel):
         min_length=1,
     )]
     mime_type: Annotated[Optional[Literal["image/png"]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="PNG media type required by Apple. Defaults to image/png.",
     )] = None
 
@@ -13765,6 +14633,7 @@ class AMBNativeRichLinkVideo(BaseModel):
         min_length=1,
     )]
     mime_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Media type of the video. Defaults to video/mp4; supply the actual type for other formats.",
     )] = None
 
@@ -13772,7 +14641,9 @@ class AMBNativeRichLinkVideo(BaseModel):
 class AMBNativeRichLinkAssets(BaseModel):
     model_config = ConfigDict(extra="allow")
     image: AMBNativeRichLinkImage
-    video: Optional[AMBNativeRichLinkVideo] = None
+    video: Annotated[Optional[AMBNativeRichLinkVideo], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class AMBNativeRichLinkData(BaseModel):
@@ -13794,6 +14665,7 @@ class AMBRichLinkConstruct(BaseModel):
         min_length=1,
     )]
     store_region: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ISO 3166-1 alpha-2 country code.",
         examples=["US"],
         max_length=2,
@@ -13805,8 +14677,11 @@ class AMBRichLinkConstruct(BaseModel):
 class AMBRichLink(BaseModel):
     "A link with a preview card. Supply your own preview in `rich_link_data`, or ask Apple to build it with `rich_link_construct`. To introduce the link, send `text` alongside it."
     model_config = ConfigDict(extra="allow")
-    rich_link_data: Optional[AMBNativeRichLinkData] = None
+    rich_link_data: Annotated[Optional[AMBNativeRichLinkData], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     rich_link_construct: Annotated[Optional[AMBRichLinkConstruct], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title.",
     )] = None
 
@@ -13825,29 +14700,36 @@ class AMBMessageBubble(BaseModel):
         min_length=1,
     )]
     subtitle: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Secondary text shown below the title.",
         max_length=512,
     )] = None
     style: Annotated[Optional[AMBMessageBubbleStyle], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Layout of an Apple interactive message bubble.",
     )] = None
     image_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Identifier of an image in `interactive.images`, or `interactive_reply.images` on a reply. Apple ignores it for custom iMessage apps.",
         min_length=1,
     )] = None
     image_title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Title shown over an attached image in a custom iMessage app bubble.",
         max_length=512,
     )] = None
     image_subtitle: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Subtitle shown over an attached image in a custom iMessage app bubble.",
         max_length=512,
     )] = None
     secondary_subtitle: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Right-aligned title in a custom iMessage app bubble.",
         max_length=512,
     )] = None
     tertiary_subtitle: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Right-aligned subtitle in a custom iMessage app bubble.",
         max_length=512,
     )] = None
@@ -13864,6 +14746,7 @@ class AMBNativeImage(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Accessibility description read by VoiceOver.",
     )] = None
 
@@ -13905,6 +14788,7 @@ class AMBListPickerItem(BaseModel):
         min_length=1,
     )] = None
     order: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Position within the section, ascending. Defaults to the row's array position.",
         ge=0,
     )] = None
@@ -13925,6 +14809,7 @@ class AMBListPickerSection(BaseModel):
         min_length=1,
     )]
     multiple_selection: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the customer can select more than one row in this section.",
     )] = None
 
@@ -13940,24 +14825,29 @@ class AMBNativeListPicker(BaseModel):
 class AMBLocation(BaseModel):
     model_config = ConfigDict(extra="allow")
     title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Name shown for the appointment location.",
     )] = None
     latitude: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Latitude in degrees. Set together with `longitude`.",
         ge=-90,
         le=90,
     )] = None
     longitude: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Longitude in degrees. Set together with `latitude`.",
         ge=-180,
         le=180,
     )] = None
     coordinates: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple Messages template content only: exactly one placeholder, such as `{{ store }}`, set instead of `latitude` and `longitude`. When the template is sent, a `location` variable fills it with its `latitude` and `longitude`, and its `name`, when it has one, replaces `title`. A direct send that includes it returns `422`. Never present on an inbound event.",
         examples=["{{ store }}"],
         pattern="^\\{\\{[ \\t]*[a-z_][a-z0-9_]*[ \\t]*\\}\\}$",
     )] = None
     radius: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Location radius in meters. Apple ignores it without coordinates.",
         ge=0,
     )] = None
@@ -13984,14 +14874,19 @@ class AMBTimeSlot(BaseModel):
 class AMBNativeEvent(BaseModel):
     model_config = ConfigDict(extra="allow")
     identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your identifier for the event. Defaults to the message identifier.",
         min_length=1,
     )] = None
-    location: Optional[AMBLocation] = None
+    location: Annotated[Optional[AMBLocation], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     timezone_offset: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Minutes from GMT at the event location. Omit it and `timezone` to use the customer's time zone.",
     )] = None
     timezone: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="IANA time zone of the event location. Apple receives the zone's offset at the time slots, so a template keeps the right offset across a daylight-saving change. Every slot must have the same offset in the zone: slots on both sides of a clock change return `422`. Set it instead of `timezone_offset`. An unknown zone returns `422`. In Apple Messages template content it may instead be exactly one placeholder, such as `{{ timezone }}`, filled with a `timezone` variable when the template is sent. A direct send with a placeholder returns `422`.",
         examples=["Europe/Amsterdam"],
         min_length=1,
@@ -14002,20 +14897,29 @@ class AMBNativeEvent(BaseModel):
         min_length=1,
     )]
     image_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Identifier of the event image in `interactive.images`.",
         min_length=1,
     )] = None
     title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Event title. Also supplies the title of each omitted received or reply bubble, where the 512-character bubble text limit applies. Supply both bubbles explicitly to use a longer event title.",
     )] = None
 
 
 class AMBFormSplash(BaseModel):
     model_config = ConfigDict(extra="allow")
-    header: Optional[str] = None
-    splash_text: Optional[str] = None
+    header: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    splash_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     button_title: Annotated[str, Field(min_length=1)]
-    image_identifier: Annotated[Optional[str], Field(min_length=1)] = None
+    image_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        min_length=1,
+    )] = None
 
 
 class AMBFormSelectItem(BaseModel):
@@ -14023,8 +14927,15 @@ class AMBFormSelectItem(BaseModel):
     identifier: Annotated[str, Field(min_length=1)]
     title: Annotated[str, Field(min_length=0)]
     value: Annotated[str, Field(min_length=0)]
-    image_identifier: Annotated[Optional[str], Field(min_length=1)] = None
-    next_page_identifier: Annotated[Optional[str], Field(max_length=19, min_length=1)] = None
+    image_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        min_length=1,
+    )] = None
+    next_page_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        max_length=19,
+        min_length=1,
+    )] = None
 
 
 class AMBFormSelectPage(BaseModel):
@@ -14035,20 +14946,24 @@ class AMBFormSelectPage(BaseModel):
         min_length=1,
     )]
     type: Annotated[Literal["select"], Field(min_length=1)]
-    title: Optional[str] = None
+    title: Annotated[Optional[str], Field(json_schema_extra={"x-bird-nullable": False})] = None
     subtitle: Annotated[str, Field(
         description="Question shown on this page.",
         min_length=0,
     )]
     next_page_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
         max_length=19,
         min_length=1,
     )] = None
     submit_form: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
     )] = None
-    multiple_selection: Optional[bool] = None
+    multiple_selection: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     items: Annotated[List[AMBFormSelectItem], Field(min_length=1)]
 
 
@@ -14067,23 +14982,27 @@ class AMBFormPickerPage(BaseModel):
         min_length=1,
     )]
     type: Annotated[Literal["picker"], Field(min_length=1)]
-    title: Optional[str] = None
+    title: Annotated[Optional[str], Field(json_schema_extra={"x-bird-nullable": False})] = None
     subtitle: Annotated[str, Field(
         description="Question shown on this page.",
         min_length=0,
     )]
     next_page_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
         max_length=19,
         min_length=1,
     )] = None
     submit_form: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
     )] = None
     picker_title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text beside the picker field. Omit to center the field without a label.",
     )] = None
     selected_item_index: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Zero-based index into `items`. Defaults to `0`. Must be less than the number of items; otherwise sending returns `422` `AMBFormPagesInvalid`.",
         ge=0,
     )] = None
@@ -14094,22 +15013,27 @@ class AMBFormDatePickerOptions(BaseModel):
     "Apple defaults to UTC when interpreting these dates."
     model_config = ConfigDict(extra="allow")
     date_format: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Format used to read the date values in these options. Defaults to `MM/dd/yyyy`.",
         min_length=1,
     )] = None
     start_date: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Date initially shown by the picker, written in `date_format`. Defaults to the current date.",
         min_length=1,
     )] = None
     maximum_date: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Latest date the picker shows, written in `date_format`. Defaults to the current date.",
         min_length=1,
     )] = None
     minimum_date: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Earliest date the picker shows, written in `date_format`.",
         min_length=1,
     )] = None
     label_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Label beside the date field. Defaults to `Date`.",
     )] = None
 
@@ -14122,21 +15046,26 @@ class AMBFormDatePickerPage(BaseModel):
         min_length=1,
     )]
     type: Annotated[Literal["date_picker"], Field(min_length=1)]
-    title: Optional[str] = None
+    title: Annotated[Optional[str], Field(json_schema_extra={"x-bird-nullable": False})] = None
     subtitle: Annotated[str, Field(
         description="Question shown on this page.",
         min_length=0,
     )]
     next_page_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
         max_length=19,
         min_length=1,
     )] = None
     submit_form: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
     )] = None
-    hint_text: Optional[str] = None
+    hint_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     options: Annotated[Optional[AMBFormDatePickerOptions], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple defaults to UTC when interpreting these dates.",
     )] = None
 
@@ -14192,30 +15121,40 @@ class AMBFormTextContentType(str, Enum):
 class AMBFormInputOptions(BaseModel):
     model_config = ConfigDict(extra="allow")
     regex: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Pattern Apple uses to validate the input. Use JSON string escaping for backslashes.",
         min_length=1,
     )] = None
     placeholder: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Shown when the field is empty. Defaults to `Required` when `required` is true, otherwise `Optional`.",
     )] = None
     required: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Disables the next-page button until the customer enters a value.",
     )] = None
-    input_type: Optional[AMBFormInputType] = None
+    input_type: Annotated[Optional[AMBFormInputType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     label_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Label for `singleline` input only. Omit for no label.",
     )] = None
     prefix_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Text beside `singleline` input only, such as a currency symbol. Omit for no prefix.",
     )] = None
     maximum_character_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Defaults to 30 for `singleline` input and 300 for `multiline` input.",
         ge=1,
     )] = None
     keyboard_type: Annotated[Optional[Annotated[Union[AMBFormKeyboardType, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple UIKit value, passed through without changing its spelling.",
     )] = None
     text_content_type: Annotated[Optional[Annotated[Union[AMBFormTextContentType, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple UIKit value, passed through without changing its spelling.",
     )] = None
 
@@ -14228,21 +15167,27 @@ class AMBFormInputPage(BaseModel):
         min_length=1,
     )]
     type: Annotated[Literal["input"], Field(min_length=1)]
-    title: Optional[str] = None
+    title: Annotated[Optional[str], Field(json_schema_extra={"x-bird-nullable": False})] = None
     subtitle: Annotated[str, Field(
         description="Question shown on this page.",
         min_length=0,
     )]
     next_page_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Next page to show. Omit to finish the form. Single-select pages route through their items instead.",
         max_length=19,
         min_length=1,
     )] = None
     submit_form: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Marks this page as an end page for the form. A page with no next page also finishes the form.",
     )] = None
-    hint_text: Optional[str] = None
-    options: Optional[AMBFormInputOptions] = None
+    hint_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    options: Annotated[Optional[AMBFormInputOptions], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class AMBFormPage(RootModel[AMBFormSelectPage | AMBFormPickerPage | AMBFormDatePickerPage | AMBFormInputPage]):
@@ -14257,12 +15202,16 @@ class AMBNativeFormData(BaseModel):
         min_length=1,
     )]
     private: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether Apple marks the submitted response as private.",
     )] = None
     show_summary: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether Apple shows a summary before the customer submits.",
     )] = None
-    splash: Optional[AMBFormSplash] = None
+    splash: Annotated[Optional[AMBFormSplash], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     pages: Annotated[List[AMBFormPage], Field(
         description="Form pages referenced by the start page and navigation identifiers.",
         min_length=1,
@@ -14331,32 +15280,49 @@ class AMBNativeAuthentication(BaseModel):
 class AMBInteractive(BaseModel):
     "Something for the customer to tap: exactly one of `quick_reply`, `list_picker`, `event` (a time picker), `dynamic` (a form) or `imessage_app`. To introduce it with text or files, send `text` alongside it; that text arrives as its own bubble first. Apple Pay and identity verification requests are created through their conversation endpoints and read back here as `payment` and `authenticate`."
     model_config = ConfigDict(extra="allow")
-    received_message: Optional[AMBMessageBubble] = None
-    reply_message: Optional[AMBMessageBubble] = None
+    received_message: Annotated[Optional[AMBMessageBubble], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    reply_message: Annotated[Optional[AMBMessageBubble], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     session_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Session UUID to preserve across interactions. Apple creates one when omitted.",
         pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )] = None
     request_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Correlation identifier for this interaction. Bird generates one when omitted. Use a new value for each message. A reply is linked to its request only when no other sent message in the conversation uses the same identifier.",
         pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )] = None
     images: Annotated[Optional[List[AMBNativeImage]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Images the interaction references by `image_identifier`, such as list picker thumbnails.",
     )] = None
-    quick_reply: Optional[AMBNativeQuickReply] = None
-    list_picker: Optional[AMBNativeListPicker] = None
-    event: Optional[AMBNativeEvent] = None
+    quick_reply: Annotated[Optional[AMBNativeQuickReply], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    list_picker: Annotated[Optional[AMBNativeListPicker], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    event: Annotated[Optional[AMBNativeEvent], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     dynamic: Annotated[Optional[AMBNativeDynamic], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Form content. Bird supplies Apple’s messageForms template and protocol version.",
     )] = None
     imessage_app: Annotated[Optional[AMBIMessageApp], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A custom iMessage app interaction. It also requires both `received_message` and `reply_message`.",
     )] = None
     payment: Annotated[Optional[AMBNativePayment], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials.",
     )] = None
     authenticate: Annotated[Optional[AMBNativeAuthentication], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials.",
     )] = None
 
@@ -14368,6 +15334,7 @@ class AMBNativeInboundImage(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Accessibility description supplied by Apple.",
     )] = None
     download_url: Annotated[str, Field(
@@ -14383,10 +15350,12 @@ class AMBNativeInboundQuickReply(BaseModel):
         min_length=1,
     )]
     selected_index: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Index reported by Apple.",
         ge=0,
     )] = None
     items: Annotated[Optional[List[AMBQuickReplyItem]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Items returned by the customer device.",
     )] = None
 
@@ -14394,6 +15363,7 @@ class AMBNativeInboundQuickReply(BaseModel):
 class AMBNativeInboundListPickerSection(BaseModel):
     model_config = ConfigDict(extra="allow")
     title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Heading shown above this section's rows.",
         min_length=1,
     )] = None
@@ -14406,6 +15376,7 @@ class AMBNativeInboundListPickerSection(BaseModel):
         min_length=1,
     )]
     multiple_selection: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the customer can select more than one row in this section.",
     )] = None
 
@@ -14420,21 +15391,30 @@ class AMBNativeInboundListPicker(BaseModel):
 class AMBNativeInboundEvent(BaseModel):
     model_config = ConfigDict(extra="allow")
     identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Event identifier returned by Apple, when provided.",
         min_length=1,
     )] = None
-    location: Optional[AMBLocation] = None
+    location: Annotated[Optional[AMBLocation], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     timezone_offset: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Minutes from GMT at the event location. Omit to use the customer's time zone.",
     )] = None
     timeslots: Annotated[Optional[List[AMBTimeSlot]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Time slots returned by Apple. May be empty when the device supplies only a selected label.",
     )] = None
     image_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Identifier of the event image in `interactive_reply.images`.",
         min_length=1,
     )] = None
-    title: Annotated[Optional[str], Field(description="Event title.")] = None
+    title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Event title.",
+    )] = None
 
 
 class AMBFormPageType(str, Enum):
@@ -14474,6 +15454,7 @@ class AMBInboundFormSelection(BaseModel):
 class AMBNativeInboundFormData(BaseModel):
     model_config = ConfigDict(extra="allow")
     private: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the sender asked the MSP to treat this form response as private.",
     )] = None
     selections: List[AMBInboundFormSelection]
@@ -14487,6 +15468,7 @@ class AMBNativeInboundDynamic(BaseModel):
 class AMBNativeInboundPayment(BaseModel):
     model_config = ConfigDict(extra="allow")
     state: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Payment state reported by Apple. This does not confirm that a payment settled.",
     )] = None
 
@@ -14494,6 +15476,7 @@ class AMBNativeInboundPayment(BaseModel):
 class AMBNativeInboundAuthentication(BaseModel):
     model_config = ConfigDict(extra="allow")
     status: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Authentication status reported by Apple. This does not establish an authenticated Bird session.",
     )] = None
 
@@ -14501,14 +15484,28 @@ class AMBNativeInboundAuthentication(BaseModel):
 class AMBInboundIMessageApp(BaseModel):
     "The custom iMessage app a customer replied from."
     model_config = ConfigDict(extra="allow")
-    app_id: Annotated[Optional[str], Field(description="Custom app identifier.")] = None
-    app_name: Annotated[Optional[str], Field(description="Custom app name.")] = None
-    bid: Annotated[Optional[str], Field(description="Apple extension identifier.")] = None
-    url: Annotated[Optional[str], Field(description="Opaque custom app response URL.")] = None
+    app_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Custom app identifier.",
+    )] = None
+    app_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Custom app name.",
+    )] = None
+    bid: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Apple extension identifier.",
+    )] = None
+    url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Opaque custom app response URL.",
+    )] = None
     use_live_layout: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the app uses live layout.",
     )] = None
     app_icon_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Relative Bird API URL for downloading the custom app icon with the same authentication and workspace as the message.",
     )] = None
 
@@ -14516,24 +15513,44 @@ class AMBInboundIMessageApp(BaseModel):
 class AMBInteractiveReply(BaseModel):
     "What the customer answered on an interactive message: their choice, time slot, form answers, payment result, sign-in result or custom app reply, under the same key as the request. Inbound only; a message that offers something to tap reads as `interactive` instead."
     model_config = ConfigDict(extra="allow")
-    received_message: Optional[AMBMessageBubble] = None
-    reply_message: Optional[AMBMessageBubble] = None
+    received_message: Annotated[Optional[AMBMessageBubble], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    reply_message: Annotated[Optional[AMBMessageBubble], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     session_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple interaction session identifier.",
     )] = None
     request_identifier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Correlation identifier reported by Apple.",
     )] = None
     images: Annotated[Optional[List[AMBNativeInboundImage]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Images returned by Apple, with authenticated download URLs.",
     )] = None
-    quick_reply: Optional[AMBNativeInboundQuickReply] = None
-    list_picker: Optional[AMBNativeInboundListPicker] = None
-    event: Optional[AMBNativeInboundEvent] = None
-    dynamic: Optional[AMBNativeInboundDynamic] = None
-    payment: Optional[AMBNativeInboundPayment] = None
-    authenticate: Optional[AMBNativeInboundAuthentication] = None
+    quick_reply: Annotated[Optional[AMBNativeInboundQuickReply], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    list_picker: Annotated[Optional[AMBNativeInboundListPicker], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    event: Annotated[Optional[AMBNativeInboundEvent], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    dynamic: Annotated[Optional[AMBNativeInboundDynamic], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    payment: Annotated[Optional[AMBNativeInboundPayment], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    authenticate: Annotated[Optional[AMBNativeInboundAuthentication], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     imessage_app: Annotated[Optional[AMBInboundIMessageApp], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The custom iMessage app a customer replied from.",
     )] = None
 
@@ -14588,11 +15605,13 @@ class AMBMessage(BaseModel):
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     from_: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="Apple business identifier on outbound messages, or the customer's opaque Apple identifier on inbound messages. Omitted when that address is unavailable on a historical record.",
         min_length=1,
     )] = None
     to: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Customer's opaque Apple identifier on outbound messages, or the Apple business identifier on inbound messages. Omitted when that address is unavailable on a historical record.",
         min_length=1,
     )] = None
@@ -14606,31 +15625,39 @@ class AMBMessage(BaseModel):
         description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
     )]
     source: Annotated[Optional[AMBMessageSource], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
     )] = None
     text: Annotated[Optional[AMBText], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message's text and files. Next to `rich_link`, `interactive` or `interactive_reply`, it is the text that came with them.",
     )] = None
     rich_link: Annotated[Optional[AMBRichLink], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The link preview an outbound message carried.",
     )] = None
     interactive: Annotated[Optional[AMBInteractive], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What an outbound message offered the customer to tap.",
     )] = None
     interactive_reply: Annotated[Optional[AMBInteractiveReply], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What the customer answered, on an inbound message replying to an interactive message.",
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     reply_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     replied_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When Apple delivered the reply in `reply_message_id` to Bird. This can be slightly earlier than that reply's `created_at`, which records when Bird processed it. Omitted until a reply is matched, and in webhook payloads.",
         examples=["2026-10-13T10:09:00Z"],
     )] = None
@@ -14640,16 +15667,20 @@ class AMBMessage(BaseModel):
         min_length=1,
     )] = None
     category: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The category this message was sent with, for reporting only. It does not affect sending or suppression policy, or select an Apple department or purpose. Defaults to an empty string when a send names no category. Absent on an inbound message, which has no category to report.",
         examples=["order_update"],
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON object for per-message context. Maximum 2 KB serialized. Top-level keys beginning with `__bird` are reserved. Returned in the send response, message reads and customer message webhooks.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` filter labels applied to this message. Absent on an inbound message.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none, and on inbound messages.",
         examples=["INV-1234"],
         max_length=255,
@@ -14669,10 +15700,12 @@ class AMBMessage(BaseModel):
         description="When the selected sending outcome occurred. Null unless the current status is `sent` and the message is outbound. For older messages without a retained sending event, the stored record time is used.",
     )] = None
     group: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple department identifier carried by this message. Omitted when absent from the message or unavailable on a historical record.",
         min_length=1,
     )] = None
     intent: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple purpose identifier carried by this message. Omitted when absent from the message or unavailable on a historical record.",
         min_length=1,
     )] = None
@@ -14730,11 +15763,13 @@ class AMBTemplateSend(BaseModel):
     "A send-by-template reference. Identify the template by `id` or `slug`. Supply exactly one reference, optionally select a language, and pass variable values in `parameters`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The workspace or built-in template to send, by its immutable slug. Read the template's live version to see its variables.",
         examples=["bird_order_update"],
         max_length=63,
@@ -14742,12 +15777,14 @@ class AMBTemplateSend(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )] = None
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Which of the template's languages to send. Omit it to send the template's default language, unless the template sets `language_source_required`, in which case a send naming no language is rejected. When the template does not carry the language you ask for, its own `on_missing_language` setting decides whether the closest available language is sent instead or the send is rejected.",
         examples=["fr"],
         max_length=35,
         min_length=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A `location` variable takes an object with `latitude` and `longitude`, and optionally `name`, which becomes the location's title. `address` is accepted for parity with WhatsApp and is not shown on Apple Messages. Every other variable takes a string, number or boolean. A missing required key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
     )] = None
 
@@ -14767,46 +15804,61 @@ class AMBMessageSendRequest(BaseModel):
         min_length=1,
     )]
     source: Annotated[Optional[AMBMessageSource], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Who sent an outbound message:\n\n- `operator`: A person, through a signed-in dashboard session.\n- `automation`: A workflow or bot acting on the workspace's behalf,\n  through a signed-in session.\n- `api`: A direct API call, authenticated with an API key.\n\nA credential can send only the sources it is permitted; naming one\noutside that set is refused with a `422` `AMBMessageSourceNotPermitted`.\n\nThis is not `from`, which a send carries alongside it. That names\nthe brand the message goes out as; this names who composed it.",
     )] = None
     text: Annotated[Optional[AMBText], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A text message. Alongside `rich_link` or `interactive`, it is sent first as its own text bubble, in the same message.",
     )] = None
     rich_link: Annotated[Optional[AMBRichLink], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A link with a preview card.",
     )] = None
     interactive: Annotated[Optional[AMBInteractive], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Something for the customer to tap, such as quick replies, a list picker, a time picker, a form or a custom iMessage app.",
     )] = None
     template: Annotated[Optional[AMBTemplateSend], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send using a stored template instead of `text`, `rich_link` or `interactive`. The category is derived from the template, so `category` is rejected alongside it.",
     )] = None
     category: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-form reporting label; it does not change sending or suppression policy, for example `order_update`. Omit it to send with the default empty category. Rejected alongside `template`, where the category is derived from the template.",
         examples=["order_update"],
         max_length=64,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON object for per-message context. Maximum 2 KB serialized. Top-level keys beginning with `__bird` are reserved. Returned in the send response, message reads and customer message webhooks.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` labels for filtering. Maximum 20 tags per send.",
         max_length=20,
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An identifier you want to find this message by, such as an order or ticket number, matched exactly by the message list's `reference` filter. Set it only when you need to search on it, and put any other data in `metadata`. Stored on the message, returned on reads and echoed in webhook payloads. Several messages can share one.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     group: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Department identifier for this message.",
     )] = None
-    intent: Annotated[Optional[str], Field(description="Purpose of this conversation.")] = None
+    intent: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Purpose of this conversation.",
+    )] = None
     locale: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple locale identifier, for example en_US. Defaults to the conversation locale.",
     )] = None
     skip_typing: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send the first part without the typing indicator and one-second pause Bird otherwise shows before it. Set it only after you sent `typing_start` with the conversation typing operation, so the customer already sees typing. A first part that Apple accepts clears that indicator when it arrives. If Bird accepts the message but it fails before then, such as a failed send or a rejection during processing, Bird sends `typing_end` instead. If the request itself returns an error, nothing is sent, so send `typing_end` yourself. When Bird splits the message into several parts, such as text around a link, the parts after the first keep their typing indicator.",
     )] = None
 
@@ -15065,13 +16117,16 @@ class AMBConversationUpdate(BaseModel):
         pattern="^(me|usr_[0-9a-hjkmnp-tv-z]{26})$",
     )] = None
     inbox_status: Annotated[Optional[ConversationInboxStatus], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the conversation needs attention in the workspace inbox. Set it to `resolved` when the work is finished. A new inbound message reopens the same conversation. Changing inbox status preserves message history and does not change the channel's permission to send messages or mark messages read.",
     )] = None
     labels: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels chosen by your workspace. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nEach label must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace. Duplicate labels are rejected. The names `all`, `archived`, `assigned`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `pinned`, `read`, `snoozed`, `spam`, `starred`, `trash`, and `unread` are reserved in every casing.",
         max_length=20,
     )] = None
     read: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mark received inbound messages with created_at at or before this timestamp as read in the shared workspace inbox. Messages sharing the timestamp are included together. Later arrivals remain unread until another read update. This does not send a read receipt to the customer or change inbox status. Omit to leave read state unchanged.",
     )] = None
     queue: Annotated[Optional[str], Field(
@@ -15081,6 +16136,7 @@ class AMBConversationUpdate(BaseModel):
         min_length=1,
     )] = None
     routing_change: Annotated[Optional[AMBConversationRoutingChangeDecision], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Settles the conversation's pending `routing_change`. `message_id` names the change you reviewed: the request fails with `409` when the pending change has a different message ID, because a newer customer message replaced it or a teammate already settled it. Either action clears `routing_change`.",
     )] = None
 
@@ -15120,6 +16176,7 @@ class AMBSuppressionList(BaseModel):
 class AMBSuppressionCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
@@ -15189,6 +16246,7 @@ class AMBBusinessAccountStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -15227,6 +16285,7 @@ class AMBIntentStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -15265,6 +16324,7 @@ class AMBGroupStatsPoint(BaseModel):
         description="Processing-latency percentiles in milliseconds for the requested scope, from acceptance to Apple handoff. Apple Messages for Business has no delivery receipt, so there is no `delivery` or `total` member beside `processing`. Conversation response timing is reported separately in `first_response`. Always present; every percentile is null when no qualifying message in scope has a measurement.",
     )]
     first_response: Annotated[Optional[AMBStatsQuantiles], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Approximate p50, p95, and p99 latency percentiles in milliseconds for one latency family. All three are null when no qualifying event contributed a measurement.",
     )] = None
 
@@ -15396,6 +16456,7 @@ class AMBTemplateLanguageState(BaseModel):
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
     )]
     draft: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the draft has an unpublished change for this language. When true beside `live`, sends keep using the older published content until submit.",
     )] = None
 
@@ -15669,12 +16730,15 @@ class AMBTemplateVersionLanguage(BaseModel):
     "One language's content and revision metadata within a version."
     model_config = ConfigDict(extra="allow")
     text: Annotated[Optional[AMBText], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stored text and files. Includes its `{{ variable }}` placeholders.",
     )] = None
     rich_link: Annotated[Optional[AMBRichLink], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stored link preview. Includes its `{{ variable }}` placeholders.",
     )] = None
     interactive: Annotated[Optional[AMBInteractive], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stored interaction. Includes its `{{ variable }}` placeholders.",
     )] = None
     revision: Annotated[int, Field(
@@ -15775,12 +16839,15 @@ class AMBTemplateLanguage(BaseModel):
         min_length=2,
     )]
     text: Annotated[Optional[AMBText], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stored text and files. Includes its `{{ variable }}` placeholders.",
     )] = None
     rich_link: Annotated[Optional[AMBRichLink], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stored link preview. Includes its `{{ variable }}` placeholders.",
     )] = None
     interactive: Annotated[Optional[AMBInteractive], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Stored interaction. Includes its `{{ variable }}` placeholders.",
     )] = None
     revision: Annotated[int, Field(
@@ -15845,11 +16912,13 @@ class WhatsAppBusinessPortfolio(BaseModel):
         min_length=1,
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The portfolio's name, as Meta reports it. Absent when Meta returned none.",
         examples=["Acme Holdings"],
         min_length=1,
     )] = None
     marketing_messages_onboarding_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessPortfolioMarketingMessagesStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How far this portfolio has got through Meta's Marketing Messages terms of service. Absent until Meta has reported it. Distinct from the account's own `marketing_messages_onboarding_status`, which Meta gives the same field name but a different vocabulary: that one is the account's own eligibility, this one is the portfolio's Terms-of-Service progress.",
     )] = None
 
@@ -15869,6 +16938,7 @@ class WhatsAppBusinessAccountBan(BaseModel):
         min_length=1,
     )]
     appeal_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where to appeal WhatsApp's decision with Meta Business Support, because neither Bird nor this API can lift one. Absent when Bird does not know the account's Meta business portfolio, since there is no support-home path to build without one.",
         examples=["https://business.facebook.com/business-support-home/178563218361309/102290129340398"],
     )] = None
@@ -15901,6 +16971,7 @@ class WhatsAppMetaHealthError(BaseModel):
         min_length=1,
     )]
     possible_solution: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's own suggested remedy. Absent when Meta gave none.",
         examples=["There was an error with your payment method. Please add a new payment method to the account."],
         min_length=1,
@@ -15920,12 +16991,15 @@ class WhatsAppMetaHealthEntity(BaseModel):
         description="Whether this node lets messages through.",
     )]
     can_receive_call_sip: Annotated[Optional[WhatsAppMetaHealthVerdict], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this node can receive a WhatsApp call over SIP, which Meta reports on `phone_number` and `app` entities. Absent on an account read: Meta reports it only when a phone number or template is the node asked about.",
     )] = None
     additional_info: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's own notes on a `limited` verdict. Absent on an account read: Meta reports it only when a phone number or template is the node asked about.",
     )] = None
     errors: Annotated[Optional[List[WhatsAppMetaHealthError]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why this node is not `available`. Absent when Meta gave no reason.",
     )] = None
 
@@ -15961,27 +17035,35 @@ class WhatsAppBusinessAccount(BaseModel):
         description="WhatsApp's own state for this account as of `meta_synced_at`. The status is `active` until WhatsApp reports otherwise. WhatsApp already considers an account usable if Bird could connect a number under it. The absence of a reading is therefore not evidence of another state.",
     )]
     account_review_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessAccountReviewStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How far WhatsApp's review of this account had got as of `meta_synced_at`. Absent until WhatsApp has reported it.",
     )] = None
     business_verification_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessVerificationStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether Meta had verified the business behind this account as of `meta_synced_at`. Absent until Meta has reported it.",
     )] = None
     marketing_messages_onboarding_status: Annotated[Optional[Annotated[Union[WhatsAppBusinessAccountMarketingMessagesStatus, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this account can use WhatsApp's Marketing Messages API, as of `meta_synced_at`. Absent until WhatsApp has reported it. Distinct from the owning portfolio's `marketing_messages_onboarding_status` (`portfolio.marketing_messages_onboarding_status`), which Meta gives the same field name but a different vocabulary: this one is the account's own eligibility, that one is the portfolio's Terms-of-Service progress.",
     )] = None
     portfolio: Annotated[Optional[WhatsAppBusinessPortfolio], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The Meta business portfolio that owns this account. Absent until Meta has reported it. The portfolio is where a messaging limit is set, so every account it owns shares one.",
     )] = None
     ban: Annotated[Optional[WhatsAppBusinessAccountBan], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's ban on this account, absent unless Bird was told of one. `status` is what the account said when Bird last read it; this is what WhatsApp announced, which arrives only on the webhook that announces it and is never re-read.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this account's ban. Each entry names one action and says why\nit is worth taking. An empty list means Bird holds no `ban` record for this account.\nA ban Bird was never told of still shows as `banned` on the account's numbers, whose\nown `next` carries the appeal, and as Meta error `141014` on the `waba` entity in\n`meta_health_status`. Neither list says whether the account can send;\n`meta_health_status` does.\n\nWhile `ban` is present this links the account restrictions and appeals guide, which\nnames `ban.appeal_url`, because neither Bird nor this API can lift a ban.",
     )] = None
     meta_health_status: Annotated[Optional[WhatsAppMetaHealthStatus], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Meta's own messaging health for this account as of `meta_synced_at`. Absent until Bird has read it, and absent again when the stored reading did not parse at all. An entity whose verdict falls outside this vocabulary is dropped on its own and the rest of the report still ships, so `entities` can be shorter than Meta's. A `blocked` verdict on the `waba` entity is why template sends fail with Meta's `#200` even though the number reads `active`: for example `error_code` `141006` names a payment method Meta rejected on the account.",
     )] = None
     meta_synced_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When Bird last read this account's state from WhatsApp. `status`, `account_review_status`, `business_verification_status`, `marketing_messages_onboarding_status`, `portfolio` and `meta_health_status` are all that reading rather than live values; Bird re-reads roughly hourly. Absent for an account Bird has never read back.",
         min_length=1,
     )] = None
@@ -16066,6 +17148,7 @@ class WhatsAppSuppression(BaseModel):
         min_length=1,
     )]
     source_whatsapp_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="ID of the WhatsApp message that caused this address to be suppressed, when the suppression was created automatically. Omitted for addresses added manually.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -16108,6 +17191,7 @@ class WhatsAppSuppressionCreate(BaseModel):
         min_length=1,
     )]
     waba: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Limit the suppression to messages sent from this WhatsApp Business Account, identified by its WhatsApp-issued account ID. Omit it to block the address for the whole workspace, whichever account sends.",
         examples=[102290129340398],
         max_length=64,
@@ -16193,20 +17277,24 @@ class WhatsAppKeywordRuleCreate(BaseModel):
         description="What Bird does when an inbound message matches the rule.\n\n- `opt_out` records that the sender no longer consents to receive any messages from your\n  WhatsApp Business Account, including transactional ones. Typing the word is the person's\n  own statement, so it covers everything, unlike WhatsApp's built-in marketing opt-out\n  control, which stops marketing alone.\n- `opt_in` records that they consent again.\n\nA rule's operation is fixed once created, and a keyword belongs to exactly one operation, so\na keyword Bird ships for `opt_out` cannot be reused for `opt_in`.\n\nClosed on the write side: an operation Bird does not answer is rejected here rather than\nstored as a rule that never fires. The read side is open, because Bird can gain an operation\nwithout a new API version.",
     )]
     country: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country this rule applies in, as an ISO 3166-1 alpha-2 code. It matches the country of the person who messaged you, worked out from their phone number. Omit it to cover everyone, which is what Bird's own rules do.",
         examples=["US"],
         max_length=2,
         min_length=2,
     )] = None
     waba: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Limit the rule to one WhatsApp Business Account, identified by its WhatsApp-issued account ID or by the `waa_` ID Bird gives it. Either form resolves to the same account, and the rule stores and returns the WhatsApp-issued one. Omit it to cover every account in your workspace. The account must be one of yours.",
         examples=[102290129340398],
         min_length=1,
     )] = None
     keywords: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Extra keywords to match, on top of the ones Bird already ships for this operation. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. You cannot remove one of Bird's keywords, and a keyword Bird has bound to the other operation cannot be reused here.",
     )] = None
     reply: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message to send back when a keyword matches. Omit it to send nothing.",
         examples=["You're off the list. ACME Courier won't message you again."],
         min_length=1,
@@ -16217,6 +17305,7 @@ class WhatsAppKeywordRuleUpdate(BaseModel):
     "Changes the reply and the added keywords. What a rule applies to (its operation, country and WhatsApp Business Account) is fixed once created: those decide which inbound messages reach it, so changing one would make it a different rule. Delete it and create the one you want."
     model_config = ConfigDict(extra="allow")
     keywords: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.",
     )] = None
     reply: Annotated[Optional[str], Field(
@@ -16269,6 +17358,7 @@ class EmailInboxInsightsMeasurement(BaseModel):
         description="Identifiers of the measurement systems that contributed to these figures. The set grows as measurement coverage does, so treat the values as labels rather than a closed list.",
     )]
     weighting: Annotated[Optional[EmailInboxInsightsWeighting], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the placement figures in this response were weighted, so a number is\nself-describing wherever it is quoted or screenshotted.\n\nPlacement rates are a weighted average of per-provider rates against an\naudience mix (the share of recipients expected at each mailbox provider)\nrather than a share of delivered volume.",
     )] = None
 
@@ -16306,6 +17396,7 @@ class EmailInboxInsightsWindow(BaseModel):
         min_length=1,
     )]
     group_by: Annotated[Optional[EmailInboxInsightsGroupBy], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The bucket size a series is grouped by. Day suits the product's charts; wider grains suit long ranges.",
     )] = None
 
@@ -16394,6 +17485,7 @@ class EmailInboxInsightsPlacementSummary(BaseModel):
         examples=[21.4],
     )]
     delta_pts: Annotated[Optional[EmailInboxInsightsPlacementDeltaPts], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the domain-wide rates moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data. Without a requested comparison or comparable prior data they are absent, not zero change.",
     )] = None
     status: Annotated[EmailInboxInsightsSectionStatus, Field(
@@ -16425,6 +17517,7 @@ class EmailInboxInsightsPlacementProvider(BaseModel):
         description="Raw measured placements behind a set of rates, before any weighting. A measured placement is one message whose mailbox destination the measurement observed.",
     )]
     delta_pts: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Inbox-rate movement against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data for this provider; absence is not zero change.",
         examples=[0.4],
     )] = None
@@ -16590,6 +17683,7 @@ class EmailInboxInsightsPlacement(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -16597,6 +17691,7 @@ class EmailInboxInsightsPlacement(BaseModel):
         description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
     )]
     compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
     )] = None
     summary: Annotated[EmailInboxInsightsPlacementSummary, Field(
@@ -16612,6 +17707,7 @@ class EmailInboxInsightsPlacement(BaseModel):
         description="Where the domain's Gmail-placed mail landed across Gmail's tabs. The status is `not_applicable` when the domain had no Gmail placement in the period; hide the section rather than showing an empty split.",
     )]
     ip_details: Annotated[Optional[EmailInboxInsightsPlacementIpDetails], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-IP placement detail for the domain's sending infrastructure. Returned only when the request asked for IP detail.",
     )] = None
 
@@ -16629,6 +17725,7 @@ class EmailInboxInsightsAuthPassRate(BaseModel):
         examples=[99.8],
     )]
     delta_pts: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the pass rate moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
         examples=[0.1],
     )] = None
@@ -16678,6 +17775,7 @@ class EmailInboxInsightsDmarc(BaseModel):
         description="Why `ready_for_reject` is false, so the answer is actionable rather than a bare refusal. Empty when nothing is holding the domain back, and null when readiness was not assessed, which pairs with `ready_for_reject`: an empty list alongside a null verdict would say the opposite of what was measured. Render these rather than a plain \"not ready\": the fix differs per reason, and a domain held back only by stale reporting needs no configuration change at all.",
     )]
     delta_pts: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the aligned rate moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
         examples=[-0.2],
     )] = None
@@ -16771,6 +17869,7 @@ class EmailInboxInsightsAuthentication(BaseModel):
         min_length=1,
     )]
     measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
@@ -16782,6 +17881,7 @@ class EmailInboxInsightsAuthentication(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -16789,6 +17889,7 @@ class EmailInboxInsightsAuthentication(BaseModel):
         description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
     )]
     compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
     )] = None
     spf: Annotated[EmailInboxInsightsAuthPassRate, Field(
@@ -16827,10 +17928,12 @@ class EmailInboxInsightsComplaintRate(BaseModel):
         examples=[0.11],
     )]
     delta_pts: Annotated[Optional[float], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the rate moved against the prior period, in percentage points. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
         examples=[0.03],
     )] = None
     peak: Annotated[Optional[EmailInboxInsightsComplaintPeak], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The worst day for complaints in the period.",
     )] = None
     status: Annotated[EmailInboxInsightsSectionStatus, Field(
@@ -16877,6 +17980,7 @@ class EmailInboxInsightsComplaints(BaseModel):
         min_length=1,
     )]
     measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
@@ -16888,6 +17992,7 @@ class EmailInboxInsightsComplaints(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -16895,6 +18000,7 @@ class EmailInboxInsightsComplaints(BaseModel):
         description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
     )]
     compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
     )] = None
     rate: Annotated[EmailInboxInsightsComplaintRate, Field(
@@ -16968,6 +18074,7 @@ class EmailInboxInsightsSpamTrapHit(BaseModel):
         description="What kind of spam trap was hit. `pristine` addresses were never used by a real person and never subscribed to anything, so a hit means the address was harvested or guessed rather than collected. `recycled` addresses belonged to a real person once and were retired, so hits point at stale list data. `typo` addresses catch misspellings of real domains, `parked` addresses sit on domains that are registered but not used for real mail, and `mixed` covers hits the trap network reports without a single kind. The trap network decides this set and can add to it, so treat an unrecognised value as a label to show rather than a case to exhaust. A hit whose kind is new is still a hit worth acting on.",
     )]
     hit_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many times this trap was hit over the period, so rows do not sum to `total` on their own: one repeatedly hit trap is one row. Absent when the trap network does not break the count out, which is not the same as one hit. A row exists because the trap was reached at least once either way.",
         examples=[2],
         ge=1,
@@ -17007,6 +18114,7 @@ class EmailInboxInsightsSpamTraps(BaseModel):
         min_length=1,
     )]
     measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
@@ -17018,6 +18126,7 @@ class EmailInboxInsightsSpamTraps(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -17025,6 +18134,7 @@ class EmailInboxInsightsSpamTraps(BaseModel):
         description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
     )]
     compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
     )] = None
     total: Annotated[int, Field(
@@ -17033,6 +18143,7 @@ class EmailInboxInsightsSpamTraps(BaseModel):
         ge=0,
     )]
     delta: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the hit count moved against the prior period, as a change in the number of hits rather than in percentage points. Negative is an improvement. Present only when the request asked for a comparison and the prior period had data; absence is not zero change.",
         examples=[-2],
     )] = None
@@ -17126,6 +18237,7 @@ class EmailInboxInsightsBlocklists(BaseModel):
         min_length=1,
     )]
     measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
@@ -17137,6 +18249,7 @@ class EmailInboxInsightsBlocklists(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -17179,6 +18292,7 @@ class EmailInboxInsightsIndustryBenchmark(BaseModel):
         min_length=1,
     )]
     measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
@@ -17190,6 +18304,7 @@ class EmailInboxInsightsIndustryBenchmark(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -17201,6 +18316,7 @@ class EmailInboxInsightsIndustryBenchmark(BaseModel):
         examples=[92.1],
     )]
     window_days: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How many days the cohort figure covers. Reported rather than assumed because the period is the one the nightly computation produced, not one the caller chose, so a label built from a requested window would be wrong. Absent when the computation does not report it, in which case a label must not name a period at all.",
         examples=[30],
         ge=1,
@@ -17331,6 +18447,7 @@ class EmailInboxInsightsSeedTestProvider(BaseModel):
         ge=0,
     )]
     gmail_category: Annotated[Optional[EmailInboxInsightsGmailCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Which Gmail tab the test's Gmail seeds mostly landed under.",
     )] = None
 
@@ -17485,6 +18602,7 @@ class EmailInboxInsightsSeedTests(BaseModel):
         min_length=1,
     )]
     measurement: Annotated[Optional[EmailInboxInsightsMeasurement], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the figures in this response were measured, so a number is self-describing in a screenshot or a bug report.",
     )] = None
     generated_at: Annotated[str, Field(
@@ -17496,6 +18614,7 @@ class EmailInboxInsightsSeedTests(BaseModel):
         description="How current the figures are. Freshness differs per resource (authentication data can lag a day or more while blocklist lookups are near real time), so any \"as of\" label binds from this field, never from a fixed string.",
     )]
     cached_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when the response was served from a short-lived copy rather than fetched for this request: when that copy was fetched.",
         examples=["2026-08-18T09:40:02Z"],
     )] = None
@@ -17503,12 +18622,14 @@ class EmailInboxInsightsSeedTests(BaseModel):
         description="The period every figure in the response covers: whole UTC calendar days,\ninclusive on both ends. The same window convention the email statistics\nendpoints use, so figures from the two sources describe the same days and\ncan be combined without adjustment.",
     )]
     compared_to: Annotated[Optional[EmailInboxInsightsComparedTo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The prior equal-length period the delta figures compare against. Present only when the request asked for a comparison.",
     )] = None
     tests: Annotated[EmailInboxInsightsSeedTestList, Field(
         description="The domain's seed tests over the period, newest first, up to 100 of them. The list is capped rather than paged, so `truncated` says whether older tests in the period were left out.",
     )]
     latest: Annotated[Optional[EmailInboxInsightsSeedTestDetail], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="One seed test with its full results.",
     )] = None
     quota: Annotated[EmailInboxInsightsSeedTestQuota, Field(
@@ -17539,6 +18660,7 @@ class EmailInboxInsightsSeedTestCreate(BaseModel):
         min_length=1,
     )]
     label: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A name attached to this registration. It is not returned in seed-test history.",
         examples=["Fall preview send"],
         max_length=200,
@@ -17825,101 +18947,143 @@ class EmailStatsQueryGrain(str, Enum):
 class EmailStatsQueryStringFilter(BaseModel):
     "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
-    include: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    include: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryCategoryFilter(BaseModel):
     "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
-    include: Optional[List[EmailMessageCategory]] = None
-    exclude: Optional[List[EmailMessageCategory]] = None
+    include: Annotated[Optional[List[EmailMessageCategory]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[EmailMessageCategory]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryTemplateFilter(BaseModel):
     "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
-    include: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    include: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryTagFilter(BaseModel):
     "Select one case-sensitive tag name. A name without values requires that tag to exist. Exclude-only predicates retain events without that tag. Include and exclude together accept at most 20 distinct normalized values with no overlap."
     model_config = ConfigDict(extra="allow")
     name: Annotated[str, Field(examples=["campaign"], min_length=1)]
-    include: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    include: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryIPPoolFilter(BaseModel):
     "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
-    include: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    include: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryBroadcastFilter(BaseModel):
     "Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
     model_config = ConfigDict(extra="allow")
-    include: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
+    include: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryFilters(BaseModel):
     "Predicates on the context recorded for each event. Dimensions combine with AND. Unsupported metric and dimension combinations return 422, including for an empty workspace."
     model_config = ConfigDict(extra="allow")
     sending_domain: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     category: Annotated[Optional[EmailStatsQueryCategoryFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     template_id: Annotated[Optional[EmailStatsQueryTemplateFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     tag: Annotated[Optional[EmailStatsQueryTagFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Select one case-sensitive tag name. A name without values requires that tag to exist. Exclude-only predicates retain events without that tag. Include and exclude together accept at most 20 distinct normalized values with no overlap.",
     )] = None
     recipient_domain: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     mailbox_provider: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     mailbox_provider_region: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     sending_ip: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     ip_pool_id: Annotated[Optional[EmailStatsQueryIPPoolFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     broadcast_id: Annotated[Optional[EmailStatsQueryBroadcastFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     country: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     region: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     city: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     agent_family: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     os_family: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     device_family: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     smtp_error_code: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
     feedback_type: Annotated[Optional[EmailStatsQueryStringFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
     )] = None
 
@@ -17941,6 +19105,7 @@ class EmailStatsQueryRequest(BaseModel):
         pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
     )]
     timezone: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="IANA timezone for dates and bucket boundaries. Defaults to UTC.",
         examples=["UTC"],
         min_length=1,
@@ -17951,30 +19116,38 @@ class EmailStatsQueryRequest(BaseModel):
         min_length=1,
     )]
     group_by: Annotated[Optional[EmailStatsQueryDimension], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Group by one recorded event dimension. Omit for a single ungrouped summary with optional series.\nGrouping by `tag` requires `filters.tag.name`.\nMissing values form a null group when the metric supports that dimension. A null value\nmeans the event lacks that attribution; it does not explain how the message was created\nor establish membership in another dimension such as a campaign.\n\nEvery selected metric must support the grouping dimension and every filter dimension.\nUnsupported combinations return validation error `E04074`, even when the workspace has no events.\n\n- `sending_domain`, `category`, `template_id`, `tag`: all metrics.\n- `recipient_domain`, `ip_pool_id`, `broadcast_id`: all metrics except `sends_accepted`.\n- `mailbox_provider`, `mailbox_provider_region`: all metrics except `sends_accepted`, `accepted`, and `rejected`.\n- `sending_ip`: `delivered`, `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`,\n  `undetermined_bounced`, `deferred`, `oob_bounces`, `effective_delivered`, `all_bounces`, `delivery_rate`,\n  `bounce_rate`, `deferral_rate`, `oob_rate`, `total_p50_ms`, `total_p95_ms`, and `total_p99_ms`.\n- `country`, `region`, `city`, `agent_family`, `os_family`, `device_family`: `opens`, `opens_non_prefetched`,\n  `clicks`, `unique_opens`, `unique_opens_non_prefetched`, `unique_clicks`, `confirmed_unique_opens`,\n  and `confirmed_unique_opens_non_prefetched`.\n- `smtp_error_code`: `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`, and `undetermined_bounced`.\n- `feedback_type`: `complained`.",
     )] = None
     grain: Annotated[Optional[EmailStatsQueryGrain], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Time buckets in the requested timezone. Weeks start on Monday; months start on the first day. Half days start at midnight and noon. Edge buckets count events inside the normalized period.",
     )] = None
     filters: Annotated[Optional[EmailStatsQueryFilters], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Predicates on the context recorded for each event. Dimensions combine with AND. Unsupported metric and dimension combinations return 422, including for an empty workspace.",
     )] = None
     sort: Annotated[Optional[EmailStatsQueryMetric], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Metric selected for period totals, time buckets, or group ranking. Counts estimate distinct identities; rates are ratios. Latency metrics measure milliseconds from Bird acceptance to processing or delivery.",
     )] = None
     order: Annotated[Optional[SortOrder], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sort direction, ascending or descending.",
     )] = None
     limit: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Grouped requests only. Maximum groups per page; defaults to 25. Each group retains its complete series.",
         ge=1,
         le=100,
     )] = None
     starting_after: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Grouped requests only. Opaque next_cursor from the previous response. Mutually exclusive with ending_before.",
         max_length=2048,
     )] = None
     ending_before: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Grouped requests only. Opaque prev_cursor for backward navigation, or refresh_cursor to read groups before the anchor in the current sort order. Mutually exclusive with starting_after.",
         max_length=2048,
     )] = None
@@ -18052,99 +19225,127 @@ class EmailStatsQueryMetrics(BaseModel):
     "Selected metric values. Counts are nonnegative approximate distinct counts. Period uniques and rates are computed independently of buckets; summing bucket or group values does not reconstruct period totals. Zero means a supported empty population; undefined rates and empty latency samples are null."
     model_config = ConfigDict(extra="allow")
     sends_accepted: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct sends accepted by Bird, counted by email identity.",
         ge=0,
     )] = None
     accepted: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients accepted by Bird.",
         ge=0,
     )] = None
     processed: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients processed for delivery.",
         ge=0,
     )] = None
     delivered: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with a delivery event.",
         ge=0,
     )] = None
     bounced: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with bounced events.",
         ge=0,
     )] = None
     hard_bounced: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with hard bounced events.",
         ge=0,
     )] = None
     soft_bounced: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with soft bounced events.",
         ge=0,
     )] = None
     admin_bounced: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with admin bounced events.",
         ge=0,
     )] = None
     block_bounced: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with block bounced events.",
         ge=0,
     )] = None
     undetermined_bounced: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with undetermined bounced events.",
         ge=0,
     )] = None
     complained: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with complained events.",
         ge=0,
     )] = None
     deferred: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with a deferral event.",
         ge=0,
     )] = None
     rejected: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients rejected before provider delivery.",
         ge=0,
     )] = None
     oob_bounces: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct out-of-band bounce events.",
         ge=0,
     )] = None
     opens: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct open events, including prefetched opens.",
         ge=0,
     )] = None
     opens_non_prefetched: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct open events excluding prefetched opens. An absent prefetch flag counts as false.",
         ge=0,
     )] = None
-    clicks: Annotated[Optional[int], Field(description="Distinct click events.", ge=0)] = None
+    clicks: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Distinct click events.",
+        ge=0,
+    )] = None
     unsubscribes: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct unsubscribe events.",
         ge=0,
     )] = None
     unique_opens: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with an open event.",
         ge=0,
     )] = None
     unique_opens_non_prefetched: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with a non-prefetched open event.",
         ge=0,
     )] = None
     unique_clicks: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with a click event.",
         ge=0,
     )] = None
     confirmed_unique_opens: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with an open or click event, deduplicated across both.",
         ge=0,
     )] = None
     confirmed_unique_opens_non_prefetched: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Distinct message recipients with a non-prefetched open or click event, deduplicated across both.",
         ge=0,
     )] = None
     effective_delivered: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Delivered recipients less out-of-band bounce events, calculated as `max(delivered - oob_bounces, 0)`.",
         ge=0,
     )] = None
     all_bounces: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="In-band bounced recipients plus out-of-band bounce events, calculated as `bounced + oob_bounces`.",
         ge=0,
     )] = None
@@ -18231,6 +19432,7 @@ class EmailStatsQueryGroup(BaseModel):
         description="Selected metric values. Counts are nonnegative approximate distinct counts. Period uniques and rates are computed independently of buckets; summing bucket or group values does not reconstruct period totals. Zero means a supported empty population; undefined rates and empty latency samples are null.",
     )]
     series: Annotated[Optional[List[EmailStatsQueryPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Present when grain is requested; absent otherwise.",
     )] = None
 
@@ -18294,6 +19496,7 @@ class EmailSendingIpStatsPoint(BaseModel):
     delivery: EmailSendingIpDeliveryStats
     latency: EmailDeliveryLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket delivery-rate series for this IP over the window. Present only when `include_trend=true`. Engagement is not attributed to a sending IP, so each point's open and click rates read 0 in buckets with deliveries and null in buckets without.",
     )] = None
 
@@ -18338,6 +19541,7 @@ class EmailSendingDomainStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket rate series for this sending domain over the window. Present only when `include_trend=true`.",
     )] = None
 
@@ -18382,6 +19586,7 @@ class EmailCategoryStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket rate series for this category over the window. Present only when `include_trend=true`.",
     )] = None
 
@@ -18431,6 +19636,7 @@ class EmailMailboxProviderRegionStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailDeliveryLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-bucket rate series for this provider region over the window. Present only when `include_trend=true`.",
     )] = None
 
@@ -18476,6 +19682,7 @@ class EmailTemplateStatsPoint(BaseModel):
     engagement: EmailEngagementStats
     latency: EmailLatencyStats
     trend: Annotated[Optional[List[EmailStatsSeriesPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A short series of this template's delivery and engagement rates, one point per time bucket over the window. Only present when you set `include_trend=true` on the request.",
     )] = None
 
@@ -18753,7 +19960,9 @@ class EmailHealthSignal(BaseModel):
         examples=["healthy"],
         min_length=1,
     )]
-    thresholds: Optional[EmailHealthSignalThresholds] = None
+    thresholds: Annotated[Optional[EmailHealthSignalThresholds], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailHealthStatus(str, Enum):
@@ -18783,9 +19992,11 @@ class DomainSettings(BaseModel):
     "Per-domain behavior toggles. Changes apply immediately to new sends."
     model_config = ConfigDict(extra="allow")
     click_tracking: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Rewrite links in HTML email through your tracking domain to record clicks. You can enable this before your tracking domain has verified; it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.",
     )] = None
     open_tracking: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Insert a tracking pixel in HTML email to record opens. You can enable this before your tracking domain has verified: it begins working once verification completes. A tracking domain must be configured; enabling it without one returns `409`.",
     )] = None
 
@@ -18854,6 +20065,7 @@ class DomainCapability(BaseModel):
         description="Hostname this capability is configured with: the return-path domain, the tracking domain, or the domain where the DMARC policy was found. `null` when not applicable or not configured.",
     )] = None
     pending: Annotated[Optional[DomainCapabilityPending], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A staged configuration change awaiting DNS verification. The currently active configuration keeps serving until the staged one verifies, at which point it is promoted automatically. Submitting another change for the same capability replaces the staged value.",
     )] = None
     reason: Annotated[Optional[str], Field(
@@ -18867,7 +20079,9 @@ class DomainCapabilities(BaseModel):
     return_path: DomainCapability
     dmarc: DomainCapability
     tracking: DomainCapability
-    inbound: Optional[DomainCapability] = None
+    inbound: Annotated[Optional[DomainCapability], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class DomainReceivingState(str, Enum):
@@ -19011,6 +20225,7 @@ class Domain(BaseModel):
         description="Per-domain behavior toggles. Changes apply immediately to new sends.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this domain, given the state it is in. Each entry names one action and says\nwhy it is worth taking, so you can act on this response without working out the order\nyourself. Present on reads that compute it: an empty list means there is nothing to do,\nand the field is absent entirely on responses that do not report next actions.\n\nThis answers whether you own the domain, which is what `status` reports. What each\ncapability still needs before it can send or receive is reported separately under\n`capabilities`, so an empty list here does not on its own mean the domain is ready.",
     )] = None
     dkim: Annotated[DomainDKIM, Field(
@@ -19095,6 +20310,7 @@ class DomainDKIMConfig(BaseModel):
     "DKIM signing configuration."
     model_config = ConfigDict(extra="allow")
     mode: Annotated[Optional[DomainDKIMConfigMode], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the DKIM public key is published in your DNS.\n\n- `txt` (default): you publish the DKIM public key as a TXT record. Key\n  rotation requires updating the record.\n- `delegated`: you publish a CNAME that points to a DKIM key we host and\n  rotate. This mode is unavailable for new configurations; supplying it\n  returns `422`.",
     )] = None
 
@@ -19107,15 +20323,19 @@ class DomainCreate(BaseModel):
         min_length=1,
     )]
     return_path: Annotated[Optional[DomainReturnPathConfig], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Return-path (bounce) domain configuration. The return-path domain receives bounce and complaint notifications for mail sent from this domain and is what mailbox providers check for SPF. Provide only the name part; we add the sending domain automatically.",
     )] = None
     tracking: Annotated[Optional[DomainTrackingConfig], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Tracking domain configuration for branded open and click tracking URLs. Provide only the name part; we add the sending domain automatically. A domain created with no tracking configuration defaults to `links`. Tracked links are served over HTTPS after the tracking record verifies.",
     )] = None
     dkim: Annotated[Optional[DomainDKIMConfig], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="DKIM signing configuration.",
     )] = None
     settings: Annotated[Optional[DomainSettings], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-domain behavior toggles. Changes apply immediately to new sends.",
     )] = None
 
@@ -19139,18 +20359,22 @@ class DomainUpdate(BaseModel):
         pattern="^ipp_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     settings: Annotated[Optional[DomainSettings], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Per-domain behavior toggles. Changes apply immediately to new sends.",
     )] = None
     return_path: Annotated[Optional[DomainReturnPathConfig], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Return-path (bounce) domain configuration. The return-path domain receives bounce and complaint notifications for mail sent from this domain and is what mailbox providers check for SPF. Provide only the name part; we add the sending domain automatically.",
     )] = None
     tracking: Annotated[Optional[DomainTrackingConfig], Field(
         description="Set or change the tracking name part, or remove tracking by passing `null`. Removal requires `click_tracking` and `open_tracking` to be disabled first, and returns `409` otherwise. After removal, links in previously sent email keep resolving while the tracking records are reported as `deprecated`.",
     )] = None
     dkim: Annotated[Optional[DomainDKIMConfig], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="DKIM signing configuration.",
     )] = None
     inbound: Annotated[Optional[DomainInboundConfig], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Inbound (receiving) configuration. Enable inbound to receive email addressed to this domain. We return MX records to publish. After they verify, mail to any local-part at this domain is delivered as an inbound message and triggers the `email.received` webhook. Use a dedicated subdomain, such as `inbound.acme.com`, because using your apex domain would capture your corporate mail.",
     )] = None
 
@@ -19406,6 +20630,7 @@ class EmailCompetitiveWatchlistRow(BaseModel):
     "One brand on the watchlist, with its figures for the requested period. Your own\nworkspace appears as a row too, so the table can be read as a single ranking.\n\nMetrics are present on every row. Interpret `null` using each field's\ndescription: it can mean unavailable, no observed campaign, or no overlap\nreturned by the panel. A `0` is a measurement rather than a gap.\n\nYour measured sends and cadence cover the workspace. Your panel rates and\noverlap describe only its highest-volume sending domain.\n\n`esp` and `list_size` are the exception. They are populated only when you read a\nsingle brand, and are always `null` on the watchlist whatever `panel_status`\nreports."
     model_config = ConfigDict(extra="allow")
     watchlist_brand_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
@@ -19872,6 +21097,7 @@ class EmailCompetitiveBrandSeries(BaseModel):
     "One line on the volume chart: a watched brand's sending over time, or your own."
     model_config = ConfigDict(extra="allow")
     watchlist_brand_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["cwb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
@@ -19943,6 +21169,7 @@ class EmailTemplateLanguageState(BaseModel):
         description="Status of one template language on channels without third-party review.\n\n- `draft`: it has never been published.\n- `live`: it is available to sends.\n- `superseded`: a later version replaced it.\n\nTreat an unknown value as not sendable.",
     )]
     draft: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the draft holds an edit to this language that has not been published. If this is true and the status is `live`, sends are still using the older content, and your edit goes out the next time you submit.",
     )] = None
 
@@ -20066,21 +21293,25 @@ class EmailTemplateLanguageContent(BaseModel):
     "One language's content for an email template. Each language carries its own subject, preview text and bodies, so a translation can differ in wording and length from every other language without affecting them."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The email subject line for this language.",
         examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
         max_length=998,
     )] = None
     preview_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The line an inbox shows after the subject in the message list, for this language. Leave it out and the inbox shows the opening words of the body instead. A mail client only reads it from the message body, so publishing folds it into the top of the HTML, hidden from view once the message is open; write it here rather than hiding your own copy in the body.",
         examples=["{{ bird.contact.first_name }}, your order is on its way"],
         max_length=255,
     )] = None
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The HTML body for this language.",
         examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
         max_length=524288,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The plain-text body for this language. Omit it and a plain-text alternative is derived from the HTML when you submit.",
         max_length=524288,
     )] = None
@@ -20097,12 +21328,14 @@ class EmailTemplateCreate(BaseModel):
         pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The template's display name, shown wherever the template is listed. You can change it any time. It defaults to the slug if you do not set one.",
         examples=["Welcome email"],
         max_length=255,
         min_length=1,
     )] = None
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What the template is for, in your own words.",
         examples=["Sent to new customers after signup."],
     )] = None
@@ -20113,18 +21346,22 @@ class EmailTemplateCreate(BaseModel):
         description="The authoring format the template is written in, fixed at creation.\n`html` is finished markup you provide, optionally personalized with\nLiquid. Liquid supports variables, filters, and control flow such\nas `{% if %}` conditionals and `{% for %}` loops. A few constructs are\nrejected when you submit, and the error names exactly what to change:\n\n- Partial includes (`{% include %}`, `{% render %}`).\n- The `increment`, `decrement`, and `ifchanged` tags.\n- The `money`, `format_date`, `format_time`, `json`, `inspect`, and `type` filters.\n- Comparing against `empty`/`blank` (use `.size == 0` instead).\n- Blocks nested far deeper than real email markup needs.\n\nBroadcast template parameters accept scalar values; arrays and objects are unsupported.\nBroadcasts support `{% for %}` over a local collection created with `split`.\nBroadcasts without caller-supplied parameters also support literal ranges and\n`{% tablerow %}`. When a broadcast uses caller parameters, ranges and\n`{% tablerow %}` are unsupported.",
     )]
     languages: Annotated[Optional[Dict[str, EmailTemplateLanguageContent]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The initial draft's content, keyed by language tag in BCP-47 form such as\n`en` or `pt-BR`. A template holds up to 25 languages, and a send picks one\nof them.\n\nOmit this to create an empty draft and add content later.\n\nThe example's `{{ first_name }}` is a parameter, filled from\n`template.parameters` at send time. A `{{ bird.contact.<attribute> }}`\nplaceholder reads a contact attribute. Broadcasts resolve each audience\ncontact during preparation; previews use the selected contact or sample\nvalues. Missing attributes use their configured fallbacks, while explicit\nempty strings remain empty.\n\nPublic API sends, including batch and scheduled sends, look up each To\naddress in this workspace when the selected language reads contact\nattributes. A missing contact returns `422` (`E04099`), even if Liquid\nsupplies a default. Each To receives its own personalized email, with Cc\nand Bcc copied on each. Resolved values are saved at acceptance for\ndelivery and later content reads.",
     )] = None
     default_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )] = None
     on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What a send does when it asks for a language this template does not carry. Defaults to `fallback` on email.",
     )] = None
     language_source_required: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether a send has to name a language. Set it to true to reject a send that names none instead of serving the default language. Pair it with `on_missing_language: fail` when every send must pick a language deliberately: on its own, `fail` is bypassed by naming no language at all. A broadcast must select a template language when this is set. Defaults to false.",
     )] = None
 
@@ -20132,6 +21369,7 @@ class EmailTemplateCreate(BaseModel):
 class EmailTemplate(BaseModel):
     model_config = ConfigDict(extra="allow")
     editor_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional link to open the saved draft in the browser editor, in its default language. Absent for built-in templates.",
     )] = None
     id: Annotated[str, Field(
@@ -20238,21 +21476,25 @@ class EmailTemplatePreviewContent(BaseModel):
     "Unsaved email template content. Preview renders these fields instead of a stored draft; input analysis identifies their references without rendering."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The subject line, including any template expressions.",
         examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
         max_length=998,
     )] = None
     preview_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Inbox preview text. Preview and publication fold it into the top of the HTML as a hidden preheader. Input analysis includes its references.",
         examples=["{{ bird.contact.first_name }}, your order is on its way"],
         max_length=255,
     )] = None
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The HTML body, including any template expressions.",
         examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
         max_length=524288,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The plain-text body. When omitted, a plain-text alternative is derived from the HTML for preview, input analysis, and publication.",
         max_length=524288,
     )] = None
@@ -20271,6 +21513,7 @@ class EmailTemplateUpdate(BaseModel):
         ge=0,
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="New display name, in free text. The slug stays fixed at creation, so renaming the template does not break whatever refers to it by slug or id.",
         max_length=255,
         min_length=1,
@@ -20279,15 +21522,18 @@ class EmailTemplateUpdate(BaseModel):
         description="What the template is for, in your own words. Send `null` to clear it.",
     )] = None
     default_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )] = None
     on_missing_language: Annotated[Optional[TemplateOnMissingLanguage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What a send does when it asks for a language this template does not carry.",
     )] = None
     language_source_required: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether a send has to name a language. Turning it on rejects a send that names none instead of serving the default language. A broadcast must select a template language when this is set.",
     )] = None
 
@@ -20296,6 +21542,7 @@ class EmailTemplateDuplicate(BaseModel):
     "Optional parameters when duplicating an email template. The body may be omitted entirely to accept the defaults."
     model_config = ConfigDict(extra="allow")
     slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The copy's workspace-unique handle, and the stable alternative to the template ID when sending by template. It can contain lowercase letters, numbers, hyphens, and underscores. Omit it to derive one from the source (for example, `welcome-email-copy`), with a numeric suffix if that slug is already taken. Two prefixes are rejected: `bird_`, reserved for our built-in templates, and `emt_`, the template ID format, which a slug could never be distinguished from. If you supply a slug that is already in use in the workspace, the request returns a conflict.",
         examples=["welcome-email-copy"],
         max_length=63,
@@ -20341,9 +21588,11 @@ class EmailTemplateUseConstraint(BaseModel):
         description="The part of the published content where a parameter or variable is used.\n\n- `subject`: the subject line.\n- `html`: the HTML body, including its inbox preview text.\n- `text`: the plain-text body.",
     )]
     path: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The parameter or variable path the template reads at this place, such as `offer` or `bird.contact.first_name`.",
     )] = None
     operation: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the template uses the parameter or variable here, passed through from the template. `output` means it writes the value; other values name the Liquid tag that reads it, such as `if`, `case`, `for` or `assign`.",
     )] = None
 
@@ -20366,6 +21615,7 @@ class EmailTemplateParameter(BaseModel):
         description="Whether the template declares the parameter required.",
     )]
     sensitive: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the template marks the parameter sensitive. A broadcast cannot supply a sensitive parameter that its content uses.",
     )] = None
     use_constraints: Annotated[List[EmailTemplateUseConstraint], Field(
@@ -20390,9 +21640,11 @@ class EmailTemplateVariable(BaseModel):
         description="Where Bird takes the value of a `bird.` variable from.\n\n- `contact`: a property of the recipient contact, read from `bird.contact.`.\n- `bird`: another value Bird fills in when it sends, such as `bird.unsubscribe_url`.",
     )]
     source_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The type of the contact property, from this workspace's current contact property definitions, such as `string`. Absent when the variable is not a defined contact property.",
     )] = None
     use_constraints: Annotated[Optional[List[EmailTemplateUseConstraint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Each place the content uses the variable.",
     )] = None
 
@@ -20411,6 +21663,7 @@ class EmailTemplateParameters(BaseModel):
         pattern="^emv_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     requested_language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
@@ -20438,24 +21691,29 @@ class EmailTemplatePreviewRequest(BaseModel):
     "Sample values and options for rendering a template preview. Omit the body entirely to preview the current draft: `bird.contact.` tokens then fill from stand-in values, and a parameter you give no value for renders as empty."
     model_config = ConfigDict(extra="allow")
     content: Annotated[Optional[EmailTemplatePreviewContent], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Render this content rather than the template's stored draft. It is what an editor uses to show a change as it is made, since nothing has to be saved first.\n\nThe content is treated exactly as a draft would be: personalization is filled in the same way, a plain-text body is derived from the HTML when you omit it, and content that could not be published is refused with the same error. `version` asks for a published version's own content, so the two cannot be combined.",
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sample values for the variables the template uses, for this one preview only. A variable takes its value under its own name. A `bird.` value nests to match the token, so `{\"bird\": {\"contact\": {\"first_name\": \"Ada\"}}}` fills `{{ bird.contact.first_name }}`.\n\nA preview is more forgiving than a send: a parameter you leave out renders as empty here rather than being rejected. `parameters` is capped at 16 KB once serialized.",
     )] = None
     contact: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Render the template the way this contact would receive it. Every `{{ bird.contact.… }}` token takes its value from the contact's record, narrowed to the attributes the template reads and filled from each property's `fallback_value` where the contact holds no value: the same values a broadcast to this contact would send.\n\nValues are read as the contact stands right now, so a preview reflects an edit to their record as soon as you make it. A `bird.contact.…` value you also pass in `parameters` wins for that one attribute, so you can preview a contact with one field changed without editing them.",
         examples=["con_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
         examples=["pt-BR"],
         max_length=35,
         min_length=2,
     )] = None
     version: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Preview a specific published version by its id, instead of the current draft.",
         examples=["emv_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -20600,6 +21858,7 @@ class EmailTemplatePreview(BaseModel):
     "A rendered preview of an email template: its subject, HTML, and plain-text bodies with the supplied sample values filled in, ready to display."
     model_config = ConfigDict(extra="allow")
     editor_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional link to open the saved draft in the browser editor, in the language this preview rendered. Absent for built-in templates, published-version previews, and previews of unsaved `content`.",
     )] = None
     subject: Annotated[Optional[str], Field(
@@ -20806,9 +22065,11 @@ class EmailTemplateLanguageSummary(BaseModel):
         description="When this language was last saved. Null if that is not recorded.",
     )] = None
     has_html: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this language has an HTML body.",
     )] = None
     has_text: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this language has a plain-text body.",
     )] = None
 
@@ -20841,6 +22102,7 @@ class EmailTemplateLanguage(BaseModel):
         description="When this language was last saved. Null if that is not recorded.",
     )] = None
     content: Annotated[Optional[EmailTemplateLanguageContent], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="One language's content for an email template. Each language carries its own subject, preview text and bodies, so a translation can differ in wording and length from every other language without affecting them.",
     )] = None
     compatibility_severity: Annotated[EmailCompatibilityReportSeverity, Field(
@@ -20862,20 +22124,24 @@ class EmailTemplateLanguageUpsert(BaseModel):
         min_length=0,
     )]
     preview_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The line an inbox shows after the subject in the message list. Leave it out and the inbox shows the opening words of the body instead.",
         examples=["{{ bird.contact.first_name }}, your order is on its way"],
         max_length=255,
     )] = None
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The HTML body for this language.",
         examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
         max_length=524288,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The plain-text body for this language. Omit it and a plain-text alternative is derived from the HTML when you submit.",
         max_length=524288,
     )] = None
     revision: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The revision you last read for this language, to detect a concurrent edit. The save is rejected with a conflict if the language moved on since. Omit it to save unconditionally. Creating a language does not need one.",
         ge=0,
     )] = None
@@ -20923,6 +22189,7 @@ class EmailTemplateLanguageSaved(BaseModel):
         description="The worst severity across every finding the response was computed from, which\nis the authoritative reading: a response that caps how many findings it lists\nstill accounts here for the ones it left out. Each response's `compatibility`\nsays which content it covered.\n\n- `problem`: at least one finding is a `problem`.\n- `warning`: every finding is a `warning`.\n- `none`: there are no findings.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this save. Present on reads that compute it: an empty list means\nthere is nothing to do, and the field is absent entirely on responses that do not\nreport next actions.\n\nA `problem` in `compatibility` routes back to this same write, with the identifiers\nto address it already on this response; a `warning` says what degrades and leaves\nthe draft as it is.",
     )] = None
     compatibility: Annotated[List[EmailCompatibilityFinding], Field(
@@ -20935,6 +22202,7 @@ class EmailTemplateLanguageUpdate(BaseModel):
     "A partial edit to one language: send only the fields you are changing, and the rest keep their current values. The language must already exist. Create it by saving its full content instead."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The email subject line. It may be empty in a draft but is required to publish.",
         examples=["Welcome to Acme, {{ bird.contact.first_name }}!"],
         max_length=998,
@@ -20945,6 +22213,7 @@ class EmailTemplateLanguageUpdate(BaseModel):
         max_length=255,
     )] = None
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A new HTML body for this language.",
         examples=["<h1>Hi {{ bird.contact.first_name }}</h1>"],
         max_length=524288,
@@ -20954,6 +22223,7 @@ class EmailTemplateLanguageUpdate(BaseModel):
         max_length=524288,
     )] = None
     revision: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The revision you last read for this language, to detect a concurrent edit. The edit is rejected with a conflict if the language moved on since. Omit it to apply the edit unconditionally.",
         ge=0,
     )] = None
@@ -20973,14 +22243,17 @@ class EmailTemplateSubmit(BaseModel):
     "Options for a submit. Every field here is optional, so an empty request body submits the draft exactly as it stands."
     model_config = ConfigDict(extra="allow")
     validate_only: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Check the draft without actually submitting it. Every language gets checked and every problem gets reported back to you, but nothing is frozen and no new version gets created. Give a validation run its own `Idempotency-Key`, separate from the real submit that follows it. You can also send no key. The validation request and real submit have different bodies, so using the same key for both is rejected as key reuse.",
     )] = None
     expected_revision: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The draft revision you last read (from the template's `revision` field). A stale value returns a conflict so you can reload and retry.",
         examples=[3],
         ge=0,
     )] = None
     languages: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Languages to process when submitting an already-published version. Email templates accept submissions only for drafts, so setting this field for an email template is rejected.",
         max_length=25,
         min_length=1,
@@ -21169,6 +22442,7 @@ class Mailbox(BaseModel):
         description="When the mailbox was deleted, or `null` if active. Deletion stops receiving; restore is available for 30 days unless permanent erasure has started.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this mailbox. The response that creates it suggests subscribing to the mail it receives. Forwarding-address setup suggests configuring the email provider. Other reads of one mailbox return an empty list, and lists omit it.",
     )] = None
 
@@ -21207,6 +22481,7 @@ class MailboxCreate(BaseModel):
     "Parameters for creating a mailbox."
     model_config = ConfigDict(extra="allow")
     local_part: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The local part of the mailbox address (the part before `@`). Letters, digits, dots, underscores, and hyphens. Stored lowercase. On the shared `inbox.ai` domain, separators must sit between letters or digits. Leading, trailing, and repeated separators are not allowed. Reserved names such as `postmaster` and `abuse` are unavailable. Choosing your own local part uses one of your plan's custom-handle allowance slots; generated addresses remain available. Omit this field to generate a random local part.",
         examples=["concierge"],
         max_length=64,
@@ -21214,33 +22489,40 @@ class MailboxCreate(BaseModel):
         pattern="^[A-Za-z0-9._-]+$",
     )] = None
     domain: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The domain the address lives under. Defaults to `inbox.ai`, our shared mailbox domain. Creating a mailbox claims the shared address for your organization on a first-come, first-served basis. The address remains reserved to your organization after the mailbox is deleted. You can instead use one of your own domains. On a domain enabled for receiving, mail arrives directly. On a domain this workspace has verified (its `status` is `verified`) that is not set up for receiving, the mailbox gets a `forwarding_address`: forward mail for the address there from your current email provider, with no MX change. If another workspace receives the domain's mail, creation fails with `E17009`.",
         examples=["mail.acme.com"],
         max_length=255,
         min_length=1,
     )] = None
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sender name shown alongside the address in outgoing mail. Must contain a non-whitespace character and cannot contain carriage returns or line feeds.",
         max_length=255,
         min_length=1,
     )] = None
     display_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Name shown to your team in the dashboard and tools. Defaults to `name` when omitted. When `name` is unset, outgoing mail uses this value as the sender name.",
         examples=["Acme Concierge"],
         max_length=255,
         min_length=1,
     )] = None
     default_reply_to: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Default `Reply-To` address stamped on mail sent from this mailbox.",
         min_length=5,
     )] = None
     receive_policy: Annotated[Optional[MailboxCreateReceivePolicy], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.",
     )] = None
     retention_tier: Annotated[Optional[MailboxCreateRetentionTier], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How long message metadata, extracted text, and attachments are kept. Original bodies and inbound raw MIME are limited to 30 days on every tier. Longer tiers require a plan that includes them.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own key/value data to attach to the mailbox. Up to 2 KB. Keys starting with `__bird` are reserved.",
     )] = None
 
@@ -21278,12 +22560,15 @@ class MailboxUpdate(BaseModel):
         description="Default `Reply-To` address stamped on mail sent from this mailbox. `null` clears it.",
     )] = None
     receive_policy: Annotated[Optional[MailboxUpdateReceivePolicy], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Which inbound mail the mailbox accepts:\n\n- `open`: Accepts everything not blocked by a rule.\n- `replies_only`: Accepts only replies to messages this mailbox has\n  sent. A reply must match a message the mailbox sent. Landing in an\n  existing thread by itself does not count.\n- `allowlist`: Accepts only senders matching an allow rule.\n- `drop`: Stores nothing.",
     )] = None
     retention_tier: Annotated[Optional[MailboxUpdateRetentionTier], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How long message metadata, extracted text, and attachments are kept. Original bodies and inbound raw MIME are limited to 30 days on every tier. Longer tiers require a plan that includes them. Lowering the tier requires `confirm=true` when messages would be affected; accepted changes hide those messages immediately. Deletion waits at least ten minutes and until the retention update finishes.",
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the mailbox's key/value data. Up to 2 KB. Keys starting with `__bird` are reserved.",
     )] = None
 
@@ -21430,6 +22715,7 @@ class ReceiveRuleCreate(BaseModel):
         min_length=1,
     )]
     note: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own note about why the rule exists.",
         max_length=512,
         min_length=1,
@@ -21458,9 +22744,11 @@ class EmailThreadHighlights(BaseModel):
     "Matched search fragments for a thread, one array per field the query matched, with the matched terms wrapped in `**`. A field is present only when the query matched it, so the keys that are present tell you which fields produced the hit. Returned only on thread search results."
     model_config = ConfigDict(extra="allow")
     subject: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Matched fragments from the conversation's subject.",
     )] = None
     text: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Matched fragments from a message's body text.",
     )] = None
 
@@ -21536,13 +22824,16 @@ class EmailThread(BaseModel):
         min_length=1,
     )]
     highlights: Annotated[Optional[EmailThreadHighlights], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Matched search fragments for a thread, one array per field the query matched, with the matched terms wrapped in `**`. A field is present only when the query matched it, so the keys that are present tell you which fields produced the hit. Returned only on thread search results.",
     )] = None
     scheduled_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Scheduled or dispatching sends targeting this conversation. Returned by conversation get and list, including zero when none remain. Omitted by search.",
         ge=0,
     )] = None
     next_scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Earliest due time among scheduled or dispatching sends. Returned by conversation get and list only when scheduled_count is positive. Omitted by search and when no sends remain.",
     )] = None
 
@@ -21574,10 +22865,12 @@ class EmailThreadLabelsUpdate(BaseModel):
     "Custom labels to add or remove. System and reserved names are refused; use read and folder for thread state. The resulting custom-label set must contain at most 20 labels; larger sets return 422."
     model_config = ConfigDict(extra="allow")
     add: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels to apply.",
         max_length=20,
     )] = None
     remove: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Labels to take off.",
         max_length=20,
     )] = None
@@ -21587,12 +22880,15 @@ class EmailThreadUpdateRequest(BaseModel):
     "Changes to apply to a thread. Omitted fields are left unchanged. Folder changes accept inbox, archive or spam and reject trashed threads with 422; first use [Restore a thread from trash](/docs/api/reference/restore-email-thread). Read and custom-label updates remain available in trash."
     model_config = ConfigDict(extra="allow")
     read: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mark all retained received messages read or unread. Includes trash, spam and blocked messages; unread_count continues to exclude them.",
     )] = None
     folder: Annotated[Optional[EmailThreadWritableFolder], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Folder a caller can choose through PATCH. Use DELETE to move a thread to trash and [Restore a thread from trash](/docs/api/reference/restore-email-thread) (POST /v1/email/threads/{thread_id}/restore) to recover it.",
     )] = None
     labels: Annotated[Optional[EmailThreadLabelsUpdate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Custom labels to add or remove. System and reserved names are refused; use read and folder for thread state. The resulting custom-label set must contain at most 20 labels; larger sets return 422.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
@@ -21670,19 +22966,23 @@ class EmailThreadMessage(BaseModel):
     "A message in a mailbox conversation, either direction. Message metadata, extracted text, and attachment bytes stay readable for the mailbox's retention tier. The body and raw MIME are available through the body and raw endpoints for 30 days after the message occurred.\nA scheduled acknowledgement reserves the message and thread IDs but is not stored in the conversation until dispatch. Use its scheduled_message_id and mailbox_id to inspect or cancel the separate schedule; body and raw reads are unavailable before dispatch."
     model_config = ConfigDict(extra="allow")
     scheduled_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["msm_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^msm_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Planned send time on a scheduled acknowledgement.",
     )] = None
     mailbox_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mbx_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mbx_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     notice: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Informational notice when conversation retention expires before dispatch; the reserved thread is recreated without expired messages.",
     )] = None
     id: Annotated[str, Field(
@@ -21820,42 +23120,53 @@ class EmailThreadMessageReplyRequest(BaseModel):
     "A reply to a conversation message. For a received message, recipients are derived from its Reply-To address when present, otherwise its From address. For a message the mailbox sent, recipients are derived from its original To line. Set `reply_all` to also include the original To and Cc recipients (minus the mailbox's own address). Add `cc` or `bcc` to copy further recipients. The subject and threading headers are set automatically. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send between 30 seconds and 30 days ahead, sharing the scheduled-email allowance. The scheduled send is listed separately and enters the conversation only at dispatch. Sender, mailbox and send-volume eligibility are rechecked then; refusal fails the schedule record without adding a conversation message. Retention starts at dispatch. Attachments are not supported on scheduled messages; send now or schedule without attachments.",
     )] = None
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="HTML body of the reply. At least one of html or text must be provided.",
         max_length=524288,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Plain-text body of the reply. At least one of html or text must be provided.",
         max_length=524288,
     )] = None
     cc: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Additional Cc recipients, merged with recipients derived by `reply_all`. Addresses already on the derived To line are dropped (case-insensitive). The merged Cc set must contain at most 50 addresses; larger sets return 422.",
         max_length=50,
     )] = None
     bcc: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Blind-copy recipients. Addresses already on the derived To or merged Cc line are dropped (case-insensitive). Bcc addresses are omitted from conversation participants, visible recipient headers, and the 202 response. Bcc delivery outcomes are excluded from the message's `recipients` list.",
         max_length=50,
     )] = None
     reply_all: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Also send the reply to the original To and Cc recipients, minus the mailbox's own address.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.",
     )] = None
     category: Annotated[Optional[EmailMessageCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachment]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="File attachments to include with the reply. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for the mailbox's retention tier.",
         max_length=20,
     )] = None
     cancel_on_reply: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When scheduled_at is set, cancel if an inbound message arrives in the conversation before dispatch is claimed. Defaults to false: the frozen parent, recipients and content are sent unchanged even if new mail arrives.",
     )] = None
 
@@ -21887,6 +23198,7 @@ class EmailMailboxScheduledMessage(BaseModel):
         pattern="^thr_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
@@ -21898,8 +23210,12 @@ class EmailMailboxScheduledMessage(BaseModel):
     cancel_on_reply: Annotated[bool, Field(
         description="Whether an inbound message cancels this send before dispatch is claimed.",
     )]
-    failure_reason: Annotated[Optional[str], Field(description="Why dispatch failed.")] = None
+    failure_reason: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Why dispatch failed.",
+    )] = None
     cancellation_reason: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why canceled; replied means new inbound mail canceled an opted-in schedule.",
     )] = None
     subject: Annotated[str, Field(description="Frozen subject.", min_length=0)]
@@ -21936,6 +23252,7 @@ class EmailMailboxComposeRequest(BaseModel):
     "A new message sent from a mailbox, starting a new conversation. Mirrors the plain send request without `from`, because the mailbox is who the message comes from, and accepts `scheduled_at` to send later. Omit it to send immediately. We set the RFC 5322 Message-ID so replies thread back into this conversation. At least one of `html` or `text` must be provided."
     model_config = ConfigDict(extra="allow")
     scheduled_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Send between 30 seconds and 30 days ahead, sharing the scheduled-email allowance. The scheduled send is listed separately and enters the conversation only at dispatch. Sender, mailbox and send-volume eligibility are rechecked then; refusal fails the schedule record without adding a conversation message. Retention starts at dispatch. Attachments are not supported on scheduled messages; send now or schedule without attachments.",
     )] = None
     to: Annotated[List[EmailAddressInput], Field(
@@ -21944,10 +23261,12 @@ class EmailMailboxComposeRequest(BaseModel):
         min_length=1,
     )]
     cc: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="CC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
         max_length=50,
     )] = None
     bcc: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="BCC recipients. Each entry is a plain email string, an RFC 5322 mailbox string (`Jane <jane@acme.com>`), or an object with an optional display name.",
         max_length=50,
     )] = None
@@ -21957,33 +23276,41 @@ class EmailMailboxComposeRequest(BaseModel):
         min_length=1,
     )]
     html: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="HTML body. At least one of html or text must be provided.",
         max_length=524288,
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Plain-text body. At least one of html or text must be provided.",
         max_length=524288,
     )] = None
     reply_to: Annotated[Optional[List[EmailAddressInput]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Reply-To addresses. When omitted, the mailbox's `default_reply_to` applies (replies then come back to the mailbox itself).",
         max_length=25,
         min_length=1,
     )] = None
     attachments: Annotated[Optional[List[EmailAttachment]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="File attachments. The send is rejected when the estimated generated message size exceeds 20 MB (bodies plus all attachments after base64 encoding). Keep total raw attachment content at or below 15 MB for reliable headroom. Attachment metadata stays on the message's `attachment_manifest`, and the bytes are downloadable for the mailbox's retention tier.",
         max_length=20,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Structured `{name, value}` labels for filtering and analytics on the sent-message log. Cap: 20 tags per send.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Arbitrary JSON object stored on the send and echoed in webhook payloads. Cap: 2 KB serialized.",
     )] = None
     category: Annotated[Optional[EmailMessageCategory], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Content classification, which controls suppression policy:\n\n- `marketing`: Blocks on all suppression reasons.\n- `transactional`: Allows delivery through complaint and unsubscribe suppressions, for receipts, password resets, and similar operational mail.",
     )] = None
     cancel_on_reply: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When scheduled_at is set, cancel if an inbound message arrives in the conversation before dispatch is claimed. Defaults to false: the frozen parent, recipients and content are sent unchanged even if new mail arrives.",
     )] = None
 
@@ -22074,6 +23401,7 @@ class WebhookConnectorBinding(BaseModel):
         min_length=1,
     )]
     config: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The connector's nonsecret fields as the endpoint delivers with them. Secret fields are never returned.",
     )] = None
 
@@ -22176,6 +23504,7 @@ class WebhookEndpoint(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Human-readable label for the endpoint.",
         examples=["Production webhook endpoint"],
         min_length=1,
@@ -22192,9 +23521,11 @@ class WebhookEndpoint(BaseModel):
         min_length=1,
     )]
     destination: Annotated[Optional[WebhookDestination], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How each delivery to the endpoint is built.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this endpoint. The responses that create or update a connector endpoint suggest testing it, which checks its fields with the connected platform. Other responses that return one endpoint return an empty list, and lists omit it.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -22241,6 +23572,7 @@ class WebhookConnectorSetup(BaseModel):
         pattern="^[a-z][a-z0-9_]{0,63}$",
     )]
     action: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Action of the connector that each delivery runs. Omit when the connector has one action. An action the connector does not have, or `events` the action does not accept, returns a `422`.",
         examples=["trigger_run"],
         max_length=64,
@@ -22251,6 +23583,7 @@ class WebhookConnectorSetup(BaseModel):
         description="Values for the connector's secret fields, keyed by field `name`. Every required secret field must be present, after merging with the stored values on an update, and a key the connector does not declare as secret returns a `422`. No response includes these values.",
     )]
     config: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Values for the connector's nonsecret fields, keyed by field `name`, such as the URL the endpoint's requests go to. A URL must be HTTPS, on one of the connector's `allowed_origins`, and under its `path_prefix` when it has one. It cannot include user info, a fragment, an IP address as its host, dot segments, or encoded slashes.",
     )] = None
 
@@ -22269,12 +23602,14 @@ class WebhookDestinationCreate(RootModel[WebhookRawDestination | WebhookConnecto
 class WebhookEndpointCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="HTTPS URL to deliver events to, at most 2048 characters. The host must be publicly reachable: URLs on private, loopback, or link-local addresses are rejected with a `422`. Required unless `destination` is a connector, whose URL comes from the connector and its `config`; a URL given with one must equal it.",
         examples=["https://example.com/webhook"],
         max_length=2048,
         min_length=1,
     )] = None
     filter: Annotated[Optional[WebhookFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Exact match on `mailbox_id`, for `email_mailbox.*` events only; the mailbox must belong to this workspace. Cannot be combined with Realtime app scope. Omit on create for all resources; on update omit to keep, send `null` to clear.",
     )] = None
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
@@ -22282,11 +23617,13 @@ class WebhookEndpointCreate(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Human-readable label for this endpoint, up to 256 characters.",
         examples=["Production webhook endpoint"],
         max_length=256,
     )] = None
     destination: Annotated[Optional[WebhookDestinationCreate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How each delivery is built. Omit to post the signed event to `url` unchanged, the same as `{\"type\": \"webhook\"}`.",
     )] = None
 
@@ -22304,6 +23641,7 @@ class WebhookEndpointCreated(BaseModel):
         min_length=1,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Human-readable label for the endpoint.",
         examples=["Production webhook endpoint"],
         min_length=1,
@@ -22320,9 +23658,11 @@ class WebhookEndpointCreated(BaseModel):
         min_length=1,
     )]
     destination: Annotated[Optional[WebhookDestination], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How each delivery to the endpoint is built.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What to do next with this endpoint. The responses that create or update a connector endpoint suggest testing it, which checks its fields with the connected platform. Other responses that return one endpoint return an empty list, and lists omit it.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -22347,6 +23687,7 @@ class WebhookConnectorSetupUpdate(BaseModel):
     "Changes to the endpoint's connector, nested as on creation. A field the endpoint's URL is built from moves the URL with it. New deliveries are prepared with the current config. Queued deliveries keep their prepared body, but every send attempt, including retries, uses the current destination URL and credentials."
     model_config = ConfigDict(extra="allow")
     connector_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The endpoint's connector. It cannot change, so a different value returns a `422`.",
         examples=["claude_managed_agents"],
         max_length=64,
@@ -22354,6 +23695,7 @@ class WebhookConnectorSetupUpdate(BaseModel):
         pattern="^[a-z][a-z0-9_]{0,63}$",
     )] = None
     action: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The endpoint's action. It cannot change, so a different value returns a `422`.",
         examples=["trigger_run"],
         max_length=64,
@@ -22361,9 +23703,11 @@ class WebhookConnectorSetupUpdate(BaseModel):
         pattern="^[a-z][a-z0-9_]{0,63}$",
     )] = None
     credentials: Annotated[Optional[Dict[str, str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="New values for the connector's secret fields, merged over the stored ones: a key given replaces that field and an omitted key keeps its value. The next delivery, retries included, uses them.",
     )] = None
     config: Annotated[Optional[Dict[str, Optional[str]]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Changes to the connector's nonsecret fields, keyed by field `name`. A key given replaces that field, `null` clears an optional one, and a key left out keeps its stored value. A required field cannot be cleared, and the result is checked as at creation.",
     )] = None
 
@@ -22372,9 +23716,12 @@ class WebhookDestinationUpdate(BaseModel):
     "Changes to how deliveries are built, shaped as at creation. Only a `connector` destination takes `connector`; on any other endpoint it returns a `422`. Omit to keep the destination."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Optional[WebhookDestinationType], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How deliveries to the webhook endpoint are built: `webhook` posts the signed event unchanged to the endpoint URL; `connector` builds the delivery using the configured connector action. An existing endpoint's type cannot change; a different value returns a `422`.",
     )] = None
-    connector: Optional[WebhookConnectorSetupUpdate] = None
+    connector: Annotated[Optional[WebhookConnectorSetupUpdate], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class WebhookEndpointUpdateStatus(str, Enum):
@@ -22385,11 +23732,13 @@ class WebhookEndpointUpdateStatus(str, Enum):
 class WebhookEndpointUpdate(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replacement delivery URL. Same rules as at creation: HTTPS, at most 2048 characters, and the host must be publicly reachable (private, loopback, and link-local addresses return a `422`). Omit to keep the current URL. A connector endpoint's URL comes from its connector and cannot be replaced: any value returns a `422`.",
         examples=["https://example.com/webhook"],
         max_length=2048,
     )] = None
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Human-readable label for this endpoint, up to 256 characters.",
         examples=["Updated webhook endpoint"],
         max_length=256,
@@ -22398,13 +23747,16 @@ class WebhookEndpointUpdate(BaseModel):
         description="Replace the mailbox scope. Omit to keep it, or send null to include all resources. Scoped endpoints accept only email_mailbox events.",
     )] = None
     events: Annotated[Optional[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`.",
         min_length=1,
     )] = None
     destination: Annotated[Optional[WebhookDestinationUpdate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Changes to how deliveries are built, shaped as at creation. Only a `connector` destination takes `connector`; on any other endpoint it returns a `422`. Omit to keep the destination.",
     )] = None
     status: Annotated[Optional[WebhookEndpointUpdateStatus], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="`paused` stops all deliveries; `active` re-enables a paused endpoint. Omit to leave the status unchanged. Events that fire while paused are not delivered and a replay cannot recover them, because they were never attempted; after re-enabling, [Replay failed deliveries](/docs/api/reference/create-webhook-replay) reaches only the deliveries that failed before the pause. A `degraded` endpoint cannot be reset through this field: it returns to `active` automatically once deliveries succeed again.",
     )] = None
 
@@ -22421,6 +23773,7 @@ class WebhookRotateSecretResponse(BaseModel):
 class WebhookTestRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     event_type: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Event type to simulate. Any type from the event catalog is accepted, whether or not the endpoint subscribes to it; an unknown type returns a `422`. When omitted, the endpoint's first subscribed event type is used.",
         examples=["email.delivered"],
     )] = None
@@ -22481,18 +23834,22 @@ class EventAMBConversationData(BaseModel):
         ge=1,
     )]
     origin: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Source of the lifecycle change, when recorded.",
         min_length=1,
     )] = None
     group_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple entry-point group recorded for this occurrence, when present.",
         min_length=1,
     )] = None
     intent_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Apple entry-point intent recorded for this occurrence, when present.",
         min_length=1,
     )] = None
     queue: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Routing queue recorded for this occurrence, when present.",
         min_length=1,
     )] = None
@@ -22775,6 +24132,7 @@ class EventEmailAcceptedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -22847,6 +24205,7 @@ class EventEmailBouncedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -22919,6 +24278,7 @@ class EventEmailCanceledData(BaseModel):
         description="The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
@@ -22977,6 +24337,7 @@ class EventEmailClickedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23054,6 +24415,7 @@ class EventEmailComplainedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23122,6 +24484,7 @@ class EventEmailDeferredData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23203,6 +24566,7 @@ class EventEmailDeliveredData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23267,6 +24631,7 @@ class EventEmailListUnsubscribedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23331,6 +24696,7 @@ class EventEmailOpenedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23403,6 +24769,7 @@ class EventEmailOutOfBandBounceData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23488,6 +24855,7 @@ class EventEmailProcessedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23637,6 +25005,7 @@ class EventEmailRejectedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23691,6 +25060,7 @@ class EventEmailScheduledData(BaseModel):
         description="The metadata object provided on the send request, echoed on the event so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
@@ -23754,6 +25124,7 @@ class EventEmailUnsubscribedData(BaseModel):
         description="The metadata object provided on the send request, echoed on every event for the send so you can correlate events with your own records. Null when the send carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on the message's events. Absent when the send set none, and on `email.unsubscribed` and `email.list_unsubscribed` events Bird records from its own unsubscribe links, which carry no send fields.",
         examples=["INV-1234"],
         max_length=255,
@@ -23912,6 +25283,7 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
         examples=["Sounds good — can you send the invoice?"],
     )] = None
     truncated_text: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="True when `extracted_text` was truncated to the 64 KB cap. Fetch the full text through the thread-member endpoint.",
     )] = None
     attachment_count: Annotated[int, Field(
@@ -24375,11 +25747,13 @@ class EventSMSAcceptedData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -24393,12 +25767,14 @@ class EventSMSAcceptedData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
@@ -24482,11 +25858,13 @@ class EventSMSDeliveredData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -24500,20 +25878,24 @@ class EventSMSDeliveredData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that delivered the message. Absent when the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
         examples=[311480],
     )] = None
@@ -24597,11 +25979,13 @@ class EventSMSExpiredData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -24615,12 +25999,14 @@ class EventSMSExpiredData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
@@ -24628,10 +26014,12 @@ class EventSMSExpiredData(BaseModel):
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that reported the expiry. Absent when the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
         examples=[311480],
     )] = None
@@ -24715,11 +26103,13 @@ class EventSMSFailedData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -24733,12 +26123,14 @@ class EventSMSFailedData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
@@ -24746,10 +26138,12 @@ class EventSMSFailedData(BaseModel):
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that reported the failure. Absent when the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
         examples=[311480],
     )] = None
@@ -24798,6 +26192,7 @@ class EventSMSReceivedData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
@@ -24806,6 +26201,7 @@ class EventSMSReceivedData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message body, so you can act on it without a follow-up read. Absent when the message carried only attachments and no text of its own.",
         examples=["STOP"],
         min_length=1,
@@ -24814,14 +26210,17 @@ class EventSMSReceivedData(BaseModel):
         description="Segment breakdown for the message body. Segment count drives billing.",
     )]
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier the message came in over. Absent where the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when not known.",
         examples=[311480],
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Country of the sender's number. When the sender is not a phone number, such as a short code or an alphanumeric sender, the country of your number that received the message. Absent when neither is known.",
         examples=["US"],
         max_length=2,
@@ -24829,9 +26228,11 @@ class EventSMSReceivedData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The outbound message this one was paired with through its messaging profile's outbound matching. Absent when it was not paired.",
     )] = None
     subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Subject line. Absent when the message carried none.",
     )] = None
 
@@ -24912,11 +26313,13 @@ class EventSMSRejectedData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -24930,12 +26333,14 @@ class EventSMSRejectedData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
@@ -24943,10 +26348,12 @@ class EventSMSRejectedData(BaseModel):
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier the message was routed to. Absent when Bird rejected the message before routing it, or the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
         examples=[311480],
     )] = None
@@ -25030,11 +26437,13 @@ class EventSMSSentData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -25048,20 +26457,24 @@ class EventSMSSentData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that handled the message. Absent when the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
         examples=[311480],
     )] = None
@@ -25145,11 +26558,13 @@ class EventSMSUndeliveredData(BaseModel):
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["mpr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     country_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The country of the recipient's number. Absent when not known.",
         examples=["US"],
         max_length=2,
@@ -25163,12 +26578,14 @@ class EventSMSUndeliveredData(BaseModel):
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
     )] = None
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     cost_center: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `cost_center` applied to the message, from the send request or else its messaging profile, echoed on every event for the message. Absent when neither set one.",
         examples=["CC001234"],
     )] = None
@@ -25176,10 +26593,12 @@ class EventSMSUndeliveredData(BaseModel):
         description="Failure detail for a message that could not be delivered or was rejected.",
     )]
     carrier: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Carrier that reported the delivery failure. Absent when the carrier does not report one.",
         examples=["Verizon"],
     )] = None
     mcc_mnc: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
         examples=[311480],
     )] = None
@@ -25818,18 +27237,21 @@ class EventWhatsAppAcceptedData(BaseModel):
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
 
@@ -25883,21 +27305,25 @@ class EventWhatsAppDeliveredData(BaseModel):
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     recipient: Annotated[Optional[WhatsAppAddress], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The participant delivery was confirmed to, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
     )] = None
 
@@ -25951,18 +27377,21 @@ class EventWhatsAppFailedData(BaseModel):
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
@@ -26145,21 +27574,25 @@ class EventWhatsAppReadData(BaseModel):
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     recipient: Annotated[Optional[WhatsAppAddress], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The participant who opened the message, on a group message. A group send raises this event once per participant, so this is what tells the deliveries apart. Absent on a one-to-one message, whose `to` already names its recipient.",
     )] = None
 
@@ -26206,40 +27639,54 @@ class EventWhatsAppReceivedData(BaseModel):
         description="Sender or recipient of a WhatsApp message: a phone number, a business-scoped user ID, or both. A message received from a WhatsApp user carries whatever profile they publish, which may be neither.",
     )]
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one answers, as WhatsApp reports the reply's target: a tap on a button or a list row, and equally a text or media message the contact sent as a quoted reply. Absent when the message answers nothing, and absent when we cannot match the target to a message we hold, which is the case for one sent before this workspace started recording them or one already past the 15-day window we keep provider ids for.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when the contact sent the message to Bird.",
     )] = None
-    text: Annotated[Optional[WhatsAppText], Field(description="Text the contact sent.")] = None
+    text: Annotated[Optional[WhatsAppText], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Text the contact sent.",
+    )] = None
     image: Annotated[Optional[WhatsAppImage], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Image the contact sent.",
     )] = None
     video: Annotated[Optional[WhatsAppVideo], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Video the contact sent.",
     )] = None
     audio: Annotated[Optional[WhatsAppAudio], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Audio the contact sent.",
     )] = None
     sticker: Annotated[Optional[WhatsAppSticker], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sticker the contact sent.",
     )] = None
     document: Annotated[Optional[WhatsAppDocument], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Document the contact sent.",
     )] = None
     location: Annotated[Optional[WhatsAppLocation], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Location the contact sent.",
     )] = None
     contact_cards: Annotated[Optional[List[WhatsAppContactCard]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Contact cards the contact shared, either by tapping a button that asked for their number or by sending a card from their address book.",
     )] = None
     interactive_reply: Annotated[Optional[WhatsAppInteractiveReply], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What the contact tapped, when the message answers an interactive message or a template's quick-reply button.",
     )] = None
     unsupported: Annotated[Optional[WhatsAppUnsupported], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set when the contact sent content the API does not model, naming the WhatsApp content type.",
     )] = None
 
@@ -26289,18 +27736,21 @@ class EventWhatsAppRejectedData(BaseModel):
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
     error: Annotated[Optional[WhatsAppError], Field(
@@ -26357,18 +27807,21 @@ class EventWhatsAppSentData(BaseModel):
         description="The metadata object from the send request, echoed on every event for the message. Null when the message was not sent through Bird, or its request carried no metadata.",
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The `reference` from the send request, echoed on every event for the message. Absent when the send set none.",
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The message this one quoted: for a send request, its `in_reply_to_message_id`. Absent when the message quoted nothing, or quoted one we cannot match to a message we hold.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     origin: Annotated[Optional[Annotated[Union[WhatsAppMessageOrigin, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the message came from when it did not come through Bird live, the same value `GET /v1/whatsapp/messages/{message_id}` returns. Absent when your workspace sent the message through Bird.",
     )] = None
 
@@ -26457,6 +27910,7 @@ class WebhookEvent(RootModel[EventAMBAccepted | EventAMBConversationClosed | Eve
 class WebhookTestResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
     kind: Annotated[Optional[WebhookTestKind], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What the test did. `delivery` sent the test event to the endpoint. `probe` read the connected platform instead, which checks a connector endpoint's fields, sends no event and starts nothing; the status, HTTP details and latency are then the platform's answer to that read. Absent when the test stopped before sending anything, with `error` saying why.",
     )] = None
     status: Annotated[WebhookTestResponseStatus, Field(
@@ -26468,6 +27922,7 @@ class WebhookTestResponse(BaseModel):
         examples=[200],
     )]
     response_body: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Response body returned by your endpoint, truncated to the first 1024 bytes. Omitted when your endpoint returned no body or could not be reached.",
         examples=["OK"],
     )] = None
@@ -26477,19 +27932,23 @@ class WebhookTestResponse(BaseModel):
         ge=0,
     )]
     event_payload: Annotated[Optional[WebhookEvent], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Webhook delivery body. `type` identifies the event variant, `timestamp` is when the event occurred, and `data` contains the event-specific payload. See the [webhooks guide](/docs/guides/webhooks) for signature verification.",
     )] = None
     error: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A short explanation of a failed test that got no HTTP answer: the endpoint or platform could not be reached, or the test stopped before sending anything, such as for a connector endpoint whose connection no longer exists (then `kind` is absent).",
         examples=["connection refused"],
         min_length=1,
     )] = None
     field: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="For a connector endpoint, the request field that the platform's answer shows is wrong, such as `destination.connector.credentials.api_key`. Correct it with [Update a webhook endpoint](/docs/api/reference/update-webhook). Present only when `status` is `failed` and the connector maps that answer to a field.",
         examples=["destination.connector.credentials.api_key"],
         min_length=1,
     )] = None
     client_certificate: Annotated[Optional[WebhookTestClientCertificate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What your endpoint did with the client certificate that we present for your workspace. Omitted when your workspace presents no client certificate, or when the test failed before your endpoint answered.\n\n- `presented`: your endpoint asked for the certificate and accepted it.\n- `not_requested`: your endpoint did not ask for a certificate.\n- `rejected`: your endpoint rejected the certificate. If your workspace allows deliveries without the certificate, we sent the test again without it, and the other fields show the result of that second request.",
     )] = None
 
@@ -26497,11 +27956,13 @@ class WebhookTestResponse(BaseModel):
 class WebhookReplayRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     since: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replay events whose delivery attempt failed at or after this timestamp. The bound is inclusive and applies to attempt time, not to when the event occurred, so a retry that trailed its event by a day falls in the window by the hour it was attempted. Defaults to 24 hours before the request when omitted. Attempts are retained for three days, so that is the oldest history a replay reaches: an earlier `since` widens the window without recovering anything older.",
         examples=["2026-05-07T00:00:00Z"],
         min_length=1,
     )] = None
     until: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replay events whose delivery attempt failed at or before this timestamp, on the same attempt-time bound as `since`. Omitted, it resolves to the time of the request.",
         examples=["2026-05-07T23:59:59Z"],
         min_length=1,
@@ -26544,6 +28005,7 @@ class WebhookAttempt(BaseModel):
         min_length=1,
     )]
     failure_reason: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why the attempt failed when no HTTP response explains it: a failure before any request was sent, such as a connector body that could not be rendered, or a TLS failure, such as an endpoint certificate that could not be verified. Absent for other attempts.",
         examples=["The endpoint's connection changed after this delivery was queued."],
         min_length=1,
@@ -26553,6 +28015,7 @@ class WebhookAttempt(BaseModel):
         examples=[200],
     )]
     response_body: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Response body your endpoint returned, which may be truncated. Omitted when no body was returned.",
         examples=["{\"ok\":true}"],
     )] = None
@@ -26638,9 +28101,15 @@ class VoicePartyEndpoint(BaseModel):
     type: Annotated[Annotated[Union[VoicePartyEndpointType, str], Field(union_mode="left_to_right")], Field(
         description="The technical participant observed on one side of a call. Additional endpoint types may appear in retained observations.",
     )]
-    sip: Optional[VoicePartySIPEndpoint] = None
-    bridge_pstn: Optional[VoicePartyBridgePSTNEndpoint] = None
-    bridge_sip: Optional[VoicePartyBridgeSIPEndpoint] = None
+    sip: Annotated[Optional[VoicePartySIPEndpoint], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    bridge_pstn: Annotated[Optional[VoicePartyBridgePSTNEndpoint], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    bridge_sip: Annotated[Optional[VoicePartyBridgeSIPEndpoint], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class VoiceParty(BaseModel):
@@ -26687,6 +28156,7 @@ class VoiceSessionCredential(BaseModel):
         min_length=1,
     )]
     handshake_token: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Short-lived token required when upgrading the WebSocket connection. The token authorizes the connection only; each call still authenticates with `password`.",
         examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODU0NDMwMzV9.fp1xWxROEmgCafwiJ-ZHbZg9cIdYC-wLGcH-5gIVbco"],
         max_length=4096,
@@ -26898,6 +28368,7 @@ class VoiceLeg(BaseModel):
         min_length=1,
     )]
     actor: Annotated[Optional[Actor], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Who placed the leg: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the leg was admitted only by its source IP address, or when no actor was recorded.",
     )] = None
     sip_trunk_id: Annotated[Optional[str], Field(
@@ -26907,6 +28378,7 @@ class VoiceLeg(BaseModel):
         pattern="^spt_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     sip_call_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The SIP `Call-ID` of this leg's signalling. We relay it unchanged, so it matches what the carrier and your own equipment logged for the same leg: the carrier's value on an incoming leg, and your system's value on a leg you place through a SIP trunk. Use it to match this leg against a carrier's records or your PBX logs. Legs recorded before this field existed carry it only if they were answered.",
         examples=["3f9a1c8e7b2d4a5f@sip.example.net"],
         min_length=1,
@@ -26918,12 +28390,15 @@ class VoiceLeg(BaseModel):
         ge=100,
     )] = None
     rejection_reason: Annotated[Optional[VoiceLegRejectionReason], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
     )] = None
     route: Annotated[Optional[VoiceLegInboundRoute], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Which answer your number gave an incoming leg. Its `type` selects the shape, and each answer carries its own fields; the variants below are the full set you can receive. Recorded when the leg was handled, so changing the number's setup afterwards does not change what its past legs say. Absent on outbound legs, and on legs recorded before this field existed.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own `{name, value}` labels for this leg, taken from the `X-Bird-Call-Tag` headers on the INVITE that placed it. Set them to organise legs by a dimension of your own (campaign, queue, agent, cost centre), then filter this list by them with `tag`. Read-only here: a leg is labelled when it is placed, and never afterwards. What is here may be less than what was sent, and the leg still goes through either way: a tag whose name or value breaks the rules below is dropped, anything past the first five is ignored, and a name sent more than once keeps its first value. Absent when the leg carried none, and on legs recorded before this field existed.",
         max_length=5,
     )] = None
@@ -26943,6 +28418,7 @@ class VoiceLeg(BaseModel):
         ge=0,
     )] = None
     pdd_ms: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Post-dial delay in milliseconds: how long the caller heard nothing between dialing and the phone starting to ring at the other end. High values are what callers experience as the leg `not going through`. Absent when the leg never rang, either because it failed first or because the carrier answered it immediately.",
         examples=[850],
         ge=0,
@@ -26952,11 +28428,15 @@ class VoiceLeg(BaseModel):
         examples=[60000],
         ge=0,
     )] = None
-    media_quality: Optional[VoiceMediaQuality] = None
+    media_quality: Annotated[Optional[VoiceMediaQuality], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     media: Annotated[Optional[VoiceLegMediaPath], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the leg's audio travelled between us and your side. Absent when we recorded nothing about it, including on legs recorded before this field existed.",
     )] = None
     cost: Annotated[Optional[VoiceLegCost], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What was charged for a leg, split into the components that make it up.",
     )] = None
 
@@ -27031,6 +28511,7 @@ class NumberOwnership(BaseModel):
     "Ownership paperwork and registration approval progress for this number. Reported when ownership requirements or a recorded ownership block or decision apply. If requirements or progress cannot be read, a recorded block or decision preserves this object; without either, the object is absent. Other sending requirements can apply even when ownership is approved."
     model_config = ConfigDict(extra="allow")
     submission_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The most recent ownership submission for this number, including after approval. Users with compliance read access can view the filed answers and their review status from the number's details in the dashboard. This may be a newer filing than the one that cleared the number for use. Absent when no submission was found or submission progress could not be read.",
         examples=["csb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -27046,9 +28527,11 @@ class NumberOwnership(BaseModel):
         description="When ownership requirements began blocking outbound SMS and inbound and outbound voice calls. Null when that block is clear. Accepted paperwork can still await activation with a block in place. A number bought before ownership requirements were introduced can have outstanding paperwork without a block.",
     )] = None
     unavailable_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="When the number became unavailable. It cannot be activated; contact support. Absent while the number is available.",
     )] = None
     registration_due_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The deadline for completing the number's ownership details. A number with incomplete or inaccurate details can be removed sooner. Absent when no deadline is known or while `unavailable_at` is set.",
     )] = None
     next: Annotated[List[NextAction], Field(
@@ -27212,9 +28695,11 @@ class AvailableNumber(BaseModel):
         description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any `pricing.setup_price` is charged during purchase, plus any tax. The recurring charge, net of tax `pricing.recurring_price` multiplied by `pricing.intervals_per_charge`, is taken with any tax at assignment and at each renewal, even while approval is pending; assignment may follow completion of a pending supplier order.",
     )]
     ownership_address_scope: Annotated[Optional[Annotated[Union[AvailableNumberOwnershipAddressScope, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where the carrier requires the business address on this number's ownership registration\nto be. Present only when the carrier itself registers the number before it carries\ntraffic and states a rule; omitted otherwise. An address that does not meet the rule\nis refused after purchase, and only an address that meets it can fix the registration.\n\n- `anywhere`: any business address.\n- `country`: a business address in the number's country.\n- `number_area`: a business address inside the number's own area code, for example in\n  Amsterdam for an Amsterdam (020) number.",
     )] = None
     pricing: Annotated[Optional[AvailableNumberPricing], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="What your organization pays for this number. Omitted on admin supplier searches, which have no organization to price for.",
     )] = None
 
@@ -27311,6 +28796,7 @@ class NumbersOrderCompliance(BaseModel):
         min_length=1,
     )]
     identity_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="An existing party this number is held for. It fills in the business details you left out from what that party already holds, and each single-value answer you file about the party is written back onto it for next time, whatever the verdict. Documents and multi-value answers are asked fresh each time. An id belonging to another organization is rejected.",
         examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -27326,12 +28812,14 @@ class NumbersOrderCreate(BaseModel):
         min_length=1,
     )]
     reference: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own reference to set on the number when this purchase completes. Leading and trailing whitespace is removed. A pending order keeps the reference until the number is allocated.",
         examples=["STORE-042"],
         max_length=100,
         min_length=1,
     )] = None
     compliance: Annotated[Optional[NumbersOrderCompliance], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Ownership paperwork for a number being ordered, where its country requires any. Optional always: the order completes and the number is yours either way, and supplying this only decides whether it can carry traffic sooner. Read `GET /v1/compliance/requirements` for the number to learn what is asked for, or file it after the order with `POST /v1/compliance/submissions`. Filing this cannot fail your order: if it is refused, the number is still yours and you can file again. The answers are a legal representation filed under the name of the business they describe. Sending this block uses the order's existing `numbers` scope at write level.",
     )] = None
 
@@ -27402,17 +28890,21 @@ class BillingResolvedPrice(BaseModel):
         examples=[False],
     )]
     billing_interval: Annotated[Optional[BillingInterval], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The recurring interval one subscription charge covers.",
     )] = None
     billing_interval_count: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Compatibility alias for `intervals_per_charge`. Only present when `pricing_model` is `unit_subscription`, or `plan` with configured recurring terms. Omitted for other pricing models and plans without configured terms.",
         examples=[1],
         ge=1,
     )] = None
     pricing_interval: Annotated[Optional[BillingPricingInterval], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A period: a unit and a count. A day is a fixed 24-hour UTC period. A larger `count` lengthens the period without multiplying the amount quoted for it.",
     )] = None
     intervals_per_charge: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Number of complete pricing intervals bought by each recurring charge. Renewal duration is `pricing_interval.count` multiplied by this value. Present alongside `pricing_interval` for `unit_subscription` products and plans with configured recurring terms; omitted otherwise.",
         examples=[1],
         ge=1,
@@ -27623,6 +29115,7 @@ class VoiceTrunkMediaCreate(BaseModel):
     "How the new trunk carries call audio. An omitted member takes its default."
     model_config = ConfigDict(extra="allow")
     encryption: Annotated[Optional[VoiceTrunkMediaEncryption], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Omit it for `preferred`, which encrypts whenever your equipment and gateways allow and otherwise carries calls as before.",
     )] = None
 
@@ -27635,36 +29128,42 @@ class VoiceTrunkCreate(BaseModel):
         min_length=1,
     )]
     outbound_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the new trunk may place calls. Omit it to create a trunk that does neither direction yet, and enable the ones you want once you know what the trunk is for. The settings below configure outbound, so send this as `true` alongside them.",
         examples=[True],
     )] = None
     inbound_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether the new trunk may receive calls. Omit it to create a trunk that does neither direction yet. A trunk receives no calls until it also has at least one gateway and at least one number, both added after create.",
         examples=[True],
     )] = None
     media_bypass: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Omit it to create the trunk with this off, which is what suits equipment behind NAT and any account that wants call recording. It is an inbound setting, so `true` is accepted only alongside `inbound_enabled: true`; `false` is always accepted. It can be changed later.",
         examples=[True],
     )] = None
     media: Annotated[Optional[VoiceTrunkMediaCreate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How the new trunk carries call audio. An omitted member takes its default.",
     )] = None
     digest_algorithms: Annotated[Optional[List[VoiceSIPDigestAlgorithm]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The Digest hash algorithms to offer, in the order they should be offered. Omit this to use the default of `[\"SHA-256\", \"MD5\"]`, which suits most equipment. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. This can be changed later without re-issuing credentials.",
         min_length=1,
     )] = None
     session_credentials_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Omit it to create the trunk with this off, which is what a trunk reached only by a PBX wants. It can be changed later.",
         examples=[True],
     )] = None
 
 
 class VoiceTrunkMediaUpdate(BaseModel):
-    "A change to how the trunk carries call audio. An omitted member is left unchanged."
+    "A change to how the trunk encrypts call audio."
     model_config = ConfigDict(extra="allow")
-    encryption: Annotated[Optional[VoiceTrunkMediaEncryption], Field(
+    encryption: Annotated[VoiceTrunkMediaEncryption, Field(
         description="Controls SRTP encryption between your equipment and Bird. SRTP keys use SDES\n(`a=crypto`) over TLS signalling. Audio between Bird and the carrier uses\nplain RTP.\n\nWith `preferred`, a call you place is encrypted when your equipment offers\n`RTP/SAVP` or `RTP/SAVPF` with an `AES_CM_128_HMAC_SHA1_80` or `_32` key over\nTLS. A plain RTP offer stays plain. Calls delivered to a TLS gateway (`sips:`\nor `;transport=tls`) use encryption when available. Calls delivered through a\ngateway without TLS or with `media_bypass` use plain audio.\n\nWith `required`, a plain call is refused with `488 Not Acceptable Here`.\nDelivered calls require encrypted media, so your gateways must use TLS.\nYou cannot combine `required` with `media_bypass` because bypassed audio\ndoes not pass through the relay that encrypts it.\n\nWith `preferred` or `required`, an SDES offer over plain SIP (UDP or TCP), an\noffer without a usable key, and DTLS-SRTP are refused with `488` and a\n`Warning` header naming the reason.\n\nWith `off`, Bird does not encrypt audio and relays an SRTP offer unchanged.\nBrowser calls use DTLS-SRTP regardless of this setting.",
-    )] = None
+    )]
 
 
 class VoiceTrunkIPACLCreate(BaseModel):
@@ -27675,6 +29174,7 @@ class VoiceTrunkIPACLCreate(BaseModel):
         min_length=7,
     )]
     description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional human-readable label for this ACL entry.",
         examples=["Office network"],
         min_length=1,
@@ -27685,35 +29185,44 @@ class VoiceTrunkUpdate(BaseModel):
     "A change to the trunk's directions, name, access control, and Digest algorithm\noffer. Every field is optional. An omitted field is left unchanged. The\n`ip_acls`, `allowed_api_key_ids`, and `digest_algorithms` fields each replace\ntheir whole list when present. Send an empty array to clear one. This lets you\ncommit the trunk's entire access configuration in one update.\n\nA direction has to be enabled before its settings can be set, but one update\ncan do both: enable a direction and send its configuration together."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="A human-readable label for this SIP trunk. Mutable, and distinct from the generated wire domain.",
         examples=["Production PBX trunk"],
         min_length=1,
     )] = None
     outbound_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this trunk may place calls. Turning it off stops the trunk admitting call attempts at the next call setup and leaves its connection and authentication settings stored, so turning it back on restores a working trunk. Omit the field to leave it unchanged.",
         examples=[True],
     )] = None
     inbound_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this trunk may receive calls. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. The gateways remain configured. Omit the field to leave it unchanged.",
         examples=[True],
     )] = None
     media_bypass: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Turning it on takes effect at the next call setup and leaves calls already up untouched. It is an inbound setting, so the trunk must have `inbound_enabled` on; one update can do both. While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped, and your equipment must be reachable for audio from the public internet. Turning it off puts us back in the path at the next call setup. Omit the field to leave it unchanged.",
         examples=[True],
     )] = None
     media: Annotated[Optional[VoiceTrunkMediaUpdate], Field(
-        description="A change to how the trunk carries call audio. An omitted member is left unchanged.",
+        json_schema_extra={"x-bird-nullable": False},
+        description="A change to how the trunk encrypts call audio.",
     )] = None
     ip_acls: Annotated[Optional[List[VoiceTrunkIPACLCreate]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the trunk's entire IP allow list. When present, the allow list is set to exactly these CIDR blocks: ranges not listed are removed and new ones are added. Send an empty array to clear the list, turning IP filtering off. Omit the field to leave the allow list unchanged.",
     )] = None
     allowed_api_key_ids: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the trunk's entire set of allowed API keys. When present, exactly these keys may authenticate the trunk over SIP Digest. Each key you ADD must belong to this workspace and hold `voice` at write level; a key that does not is refused and the whole update is rolled back. A key already on the list that has since lost the permission or expired does not block the update, so you can keep editing the trunk while you put its permission back. A non-empty list turns API-key authentication on; send an empty array to turn it off. Omit the field to leave the allowed keys unchanged.",
     )] = None
     digest_algorithms: Annotated[Optional[List[VoiceSIPDigestAlgorithm]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the Digest hash algorithms this trunk offers, in the order they should be offered. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. Send an empty array to return to the default of `[\"SHA-256\", \"MD5\"]`. The offer is never empty, because a trunk that offered nothing could not be authenticated at all. Narrowing the list also narrows what the trunk accepts: an answer using an algorithm no longer offered is rejected. Takes effect on the next call setup; no credential is re-issued. Omit the field to leave the offer unchanged.",
     )] = None
     session_credentials_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Off by default; turning it on does not change what the allow lists admit, and turning it off stops those connections at the next call setup without re-issuing anything. Omit the field to leave it unchanged.",
         examples=[True],
     )] = None
@@ -27786,11 +29295,13 @@ class VoiceTrunkGatewayCreate(BaseModel):
         le=2147483647,
     )]
     origination_format: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How this gateway wants the calling number spelled. Write a template whose\n`{number}` stands for the number without its leading `+`; the result is\nstated in the `P-Asserted-Identity` header of the delivered call.\n\nOmit it for E.164, which is `+{number}`. The template may add digits,\nletters and the characters `-_.!~*'()&=+$,;?/%#` around `{number}`, which\nmay appear at most once, and anything else in braces is rejected so a\nmisspelled placeholder cannot reach a call.\n\nA format with no `{number}` at all states the same identity on every call,\nwhich is what a peer that only accepts one authorized number wants. The\ncall then carries nothing about who really called.",
         examples=["+{number}"],
         max_length=64,
     )] = None
     destination_format: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How this gateway formats the dialed number. In the template, `{number}`\nrepresents the number without its leading `+`. The result is placed before\nthe `sip_uri` host. For example, `1234#{number}` formats `+31201234567` as\n`sip:1234#31201234567@pbx.example.com:5060`.\n\nOmit it for E.164, which is `+{number}`. A format with no `{number}` at all\nsends every number this trunk answers to one fixed number, so\n`777000447973` reaches `sip:777000447973@pbx.example.com:5060` whatever was\ndialed. The same rules as `origination_format` apply to what the template\nmay contain.",
         examples=["1234#{number}"],
         max_length=64,
@@ -27801,23 +29312,27 @@ class VoiceTrunkGatewayUpdate(BaseModel):
     "A change to the gateway's address, its place in the order, or how it wants numbers spelled. Every field is optional; an omitted field is left unchanged."
     model_config = ConfigDict(extra="allow")
     sip_uri: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="SIP URI an inbound call to this trunk should be forwarded to. Give the host only, with an optional port: which number is dialed there comes from `destination_format`, so a URI carrying a user part is rejected.",
         examples=["sip:pbx.example.com:5060"],
         max_length=512,
         min_length=1,
     )] = None
     priority: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The gateway's place in the trunk's **All gateways (automatic)** hunt group, which tries the lowest priority first. Give two gateways the same priority to share calls between them evenly. Hunt groups you build in the trunk's inbound routing in the dashboard set their own order.",
         examples=[0],
         ge=0,
         le=2147483647,
     )] = None
     origination_format: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How this gateway wants the calling number spelled, as a template whose\n`{number}` stands for the number without its leading `+`. The result is\nstated in the `P-Asserted-Identity` header of the delivered call.\n\nSend an empty string to go back to E.164, which is `+{number}`. The template\nmay add digits, letters and the characters `-_.!~*'()&=+$,;?/%#` around\n`{number}`, which may appear at most once, and anything else in braces is\nrejected so a misspelled placeholder cannot reach a call.\n\nA format with no `{number}` at all states the same identity on every call,\nwhich is what a peer that only accepts one authorized number wants. The\ncall then carries nothing about who really called.",
         examples=["+{number}"],
         max_length=64,
     )] = None
     destination_format: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="How this gateway formats the dialed number. In the template, `{number}`\nrepresents the number without its leading `+`. The result is placed before\nthe `sip_uri` host. For example, `1234#{number}` formats `+31201234567` as\n`sip:1234#31201234567@pbx.example.com:5060`.\n\nSend an empty string to go back to E.164, which is `+{number}`. A format\nwith no `{number}` at all sends every number this trunk answers to one fixed\nnumber, so `777000447973` reaches `sip:777000447973@pbx.example.com:5060`\nwhatever was dialed. The same rules as `origination_format` apply to what\nthe template may contain.",
         examples=["1234#{number}"],
         max_length=64,
@@ -27957,8 +29472,11 @@ class VoiceInboundConfiguration(BaseModel):
     route: Annotated[Optional[VoiceCallRoute], Field(
         description="Null when the number has no route of its own and follows your workspace's default inbound route from the voice settings. Also null when the stored route type is unsupported, in which case configuration_error says so; inspect it before changing the route.",
     )]
-    configuration_error: Optional[Literal["unsupported_route_type"]] = None
+    configuration_error: Annotated[Optional[Literal["unsupported_route_type"]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     forward_as_options: Annotated[Optional[List[VoiceInboundForwardAs]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Caller identities available when configuring a forward. Use these values to populate the choice in your editor. The current choices are `dialed_number` and `calling_number`.",
     )] = None
 
@@ -28035,7 +29553,9 @@ class VoiceNumberUpdate(BaseModel):
         max_length=100,
         min_length=1,
     )] = None
-    inbound_configuration: Optional[VoiceInboundConfigurationPut] = None
+    inbound_configuration: Annotated[Optional[VoiceInboundConfigurationPut], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class VoiceSettingsInboundConfiguration(BaseModel):
@@ -28109,9 +29629,12 @@ class VoiceSettingsUpdate(BaseModel):
     "Changes to your workspace's voice settings. Omit a field to leave it as it is."
     model_config = ConfigDict(extra="allow")
     inbound_configuration: Annotated[Optional[VoiceSettingsInboundConfigurationPut], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The route for calls arriving on any of your Bird numbers that has no inbound route of its own; verified caller IDs receive no calls. It takes effect on the next call to each of those numbers. Numbers with their own route keep it.",
     )] = None
-    daily_spend_limit: Optional[VoiceDailySpendLimitUpdate] = None
+    daily_spend_limit: Annotated[Optional[VoiceDailySpendLimitUpdate], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class VoiceVerifiedNumberID(RootModel[str]):
@@ -28179,6 +29702,7 @@ class VoiceVerifiedNumberCreate(BaseModel):
         min_length=1,
     )]
     name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your label for this verified number, to tell several registered numbers apart. Omit it to register the number without one and add it later. It is yours to choose and appears nowhere on a call, so it never affects what the person you are calling sees.",
         examples=["Support line"],
         max_length=100,
@@ -28187,19 +29711,20 @@ class VoiceVerifiedNumberCreate(BaseModel):
 
 
 class VoiceVerifiedNumberUpdate(BaseModel):
-    "A change to the verified number's label. Every field is optional; an omitted field is left unchanged."
+    "A replacement for the verified number's label."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
         description="Your new label for this verified number. Send `null` to clear it and go back to identifying the verified number by its number alone. It is yours to choose and appears nowhere on a call, so renaming never affects what the person you are calling sees, and it leaves the number and its verification untouched.",
         examples=["Support line"],
         max_length=100,
         min_length=1,
-    )] = None
+    )]
 
 
 class VoiceVerifiedNumberVerifyRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The 6-digit verification code read out by the verification call. Required until ownership is verified. Omit it when retrying activation of an already verified number.",
         examples=[123456],
         max_length=6,
@@ -28260,14 +29785,14 @@ class VoiceRingGroupCreate(BaseModel):
 
 
 class VoiceRingGroupUpdate(BaseModel):
-    "A change to the ring group. An omitted field is left unchanged."
+    "A change to the ring group's name."
     model_config = ConfigDict(extra="allow")
-    name: Annotated[Optional[str], Field(
+    name: Annotated[str, Field(
         description="The ring group's new name.",
         examples=["Tier 2 support"],
         max_length=100,
         min_length=1,
-    )] = None
+    )]
 
 
 class VoiceRingGroupMember(BaseModel):
@@ -28582,6 +30107,7 @@ class EsimAvailableAction(BaseModel):
         description="Why the action is unavailable. Null while `available` is true.",
     )]
     requires: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Additional parameters required by the current state, such as `acknowledge_balance_forfeit` when releasing an eSIM with remaining data. Absent when no additional parameters apply or when permissions, network support, or profile state prevent the action.",
     )] = None
 
@@ -28636,7 +30162,9 @@ class Esim(BaseModel):
         description="Phone number attached to this eSIM, in E.164 format, as the supplier reports it. Null while none is on record: a data-only plan comes with no number, and a plan that includes one reports it after provisioning.",
         examples=[+31612345678],
     )]
-    capabilities: Optional[EsimServiceCapabilities] = None
+    capabilities: Annotated[Optional[EsimServiceCapabilities], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     order_id: Annotated[str, Field(
         description="The order that created this eSIM.",
         examples=["eor_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -28656,6 +30184,7 @@ class Esim(BaseModel):
         description="Remaining data per coverage zone, combined across the zone's packages. Derived; the packages are the source of truth.",
     )]
     available_actions: Annotated[Optional[List[EsimAvailableAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Actions currently available to you on this eSIM, with reasons for unavailable actions. Returned by the individual eSIM read. Use this to display controls and explain restrictions. Each action rechecks permissions and state when submitted, so availability is not a guarantee of success.",
     )] = None
     package_limit: Annotated[int, Field(
@@ -28683,10 +30212,12 @@ class Esim(BaseModel):
         description="Most recent network attachment, or null before first attach.",
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Tags for routing, filtering, and stats grouping, echoed on webhook events for the eSIM.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own key-value data, echoed on webhook events for the eSIM. Maximum 2 KB serialized.",
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
@@ -28715,6 +30246,7 @@ class EsimDelivery(BaseModel):
         description="Channel the install credentials are delivered over.",
     )]
     locale: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Language for the message. Falls back to the closest available language, then English.",
         examples=["pt-BR"],
         max_length=35,
@@ -28788,6 +30320,7 @@ class EsimOrder(BaseModel):
         pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     recurring_subscription_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The recurring service associated with this purchase. Absent for one-time orders.",
         examples=["ers_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -28815,9 +30348,11 @@ class EsimOrder(BaseModel):
         pattern="^wtx_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     delivery: Annotated[Optional[EsimDelivery], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Where install credentials are delivered once available. Present when requested at creation.",
     )] = None
     awaiting_funds: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether this order is in `charging` after an insufficient wallet balance refusal. The required balance is in `funding` when available. False does not confirm payment; check `status` and `wallet_transaction_id`. When absent, `funding` indicates a refusal if present; otherwise the funding state is unknown.",
     )] = None
     funding: Annotated[Optional[EsimOrderFunding], Field(
@@ -28905,7 +30440,11 @@ class VoiceSequenceSavedExecutionParty(BaseModel):
     "Saved hypothetical party, or null for an absent observation. Strings may be stale; explicit preview and evaluation validate endpoint types and telephone addresses."
     model_config = ConfigDict(extra="allow")
     endpoint: VoiceSequenceSavedExecutionEndpoint
-    address: Annotated[Optional[str], Field(max_length=128, min_length=1)] = None
+    address: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        max_length=128,
+        min_length=1,
+    )] = None
 
 
 class VoiceSequenceSavedExecutionCallSample(BaseModel):
@@ -28942,9 +30481,11 @@ class VoiceSequenceSavedPreview(BaseModel):
     )]
     trigger_data: Dict[str, Any]
     node_samples: Annotated[Optional[List[VoiceSequencePreviewSample]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         max_length=50,
     )] = None
     execution_sample: Annotated[Optional[VoiceSequenceSavedExecutionSample], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Saved hypothetical values, which may be stale or incomplete in meaning. Each string is nonempty and limited to 128 bytes. Explicit preview and evaluation require valid typed identifiers and a timestamp.",
     )] = None
 
@@ -28953,6 +30494,7 @@ class VoiceSequencePresentation(BaseModel):
     "Optional editor layout, labels and saved authoring samples. These fields do not drive execution. Their bytes still count toward definition and execution size limits."
     model_config = ConfigDict(extra="allow")
     preview: Annotated[Optional[VoiceSequenceSavedPreview], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Saved authoring scenario. Values are checked against node contracts only when explicitly submitted to preview or evaluation.",
     )] = None
 
@@ -28970,9 +30512,11 @@ class VoiceSequenceDefinition(BaseModel):
         description="Nodes keyed by stable IDs. Incomplete node objects may be saved in a draft. Array order has no execution meaning.",
     )]
     settings: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sequence policies being authored. Omission leaves the definition without explicit settings.",
     )] = None
     presentation: Annotated[Optional[VoiceSequencePresentation], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Optional editor layout, labels and saved authoring samples. These fields do not drive execution. Their bytes still count toward definition and execution size limits.",
     )] = None
 
@@ -29044,18 +30588,22 @@ class VoiceCall(BaseModel):
     parties: Annotated[List[VoiceParty], Field(
         description="The distinct participant observations the call's legs recorded, for display beside the call. The length is not a count of people and not a reconstruction of the leg graph.",
     )]
-    sequence: Optional[VoiceCallSequence] = None
+    sequence: Annotated[Optional[VoiceCallSequence], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class CreateVoiceCallSequenceRequest(BaseModel):
     "Supply exactly one of `id`, to run a saved sequence's active publication, or `definition`, to run a sequence once without saving it."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     definition: Annotated[Optional[VoiceSequenceDefinition], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Complete sequence definition to run once after the recipient answers. It must pass the same checks as publishing a sequence, is frozen when the call is accepted, and creates no saved sequence.",
     )] = None
     entry_node_id: Annotated[str, Field(
@@ -29085,6 +30633,7 @@ class CreateVoiceCallRequest(BaseModel):
         pattern="^\\+[1-9][0-9]{3,14}$",
     )]
     ringing_timeout_seconds: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Maximum ringing time for the original dialing attempt, shared across routing candidates.",
         ge=5,
         le=120,
@@ -29131,11 +30680,16 @@ class VoiceDestination(BaseModel):
         min_length=1,
     )]
     dial_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="International dialling prefix, without the leading plus. Absent for countries that have none.",
         examples=[31],
     )] = None
-    region: Optional[Annotated[Union[DestinationRegion, str], Field(union_mode="left_to_right")]] = None
-    super_region: Optional[Annotated[Union[DestinationSuperRegion, str], Field(union_mode="left_to_right")]] = None
+    region: Annotated[Optional[Annotated[Union[DestinationRegion, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    super_region: Annotated[Optional[Annotated[Union[DestinationSuperRegion, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
     enabled: Annotated[bool, Field(
         description="Whether your workspace has enabled calling to this country.",
     )]
@@ -29177,10 +30731,12 @@ class DestinationSetting(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )]
     enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether to enable (`true`) or disable (`false`) this destination country. Omit it to leave the country's enabled setting unchanged.",
         examples=[True],
     )] = None
     daily_spend_limit: Annotated[Optional[VoiceDestinationDailySpendLimitUpdate], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Sets or removes this country's daily spend limit; omit it to leave the limit unchanged. Once today's spend reaches the limit, new calls to the country are refused, verification calls included, whether or not it is enabled; a call already in progress is not cut off, so spend can pass the limit by what that call costs.",
     )] = None
 
@@ -29473,40 +31029,49 @@ class EsimOrderCreate(BaseModel):
         pattern="^eof_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     esim_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Existing eSIM to add the package to. Omit to provision a new eSIM.",
         examples=["esm_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^esm_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     subscriber_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Person to assign the new eSIM to when delivery completes. Must be a subscriber in this workspace. Omit to leave it unassigned. Supplying it with esim_id returns 422; top-ups retain the existing assignment. An unknown subscriber or one outside this workspace returns 404 before charging. Identification guidance does not gate purchase.",
         examples=["esub_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^esub_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     offer_revision: Annotated[Optional[int], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The offer revision you are quoting from. When set and the offer has since moved to a newer revision, the order is refused with a conflict instead of charging a price you did not see. Omitted, the current revision is used.",
         ge=1,
     )] = None
     recurrence: Annotated[Optional[EsimOrderRecurrence], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Buy the first package and enable automatic renewal in one purchase. Requires subscriber_id, offer_revision and Idempotency-Key. Omit esim_id and expected_price.",
     )] = None
     expected_price: Annotated[Optional[Money], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="The price you displayed to the buyer. When set and the workspace's current resolved price differs, the order is refused with a conflict instead of charging a different amount. Catches billing-rate changes, which move independently of the offer revision.",
     )] = None
     display_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Free-text label for the new eSIM, for your own reference. Ignored when esim_id is set.",
         examples=["Amsterdam trip, order 8812"],
         max_length=120,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Tags for the new eSIM, echoed on its lifecycle webhook events. Ignored when esim_id is set.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Your own key-value data for the new eSIM, echoed on its lifecycle webhook events. Maximum 2 KB serialized. Ignored when esim_id is set.",
     )] = None
     acknowledge_shortened_validity: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Set to true to accept a validity cut short by the eSIM's service period. Without it, an order whose package would expire early is refused with a conflict that states the effective validity.",
     )] = None
 
@@ -30087,10 +31652,12 @@ class EsimUpdate(BaseModel):
         max_length=120,
     )] = None
     tags: Annotated[Optional[List[Tag]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the eSIM's tags.",
         max_length=20,
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Replaces the eSIM's metadata. Maximum 2 KB serialized.",
     )] = None
 
@@ -30290,6 +31857,7 @@ class EsimSettingsUpdate(BaseModel):
     "Changes to your workspace's eSIM settings. Omit a field to leave it as it is."
     model_config = ConfigDict(extra="allow")
     credential_delivery_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
         description="Whether Bird automatically sends an install link after a new eSIM purchase with a linked contact. Uses the contact's email address, or SMS when only a phone number is available. Omit this field to retain the current value; a workspace without saved settings starts with `false`. Manual install-link sends remain available regardless of this setting.",
         examples=[False],
     )] = None

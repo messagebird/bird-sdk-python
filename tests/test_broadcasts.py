@@ -8,7 +8,16 @@ import httpx
 import pytest
 import respx
 
-from bird import AsyncBird, Bird, BirdError, BroadcastCreateParams, BroadcastUpdateParams, EmailBroadcast
+from bird import (
+    AsyncBird,
+    Bird,
+    BirdError,
+    BroadcastCreateParams,
+    BroadcastUpdateParams,
+    EmailBroadcast,
+    EmailBroadcastTemplateUpdate,
+    omit,
+)
 
 BASE = "https://eu1.platform.bird.com"
 ID1 = "eb_01krdgeqcxet5s7t44vh8rt9mg"
@@ -122,7 +131,9 @@ def test_update_takes_a_params_dict_splatted() -> None:
     route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}").mock(
         return_value=httpx.Response(200, json=_broadcast())
     )
-    params: BroadcastUpdateParams = {"template": "emt_01krdgeqcxet5s7t44vh8rt9mg", "language": None, "parameters": None}
+    params: BroadcastUpdateParams = {
+        "template": EmailBroadcastTemplateUpdate(id="emt_01krdgeqcxet5s7t44vh8rt9mg", language=None),
+    }
     client().broadcasts.update(ID1, **params)
     body = json.loads(route.calls.last.request.content)
     assert body["template"] == {"id": "emt_01krdgeqcxet5s7t44vh8rt9mg", "language": None}
@@ -133,53 +144,96 @@ def test_update_sends_parameter_overrides_without_releasing_the_version() -> Non
     route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}").mock(
         return_value=httpx.Response(200, json=_broadcast())
     )
-    client().broadcasts.update(ID1, parameter_overrides={"it": {"count": 9007199254740995, "empty": ""}, "es": {}})
+    client().broadcasts.update(ID1, template=EmailBroadcastTemplateUpdate(
+        parameter_overrides={"it": {"count": 9007199254740995, "empty": ""}, "es": {}},
+    ))
     body = json.loads(route.calls.last.request.content)
     assert body["template"] == {"parameter_overrides": {"it": {"count": 9007199254740995, "empty": ""}, "es": {}}}
-    with pytest.raises(ValueError, match="cleared template"):
-        client().broadcasts.update(ID1, template=None, parameter_overrides={})
 
 
 @pytest.mark.parametrize("overrides", [{"it": None}, {"it": []}, None])
-def test_create_and_update_refuse_a_null_or_non_object_override_map(overrides: Any) -> None:
+def test_create_refuses_a_null_or_non_object_override_map(overrides: Any) -> None:
     with respx.mock:
         route = respx.route(url__regex=rf"{BASE}/v1/email/broadcasts.*")
         if overrides is None:
-            # Outer None keeps the documented omission convention.
             route.mock(return_value=httpx.Response(200, json=_broadcast()))
-            client().broadcasts.update(ID1, parameter_overrides=None)
+            client().broadcasts.create(template="emt_01krdgeqcxet5s7t44vh8rt9mg", parameter_overrides=None)
             assert "parameter_overrides" not in json.loads(route.calls.last.request.content).get("template", {})
             return
-        with pytest.raises(BirdError, match="template.parameter_overrides"):
-            client().broadcasts.update(ID1, parameter_overrides=overrides)
         with pytest.raises(BirdError, match="template.parameter_overrides"):
             client().broadcasts.create(template="emt_01krdgeqcxet5s7t44vh8rt9mg", parameter_overrides=overrides)
         assert not route.called
 
 
+@pytest.mark.parametrize("template, body", [
+    (omit, {}),
+    (None, {"template": None}),
+    (EmailBroadcastTemplateUpdate(), {"template": {}}),
+    (EmailBroadcastTemplateUpdate(language=None), {"template": {"language": None}}),
+    (EmailBroadcastTemplateUpdate(parameters={}), {"template": {"parameters": {}}}),
+    (EmailBroadcastTemplateUpdate(parameter_overrides={}), {"template": {"parameter_overrides": {}}}),
+    (EmailBroadcastTemplateUpdate(parameters={"greeting": None, "count": 9007199254740995}),
+     {"template": {"parameters": {"greeting": None, "count": 9007199254740995}}}),
+    (EmailBroadcastTemplateUpdate(parameter_overrides={"it": {"greeting": None}, "es": {}}),
+     {"template": {"parameter_overrides": {"it": {"greeting": None}, "es": {}}}}),
+])
 @respx.mock
-def test_scalar_null_inside_a_language_stays_null() -> None:
-    route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}").mock(return_value=httpx.Response(200, json=_broadcast()))
-    client().broadcasts.update(ID1, parameter_overrides={"it": {"greeting": None}})
-    assert json.loads(route.calls.last.request.content)["template"]["parameter_overrides"] == {"it": {"greeting": None}}
-
-
-def test_update_refuses_a_language_when_the_template_is_cleared() -> None:
-    with respx.mock:
-        route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}")
-        with pytest.raises(ValueError, match="language needs a template"):
-            client().broadcasts.update(ID1, template=None, language="nl")
-        assert not route.called
-
-
-@respx.mock
-def test_update_clears_template_and_language_together() -> None:
+@pytest.mark.asyncio
+async def test_update_typed_template_states_sync_and_async(template: Any, body: dict[str, Any]) -> None:
     route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}").mock(
         return_value=httpx.Response(200, json=_broadcast())
     )
-    client().broadcasts.update(ID1, template=None, language=None)
-    body = json.loads(route.calls.last.request.content)
-    assert body["template"] is None
+    with client() as synchronous:
+        synchronous.broadcasts.update(ID1, template=template, category=None)
+    async with AsyncBird(api_key="bk_eu1_secret") as asynchronous:
+        await asynchronous.broadcasts.update(ID1, template=template, category=None)
+    assert len(route.calls) == 2
+    for call in route.calls:
+        assert json.loads(call.request.content) == body
+
+
+@pytest.mark.parametrize("field", ["id", "parameters", "parameter_overrides"])
+@respx.mock
+@pytest.mark.asyncio
+async def test_update_rejects_nested_nonnullable_nulls(field: str) -> None:
+    route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}")
+    template = EmailBroadcastTemplateUpdate.model_validate({field: None})
+    with client() as synchronous:
+        with pytest.raises(BirdError, match=rf"template\.{field}: null"):
+            synchronous.broadcasts.update(ID1, template=template)
+    async with AsyncBird(api_key="bk_eu1_secret") as asynchronous:
+        with pytest.raises(BirdError, match=rf"template\.{field}: null"):
+            await asynchronous.broadcasts.update(ID1, template=template)
+    assert not route.called
+
+
+@pytest.mark.parametrize("template", ["emt_01krdgeqcxet5s7t44vh8rt9mg", {}, {"language": None}])
+@respx.mock
+@pytest.mark.asyncio
+async def test_update_requires_a_template_model(template: Any) -> None:
+    route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}")
+    with client() as synchronous:
+        with pytest.raises(BirdError, match="EmailBroadcastTemplateUpdate"):
+            synchronous.broadcasts.update(ID1, template=template)
+    async with AsyncBird(api_key="bk_eu1_secret") as asynchronous:
+        with pytest.raises(BirdError, match="EmailBroadcastTemplateUpdate"):
+            await asynchronous.broadcasts.update(ID1, template=template)
+    assert not route.called
+
+
+@pytest.mark.parametrize("field, value", [("language", "nl"), ("parameters", {}), ("parameter_overrides", {})])
+@respx.mock
+@pytest.mark.asyncio
+async def test_update_removed_flat_template_keywords(field: str, value: Any) -> None:
+    route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}")
+    kwargs: dict[str, Any] = {field: value}
+    with client() as synchronous:
+        with pytest.raises(TypeError, match=field):
+            synchronous.broadcasts.update(ID1, **kwargs)
+    async with AsyncBird(api_key="bk_eu1_secret") as asynchronous:
+        with pytest.raises(TypeError, match=field):
+            await asynchronous.broadcasts.update(ID1, **kwargs)
+    assert not route.called
 
 
 @pytest.mark.asyncio

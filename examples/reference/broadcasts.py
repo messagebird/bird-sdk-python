@@ -31,10 +31,13 @@ def broadcasts_get() -> None:
 
 
 def broadcasts_update() -> None:
+    from bird import EmailBroadcastTemplateUpdate
+
     broadcast = client.broadcasts.update(
         "eb_01krdgeqcxet5s7t44vh8rt9mg",
-        template="emt_01krdgeqcxet5s7t44vh8rt9mg",
-        parameters={},
+        template=EmailBroadcastTemplateUpdate(
+            id="emt_01krdgeqcxet5s7t44vh8rt9mg", parameters={},
+        ),
     )
     print(broadcast.status)
 

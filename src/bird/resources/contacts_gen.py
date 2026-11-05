@@ -13,7 +13,7 @@ from bird._generated import (
     ContactUpsertRequest,
     ContactUpsertResult,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -200,7 +200,7 @@ class ContactsBase(Resource):
             _body["external_id"] = external_id
         if data is not None:
             _body["data"] = data
-        body = to_wire_exclude_unset(ContactUpdateRequest, _body)
+        body = to_wire(ContactUpdateRequest, _body)
         return self._write(
             "PATCH",
             f"/v1/contacts/{quote(contact_id, safe='')}",
@@ -382,7 +382,7 @@ class AsyncContactsBase(AsyncResource):
             _body["external_id"] = external_id
         if data is not None:
             _body["data"] = data
-        body = to_wire_exclude_unset(ContactUpdateRequest, _body)
+        body = to_wire(ContactUpdateRequest, _body)
         return await self._write(
             "PATCH",
             f"/v1/contacts/{quote(contact_id, safe='')}",

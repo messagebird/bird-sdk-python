@@ -303,29 +303,6 @@ class BroadcastCreateParams(TypedDict, total=False):
     scheduled_at: Union[str, datetime]
 
 
-class BroadcastUpdateParams(TypedDict, total=False):
-    """Params for ``client.broadcasts.update`` (the broadcast id is positional).
-    An absent key keeps the stored value; ``template``, ``language``,
-    ``reply_to`` and ``ip_pool_id`` present with ``None`` clear it, which is why
-    those four are the nullable ones. A ``language`` needs a ``template`` to
-    belong to, so clearing the template clears the language with it."""
-
-    from_: EmailAddressInput
-    audience_id: str
-    template: str | None
-    language: str | None
-    parameters: Mapping[str, Any] | None | Omit
-    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit
-    reply_to: Sequence[EmailAddressInput] | None
-    headers: Mapping[str, str]
-    tags: Sequence[Mapping[str, str]]
-    metadata: Mapping[str, Any]
-    track_opens: bool
-    track_clicks: bool
-    ip_pool_id: str | None
-    category: str
-
-
 class BroadcastSendParams(TypedDict, total=False):
     """Params for ``client.broadcasts.send`` (the broadcast id is positional).
     ``scheduled_at`` accepts a timezone-aware ``datetime`` or an already-wire

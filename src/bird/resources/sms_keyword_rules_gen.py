@@ -12,7 +12,7 @@ from bird._generated import (
     SMSKeywordRuleList,
     SMSKeywordRuleUpdate,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
@@ -116,7 +116,7 @@ class SmsKeywordRules(Resource):
             _body["reply"] = reply
         if confirmed_self_managed is not None:
             _body["confirmed_self_managed"] = confirmed_self_managed
-        body = to_wire_exclude_unset(SMSKeywordRuleCreate, _body)
+        body = to_wire(SMSKeywordRuleCreate, _body)
         return self._write(
             "POST",
             "/v1/sms/keyword-rules",
@@ -142,7 +142,7 @@ class SmsKeywordRules(Resource):
             _body["reply"] = reply
         if confirmed_self_managed is not None:
             _body["confirmed_self_managed"] = confirmed_self_managed
-        body = to_wire_exclude_unset(SMSKeywordRuleUpdate, _body)
+        body = to_wire(SMSKeywordRuleUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/sms/keyword-rules/{quote(id, safe='')}",
@@ -227,7 +227,7 @@ class AsyncSmsKeywordRules(AsyncResource):
             _body["reply"] = reply
         if confirmed_self_managed is not None:
             _body["confirmed_self_managed"] = confirmed_self_managed
-        body = to_wire_exclude_unset(SMSKeywordRuleCreate, _body)
+        body = to_wire(SMSKeywordRuleCreate, _body)
         return await self._write(
             "POST",
             "/v1/sms/keyword-rules",
@@ -253,7 +253,7 @@ class AsyncSmsKeywordRules(AsyncResource):
             _body["reply"] = reply
         if confirmed_self_managed is not None:
             _body["confirmed_self_managed"] = confirmed_self_managed
-        body = to_wire_exclude_unset(SMSKeywordRuleUpdate, _body)
+        body = to_wire(SMSKeywordRuleUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/sms/keyword-rules/{quote(id, safe='')}",

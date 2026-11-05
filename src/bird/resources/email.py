@@ -14,7 +14,7 @@ from bird._generated import (
     EmailMessageSendRequest,
 )
 
-from bird._models import to_wire
+from bird._models import _reject_nested_input_nulls, to_wire
 from bird._response import APIResponse
 from bird.resources.email_mailboxes import AsyncEmailMailboxes, EmailMailboxes
 from bird.resources.email_threads import AsyncEmailThreads, EmailThreads
@@ -88,6 +88,13 @@ def _send_body(
     d = defaults or {}
     raw_from = from_ if from_ is not None else d.get("from_")
     raw_reply_to = reply_to if reply_to is not None else d.get("reply_to")
+    template_body: dict[str, Any] | None = None
+    if template is not None:
+        template_body = {"id" if template.startswith("emt_") else "slug": template}
+        if language is not None:
+            template_body["language"] = language
+        if parameters is not None:
+            template_body["parameters"] = parameters
     return to_wire(EmailMessageSendRequest, {
         "from":         _parse_address(raw_from) if raw_from is not None else None,
         "to":           _parse_address_list(to),
@@ -98,10 +105,7 @@ def _send_body(
         # under the template object; an inline send uses the top-level parameters
         # (the two content modes are exclusive). The `emt_` prefix marks an id, else
         # a slug handle.
-        "template": (
-            {("id" if template.startswith("emt_") else "slug"): template, "language": language, "parameters": parameters}
-            if template is not None else None
-        ),
+        "template":     template_body,
         "parameters":   parameters if template is None else None,
         "cc":           _parse_address_list(cc),
         "bcc":          _parse_address_list(bcc),
@@ -122,12 +126,14 @@ def _batch_body(
     messages: Sequence[EmailSendParams],
     defaults: EmailDefaults | None,
 ) -> dict[str, Any]:
+    for message in messages:
+        _reject_nested_input_nulls(EmailMessageSendRequest, message)
     # Each item is built exactly like a single send (address parsing, the from_->"from"
-    # alias, the EmailDefaults merge, exclude_none) via _send_body, which validates the
+    # alias, the EmailDefaults merge, exclude_unset) via _send_body, which validates the
     # item through EmailMessageSendRequest. The list's own 1..100 length bound is checked
     # against the generated model's `messages` field constraints so a too-short/long batch
     # fails client-side as a BirdError, mirroring to_wire — without re-dumping the items
-    # (that would re-apply model defaults and undo exclude_none).
+    # (that would re-apply model defaults and undo exclude_unset).
     items = [
         _send_body(
             from_=m.get("from_"),

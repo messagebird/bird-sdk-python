@@ -12,7 +12,7 @@ from bird._generated import (
     WhatsAppKeywordRuleList,
     WhatsAppKeywordRuleUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
@@ -161,7 +161,7 @@ class WhatsappKeywordRules(Resource):
             _body["keywords"] = keywords
         if not isinstance(reply, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["reply"] = reply
-        body = to_wire_exclude_unset(WhatsAppKeywordRuleUpdate, _body)
+        body = to_wire(WhatsAppKeywordRuleUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/whatsapp/keyword-rules/{quote(id, safe='')}",
@@ -301,7 +301,7 @@ class AsyncWhatsappKeywordRules(AsyncResource):
             _body["keywords"] = keywords
         if not isinstance(reply, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["reply"] = reply
-        body = to_wire_exclude_unset(WhatsAppKeywordRuleUpdate, _body)
+        body = to_wire(WhatsAppKeywordRuleUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/whatsapp/keyword-rules/{quote(id, safe='')}",

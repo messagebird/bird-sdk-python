@@ -12,7 +12,7 @@ from bird._generated import (
     EmailTemplateLanguageUpdate,
     EmailTemplateLanguageUpsert,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
@@ -140,7 +140,7 @@ class EmailTemplatesVersionsLanguages(Resource):
             _body["text"] = text
         if revision is not None:
             _body["revision"] = revision
-        body = to_wire_exclude_unset(EmailTemplateLanguageUpdate, _body)
+        body = to_wire(EmailTemplateLanguageUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
@@ -261,7 +261,7 @@ class AsyncEmailTemplatesVersionsLanguages(AsyncResource):
             _body["text"] = text
         if revision is not None:
             _body["revision"] = revision
-        body = to_wire_exclude_unset(EmailTemplateLanguageUpdate, _body)
+        body = to_wire(EmailTemplateLanguageUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",

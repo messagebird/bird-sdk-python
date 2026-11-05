@@ -15,7 +15,7 @@ from bird._generated import (
     WebhookTestRequest,
     WebhookTestResponse,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -296,7 +296,7 @@ class WebhooksBase(Resource):
             _body["destination"] = destination
         if status is not None:
             _body["status"] = status
-        body = to_wire_exclude_unset(WebhookEndpointUpdate, _body)
+        body = to_wire(WebhookEndpointUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/webhooks/{quote(webhook_id, safe='')}",
@@ -515,7 +515,7 @@ class AsyncWebhooksBase(AsyncResource):
             _body["destination"] = destination
         if status is not None:
             _body["status"] = status
-        body = to_wire_exclude_unset(WebhookEndpointUpdate, _body)
+        body = to_wire(WebhookEndpointUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/webhooks/{quote(webhook_id, safe='')}",

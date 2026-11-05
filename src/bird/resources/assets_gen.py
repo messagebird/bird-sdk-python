@@ -9,7 +9,7 @@ from bird._generated import (
     Asset,
     AssetUpdate,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -124,7 +124,7 @@ class AssetsBase(Resource):
             _body["alt_text"] = alt_text
         if not isinstance(folder_id, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["folder_id"] = folder_id
-        body = to_wire_exclude_unset(AssetUpdate, _body)
+        body = to_wire(AssetUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/assets/{quote(asset_id, safe='')}",
@@ -232,7 +232,7 @@ class AsyncAssetsBase(AsyncResource):
             _body["alt_text"] = alt_text
         if not isinstance(folder_id, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["folder_id"] = folder_id
-        body = to_wire_exclude_unset(AssetUpdate, _body)
+        body = to_wire(AssetUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/assets/{quote(asset_id, safe='')}",

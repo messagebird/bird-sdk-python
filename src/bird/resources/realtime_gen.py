@@ -14,7 +14,7 @@ from bird._generated import (
 )
 from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 
 
 class _RealtimeBatchEventRequired(TypedDict):
@@ -23,7 +23,7 @@ class _RealtimeBatchEventRequired(TypedDict):
 
 
 class RealtimeBatchEvent(_RealtimeBatchEventRequired, total=False):
-    data: Any
+    data: Any | None
     exclude_connection_id: str
     include: Sequence[str]
 
@@ -36,7 +36,7 @@ class _RealtimePublishRequired(TypedDict):
 class RealtimePublishParams(_RealtimePublishRequired, total=False):
     """Params for ``client.realtime.publish``. ``event`` and ``channels`` are required."""
 
-    data: Any
+    data: Any | None
     exclude_connection_id: str
     include: Sequence[str]
 
@@ -56,7 +56,7 @@ class RealtimeBase(Resource):
         *,
         event: str,
         channels: Sequence[str],
-        data: Any | None = None,
+        data: Any | None | Omit = omit,
         exclude_connection_id: str | None = None,
         include: Sequence[str] | None = None,
         options: RequestOptions | None = None,
@@ -72,16 +72,16 @@ class RealtimeBase(Resource):
         print(result.data)
         ```
         """
-        body = to_wire(
-            RealtimePublish,
-            {
-                "event": event,
-                "channels": channels,
-                "data": data,
-                "exclude_connection_id": exclude_connection_id,
-                "include": include,
-            },
-        )
+        _body: dict[str, Any] = {}
+        _body["event"] = event
+        _body["channels"] = channels
+        if not isinstance(data, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["data"] = data
+        if exclude_connection_id is not None:
+            _body["exclude_connection_id"] = exclude_connection_id
+        if include is not None:
+            _body["include"] = include
+        body = to_wire(RealtimePublish, _body)
         return self._write(
             "POST",
             f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/events",
@@ -132,7 +132,7 @@ class AsyncRealtimeBase(AsyncResource):
         *,
         event: str,
         channels: Sequence[str],
-        data: Any | None = None,
+        data: Any | None | Omit = omit,
         exclude_connection_id: str | None = None,
         include: Sequence[str] | None = None,
         options: RequestOptions | None = None,
@@ -148,16 +148,16 @@ class AsyncRealtimeBase(AsyncResource):
         print(result.data)
         ```
         """
-        body = to_wire(
-            RealtimePublish,
-            {
-                "event": event,
-                "channels": channels,
-                "data": data,
-                "exclude_connection_id": exclude_connection_id,
-                "include": include,
-            },
-        )
+        _body: dict[str, Any] = {}
+        _body["event"] = event
+        _body["channels"] = channels
+        if not isinstance(data, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["data"] = data
+        if exclude_connection_id is not None:
+            _body["exclude_connection_id"] = exclude_connection_id
+        if include is not None:
+            _body["include"] = include
+        body = to_wire(RealtimePublish, _body)
         return await self._write(
             "POST",
             f"/v1/realtime/apps/{quote(realtime_app_id, safe='')}/events",

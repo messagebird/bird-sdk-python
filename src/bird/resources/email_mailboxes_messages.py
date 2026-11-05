@@ -11,7 +11,7 @@ from bird._generated import (
     EmailMailboxComposeRequest,
     EmailThreadMessage,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._types import EmailDefaults, RequestOptions
 from bird._resource import AsyncResource, Resource
 
@@ -32,7 +32,7 @@ def _compose_body(defaults: EmailDefaults | None, **kwargs: Any) -> dict[str, An
         for key in _COMPOSE_DEFAULT_KEYS:
             if kwargs.get(key) is None and (value := defaults.get(key)) is not None:
                 kwargs[key] = value
-    return to_wire_exclude_unset(EmailMailboxComposeRequest, kwargs)
+    return to_wire(EmailMailboxComposeRequest, kwargs)
 
 
 class EmailMailboxesMessages(Resource):

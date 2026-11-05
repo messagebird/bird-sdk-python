@@ -12,7 +12,7 @@ from bird._generated import (
     AMBConversationUpdate,
     AMBMessage,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -124,7 +124,7 @@ class AmbConversations(Resource):
             _body["queue"] = queue
         if routing_change is not None:
             _body["routing_change"] = routing_change
-        body = to_wire_exclude_unset(AMBConversationUpdate, _body)
+        body = to_wire(AMBConversationUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/amb/conversations/{quote(conversation_id, safe='')}",
@@ -277,7 +277,7 @@ class AsyncAmbConversations(AsyncResource):
             _body["queue"] = queue
         if routing_change is not None:
             _body["routing_change"] = routing_change
-        body = to_wire_exclude_unset(AMBConversationUpdate, _body)
+        body = to_wire(AMBConversationUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/amb/conversations/{quote(conversation_id, safe='')}",

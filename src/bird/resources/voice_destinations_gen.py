@@ -24,7 +24,7 @@ class Money(_MoneyRequired, total=False):
 
 
 class _VoiceDestinationDailySpendLimitUpdateRequired(TypedDict):
-    limit: Money
+    limit: Money | None
 
 
 class VoiceDestinationDailySpendLimitUpdate(_VoiceDestinationDailySpendLimitUpdateRequired, total=False):

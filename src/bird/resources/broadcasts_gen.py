@@ -132,7 +132,7 @@ class BroadcastsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
-        """Cancel a scheduled, accepted, or sending broadcast. This stops every delivery that has not gone out yet. Recipients already dispatched are not recalled. Calling this again on a broadcast already canceling or canceled returns its current state rather than an error. A draft cannot be canceled, because it was never sent. Delete it with `broadcasts.delete` instead.
+        """Cancel a broadcast that is scheduled, accepted, sending, waiting for funds, or paused. This stops every delivery that has not gone out yet. Recipients already dispatched are not recalled. Calling this again on a broadcast already canceling or canceled returns its current state rather than an error. A draft cannot be canceled, because it was never sent. Delete it with `broadcasts.delete` instead.
 
         ```python
         broadcast = client.broadcasts.cancel("eb_01krdgeqcxet5s7t44vh8rt9mg")
@@ -339,7 +339,7 @@ class AsyncBroadcastsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
-        """Cancel a scheduled, accepted, or sending broadcast. This stops every delivery that has not gone out yet. Recipients already dispatched are not recalled. Calling this again on a broadcast already canceling or canceled returns its current state rather than an error. A draft cannot be canceled, because it was never sent. Delete it with `broadcasts.delete` instead.
+        """Cancel a broadcast that is scheduled, accepted, sending, waiting for funds, or paused. This stops every delivery that has not gone out yet. Recipients already dispatched are not recalled. Calling this again on a broadcast already canceling or canceled returns its current state rather than an error. A draft cannot be canceled, because it was never sent. Delete it with `broadcasts.delete` instead.
 
         ```python
         broadcast = await client.broadcasts.cancel("eb_01krdgeqcxet5s7t44vh8rt9mg")

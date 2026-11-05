@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from bird._client import AsyncBird, Bird
 from bird._generated import (
+    EmailBroadcastTemplateUpdate,
     AssetUploadInstruction,
     AssetUploadReceipt,
     AssetUploadSessionDetails,
@@ -30,7 +31,6 @@ from bird._types import (
     omit,
     BroadcastCreateParams,
     BroadcastSendParams,
-    BroadcastUpdateParams,
     ContactPropertyCreateParams,
     ContactPropertyUpdateParams,
     EmailDefaults,
@@ -47,6 +47,7 @@ from bird._types import (
     SmsSendParams,
     WhatsappSendParams,
 )
+from bird.resources.broadcasts import BroadcastUpdateParams
 from bird.resources.webhooks import WebhooksCreateParams
 from bird.resources.email_gen import EmailContentParams, EmailRecipientsParams
 from bird.resources.compliance_attachments import ComplianceAttachment, ComplianceFile
@@ -1056,6 +1057,7 @@ __all__ = [
     "BroadcastCreateParams",
     "WebhooksCreateParams",
     "BroadcastUpdateParams",
+    "EmailBroadcastTemplateUpdate",
     "BroadcastSendParams",
     "EmailBroadcast",
     "EmailBroadcastList",

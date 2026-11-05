@@ -15,7 +15,7 @@ from bird._generated import (
     EmailTemplateSummary,
     EmailTemplateUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -149,7 +149,7 @@ class EmailTemplatesBase(Resource):
             _body["on_missing_language"] = on_missing_language
         if language_source_required is not None:
             _body["language_source_required"] = language_source_required
-        body = to_wire_exclude_unset(EmailTemplateUpdate, _body)
+        body = to_wire(EmailTemplateUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/email/templates/{quote(template_ref, safe='')}",
@@ -309,7 +309,7 @@ class AsyncEmailTemplatesBase(AsyncResource):
             _body["on_missing_language"] = on_missing_language
         if language_source_required is not None:
             _body["language_source_required"] = language_source_required
-        body = to_wire_exclude_unset(EmailTemplateUpdate, _body)
+        body = to_wire(EmailTemplateUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/email/templates/{quote(template_ref, safe='')}",

@@ -16,7 +16,7 @@ from bird._generated import (
     AudienceMembershipStatisticsResponse,
     AudienceUpdateRequest,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -177,7 +177,7 @@ class Audiences(Resource):
             _body["name"] = name
         if not isinstance(description, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["description"] = description
-        body = to_wire_exclude_unset(AudienceUpdateRequest, _body)
+        body = to_wire(AudienceUpdateRequest, _body)
         return self._write(
             "PATCH",
             f"/v1/audiences/{quote(audience_id, safe='')}",
@@ -444,7 +444,7 @@ class AsyncAudiences(AsyncResource):
             _body["name"] = name
         if not isinstance(description, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["description"] = description
-        body = to_wire_exclude_unset(AudienceUpdateRequest, _body)
+        body = to_wire(AudienceUpdateRequest, _body)
         return await self._write(
             "PATCH",
             f"/v1/audiences/{quote(audience_id, safe='')}",

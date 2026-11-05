@@ -24,10 +24,12 @@ class VoiceRingGroupsCreateParams(_VoiceRingGroupsCreateRequired, total=False):
     """Params for ``client.voice.ring_groups.create``. ``name`` is required."""
 
 
-class VoiceRingGroupsUpdateParams(TypedDict, total=False):
-    """Params for ``client.voice.ring_groups.update``. Every key is optional."""
-
+class _VoiceRingGroupsUpdateRequired(TypedDict):
     name: str
+
+
+class VoiceRingGroupsUpdateParams(_VoiceRingGroupsUpdateRequired, total=False):
+    """Params for ``client.voice.ring_groups.update``. ``name`` is required."""
 
 
 class VoiceRingGroupsBase(Resource):
@@ -102,7 +104,7 @@ class VoiceRingGroupsBase(Resource):
         self,
         ring_group_id: str,
         *,
-        name: str | None = None,
+        name: str,
         options: RequestOptions | None = None,
     ) -> VoiceRingGroup:
         """Rename a ring group. The default group cannot be renamed.
@@ -213,7 +215,7 @@ class AsyncVoiceRingGroupsBase(AsyncResource):
         self,
         ring_group_id: str,
         *,
-        name: str | None = None,
+        name: str,
         options: RequestOptions | None = None,
     ) -> VoiceRingGroup:
         """Rename a ring group. The default group cannot be renamed.

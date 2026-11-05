@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.123.0
+
+- **Breaking:** `broadcasts.update` now accepts an `EmailBroadcastTemplateUpdate` model for `template`. Replace `template=ID` plus `language`, `parameters` or `parameter_overrides` keywords with `template=EmailBroadcastTemplateUpdate(id=ID, language=..., parameters=..., parameter_overrides=...)`. Previously, top-level `parameters=None` and `parameter_overrides=None` meant omission; the nested model now rejects `parameters=None` and `parameter_overrides=None`, so omit those nested keys instead. Other optional nonnullable top-level arguments still treat a Python None value as omission. An empty model sends an empty `template` object; a Python None value clears it and omission retains it.
+- **Breaking:** `contact_properties.create` and `contact_properties.update` preserve None as explicit JSON null for `fallback_value`; `realtime.publish`, `realtime.publish_batch` and `realtime.members.send` do the same for `data`. Omit the keyword or nested key to omit it; optional non-nullable keywords still treat None as omission.
+- **Breaking:** `voice.verified_numbers.update` requires `name` (a label or None), `voice.ring_groups.update` requires `name`, and `voice.trunks.update` requires `media.encryption` when supplying `media`. Supply those public update parameters instead of omitting them.
+- Add broadcast `waiting_for_funds` and `paused` states, `funding_hold` details, and send-quota fields `can_start` and `on_insufficient_funds` ahead of server support. If `can_start` is absent from the send-quota response, use `allowed` for the current allowance and do not assume the broadcast can wait or resume.
+- Go also exports `EmailBroadcastFundingHold`, `EmailBroadcastFundingHoldReason`, and `EmailBroadcastInsufficientFundsBehavior`, with constants for their enum values.
+- **Breaking:** Encrypted Realtime publishes and batch events now omit data when the caller leaves it unset, instead of encrypting JSON null. Supply an explicit null payload to keep sending encrypted null: use `bird.Null[any]()` in Go, None in Python, `null` in Node, or `setData(null)` in PHP.
+- **Breaking:** explicit None now sends JSON null for nullable request fields, including nested objects and lists, instead of dropping the field. Omit the keyword or use `from bird import omit` when no value should be sent. Optional non-nullable keyword parameters still treat None as omission; forbidden nested nulls fail locally.
+- `bird contact-properties update` and the public SDK contact-property update methods now preserve the stored fallback when `fallback_value` is omitted. Send explicit JSON null to clear the fallback; an empty update no longer erases the stored value.
+
 ## 0.122.0
 
 - **Breaking:** email templates and email template list entries now include a required `live_default_language`, so code that builds an `EmailTemplate` or `EmailTemplateSummary` value itself, such as a test double, has to set it. It is the live version's default language, the one a single send falls back to when the template's language settings allow. It is null until the template is first published, and a built-in template reports its `default_language`.

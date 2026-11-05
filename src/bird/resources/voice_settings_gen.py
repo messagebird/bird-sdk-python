@@ -24,7 +24,7 @@ class Money(_MoneyRequired, total=False):
 
 
 class _VoiceDailySpendLimitUpdateRequired(TypedDict):
-    workspace_limit: Money
+    workspace_limit: Money | None
 
 
 class VoiceDailySpendLimitUpdate(_VoiceDailySpendLimitUpdateRequired, total=False):

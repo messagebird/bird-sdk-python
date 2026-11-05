@@ -21,8 +21,12 @@ class VoiceTrunkMediaCreate(TypedDict, total=False):
     encryption: str
 
 
-class VoiceTrunkMediaUpdate(TypedDict, total=False):
+class _VoiceTrunkMediaUpdateRequired(TypedDict):
     encryption: str
+
+
+class VoiceTrunkMediaUpdate(_VoiceTrunkMediaUpdateRequired, total=False):
+    pass
 
 
 class _VoiceTrunkIPACLCreateRequired(TypedDict):

@@ -13,7 +13,7 @@ from bird._generated import (
     WhatsAppTemplateLanguageSaved,
     WhatsAppTemplateLanguageUpsert,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
@@ -182,7 +182,7 @@ class WhatsappTemplatesVersionsLanguages(Resource):
             _body["components"] = components
         if revision is not None:
             _body["revision"] = revision
-        body = to_wire_exclude_unset(WhatsAppTemplateLanguageUpsert, _body)
+        body = to_wire(WhatsAppTemplateLanguageUpsert, _body)
         return self._write(
             "PUT",
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
@@ -331,7 +331,7 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
             _body["components"] = components
         if revision is not None:
             _body["revision"] = revision
-        body = to_wire_exclude_unset(WhatsAppTemplateLanguageUpsert, _body)
+        body = to_wire(WhatsAppTemplateLanguageUpsert, _body)
         return await self._write(
             "PUT",
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",

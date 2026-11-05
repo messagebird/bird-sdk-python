@@ -12,7 +12,7 @@ from bird._generated import (
     WhatsAppTemplateDuplicate,
     WhatsAppTemplateUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -222,7 +222,7 @@ class WhatsappTemplatesBase(Resource):
             _body["on_missing_language"] = on_missing_language
         if language_source_required is not None:
             _body["language_source_required"] = language_source_required
-        body = to_wire_exclude_unset(WhatsAppTemplateUpdate, _body)
+        body = to_wire(WhatsAppTemplateUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}",
@@ -429,7 +429,7 @@ class AsyncWhatsappTemplatesBase(AsyncResource):
             _body["on_missing_language"] = on_missing_language
         if language_source_required is not None:
             _body["language_source_required"] = language_source_required
-        body = to_wire_exclude_unset(WhatsAppTemplateUpdate, _body)
+        body = to_wire(WhatsAppTemplateUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/whatsapp/templates/{quote(template_ref, safe='')}",

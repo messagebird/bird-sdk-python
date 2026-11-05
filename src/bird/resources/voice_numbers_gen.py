@@ -10,7 +10,7 @@ from bird._generated import (
     VoiceNumber,
     VoiceNumberUpdate,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -109,7 +109,7 @@ class VoiceNumbers(Resource):
             _body["name"] = name
         if inbound_configuration is not None:
             _body["inbound_configuration"] = inbound_configuration
-        body = to_wire_exclude_unset(VoiceNumberUpdate, _body)
+        body = to_wire(VoiceNumberUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/voice/numbers/{quote(number_id, safe='')}",
@@ -192,7 +192,7 @@ class AsyncVoiceNumbers(AsyncResource):
             _body["name"] = name
         if inbound_configuration is not None:
             _body["inbound_configuration"] = inbound_configuration
-        body = to_wire_exclude_unset(VoiceNumberUpdate, _body)
+        body = to_wire(VoiceNumberUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/voice/numbers/{quote(number_id, safe='')}",

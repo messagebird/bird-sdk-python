@@ -12,7 +12,7 @@ from bird._generated import (
 )
 from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
 
 
@@ -32,13 +32,13 @@ class _ContactPropertyCreateRequired(TypedDict):
 class ContactPropertyCreateParams(_ContactPropertyCreateRequired, total=False):
     """Params for ``client.contact_properties.create``. ``key`` and ``type`` are required."""
 
-    fallback_value: Any
+    fallback_value: Any | None
 
 
 class ContactPropertyUpdateParams(TypedDict, total=False):
     """Params for ``client.contact_properties.update``. Every key is optional."""
 
-    fallback_value: Any
+    fallback_value: Any | None
 
 
 class ContactProperties(Resource):
@@ -89,7 +89,7 @@ class ContactProperties(Resource):
         *,
         key: str,
         type: str,
-        fallback_value: Any | None = None,
+        fallback_value: Any | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
         """Define a custom contact property (key + value type) that becomes available in contact data and as a broadcast template variable. The key and type cannot change after creation; a workspace holds at most 200 properties, archived included.
@@ -99,14 +99,12 @@ class ContactProperties(Resource):
         print(prop.id, prop.key)
         ```
         """
-        body = to_wire(
-            ContactPropertyCreateRequest,
-            {
-                "key": key,
-                "type": type,
-                "fallback_value": fallback_value,
-            },
-        )
+        _body: dict[str, Any] = {}
+        _body["key"] = key
+        _body["type"] = type
+        if not isinstance(fallback_value, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["fallback_value"] = fallback_value
+        body = to_wire(ContactPropertyCreateRequest, _body)
         return self._write(
             "POST",
             "/v1/contact-properties",
@@ -119,7 +117,7 @@ class ContactProperties(Resource):
         self,
         property_id: str,
         *,
-        fallback_value: Any | None = None,
+        fallback_value: Any | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
         """Update a contact property's fallback value. Only the fallback value can change; the key and type are fixed at creation, so a different key or type needs a new property.
@@ -129,12 +127,10 @@ class ContactProperties(Resource):
         print(prop.fallback_value)
         ```
         """
-        body = to_wire(
-            ContactPropertyUpdateRequest,
-            {
-                "fallback_value": fallback_value,
-            },
-        )
+        _body: dict[str, Any] = {}
+        if not isinstance(fallback_value, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["fallback_value"] = fallback_value
+        body = to_wire(ContactPropertyUpdateRequest, _body)
         return self._write(
             "PATCH",
             f"/v1/contact-properties/{quote(property_id, safe='')}",
@@ -232,7 +228,7 @@ class AsyncContactProperties(AsyncResource):
         *,
         key: str,
         type: str,
-        fallback_value: Any | None = None,
+        fallback_value: Any | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
         """Define a custom contact property (key + value type) that becomes available in contact data and as a broadcast template variable. The key and type cannot change after creation; a workspace holds at most 200 properties, archived included.
@@ -242,14 +238,12 @@ class AsyncContactProperties(AsyncResource):
         print(prop.id, prop.key)
         ```
         """
-        body = to_wire(
-            ContactPropertyCreateRequest,
-            {
-                "key": key,
-                "type": type,
-                "fallback_value": fallback_value,
-            },
-        )
+        _body: dict[str, Any] = {}
+        _body["key"] = key
+        _body["type"] = type
+        if not isinstance(fallback_value, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["fallback_value"] = fallback_value
+        body = to_wire(ContactPropertyCreateRequest, _body)
         return await self._write(
             "POST",
             "/v1/contact-properties",
@@ -262,7 +256,7 @@ class AsyncContactProperties(AsyncResource):
         self,
         property_id: str,
         *,
-        fallback_value: Any | None = None,
+        fallback_value: Any | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> ContactProperty:
         """Update a contact property's fallback value. Only the fallback value can change; the key and type are fixed at creation, so a different key or type needs a new property.
@@ -272,12 +266,10 @@ class AsyncContactProperties(AsyncResource):
         print(prop.fallback_value)
         ```
         """
-        body = to_wire(
-            ContactPropertyUpdateRequest,
-            {
-                "fallback_value": fallback_value,
-            },
-        )
+        _body: dict[str, Any] = {}
+        if not isinstance(fallback_value, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["fallback_value"] = fallback_value
+        body = to_wire(ContactPropertyUpdateRequest, _body)
         return await self._write(
             "PATCH",
             f"/v1/contact-properties/{quote(property_id, safe='')}",

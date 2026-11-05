@@ -10,7 +10,7 @@ from bird._generated import (
     AMBChannelSettings,
     AMBChannelSettingsUpdate,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
@@ -82,7 +82,7 @@ class AmbBusinessAccountsSettings(Resource):
             _body["brand_name"] = brand_name
         if not isinstance(logo_asset_id, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["logo_asset_id"] = logo_asset_id
-        body = to_wire_exclude_unset(AMBChannelSettingsUpdate, _body)
+        body = to_wire(AMBChannelSettingsUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/amb/business-accounts/{quote(business_account_id, safe='')}/channel-settings",
@@ -139,7 +139,7 @@ class AsyncAmbBusinessAccountsSettings(AsyncResource):
             _body["brand_name"] = brand_name
         if not isinstance(logo_asset_id, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["logo_asset_id"] = logo_asset_id
-        body = to_wire_exclude_unset(AMBChannelSettingsUpdate, _body)
+        body = to_wire(AMBChannelSettingsUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/amb/business-accounts/{quote(business_account_id, safe='')}/channel-settings",

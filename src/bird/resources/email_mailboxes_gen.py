@@ -13,7 +13,7 @@ from bird._generated import (
     MailboxStatsResponse,
     MailboxUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -194,7 +194,7 @@ class EmailMailboxesBase(Resource):
             _body["retention_tier"] = retention_tier
         if metadata is not None:
             _body["metadata"] = metadata
-        body = to_wire_exclude_unset(MailboxUpdate, _body)
+        body = to_wire(MailboxUpdate, _body)
         return self._write(
             "PATCH",
             f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}",
@@ -440,7 +440,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
             _body["retention_tier"] = retention_tier
         if metadata is not None:
             _body["metadata"] = metadata
-        body = to_wire_exclude_unset(MailboxUpdate, _body)
+        body = to_wire(MailboxUpdate, _body)
         return await self._write(
             "PATCH",
             f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}",

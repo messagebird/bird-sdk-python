@@ -9,7 +9,7 @@ generator has no wire conversion for, and ``create``/``update`` also carry a
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, TypedDict
 from urllib.parse import quote
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
@@ -25,10 +25,33 @@ from bird._generated import (
     EmailBroadcastCreateRequest,
     EmailBroadcastSendNowRequest,
     EmailBroadcastUpdateRequest,
+    EmailBroadcastTemplateUpdate,
 )
-from bird._models import to_wire, to_wire_exclude_unset
+from bird._models import to_wire
 from bird._types import EmailAddressInput, EmailDefaults, Omit, RequestOptions, omit
 from bird.resources.broadcasts_gen import AsyncBroadcastsBase, BroadcastsBase
+
+
+class BroadcastUpdateParams(TypedDict, total=False):
+    """Params for ``client.broadcasts.update`` (the broadcast id is positional).
+
+    An absent key retains the stored value. ``template``, ``reply_to`` and
+    ``ip_pool_id`` accept ``None`` to clear; template changes use the typed
+    ``EmailBroadcastTemplateUpdate`` model, including an empty change object.
+    """
+
+    from_: EmailAddressInput
+    audience_id: str
+    template: EmailBroadcastTemplateUpdate | None | Omit
+    reply_to: Sequence[EmailAddressInput] | None
+    headers: Mapping[str, str]
+    tags: Sequence[Mapping[str, str]]
+    metadata: Mapping[str, Any]
+    track_opens: bool
+    track_clicks: bool
+    ip_pool_id: str | None
+    category: str
+
 
 _NAIVE_SCHEDULED_AT = (
     "scheduled_at requires a timezone-aware datetime (e.g. tzinfo=timezone.utc): "
@@ -142,7 +165,7 @@ def _create_body(
 def _update_body(
     from_: EmailAddressInput | None,
     audience_id: str | None,
-    template: str | None | Omit,
+    template: EmailBroadcastTemplateUpdate | None | Omit,
     reply_to: Sequence[EmailAddressInput] | None | Omit,
     headers: Mapping[str, str] | None,
     tags: Sequence[Mapping[str, str]] | None,
@@ -151,37 +174,16 @@ def _update_body(
     track_clicks: bool | None,
     ip_pool_id: str | None | Omit,
     category: str | None,
-    language: str | None | Omit = omit,
-    parameters: Mapping[str, Any] | None | Omit = omit,
-    parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {}
     if from_ is not None:
         body["from"] = from_
     if audience_id is not None:
         body["audience_id"] = audience_id
-    # None clears (JSON null); omit leaves the stored value unchanged. The two
-    # are distinct on the wire, so the sentinel is what separates them. Naming a
-    # template releases the version the broadcast is fixed to, so a language on
-    # its own is sent without an id and keeps it.
-    # Clearing the template clears its language too, so ``language=None``
-    # beside ``template=None`` asks for the same clear twice and goes through.
-    if not isinstance(template, Omit) and template is None:
-        if _given(parameters) or _given(parameter_overrides):
-            raise ValueError("parameters cannot accompany a cleared template")
-        if not isinstance(language, Omit) and language is not None:
-            raise ValueError("language needs a template: the language is chosen from the template it belongs to")
-        body["template"] = None
-    elif (
-        not isinstance(template, Omit) or not isinstance(language, Omit)
-        or _given(parameters) or _given(parameter_overrides)
-    ):
-        nested: dict[str, Any] = {}
-        if not isinstance(template, Omit):
-            nested["id"] = template
-        if not isinstance(language, Omit):
-            nested["language"] = language
-        body["template"] = nested
+    if not isinstance(template, Omit):
+        if template is not None and not isinstance(template, EmailBroadcastTemplateUpdate):
+            raise BirdError("template must be an EmailBroadcastTemplateUpdate model, None, or omit")
+        body["template"] = template
     if not isinstance(reply_to, Omit):
         body["reply_to"] = reply_to
     if headers is not None:
@@ -198,12 +200,7 @@ def _update_body(
         body["ip_pool_id"] = ip_pool_id
     if category is not None:
         body["category"] = category
-    wire = to_wire_exclude_unset(EmailBroadcastUpdateRequest, body)
-    if parameters is not None and not isinstance(parameters, Omit):
-        wire["template"]["parameters"] = dict(parameters)
-    if parameter_overrides is not None and not isinstance(parameter_overrides, Omit):
-        wire["template"]["parameter_overrides"] = _overrides_wire(parameter_overrides)
-    return wire
+    return to_wire(EmailBroadcastUpdateRequest, body)
 
 
 def _send_body(scheduled_at: str | datetime | None) -> dict[str, Any]:
@@ -293,7 +290,7 @@ class Broadcasts(BroadcastsBase):
         *,
         from_: EmailAddressInput | None = None,
         audience_id: str | None = None,
-        template: str | None | Omit = omit,
+        template: EmailBroadcastTemplateUpdate | None | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
@@ -302,29 +299,27 @@ class Broadcasts(BroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
-        language: str | None | Omit = omit,
-        parameters: Mapping[str, Any] | None | Omit = omit,
-        parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a broadcast that is still a draft or is scheduled, and return
         it as it now stands. Omitted arguments keep their current value;
-        ``template``, ``language``, ``reply_to`` and ``ip_pool_id`` take
+        ``template``, ``reply_to`` and ``ip_pool_id`` take
         ``None`` to clear. A broadcast that has started sending can no longer be edited
         and raises a ``409``.
 
         ```python
+        from bird import EmailBroadcastTemplateUpdate
+
         broadcast = client.broadcasts.update(
             "eb_01krdgeqcxet5s7t44vh8rt9mg",
-            template="emt_01krdgeqcxet5s7t44vh8rt9mg",
+            template=EmailBroadcastTemplateUpdate(id="emt_01krdgeqcxet5s7t44vh8rt9mg"),
         )
         print(broadcast.status)
         ```
         """
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category, language, parameters,
-            parameter_overrides,
+            track_opens, track_clicks, ip_pool_id, category,
         )
         return self._write(
             "PATCH",
@@ -384,7 +379,7 @@ class Broadcasts(BroadcastsBase):
         ```
         """
         body = _parameter_operation_body(template, from_, reply_to, headers)
-        body = to_wire_exclude_unset(EmailBroadcastValidationRequest, body)
+        body = to_wire(EmailBroadcastValidationRequest, body)
         return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/validate", body, EmailBroadcastValidationResult, options)
 
     def preview(
@@ -413,7 +408,7 @@ class Broadcasts(BroadcastsBase):
         ```
         """
         body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
-        body = to_wire_exclude_unset(EmailBroadcastPreviewRequest, body)
+        body = to_wire(EmailBroadcastPreviewRequest, body)
         return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/preview", body, EmailBroadcastPreviewResult, options)
 
     def test(
@@ -455,7 +450,7 @@ class Broadcasts(BroadcastsBase):
         body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
         body["to"] = to
         body["preview_fingerprint"] = preview_fingerprint
-        body = to_wire_exclude_unset(EmailBroadcastTestRequest, body)
+        body = to_wire(EmailBroadcastTestRequest, body)
         if not options or not options.get("idempotency_key"):
             raise BirdError("broadcasts.test requires a nonempty caller idempotency_key")
         return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/test", body, EmailMessage, options)
@@ -503,7 +498,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         *,
         from_: EmailAddressInput | None = None,
         audience_id: str | None = None,
-        template: str | None | Omit = omit,
+        template: EmailBroadcastTemplateUpdate | None | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | None = None,
         tags: Sequence[Mapping[str, str]] | None = None,
@@ -512,16 +507,12 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
-        language: str | None | Omit = omit,
-        parameters: Mapping[str, Any] | None | Omit = omit,
-        parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a draft or scheduled broadcast. See `Broadcasts.update`."""
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category, language, parameters,
-            parameter_overrides,
+            track_opens, track_clicks, ip_pool_id, category,
         )
         return await self._write(
             "PATCH",
@@ -559,7 +550,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
     ) -> EmailBroadcastValidationResult:
         """Check a broadcast's inputs without saving. See `Broadcasts.validate`."""
         body = _parameter_operation_body(template, from_, reply_to, headers)
-        body = to_wire_exclude_unset(EmailBroadcastValidationRequest, body)
+        body = to_wire(EmailBroadcastValidationRequest, body)
         return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/validate", body, EmailBroadcastValidationResult, options)
 
     async def preview(
@@ -575,7 +566,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
     ) -> EmailBroadcastPreviewResult:
         """Render a broadcast for one contact. See `Broadcasts.preview`."""
         body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
-        body = to_wire_exclude_unset(EmailBroadcastPreviewRequest, body)
+        body = to_wire(EmailBroadcastPreviewRequest, body)
         return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/preview", body, EmailBroadcastPreviewResult, options)
 
     async def test(
@@ -595,7 +586,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
         body["to"] = to
         body["preview_fingerprint"] = preview_fingerprint
-        body = to_wire_exclude_unset(EmailBroadcastTestRequest, body)
+        body = to_wire(EmailBroadcastTestRequest, body)
         if not options or not options.get("idempotency_key"):
             raise BirdError("broadcasts.test requires a nonempty caller idempotency_key")
         return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/test", body, EmailMessage, options)

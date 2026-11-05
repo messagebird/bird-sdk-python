@@ -5,6 +5,7 @@ from typing import Any, Mapping
 import pydantic
 
 from bird._exceptions import BirdError
+from bird._types import Omit
 
 
 class BaseModel(pydantic.BaseModel):
@@ -33,51 +34,78 @@ def _validate(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> p
     ``__cause__``.
     """
     try:
-        return model_cls.model_validate(dict(data))
+        supplied = _without_omit(data)
+        # Existing optional nonnullable keyword parameters use None for omission.
+        # Apply that convention only at this facade boundary; nested supplied
+        # None values retain their meaning and are validated below.
+        omitted = _optional_nonnullable_keys(model_cls)
+        supplied = {key: value for key, value in supplied.items() if value is not None or key not in omitted}
+        model = model_cls.model_validate(supplied)
+        _validate_request_nulls(model, "")
+        return model
     except pydantic.ValidationError as exc:
         reasons = "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors())
         raise BirdError(f"invalid request: {reasons}") from exc
 
 
-def to_wire(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> dict[str, Any]:
-    """Validate request fields through the generated model, then emit wire JSON.
-
-    ``by_alias`` maps ``from_`` to the wire field ``from``; ``exclude_none`` drops
-    unset fields so the server applies its defaults. A required field holding
-    ``None`` is nullable by schema and is still sent as null.
-    """
-    model = _validate(model_cls, data)
-    wire = model.model_dump(by_alias=True, exclude_none=True, mode="json")
-    _restore_required_nulls(model, wire)
-    return wire
+def _without_omit(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _without_omit(item) for key, item in value.items() if not isinstance(item, Omit)}
+    if isinstance(value, (list, tuple)):
+        return [_without_omit(item) for item in value]
+    return value
 
 
-def _restore_required_nulls(value: Any, wire: Any) -> None:
-    if isinstance(value, pydantic.BaseModel) and isinstance(wire, dict):
-        for name, field in type(value).model_fields.items():
-            key = field.serialization_alias or field.alias or name
+def _optional_nonnullable_keys(model_cls: type[pydantic.BaseModel]) -> set[str]:
+    keys: set[str] = set()
+    for name, field in model_cls.model_fields.items():
+        metadata = field.json_schema_extra
+        if not field.is_required() and isinstance(metadata, dict) and metadata.get("x-bird-nullable") is False:
+            keys.add(name)
+            if isinstance(field.alias, str):
+                keys.add(field.alias)
+            if isinstance(field.validation_alias, str):
+                keys.add(field.validation_alias)
+    return keys
+
+
+def _reject_nested_input_nulls(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> None:
+    # Batch messages have an authored friendly mapper before model validation.
+    # Check their supplied keys before that mapper applies the root None-default
+    # convention and erases whether a nested property was explicitly null.
+    for key in _optional_nonnullable_keys(model_cls):
+        if key in data and data[key] is None:
+            raise BirdError(f"invalid request: {key}: null is not allowed")
+
+
+def _validate_request_nulls(value: Any, path: str) -> None:
+    # Response models retain their permissive defaults. Only a request's supplied
+    # fields are checked against the generator's independent nullable contract.
+    if isinstance(value, pydantic.BaseModel):
+        for name in value.model_fields_set:
+            field = type(value).model_fields.get(name)
             item = getattr(value, name)
-            if item is None:
-                if field.is_required():
-                    wire[key] = None
-            elif key in wire:
-                _restore_required_nulls(item, wire[key])
-    elif isinstance(value, (list, tuple)) and isinstance(wire, list):
-        for item, out in zip(value, wire):
-            _restore_required_nulls(item, out)
-    elif isinstance(value, dict) and isinstance(wire, dict):
+            key = (field.serialization_alias or field.alias or name) if field else name
+            child = f"{path}.{key}" if path else key
+            metadata = field.json_schema_extra if field else None
+            if item is None and isinstance(metadata, dict) and metadata.get("x-bird-nullable") is False:
+                raise BirdError(f"invalid request: {child}: null is not allowed")
+            _validate_request_nulls(item, child)
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _validate_request_nulls(item, f"{path}.{index}")
+    elif isinstance(value, Mapping):
         for key, item in value.items():
-            if key in wire:
-                _restore_required_nulls(item, wire[key])
+            _validate_request_nulls(item, f"{path}.{key}" if path else str(key))
 
 
-def to_wire_exclude_unset(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> dict[str, Any]:
-    """Like :func:`to_wire`, but drops fields the caller did not set rather than
-    ``None`` ones. Use this where a generated model gives an optional field a
-    non-``None`` default (e.g. ``DomainSettings`` toggles default to ``False``,
-    ``DomainDKIMConfig.mode`` to ``"txt"``): ``exclude_none`` would let that default
-    leak onto a partial update, whereas ``exclude_unset`` sends only what the caller
-    passed. It also preserves an explicit ``None`` the caller did set — e.g. a
-    ``DomainUpdate`` with ``tracking=None`` emits ``"tracking": null`` to remove it.
+def to_wire(model_cls: type[pydantic.BaseModel], data: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate supplied request fields, preserving explicit nulls at every depth.
+
+    Optional nonnullable root None values keep their existing omission convention;
+    nullable and nested None values remain explicit. Omit also omits a field.
+    Generated model defaults never enter a request.
+    ``by_alias`` maps Python identifiers such as ``from_`` to their wire names.
     """
     return _validate(model_cls, data).model_dump(by_alias=True, exclude_unset=True, mode="json")
+

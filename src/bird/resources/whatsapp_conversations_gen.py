@@ -12,7 +12,7 @@ from bird._generated import (
     WhatsAppConversationUpdateRequest,
     WhatsAppMessage,
 )
-from bird._models import to_wire_exclude_unset
+from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 from bird.pagination import AsyncPage, SyncPage
@@ -152,7 +152,7 @@ class WhatsappConversations(Resource):
             _body["labels"] = labels
         if read is not None:
             _body["read"] = read
-        body = to_wire_exclude_unset(WhatsAppConversationUpdateRequest, _body)
+        body = to_wire(WhatsAppConversationUpdateRequest, _body)
         return self._write(
             "PATCH",
             f"/v1/whatsapp/conversations/{quote(conversation_id, safe='')}",
@@ -329,7 +329,7 @@ class AsyncWhatsappConversations(AsyncResource):
             _body["labels"] = labels
         if read is not None:
             _body["read"] = read
-        body = to_wire_exclude_unset(WhatsAppConversationUpdateRequest, _body)
+        body = to_wire(WhatsAppConversationUpdateRequest, _body)
         return await self._write(
             "PATCH",
             f"/v1/whatsapp/conversations/{quote(conversation_id, safe='')}",

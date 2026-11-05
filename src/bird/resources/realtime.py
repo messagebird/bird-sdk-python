@@ -31,7 +31,7 @@ from bird._realtime_crypto import (
     hmac_sha256_hex,
     is_encrypted_channel,
 )
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.resources.realtime_channels_gen import (
     AsyncRealtimeChannels,
     RealtimeChannels,
@@ -80,7 +80,8 @@ def _seal_data(channels: Sequence[str], data: Any, master_key: str | None) -> An
         return data
     if len(channels) > 1:
         raise BirdError(_MULTI_CHANNEL)
-    return encrypt_for_channel(encrypted[0], data, decode_master_key(master_key))
+    key = decode_master_key(master_key)
+    return data if isinstance(data, Omit) else encrypt_for_channel(encrypted[0], data, key)
 
 
 def _seal_events(
@@ -93,7 +94,7 @@ def _seal_events(
     key = decode_master_key(master_key)
     return [
         {**e, "data": encrypt_for_channel(e["channel"], e.get("data"), key)}
-        if is_encrypted_channel(e["channel"])
+        if is_encrypted_channel(e["channel"]) and "data" in e and not isinstance(e["data"], Omit)
         else e
         for e in events
     ]
@@ -146,7 +147,7 @@ class Realtime(RealtimeBase):
         *,
         event: str,
         channels: Sequence[str],
-        data: Any | None = None,
+        data: Any | None | Omit = omit,
         exclude_connection_id: str | None = None,
         include: Sequence[str] | None = None,
         options: RequestOptions | None = None,
@@ -279,7 +280,7 @@ class AsyncRealtime(AsyncRealtimeBase):
         *,
         event: str,
         channels: Sequence[str],
-        data: Any | None = None,
+        data: Any | None | Omit = omit,
         exclude_connection_id: str | None = None,
         include: Sequence[str] | None = None,
         options: RequestOptions | None = None,
