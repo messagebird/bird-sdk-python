@@ -737,6 +737,26 @@ class VoiceLegMediaEncryption:
     SDES: Final = "sdes"
 
 
+class VoiceLegRejectionReason:
+    """Values of VoiceLegRejectionReason known at this SDK version (open enum)."""
+
+    CALL_NOT_PERMITTED: Final = "call_not_permitted"
+    CALLER_ID_NOT_VERIFIED: Final = "caller_id_not_verified"
+    CALLS_PER_SECOND_EXCEEDED: Final = "calls_per_second_exceeded"
+    CONCURRENT_CALLS_EXCEEDED: Final = "concurrent_calls_exceeded"
+    DAILY_SPEND_EXCEEDED: Final = "daily_spend_exceeded"
+    DESTINATION_BLOCKED: Final = "destination_blocked"
+    DESTINATION_NOT_ENABLED: Final = "destination_not_enabled"
+    EMERGENCY_CAP_EXCEEDED: Final = "emergency_cap_exceeded"
+    EMERGENCY_CARRIER_UNAVAILABLE: Final = "emergency_carrier_unavailable"
+    EMERGENCY_NUMBER_INACTIVE: Final = "emergency_number_inactive"
+    INSUFFICIENT_BALANCE: Final = "insufficient_balance"
+    NO_ROUTE_FOUND: Final = "no_route_found"
+    NUMBER_OWNERSHIP_NOT_VERIFIED: Final = "number_ownership_not_verified"
+    ROUTING_NOT_CONFIGURED: Final = "routing_not_configured"
+    SOURCE_NOT_ALLOWED: Final = "source_not_allowed"
+
+
 class VoicePartyEndpointType:
     """Values of VoicePartyEndpointType known at this SDK version (open enum)."""
 
@@ -1165,6 +1185,7 @@ __all__ = [
     "VerificationChannel",
     "VerificationTerminalReason",
     "VoiceLegMediaEncryption",
+    "VoiceLegRejectionReason",
     "VoicePartyEndpointType",
     "VoiceVerifiedNumberStatus",
     "WhatsAppBusinessAccountMarketingMessagesStatus",

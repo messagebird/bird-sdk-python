@@ -28177,6 +28177,9 @@ class VoiceLegRejectionReason(str, Enum):
     calls_per_second_exceeded = "calls_per_second_exceeded"
     call_not_permitted = "call_not_permitted"
     number_ownership_not_verified = "number_ownership_not_verified"
+    emergency_number_inactive = "emergency_number_inactive"
+    emergency_cap_exceeded = "emergency_cap_exceeded"
+    emergency_carrier_unavailable = "emergency_carrier_unavailable"
 
 
 class VoiceLegInboundRouteReject(BaseModel):
@@ -28389,7 +28392,7 @@ class VoiceLeg(BaseModel):
         examples=[200],
         ge=100,
     )] = None
-    rejection_reason: Annotated[Optional[VoiceLegRejectionReason], Field(
+    rejection_reason: Annotated[Optional[Annotated[Union[VoiceLegRejectionReason, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
     )] = None

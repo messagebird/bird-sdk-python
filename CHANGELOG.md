@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.124.0
+
+- Voice leg `rejection_reason` accepts values added later, so treat a value you don't recognize as a new reason. It gains `emergency_number_inactive`, `emergency_cap_exceeded` and `emergency_carrier_unavailable`.
+
 ## 0.123.0
 
 - **Breaking:** `broadcasts.update` now accepts an `EmailBroadcastTemplateUpdate` model for `template`. Replace `template=ID` plus `language`, `parameters` or `parameter_overrides` keywords with `template=EmailBroadcastTemplateUpdate(id=ID, language=..., parameters=..., parameter_overrides=...)`. Previously, top-level `parameters=None` and `parameter_overrides=None` meant omission; the nested model now rejects `parameters=None` and `parameter_overrides=None`, so omit those nested keys instead. Other optional nonnullable top-level arguments still treat a Python None value as omission. An empty model sends an empty `template` object; a Python None value clears it and omission retains it.
