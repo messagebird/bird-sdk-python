@@ -311,6 +311,12 @@ class WorkspaceRateLimitCap(BaseModel):
     )]
 
 
+class WorkspaceRateLimitLimitSource(str, Enum):
+    manual = "manual"
+    automatic = "automatic"
+    organization = "organization"
+
+
 class WorkspaceRateLimitAttributionStatus(str, Enum):
     unavailable = "unavailable"
     warming = "warming"
@@ -349,11 +355,11 @@ class WorkspaceRateLimitUsage(BaseModel):
         ge=0,
     )]
     workspace_limit: Annotated[Optional[int], Field(
-        description="The workspace's own limit requests were checked against when usage was read. `null` when no workspace limit applied or usage is unavailable.",
+        description="The workspace's own limit or automatic share requests were checked against when usage was read. `null` when no workspace limit applied or usage is unavailable.",
         ge=1,
     )]
     workspace_remaining: Annotated[Optional[int], Field(
-        description="Units this workspace can still use under its own limit. `null` when no workspace limit applied, usage is unavailable, or workspace usage is not yet measured for long enough.",
+        description="Units this workspace can still use under its own limit or automatic share. `null` when no workspace limit applied, usage is unavailable, or workspace usage is not yet measured for long enough.",
         ge=0,
     )]
     resets_in_seconds: Annotated[Optional[int], Field(
@@ -385,11 +391,21 @@ class WorkspaceRateLimit(BaseModel):
         ge=1,
     )]
     workspace_limit: Annotated[Optional[WorkspaceRateLimitCap], Field(
-        description="The workspace's own limit. `null` when the workspace has none and uses only the shared organization limit.",
+        description="The workspace's own saved limit. `null` when none is saved; `limit_source` and `automatic_limit` then show whether an automatic share applies.",
     )]
     limit: Annotated[int, Field(
-        description="The lower of the organization limit and any active workspace limit. Requests can still be refused below it when other workspaces use the shared organization limit.",
+        description="The lower of the organization limit and the workspace's active limit or automatic share. Requests can still be refused below it when other workspaces use the shared organization limit.",
         ge=1,
+    )]
+    limit_source: Annotated[Annotated[Union[WorkspaceRateLimitLimitSource, str], Field(union_mode="left_to_right")], Field(
+        description="Which limit bounds the workspace's own usage.\n\n- `manual`: the workspace's own active limit.\n- `automatic`: the workspace's share of the organization limit under its automatic allocation.\n- `organization`: no workspace limit applies; only the shared organization limit does.",
+    )]
+    automatic_limit: Annotated[Optional[int], Field(
+        description="The workspace's share under the organization's automatic allocation, at least 1 per window. Set only when `limit_source` is `automatic`; it is never saved as a workspace limit.",
+        ge=1,
+    )]
+    allocation_enabled: Annotated[bool, Field(
+        description="Whether the organization has an automatic allocation of this policy. It can be `true` while `limit_source` is `manual`. When `true`, changing or removing this workspace's limit can change other workspaces' automatic shares.",
     )]
     attribution: Annotated[WorkspaceRateLimitAttribution, Field(
         description="When workspace usage has been measured for long enough to set a new workspace limit for this policy. Readiness covers timing only; a new limit also needs an organization with several workspaces, and with one workspace only an existing unexpired limit can be changed.",
@@ -6782,7 +6798,7 @@ class TemplateVariable(BaseModel):
     "A single variable slot a template fills in when it sends. Most slots are filled from the values supplied when sending; a slot with `system` true is filled by Bird itself, per recipient. The same shape on email, SMS and WhatsApp, so reading what a template needs works the same way whichever channel you are sending on."
     model_config = ConfigDict(extra="allow")
     key: Annotated[str, Field(
-        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the `name` on the matching parameter inside `components`, or, in the template parameters preview, the key in the send's `template.parameters`. A WhatsApp template whose placeholders are positional uses the position itself as `1`, `2` and so on, and values with no placeholder use fixed keys: `header_url`, `header_filename`, `header_location` and `code`, plus `button_url` (or `button_url_1`, `button_url_2` for a carousel card) for a url button whose suffix is numbered.",
+        description="The key this slot is filled by. When `system` is true it is the reserved `bird` key or a dotted path beneath it, such as `bird.contact.first_name`, and naming it in a send is rejected. Otherwise, on email and SMS it is the key you set in the send's `parameters` object, and on WhatsApp the key in the send's `template.parameters`, or the `name` on the matching parameter inside `components`. A WhatsApp template whose placeholders are positional uses the position itself as `1`, `2` and so on, and values with no placeholder use fixed keys: `header_url`, `header_filename`, `header_location` and `code`, plus `button_url` (or `button_url_1`, `button_url_2` for a carousel card) for a url button whose suffix is numbered.",
         min_length=1,
     )]
     type: Annotated[Annotated[Union[TemplateVariableType, str], Field(union_mode="left_to_right")], Field(
@@ -6802,7 +6818,7 @@ class TemplateVariable(BaseModel):
     )] = None
     system: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether the value comes from Bird rather than from the send. Absent means false. System slots are identified by the reserved `bird` key or a dotted path beneath it. They appear on email templates, and, in the template parameters preview, on WhatsApp templates whose parameter bindings read contact data; every SMS slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
+        description="Whether the value comes from Bird rather than from the send. Absent means false. System slots are identified by the reserved `bird` key or a dotted path beneath it. They appear on email templates, and on WhatsApp templates whose parameter bindings read contact data; every SMS slot is yours to fill. A draft can also name a reserved key no Bird value fills, including `bird` itself: `constraint` says so, and publishing that draft is rejected.",
     )] = None
 
 
@@ -7911,6 +7927,20 @@ class AssetUploadSessionPrepared(BaseModel):
         description="Available next steps for this session.",
     )]
     upload: AssetUploadInstruction
+
+
+class AssetUploadBrowserHandoff(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    session: Annotated[AssetUploadSessionDetails, Field(
+        description="The original upload session and any saved publication receipt. In this response, `session.next` is empty; follow the top-level `next` steps.",
+    )]
+    browser_url: Annotated[Optional[str], Field(
+        description="Bird page for a pending session, or null when it no longer accepts an upload. The link grants no access; the person must sign in and have asset write permission in the workspace.",
+        min_length=1,
+    )]
+    next: Annotated[List[NextAction], Field(
+        description="Ordered steps to finish the fallback or read its outcome.",
+    )]
 
 
 class AssetKindFilter(str, Enum):
@@ -9452,31 +9482,6 @@ class WhatsAppMessageID(RootModel[str]):
     root: str
 
 
-class WhatsAppEventID(RootModel[str]):
-    root: str
-
-
-class WhatsAppError(BaseModel):
-    "Failure detail for a message that could not be delivered or was rejected."
-    model_config = ConfigDict(extra="allow")
-    code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
-    )]
-    description: Annotated[str, Field(
-        description="Human-readable explanation of the failure.",
-        examples=["Message could not be delivered."],
-        min_length=1,
-    )]
-    meta_error_code: Annotated[Optional[str], Field(
-        description="Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.",
-        examples=[131026],
-    )] = None
-    occurred_at: Annotated[str, Field(
-        description="When the failure occurred.",
-        min_length=1,
-    )]
-
-
 class WhatsAppTemplateParameterType(str, Enum):
     text = "text"
     image = "image"
@@ -9856,6 +9861,10 @@ class WhatsAppMessageTemplate(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="The `bid_multiplier` the message was sent with. Absent when the send named none, which bids at 1. Also absent on messages sent before Bird stored it.",
         examples=[0.8],
+    )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The `template.parameters` map the message was sent with, keeping only the keys the template language reads; keys the send ignored are dropped. `components` shows the values the template rendered from it. Absent for a `components` send, for an authentication template, and for messages sent before Bird stored it.",
     )] = None
     components: Annotated[List[WhatsAppMessageTemplateComponent], Field(
         description="The values that filled the template's placeholders. Empty for an authentication template, whose content is never returned.",
@@ -10490,6 +10499,27 @@ class WhatsAppMessageOrigin(str, Enum):
     history_sync = "history_sync"
 
 
+class WhatsAppError(BaseModel):
+    "Failure detail for a message that could not be delivered or was rejected."
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
+        description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
+    )]
+    description: Annotated[str, Field(
+        description="Human-readable explanation of the failure.",
+        examples=["Message could not be delivered."],
+        min_length=1,
+    )]
+    meta_error_code: Annotated[Optional[str], Field(
+        description="Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.",
+        examples=[131026],
+    )] = None
+    occurred_at: Annotated[str, Field(
+        description="When the failure occurred.",
+        min_length=1,
+    )]
+
+
 class WhatsAppMessageDirection(str, Enum):
     outbound = "outbound"
     inbound = "inbound"
@@ -10648,7 +10678,7 @@ class WhatsAppMessageList(BaseModel):
 
 
 class WhatsAppTemplateSend(BaseModel):
-    "Supply exactly one of `id` or `slug`, optionally a language, and fill required placeholders through `components`."
+    "Supply exactly one of `id` or `slug`, optionally a language, and fill required placeholders through `parameters` or `components`."
     model_config = ConfigDict(extra="allow")
     id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -10677,6 +10707,10 @@ class WhatsAppTemplateSend(BaseModel):
         examples=[0.8],
         ge=0.01,
         le=100,
+    )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The template's inputs as one map, instead of `components`. Each key is a name in the version's `variables`: a placeholder's own name, or its number (`1`, `2`) for a numbered placeholder, `header_url` (or `header_url_1`, `header_url_2` for a carousel card), `header_filename`, `header_location` and `code` for values with no placeholder, `button_url` (or `button_url_1`, `button_url_2` for a carousel card) for a numbered URL suffix, or an input a parameter binding reads. A media header left out, or whose value is empty, sends the template's approved sample; a template without one, such as one imported from WhatsApp, needs its media URL. A value is a string, number or boolean, except `header_location`, an object with `latitude` and `longitude`, and optionally `name` and `address`. Keys the language does not use are ignored, and `bird` is reserved. At most 16 KB. Send `parameters` or `components`, not both. A template with parameter bindings, or with named variables in a card or a button URL, takes only `parameters`.",
     )] = None
     components: Annotated[Optional[List[WhatsAppMessageTemplateComponent]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -11452,6 +11486,10 @@ class WhatsAppEventType(str, Enum):
     whatsapp_received = "whatsapp.received"
     whatsapp_rejected = "whatsapp.rejected"
     whatsapp_sent = "whatsapp.sent"
+
+
+class WhatsAppEventID(RootModel[str]):
+    root: str
 
 
 class WhatsAppEvent(BaseModel):
@@ -12387,6 +12425,39 @@ class WhatsAppTemplateCategoryWrite(str, Enum):
     marketing = "marketing"
 
 
+class WhatsAppTemplateLocationBinding(BaseModel):
+    "The Liquid that fills a location header, one string per field. Latitude and longitude must render to a number."
+    model_config = ConfigDict(extra="allow")
+    latitude: Annotated[str, Field(
+        description="Liquid for the latitude, in degrees.",
+        examples=["{{ store_lat }}"],
+        max_length=2000,
+        min_length=1,
+    )]
+    longitude: Annotated[str, Field(
+        description="Liquid for the longitude, in degrees.",
+        examples=["{{ store_lng }}"],
+        max_length=2000,
+        min_length=1,
+    )]
+    name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Liquid for the location's name.",
+        examples=["{{ store_name }}"],
+        max_length=2000,
+    )] = None
+    address: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Liquid for the location's address.",
+        examples=["{{ store_address }}"],
+        max_length=2000,
+    )] = None
+
+
+class WhatsAppTemplateParameterBindings(RootModel[Dict[str, Any]]):
+    root: Dict[str, Any]
+
+
 class WhatsAppTemplateOptimizationSpecWrite(BaseModel):
     "A maximum price for this language's marketing deliveries. Meta charges each delivery a variable amount up to the bid. Only marketing templates accept it."
     model_config = ConfigDict(extra="allow")
@@ -12590,6 +12661,9 @@ class WhatsAppTemplateRevision(RootModel[int]):
 class WhatsAppTemplateLanguageUpsert(BaseModel):
     "One language's content, as written to a draft."
     model_config = ConfigDict(extra="allow")
+    parameter_bindings: Annotated[Optional[Dict[str, Any]], Field(
+        description="Liquid that computes this language's send values from the send's `template.parameters`. Omit it to keep the current bindings, and send `null` to remove them. Changing only the bindings never needs a new review.",
+    )] = None
     optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpecWrite], Field(
         description="This language's maximum price. Omit it to keep the current one. A new language written without it uses Meta's standard rate. Send `null` to return to the standard rate. Changing only the price updates Meta without a new review. A send at a maximum price needs the business account's `marketing_messages_onboarding_status` to be `onboarded`. Otherwise it fails with WhatsApp error 131061.",
     )] = None
@@ -12751,6 +12825,10 @@ class WhatsAppTemplateVersionSummary(BaseModel):
         description="When this version was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's version, which Bird ships already approved rather than submitting on your behalf.",
         examples=["2026-07-20T11:04:00Z"],
     )]
+    variables: Annotated[Optional[List[TemplateVariable]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The variable slots this version's content fills in from the values you supply when sending. Combined across every language, because languages need not declare the same slots: if the English body uses `first_name` and the French one uses `last_name`, both appear here. A template with named parameters keys them by name; a positional one keys them by their `{{n}}` position, as `1`, `2` and so on. Supply the slots the language you send declares, by these keys in `template.parameters` or through `components`.",
+    )] = None
     languages: Annotated[Dict[str, WhatsAppTemplateLanguageState], Field(
         description="What this version's submission did with each language it holds, keyed by BCP-47 language tag. Content is not here: read the version for that.",
     )]
@@ -12786,6 +12864,10 @@ class WhatsAppTemplateVersionList(BaseModel):
 class WhatsAppTemplateVersionLanguage(BaseModel):
     "One language's content in one version, and what that submission did with it."
     model_config = ConfigDict(extra="allow")
+    parameter_bindings: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="This language's bindings in this version, absent when it has none.",
+    )] = None
     components: Annotated[List[WhatsAppTemplateComponent], Field(
         description="This language's content in this version, in display order.",
     )]
@@ -12825,6 +12907,10 @@ class WhatsAppTemplateVersion(BaseModel):
         description="When this version was submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's version, which Bird ships already approved rather than submitting on your behalf.",
         examples=["2026-07-20T11:04:00Z"],
     )]
+    variables: Annotated[Optional[List[TemplateVariable]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The variable slots this version's content fills in from the values you supply when sending. Combined across every language, because languages need not declare the same slots: if the English body uses `first_name` and the French one uses `last_name`, both appear here. A template with named parameters keys them by name; a positional one keys them by their `{{n}}` position, as `1`, `2` and so on. Supply the slots the language you send declares, by these keys in `template.parameters` or through `components`.",
+    )] = None
     languages: Annotated[Dict[str, WhatsAppTemplateVersionLanguage], Field(
         description="This version's content, keyed by BCP-47 language tag, with what its submission did with each language.",
     )]
@@ -13009,6 +13095,10 @@ class WhatsAppTemplatePause(BaseModel):
 class WhatsAppTemplateLanguage(BaseModel):
     "One language of one version: its content, what the submission carrying it did with it, and everything Meta holds about it."
     model_config = ConfigDict(extra="allow")
+    parameter_bindings: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="This language's bindings, absent when it has none.",
+    )] = None
     optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpec], Field(
         description="This language's maximum price, or `null` when Meta's standard rate applies.",
     )] = None
@@ -13878,7 +13968,7 @@ class AMBBusinessAccountEvent(BaseModel):
     )]
     summary: Annotated[str, Field(min_length=1)]
     metadata: Annotated[Dict[str, Any], Field(
-        description="Details of the change. source identifies whether a customer or Bird staff recorded it.",
+        description="Details of the change. `source` identifies who recorded it, `customer`, `staff` or `automated_review`.",
     )]
     created_at: Annotated[str, Field(min_length=1)]
 
@@ -14080,6 +14170,11 @@ class AMBBusinessAccountSubmissionStatus(str, Enum):
     rejected = "rejected"
 
 
+class AMBBusinessAccountSubmissionDecider(str, Enum):
+    staff = "staff"
+    automated_review = "automated_review"
+
+
 class AMBBusinessAccountSubmission(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
@@ -14107,8 +14202,12 @@ class AMBBusinessAccountSubmission(BaseModel):
         description="The review outcome of this attempt. Earlier attempts retain their outcome when a new attempt is submitted.",
     )]
     status_reason: Annotated[Optional[str], Field(
-        description="Review feedback on this attempt, such as the reason Apple rejected it. May contain basic Markdown, such as emphasis and lists.",
+        description="Review feedback on this attempt, such as the automated review's feedback or the reason Apple rejected it. May contain basic Markdown, such as emphasis, lists and links.",
         min_length=1,
+    )]
+    decided_by: Annotated[Optional[Annotated[Union[AMBBusinessAccountSubmissionDecider, str], Field(union_mode="left_to_right")]], Field(
+        description="Who recorded this attempt's outcome, `automated_review` when Bird's automated review rejected it or `staff`. Null while the attempt waits, and for outcomes recorded before automated reviews.",
+        examples=["null"],
     )]
     created_at: Annotated[str, Field(min_length=1)]
     next: Annotated[Optional[List[NextAction]], Field(

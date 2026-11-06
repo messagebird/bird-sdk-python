@@ -19,6 +19,13 @@ class AMBBusinessAccountReviewStatus:
     REJECTED: Final = "rejected"
 
 
+class AMBBusinessAccountSubmissionDecider:
+    """Values of AMBBusinessAccountSubmissionDecider known at this SDK version (open enum)."""
+
+    AUTOMATED_REVIEW: Final = "automated_review"
+    STAFF: Final = "staff"
+
+
 class AMBFormKeyboardType:
     """Values of AMBFormKeyboardType known at this SDK version (open enum)."""
 
@@ -1116,8 +1123,17 @@ class WorkspaceQuotaLimitSource:
     ORGANIZATION: Final = "organization"
 
 
+class WorkspaceRateLimitLimitSource:
+    """Values of WorkspaceRateLimitLimitSource known at this SDK version (open enum)."""
+
+    AUTOMATIC: Final = "automatic"
+    MANUAL: Final = "manual"
+    ORGANIZATION: Final = "organization"
+
+
 __all__ = [
     "AMBBusinessAccountReviewStatus",
+    "AMBBusinessAccountSubmissionDecider",
     "AMBFormKeyboardType",
     "AMBFormTextContentType",
     "AMBMessageEventType",
@@ -1221,4 +1237,5 @@ __all__ = [
     "WhatsAppTemplateRejectionCategory",
     "WhatsAppUsernameStatus",
     "WorkspaceQuotaLimitSource",
+    "WorkspaceRateLimitLimitSource",
 ]

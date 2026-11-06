@@ -51,6 +51,7 @@ def _send_body(
     template: str | None = None,
     language: str | None = None,
     components: Sequence[Mapping[str, Any]] | None = None,
+    parameters: Mapping[str, Any] | None = None,
     bid_multiplier: float | None = None,
     text: Mapping[str, Any] | None = None,
     image: Mapping[str, Any] | None = None,
@@ -68,7 +69,13 @@ def _send_body(
     body: dict[str, Any] = {"to": to}
     if from_ is not None:
         body["from"] = from_
-    if template is not None or language is not None or components is not None or bid_multiplier is not None:
+    if (
+        template is not None
+        or language is not None
+        or components is not None
+        or parameters is not None
+        or bid_multiplier is not None
+    ):
         tmpl: dict[str, Any] = {}
         if template is not None:
             # A wat_-prefixed value is the id; anything else is the slug handle.
@@ -77,6 +84,8 @@ def _send_body(
             tmpl["language"] = language
         if components is not None:
             tmpl["components"] = components
+        if parameters is not None:
+            tmpl["parameters"] = parameters
         if bid_multiplier is not None:
             tmpl["bid_multiplier"] = bid_multiplier
         body["template"] = tmpl
@@ -129,6 +138,7 @@ class Whatsapp(WhatsappBase):
         template: str | None = None,
         language: str | None = None,
         components: Sequence[Mapping[str, Any]] | None = None,
+        parameters: Mapping[str, Any] | None = None,
         bid_multiplier: float | None = None,
         text: Mapping[str, Any] | None = None,
         image: Mapping[str, Any] | None = None,
@@ -174,6 +184,7 @@ class Whatsapp(WhatsappBase):
             template=template,
             language=language,
             components=components,
+            parameters=parameters,
             bid_multiplier=bid_multiplier,
             text=text,
             image=image,
@@ -216,6 +227,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
         template: str | None = None,
         language: str | None = None,
         components: Sequence[Mapping[str, Any]] | None = None,
+        parameters: Mapping[str, Any] | None = None,
         bid_multiplier: float | None = None,
         text: Mapping[str, Any] | None = None,
         image: Mapping[str, Any] | None = None,
@@ -238,6 +250,7 @@ class AsyncWhatsapp(AsyncWhatsappBase):
             template=template,
             language=language,
             components=components,
+            parameters=parameters,
             bid_multiplier=bid_multiplier,
             text=text,
             image=image,

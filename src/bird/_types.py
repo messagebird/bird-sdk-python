@@ -168,7 +168,7 @@ class _WhatsappSendRequired(TypedDict):
 class WhatsappSendParams(_WhatsappSendRequired, total=False):
     """Params for ``client.whatsapp.send``. ``to`` is required. A send carries
     exactly one kind of content: a ``template`` (personalized by ``language``
-    and ``components``), or one free-form arm (``text``, ``image``, ``video``,
+    and ``components``, or by ``parameters`` keyed by name), or one free-form arm (``text``, ``image``, ``video``,
     ``audio``, ``sticker``, ``document``, ``location``) shaped like its wire
     object."""
 
@@ -176,6 +176,7 @@ class WhatsappSendParams(_WhatsappSendRequired, total=False):
     template: str
     language: str
     components: Sequence[Mapping[str, Any]]
+    parameters: Mapping[str, Any]
     text: Mapping[str, Any]
     image: Mapping[str, Any]
     video: Mapping[str, Any]

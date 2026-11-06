@@ -334,6 +334,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/esim/subscriptions/{subscription_id}/cancel": {"post"},
     "/v1/esim/subscriptions/{subscription_id}/periods": {"get"},
     "/v1/asset-upload-sessions": {"post"},
+    "/v1/asset-upload-sessions/{upload_id}/browser": {"post"},
     "/v1/asset-upload-sessions/{upload_id}": {"get"},
     "/v1/asset-upload-sessions/{upload_id}/prepare": {"post"},
     "/v1/asset-upload-sessions/{upload_id}/complete": {"post"},

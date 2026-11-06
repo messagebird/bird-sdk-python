@@ -447,6 +447,7 @@ def test_surface_conformance() -> None:
     assert callable(client.esim.recurring_subscriptions.cancel)
     assert callable(client.esim.recurring_subscriptions.periods)
     assert callable(client.assets.uploads.create)
+    assert callable(client.assets.uploads.handoff)
     assert callable(client.assets.uploads.get)
     assert callable(client.assets.uploads.prepare)
     assert callable(client.assets.uploads.complete)

@@ -75,7 +75,7 @@ class AmbBusinessAccountsSubmissions(Resource):
         video_attachment_id: str,
         options: RequestOptions | None = None,
     ) -> AMBBusinessAccountSubmission:
-        """Submits an account for review, making its name, Apple UUID and three uploaded evidence attachments available to Bird staff. This does not approve the account.
+        """Submits an account for review and queues an automated review of its three evidence attachments. The review can reject the attempt with the changes needed. Otherwise Bird staff review it and relay it to Apple when it is ready. Read the outcome with `amb.business_accounts.submissions.list`. This does not approve the account.
 
         ```python
         result = client.amb.business_accounts.submissions.create(
@@ -143,7 +143,7 @@ class AsyncAmbBusinessAccountsSubmissions(AsyncResource):
         video_attachment_id: str,
         options: RequestOptions | None = None,
     ) -> AMBBusinessAccountSubmission:
-        """Submits an account for review, making its name, Apple UUID and three uploaded evidence attachments available to Bird staff. This does not approve the account.
+        """Submits an account for review and queues an automated review of its three evidence attachments. The review can reject the attempt with the changes needed. Otherwise Bird staff review it and relay it to Apple when it is ready. Read the outcome with `amb.business_accounts.submissions.list`. This does not approve the account.
 
         ```python
         result = await client.amb.business_accounts.submissions.create(

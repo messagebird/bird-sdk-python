@@ -81,6 +81,7 @@ class WhatsAppTemplateComponentWrite(_WhatsAppTemplateComponentWriteRequired, to
 class WhatsappTemplatesVersionsLanguagesSetParams(TypedDict, total=False):
     """Params for ``client.whatsapp.templates.versions.languages.set``. Every key is optional."""
 
+    parameter_bindings: Mapping[str, Any] | None
     optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None
     message_send_ttl_seconds: int | None
     components: Sequence[WhatsAppTemplateComponentWrite]
@@ -149,6 +150,7 @@ class WhatsappTemplatesVersionsLanguages(Resource):
         version_id: str,
         language: str,
         *,
+        parameter_bindings: Mapping[str, Any] | None | Omit = omit,
         optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None | Omit = omit,
         message_send_ttl_seconds: int | None | Omit = omit,
         components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
@@ -174,6 +176,8 @@ class WhatsappTemplatesVersionsLanguages(Resource):
         ```
         """
         _body: dict[str, Any] = {}
+        if not isinstance(parameter_bindings, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["parameter_bindings"] = parameter_bindings
         if not isinstance(optimization_spec, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["optimization_spec"] = optimization_spec
         if not isinstance(message_send_ttl_seconds, Omit):  # None clears (JSON null); omit leaves it unchanged
@@ -298,6 +302,7 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
         version_id: str,
         language: str,
         *,
+        parameter_bindings: Mapping[str, Any] | None | Omit = omit,
         optimization_spec: WhatsAppTemplateOptimizationSpecWrite | None | Omit = omit,
         message_send_ttl_seconds: int | None | Omit = omit,
         components: Sequence[WhatsAppTemplateComponentWrite] | None = None,
@@ -323,6 +328,8 @@ class AsyncWhatsappTemplatesVersionsLanguages(AsyncResource):
         ```
         """
         _body: dict[str, Any] = {}
+        if not isinstance(parameter_bindings, Omit):  # None clears (JSON null); omit leaves it unchanged
+            _body["parameter_bindings"] = parameter_bindings
         if not isinstance(optimization_spec, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["optimization_spec"] = optimization_spec
         if not isinstance(message_send_ttl_seconds, Omit):  # None clears (JSON null); omit leaves it unchanged

@@ -13,6 +13,7 @@ from bird._generated import (
     EmailBroadcastTemplateUpdate,
     AssetUploadInstruction,
     AssetUploadReceipt,
+    AssetUploadBrowserHandoff,
     AssetUploadSessionDetails,
     AssetUploadSessionInstruction,
     AssetUploadSessionPrepared,
@@ -584,6 +585,7 @@ from bird._open_enums import (
     EsimActionName,
     EsimActionUnavailableReason,
     AMBBusinessAccountReviewStatus,
+    AMBBusinessAccountSubmissionDecider,
     AMBMessageEventType,
     AMBFormKeyboardType,
     AMBFormTextContentType,
@@ -684,6 +686,7 @@ from bird._open_enums import (
     WhatsAppTemplateRejectionCategory,
     WhatsAppUsernameStatus,
     WorkspaceQuotaLimitSource,
+    WorkspaceRateLimitLimitSource,
 )
 from bird.resources.realtime import ChannelAuthorization
 from bird.resources.webhooks import GenericWebhookEvent
@@ -794,6 +797,7 @@ __all__ = [
     "AssetsUploadsCreateParams",
     "AssetUploadInstruction",
     "AssetUploadReceipt",
+    "AssetUploadBrowserHandoff",
     "AssetUploadSessionDetails",
     "AssetUploadSessionInstruction",
     "AssetUploadSessionPrepared",
@@ -929,6 +933,7 @@ __all__ = [
     "EsimActionName",
     "EsimActionUnavailableReason",
     "AMBBusinessAccountReviewStatus",
+    "AMBBusinessAccountSubmissionDecider",
     "AMBMessageEventType",
     "AMBFormKeyboardType",
     "AMBFormTextContentType",
@@ -1393,6 +1398,7 @@ __all__ = [
     "WhatsAppTemplateRejectionCategory",
     "WhatsAppUsernameStatus",
     "WorkspaceQuotaLimitSource",
+    "WorkspaceRateLimitLimitSource",
     "BirdError",
     "APIError",
     "APIStatusError",

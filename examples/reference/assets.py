@@ -87,3 +87,9 @@ def assets_uploads_complete() -> None:
 def assets_uploads_cancel() -> None:
     upload = client.assets.uploads.cancel("aus_01krdgeqcxet5s7t44vh8rt9mg")
     print(upload.state)
+
+
+def assets_uploads_handoff() -> None:
+    handoff = client.assets.uploads.handoff("aus_01krdgeqcxet5s7t44vh8rt9mg")
+    if handoff.browser_url:
+        print(handoff.browser_url)

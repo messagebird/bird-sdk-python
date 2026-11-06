@@ -6,6 +6,7 @@ from typing import TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
+    AssetUploadBrowserHandoff,
     AssetUploadSessionCreate,
     AssetUploadSessionDetails,
     AssetUploadSessionInstruction,
@@ -86,6 +87,27 @@ class AssetsUploads(Resource):
             "/v1/asset-upload-sessions",
             body,
             AssetUploadSessionInstruction,
+            options,
+        )
+
+    def handoff(
+        self,
+        upload_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AssetUploadBrowserHandoff:
+        """Use assets.uploads.handoff only when the code environment cannot PUT to the upload hostname and the customer cannot or does not want to change its network settings. It returns a Bird page where an authorized person selects the original file and publishes it. A generated file must first be downloaded. The person's browser still needs access to the storage hostname. Opening the page does not finish the upload; use assets.uploads.get with the original connection to read the saved result.
+
+        ```python
+        handoff = client.assets.uploads.handoff("aus_01krdgeqcxet5s7t44vh8rt9mg")
+        if handoff.browser_url:
+            print(handoff.browser_url)
+        ```
+        """
+        return self._action(
+            "POST",
+            f"/v1/asset-upload-sessions/{quote(upload_id, safe='')}/browser",
+            AssetUploadBrowserHandoff,
             options,
         )
 
@@ -216,6 +238,27 @@ class AsyncAssetsUploads(AsyncResource):
             "/v1/asset-upload-sessions",
             body,
             AssetUploadSessionInstruction,
+            options,
+        )
+
+    async def handoff(
+        self,
+        upload_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AssetUploadBrowserHandoff:
+        """Use assets.uploads.handoff only when the code environment cannot PUT to the upload hostname and the customer cannot or does not want to change its network settings. It returns a Bird page where an authorized person selects the original file and publishes it. A generated file must first be downloaded. The person's browser still needs access to the storage hostname. Opening the page does not finish the upload; use assets.uploads.get with the original connection to read the saved result.
+
+        ```python
+        handoff = await client.assets.uploads.handoff("aus_01krdgeqcxet5s7t44vh8rt9mg")
+        if handoff.browser_url:
+            print(handoff.browser_url)
+        ```
+        """
+        return await self._action(
+            "POST",
+            f"/v1/asset-upload-sessions/{quote(upload_id, safe='')}/browser",
+            AssetUploadBrowserHandoff,
             options,
         )
 
