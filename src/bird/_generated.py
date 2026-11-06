@@ -22839,6 +22839,22 @@ class ThreadID(RootModel[str]):
     root: str
 
 
+class EmailThreadParticipantName(BaseModel):
+    "A conversation participant's display name."
+    model_config = ConfigDict(extra="allow")
+    address: Annotated[str, Field(
+        description="Participant address, as listed in the conversation's `participants`.",
+        examples=["ada@example.com"],
+        min_length=1,
+    )]
+    name: Annotated[str, Field(
+        description="Display name for this participant, such as `Ada Lovelace`. It is not verified.",
+        examples=["Ada Lovelace"],
+        max_length=256,
+        min_length=1,
+    )]
+
+
 class EmailThreadHighlights(BaseModel):
     "Matched search fragments for a thread, one array per field the query matched, with the matched terms wrapped in `**`. A field is present only when the query matched it, so the keys that are present tell you which fields produced the hit. Returned only on thread search results."
     model_config = ConfigDict(extra="allow")
@@ -22887,6 +22903,9 @@ class EmailThread(BaseModel):
     )]
     participants: Annotated[List[str], Field(
         description="Addresses that appear on the retained messages in this conversation, including the mailbox's own address.",
+    )]
+    participant_names: Annotated[List[EmailThreadParticipantName], Field(
+        description="Display names for participants, taken from this conversation's messages. A name is either the one a sender gave in their From header or the one your mailbox gave a To or Cc recipient when sending. When a participant was named more than once, the most recent name is shown. Names are not verified, so identify participants by address. A participant without a name is absent.",
     )]
     message_count: Annotated[int, Field(
         description="Number of retained messages in this conversation, both directions.",
@@ -23108,6 +23127,11 @@ class EmailThreadMessage(BaseModel):
         alias="from",
         description="Sender address.",
         min_length=1,
+    )]
+    from_name: Annotated[Optional[str], Field(
+        description="Display name in the sender's From header, such as `Ada Lovelace`. The sender chooses it and it is not verified, so identify the sender by `from`. Null when the sender gave no name or the name is not available.",
+        examples=["Ada Lovelace"],
+        max_length=256,
     )]
     to: Annotated[List[str], Field(description="Recipient addresses on the To line.")]
     cc: Annotated[List[str], Field(
@@ -26910,7 +26934,7 @@ class EventVerifyAttemptUndeliveredData(BaseModel):
         min_length=1,
     )]
     reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: The channel does not carry passcodes to this\n  destination country. The verification moves to the next channel enabled\n  there, or fails when the country has no other.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
+        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: A destination or session restriction prevented the\n  channel from being used. The verification can try the next eligible channel\n  while the session remains pending and unexpired.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
     )]
     error: Annotated[Optional[str], Field(
         description="Diagnostic text describing the failure, for display only. Null when none was reported.",
@@ -27033,7 +27057,7 @@ class EventVerifyVerificationFailedData(BaseModel):
         examples=["sms"],
     )]
     last_attempt_reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: The channel does not carry passcodes to this\n  destination country. The verification moves to the next channel enabled\n  there, or fails when the country has no other.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
+        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: A destination or session restriction prevented the\n  channel from being used. The verification can try the next eligible channel\n  while the session remains pending and unexpired.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
     )]
     failed_at: Annotated[str, Field(
         description="Time the verification was resolved.",

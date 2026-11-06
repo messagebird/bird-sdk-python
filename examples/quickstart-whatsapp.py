@@ -3,10 +3,10 @@ from bird import APIError, Bird
 with Bird() as client:
     try:
         message = client.whatsapp.send(
-            to="+31612345678",
+            to="+15551234567",
             template="bird_otp",
             language="en",
-            components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
+            parameters={"code": "123456"},
         )
         print(message.id, message.status)
     except APIError as err:

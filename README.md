@@ -71,10 +71,10 @@ A send carries exactly one kind of content: a template, or free-form `text`, `im
 ```python
 # Send a template
 message = client.whatsapp.send(
-    to="+31612345678",
+    to="+15551234567",
     template="bird_otp",
     language="en",
-    components=[{"type": "body", "parameters": [{"type": "text", "text": "123456"}]}],
+    parameters={"code": "123456"},
 )
 
 # Send free-form text
