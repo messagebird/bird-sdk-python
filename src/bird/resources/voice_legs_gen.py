@@ -51,7 +51,7 @@ class VoiceLegs(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[VoiceLeg]:
-        """List the workspace's legs, newest first. Filter to `ringing`/`in_progress` for the legs in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-leg records and do not include aggregate rates or totals. Use `voice.legs.get` to follow one leg to settlement.
+        """List the workspace's legs, newest first. Filter to `ringing`/`in_progress` for the legs in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, `to` for a SIP extension or an exact `usr_` or `vrg_` ID for a browser's call to that user or ring group, and `number` to search either side by fragment. These are per-leg records and do not include aggregate rates or totals. Use `voice.legs.get` to follow one leg to settlement.
 
         ```python
         for leg in client.voice.legs.list():
@@ -116,7 +116,7 @@ class AsyncVoiceLegs(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[VoiceLeg]:
-        """List the workspace's legs, newest first. Filter to `ringing`/`in_progress` for the legs in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, and `number` to search either side by fragment. These are per-leg records and do not include aggregate rates or totals. Use `voice.legs.get` to follow one leg to settlement.
+        """List the workspace's legs, newest first. Filter to `ringing`/`in_progress` for the legs in progress right now, to final statuses for completed records, or to any mix of the two. Use `from`/`to` for one known party number in international form, `to` for a SIP extension or an exact `usr_` or `vrg_` ID for a browser's call to that user or ring group, and `number` to search either side by fragment. These are per-leg records and do not include aggregate rates or totals. Use `voice.legs.get` to follow one leg to settlement.
 
         ```python
         async for leg in client.voice.legs.list():
