@@ -27152,7 +27152,7 @@ class EventVoiceCallAnsweredData(BaseModel):
         min_length=1,
     )]
     to: Annotated[str, Field(
-        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_` or `vrg_` ID of the workspace user or ring group a browser called.",
+        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
         examples=[+16505559876],
         min_length=1,
     )]
@@ -27205,7 +27205,7 @@ class EventVoiceCallEndedData(BaseModel):
         min_length=1,
     )]
     to: Annotated[str, Field(
-        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_` or `vrg_` ID of the workspace user or ring group a browser called.",
+        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
         examples=[+16505559876],
         min_length=1,
     )]
@@ -27276,7 +27276,7 @@ class EventVoiceCallInitiatedData(BaseModel):
         min_length=1,
     )]
     to: Annotated[str, Field(
-        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_` or `vrg_` ID of the workspace user or ring group a browser called.",
+        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
         examples=[+16505559876],
         min_length=1,
     )]
@@ -28491,7 +28491,7 @@ class VoiceLeg(BaseModel):
         min_length=1,
     )]
     to: Annotated[str, Field(
-        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_` or `vrg_` ID of the workspace user or ring group a browser called.",
+        description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
         examples=[+16505559876],
         min_length=1,
     )]
@@ -28538,7 +28538,7 @@ class VoiceLeg(BaseModel):
         description="When the leg was answered (`200` OK received). `null` for unanswered legs.",
     )] = None
     answered_by: Annotated[Optional[Any], Field(
-        description="Who answered when Bird rang your workspace users for this leg, through a ring group or a browser call to a user or a ring group. When a sequence rings more than once, it names who answered the latest ring. `null` when no workspace user answered, and on legs recorded before this field existed. Handle unknown `type` values as future answerer kinds.",
+        description="Who answered when Bird rang your workspace users for this leg, through a ring group or a browser call to a user or a ring group. When a sequence rings more than once, it names who answered the latest ring. `null` when no workspace user answered, on legs recorded before this field existed, or when the API does not support the stored answerer kind. New kinds may be added; handle unknown `type` values as future answerer kinds.",
     )] = None
     ended_at: Annotated[Optional[str], Field(
         description="When the leg ended (BYE or final non-2xx response). `null` for legs that ended abnormally without a recorded end event.",
