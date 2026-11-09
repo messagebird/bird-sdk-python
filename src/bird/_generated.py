@@ -12993,7 +12993,7 @@ class WhatsAppTemplateLanguageSummary(BaseModel):
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Not yet approved or rejected.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Awaiting Meta's verdict, with no estimate. This includes a submission Meta has not yet confirmed receiving. Bird cannot speed it up.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -13117,7 +13117,7 @@ class WhatsAppTemplateLanguage(BaseModel):
     )]
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Not yet approved or rejected.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Language review and health status:\n\n- `approved`: Passed review and can be sent.\n- `pending`: Awaiting Meta's verdict, with no estimate. This includes a submission Meta has not yet confirmed receiving. Bird cannot speed it up.\n- `rejected`: Failed review.\n- `paused` or `disabled`: Sending is suspended.\n- `in_appeal`: A decision is being appealed.\n- `pending_deletion`: Scheduled for deletion by Meta.\n- `limit_exceeded`: Sending is blocked by a limit.\n- `archived`: Reclaimed after 12 months without use; recoverable for 28 days.\n- `deleted`: Permanently deleted.\n- `submit_failed`: A submission or a deletion did not complete and will not be retried. `error.description` says why, and `error.meta_error_code` is set only where WhatsApp itself refused.\n\nThis is an open enum. Accept unrecognized values.",
     )] = None
     revision: Annotated[int, Field(
         description="A write counter, incremented every time the content it belongs to changes. It sits at 1 on content that has never been written through this API.",
@@ -13598,7 +13598,7 @@ class WhatsAppNumber(BaseModel):
         min_length=1,
     )] = None
     phone_number: Annotated[Optional[str], Field(
-        description="The number in E.164 format. Null only while the number itself is not yet known: a number your workspace holds carries its E.164 from the moment setup starts, so a value here does not mean the number can send. `status` is what says that.",
+        description="The number in E.164 format. Null only while the number itself is not yet known: a number your workspace holds carries its E.164 from the moment setup starts, so a value here does not mean the number can send. Check `status` for connection state.",
         examples=[+15550001234],
     )]
     number_id: Annotated[Optional[str], Field(
@@ -13628,7 +13628,7 @@ class WhatsAppNumber(BaseModel):
         description="The country this number's message content is stored at rest in, as its two-letter ISO 3166 code. Absent when it uses WhatsApp's default storage. It can differ from the region requested at connection when WhatsApp requires a particular country for the number.",
     )] = None
     status: Annotated[Annotated[Union[WhatsAppNumberStatus, str], Field(union_mode="left_to_right")], Field(
-        description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`.",
+        description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`. A connected virtual +1 555 or +1 711 number still has a daily sending limit until its current name is approved. Read `display_name_status` from the live profile for display name approval.",
     )]
     next: Annotated[Optional[List[NextAction]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -13741,7 +13741,7 @@ class WhatsAppNumberEvent(BaseModel):
         min_length=1,
     )]
     metadata: Annotated[Dict[str, Any], Field(
-        description="Structured details for the event. `from` and `to` carry the values that changed, and `from` is absent when the number had no prior value to report. A status change into `failed` also carries the `reason`; a display-name decision carries `new_display_name`, `decision`, and, when WhatsApp named one for a rejection, `rejection_reason`. A messaging-limit change also carries the `trigger` WhatsApp named for it, such as `onboarding` or `throughput_upgrade`, when it named one. A `whatsapp_number.created` event carries the `source` the number came from, and its `phone_number` once one is known.",
+        description="Structured details for the event. `from` and `to` carry the values that changed, and `from` is absent when the number had no prior value to report. A status change into `failed` also carries the `reason`; a display-name decision carries `new_display_name`, `decision`, and, when WhatsApp named one for a rejection, `rejection_reason`. For `whatsapp_number.profile_name_update`, `decision: available_without_review` means Meta accepted the requested name without review; `approved` records approval. Older events also used `approved` for acceptance without review, so those historical events cannot establish approval. Read `display_name_status` from `GET /v1/whatsapp/numbers/{number_id}/profile` for the current name's approval. A messaging-limit change also carries the `trigger` WhatsApp named for it, such as `onboarding` or `throughput_upgrade`, when it named one. A `whatsapp_number.created` event carries the `source` the number came from, and its `phone_number` once one is known.",
     )]
     created_at: Annotated[str, Field(
         description="When the event was recorded.",
@@ -13818,7 +13818,7 @@ class WhatsAppNumberProfile(BaseModel):
     )] = None
     display_name_status: Annotated[Optional[Annotated[Union[WhatsAppDisplayNameStatus, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Where WhatsApp's review of the display name stands. A name still under review is not yet shown at the top of a chat.",
+        description="Where WhatsApp's review of the current display name stands. `available_without_review` means the name was accepted without review, and `approved` means it passed review. A virtual +1 555 or +1 711 number still has a daily sending limit while its current name is unapproved. See [virtual-number display name review](/docs/knowledge-base/whatsapp/virtual-numbers#display-name-review).",
     )] = None
     new_display_name: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -13827,7 +13827,7 @@ class WhatsAppNumberProfile(BaseModel):
     )] = None
     new_display_name_status: Annotated[Optional[Annotated[Union[WhatsAppDisplayNameStatus, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Where the requested display name stands with WhatsApp, including whether it is being reviewed or was accepted for immediate use without a review. Absent when no change is pending. If WhatsApp accepts the name it becomes `display_name`. Every other outcome leaves the number on the name it already had: `declined` is WhatsApp refusing the name, and `expired` is a request that no longer stands and has to be made again.",
+        description="Where the requested display name stands with WhatsApp, including whether it is being reviewed or was accepted without a review. Absent when no change is pending. An accepted name becomes `display_name` once the change is applied. This status belongs to the requested name; check `display_name_status` for approval of the current name. Applying a name accepted without review does not establish display name approval. `declined` is WhatsApp refusing the name, and `expired` is a request that no longer stands and has to be made again.",
     )] = None
     username: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -14759,8 +14759,8 @@ class AMBRichLinkConstruct(BaseModel):
     "Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
-        description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. A URL Apple cannot build a preview for is refused with a `422` `AMBConstructPayloadFailed`; send `rich_link` content with your own `title` and `image` instead.",
-        examples=["https://apps.apple.com/app/id123456789?clip=1"],
+        description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. Apple builds the preview when the message is sent. If Apple refuses the URL, or fails to build it with a `500` at least 5 times over at least 10 minutes, the message ends `send_failed` with `bird:construct_rejected`; send `rich_link` content with your own `title` and `image` instead. If Apple stays unreachable for the whole retry budget, the message ends `send_failed` with `bird:attempts_exhausted`.",
+        examples=["https://apps.apple.com/app/id375380948?clip=1"],
         min_length=1,
     )]
     store_region: Annotated[Optional[str], Field(
@@ -27171,7 +27171,7 @@ class EventVoiceCallAnsweredData(BaseModel):
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Calling party number in E.164 format.",
+        description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
         examples=[+14155551234],
         min_length=1,
     )]
@@ -27224,7 +27224,7 @@ class EventVoiceCallEndedData(BaseModel):
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Calling party number in E.164 format.",
+        description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
         examples=[+14155551234],
         min_length=1,
     )]
@@ -27295,7 +27295,7 @@ class EventVoiceCallInitiatedData(BaseModel):
     )]
     from_: Annotated[str, Field(
         alias="from",
-        description="Calling party number in E.164 format.",
+        description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
         examples=[+14155551234],
         min_length=1,
     )]
@@ -28510,7 +28510,7 @@ class VoiceLeg(BaseModel):
     direction: VoiceCallDirection
     from_: Annotated[str, Field(
         alias="from",
-        description="Calling party number in E.164 format.",
+        description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
         examples=[+14155551234],
         min_length=1,
     )]
