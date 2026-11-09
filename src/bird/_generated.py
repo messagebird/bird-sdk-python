@@ -28267,6 +28267,13 @@ class VoiceParty(BaseModel):
         description="This side's own address, in E.164 or as a `sip:` URI. `null` when the observation carried none, which does not say whether one was withheld, missing, or nonexistent.",
         examples=[+14155551234],
     )] = None
+    overdial_suffix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Digits dialled after this party's number, including leading zeroes. Absent when no overdial was received.",
+        max_length=16,
+        min_length=1,
+        pattern="^[0-9]+$",
+    )] = None
     trunk_id: Annotated[Optional[str], Field(
         description="The workspace trunk on this side of the leg. `null` when this side sat behind no trunk.",
         examples=["spt_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -28542,6 +28549,13 @@ class VoiceLeg(BaseModel):
         examples=[+16505559876],
         min_length=1,
     )]
+    overdial_suffix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Digits appended to this leg's destination number, preserving leading zeroes. Absent for a call without overdial.",
+        max_length=16,
+        min_length=1,
+        pattern="^[0-9]+$",
+    )] = None
     actor: Annotated[Optional[Actor], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Who placed the leg: the API key whose credentials it used, the integration acting for the workspace, or the user who placed it from a browser or the CLI. Absent when the leg was admitted only by its source IP address, or when no actor was recorded.",
@@ -30622,6 +30636,13 @@ class VoiceSequenceSavedExecutionParty(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         max_length=128,
         min_length=1,
+    )] = None
+    overdial_suffix: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Digits appended to the destination number; leading zeroes are preserved. Only the destination party supplies this fact; a value on the origin is ignored.",
+        max_length=16,
+        min_length=1,
+        pattern="^[0-9]+$",
     )] = None
 
 
