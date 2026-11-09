@@ -31,7 +31,7 @@ class EmailTemplatesBroadcasts(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailTemplateBroadcastSummary]:
-        """List the broadcasts that block deleting a template, newest first."""
+        """List the broadcasts that block deleting a template, newest first. A Verify configuration pinning the template as its custom email sender's body also blocks the delete but is not listed here; it is cleared in the dashboard's Verify settings."""
         query = {
             "limit": limit,
             "starting_after": starting_after,
@@ -50,7 +50,7 @@ class AsyncEmailTemplatesBroadcasts(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailTemplateBroadcastSummary]:
-        """List the broadcasts that block deleting a template, newest first."""
+        """List the broadcasts that block deleting a template, newest first. A Verify configuration pinning the template as its custom email sender's body also blocks the delete but is not listed here; it is cleared in the dashboard's Verify settings."""
         query = {
             "limit": limit,
             "starting_after": starting_after,

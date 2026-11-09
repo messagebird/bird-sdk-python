@@ -65,8 +65,11 @@ class Amb(AmbBase):
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
         Supply ``text``, ``rich_link`` or ``interactive`` (the last two optionally
-        with ``text``, sent first as its own bubble), or a stored ``template`` (by
-        id or slug, with optional ``language`` and ``parameters``).
+        with ``text``), or a stored ``template`` (by id or slug, with optional
+        ``language`` and ``parameters``). Beside ``interactive``, ``text`` is sent
+        first as its own bubble. Beside ``rich_link``, the card takes the place of
+        the first copy of its URL in ``text``, splitting the text around it, or
+        follows the text when the URL is absent.
 
         Example:
             message = bird.amb.send(
@@ -117,8 +120,11 @@ class AsyncAmb(AsyncAmbBase):
     ) -> AMBMessage:
         """Reply to an open conversation as a configured, connected business account.
         Supply ``text``, ``rich_link`` or ``interactive`` (the last two optionally
-        with ``text``, sent first as its own bubble), or a stored ``template`` (by
-        id or slug, with optional ``language`` and ``parameters``).
+        with ``text``), or a stored ``template`` (by id or slug, with optional
+        ``language`` and ``parameters``). Beside ``interactive``, ``text`` is sent
+        first as its own bubble. Beside ``rich_link``, the card takes the place of
+        the first copy of its URL in ``text``, splitting the text around it, or
+        follows the text when the URL is absent.
 
         Example:
             message = await bird.amb.send(
