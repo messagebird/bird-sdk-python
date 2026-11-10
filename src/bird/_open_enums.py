@@ -411,6 +411,19 @@ class EmailLookupResult:
     VALID: Final = "valid"
 
 
+class EmailRejectionReason:
+    """Values of EmailRejectionReason known at this SDK version (open enum)."""
+
+    DOMAIN_UNVERIFIED: Final = "domain_unverified"
+    GENERATION_FAILURE: Final = "generation_failure"
+    POLICY_REJECTION: Final = "policy_rejection"
+    QUOTA_EXCEEDED: Final = "quota_exceeded"
+    RECIPIENT_NOT_ALLOWED: Final = "recipient_not_allowed"
+    RECIPIENT_SUPPRESSED: Final = "recipient_suppressed"
+    TRANSMISSION_FAILED: Final = "transmission_failed"
+    WORKSPACE_SUSPENDED: Final = "workspace_suspended"
+
+
 class EmailTemplateParameterType:
     """Values of EmailTemplateParameterType known at this SDK version (open enum)."""
 
@@ -595,6 +608,7 @@ class SMSErrorCode:
     SENDER_UNREGISTERED: Final = "sender_unregistered"
     UNKNOWN: Final = "unknown"
     UNREACHABLE: Final = "unreachable"
+    WORKSPACE_SUSPENDED: Final = "workspace_suspended"
 
 
 class SMSKeywordOperation:
@@ -716,6 +730,7 @@ class VerificationAttemptFailureReason:
     NOT_BILLABLE: Final = "not_billable"
     SOFT_BOUNCE: Final = "soft_bounce"
     UNDELIVERED: Final = "undelivered"
+    WORKSPACE_SUSPENDED: Final = "workspace_suspended"
 
 
 class VerificationChannel:
@@ -892,6 +907,7 @@ class WhatsAppErrorCode:
     RECIPIENT_SUPPRESSED: Final = "recipient_suppressed"
     SERVICE_WINDOW_EXPIRED: Final = "service_window_expired"
     UNDELIVERABLE: Final = "undeliverable"
+    WORKSPACE_SUSPENDED: Final = "workspace_suspended"
 
 
 class WhatsAppEventType:
@@ -1166,6 +1182,7 @@ __all__ = [
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",
+    "EmailRejectionReason",
     "EmailTemplateParameterType",
     "EmailTemplateParameterValueDomain",
     "EmailTemplateSource",

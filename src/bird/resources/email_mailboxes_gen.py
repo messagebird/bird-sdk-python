@@ -295,7 +295,7 @@ class EmailMailboxesBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailMailboxLabelList:
-        """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in use.
+        """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in the workspace, which all its mailboxes share.
 
         ```python
         labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
@@ -541,7 +541,7 @@ class AsyncEmailMailboxesBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailMailboxLabelList:
-        """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in use.
+        """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in the workspace, which all its mailboxes share.
 
         ```python
         labels = await client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")

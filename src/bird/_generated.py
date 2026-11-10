@@ -283,6 +283,10 @@ class Workspace(BaseModel):
     logo_url: Annotated[Optional[str], Field(
         description="HTTPS URL to the current workspace logo. `null` when unset.",
     )] = None
+    suspended_at: Annotated[Optional[str], Field(
+        description="When Bird suspended the workspace. `null` while the workspace is active. A suspended workspace cannot send messages, place calls other than emergency calls, or buy numbers or eSIMs. Its members can still sign in, read it and change its configuration.",
+        examples=["null"],
+    )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
@@ -1851,6 +1855,7 @@ class SMSErrorCode(str, Enum):
     recipient_opted_out = "recipient_opted_out"
     provider_unavailable = "provider_unavailable"
     insufficient_balance = "insufficient_balance"
+    workspace_suspended = "workspace_suspended"
     unknown = "unknown"
 
 
@@ -2054,7 +2059,7 @@ class WhatsAppDeliveryStats(BaseModel):
         ge=0,
     )]
     rejected: Annotated[int, Field(
-        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
+        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, the wallet could not fund the send, or the workspace is suspended. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
         examples=[412],
         ge=0,
     )]
@@ -2219,7 +2224,7 @@ class WhatsAppDeliveryCounts(BaseModel):
         ge=0,
     )]
     rejected: Annotated[int, Field(
-        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, or the wallet could not fund the send. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
+        description="Distinct messages rejected before any send attempt, because the recipient is on the workspace's suppression list, no reachable recipient was given, the destination has no price, the wallet could not fund the send, or the workspace is suspended. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `failure_rate`, which covers send failures only.",
         examples=[412],
         ge=0,
     )]
@@ -2348,6 +2353,7 @@ class WhatsAppErrorCode(str, Enum):
     rate_limited = "rate_limited"
     recipient_suppressed = "recipient_suppressed"
     media_rejected = "media_rejected"
+    workspace_suspended = "workspace_suspended"
 
 
 class WhatsAppErrorCodeStatsPoint(BaseModel):
@@ -2493,12 +2499,12 @@ class AMBOutboundStatsCounts(BaseModel):
         ge=0,
     )]
     send_failed: Annotated[int, Field(
-        description="Distinct accepted messages that Apple refused or that exhausted their send attempts. See `last_error.code` on the message for the reason; a refused charge is not a send failure, it is `rejected`.",
+        description="Distinct accepted messages that Apple refused, that exhausted their send attempts, or that a workspace suspension stopped. See `last_error.code` on the message for the reason; a refused charge is not a send failure, it is `rejected`.",
         examples=[30],
         ge=0,
     )]
     rejected: Annotated[int, Field(
-        description="Distinct messages refused before any send attempt, because the destination has no price, the wallet could not fund the send, or the content cannot be sent yet. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `send_failure_rate`, which covers send failures only.",
+        description="Distinct messages refused before any send attempt, because the destination has no price, the wallet could not fund the send, the workspace is suspended, or the content cannot be sent yet. Rejected messages are never charged and are not counted in `accepted`, so the total addressed is `accepted + rejected`. Excluded from `send_failure_rate`, which covers send failures only.",
         examples=[4],
         ge=0,
     )]
@@ -3008,6 +3014,7 @@ class VerificationAttemptFailureReason(str, Enum):
     channel_restricted = "channel_restricted"
     delivery_timeout = "delivery_timeout"
     not_billable = "not_billable"
+    workspace_suspended = "workspace_suspended"
 
 
 class WorkspaceSortField(str, Enum):
@@ -3820,6 +3827,7 @@ class EmailRecipientRejectionReason(str, Enum):
     domain_unverified = "domain_unverified"
     quota_exceeded = "quota_exceeded"
     recipient_not_allowed = "recipient_not_allowed"
+    workspace_suspended = "workspace_suspended"
 
 
 class EmailRecipientBounceType(str, Enum):
@@ -3869,7 +3877,7 @@ class EmailRecipient(BaseModel):
         min_length=1,
     )]
     rejection_reason: Annotated[Optional[EmailRecipientRejectionReason], Field(
-        description="Present on `status: rejected` rows. Specifies why the recipient was rejected:\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).",
+        description="Present on `status: rejected` rows. Specifies why the recipient was rejected:\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).\n- `workspace_suspended`: The workspace is suspended, so this mail was not sent and will not be sent after reactivation. Contact Bird support to reactivate the workspace.",
     )] = None
     bounce_type: Annotated[Optional[EmailRecipientBounceType], Field(
         description="Bounce classification for `bounced` and `deferred` rows, or null when the recipient\nhas not bounced or the receiving server's response has not been classified.\n\n- `hard`: a permanent failure (invalid address or non-existent domain).\n- `soft`: a transient failure (mailbox full or server temporarily unavailable).\n- `block`: the receiving mail server blocked the sending IP for reputation reasons.\n- `admin`: an administrative refusal (relaying denied or blocklisted domain).\n- `undetermined`: the receiving server's response is ambiguous.",
@@ -3966,6 +3974,7 @@ class EmailEventRejectionReason(str, Enum):
     domain_unverified = "domain_unverified"
     quota_exceeded = "quota_exceeded"
     recipient_not_allowed = "recipient_not_allowed"
+    workspace_suspended = "workspace_suspended"
 
 
 class EmailEvent(BaseModel):
@@ -4005,7 +4014,7 @@ class EmailEvent(BaseModel):
         description="The bounce reason, in plain language, as reported by the mail server. Present on `email.bounced` and `email.deferred` events.",
     )] = None
     rejection_reason: Annotated[Optional[EmailEventRejectionReason], Field(
-        description="Specific cause of rejection. Present on `email.rejected` events only.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery, because of a template or content issue.\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: This recipient was not allowed for this send. For a send from the shared onboarding domain, every recipient has to be a verified member of the workspace.",
+        description="Specific cause of rejection. Present on `email.rejected` events only.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery, because of a template or content issue.\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: This recipient was not allowed for this send. For a send from the shared onboarding domain, every recipient has to be a verified member of the workspace.\n- `workspace_suspended`: The workspace is suspended, so this mail was not sent and will not be sent after reactivation. Contact Bird support to reactivate the workspace.",
     )] = None
     sending_ip: Annotated[Optional[str], Field(
         description="The IP address used to send this message. Useful for spotting a deliverability problem that is tied to one specific sending IP rather than affecting all of them. Present on `email.delivered`, `email.bounced`, `email.out_of_band_bounce`, and `email.deferred` events.",
@@ -4146,7 +4155,7 @@ class EmailBroadcastFundingHoldReason(str, Enum):
 
 
 class EmailBroadcastFundingHold(BaseModel):
-    "Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nFunding recovery is declared ahead of server support. The send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nThe automatic wait lasts at most 20 minutes from the first time sending stops for funds. Later stops and top-ups do not extend it. Resuming a paused broadcast starts a new wait for any later stop."
+    "Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nThe send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nEach interruption can wait up to 20 minutes for funds. Checks, refused batches and partial top-ups during the same interruption do not extend its deadline. Automatic continuation or an explicit resume clears the hold; if sending later stops for funds again, a new 20-minute wait begins."
     model_config = ConfigDict(extra="allow")
     reason: Annotated[EmailBroadcastFundingHoldReason, Field(
         description="Why sending stopped for funds.\n\n- `automatic_top_up`: Sending stopped while automatic top-up was active. Sending can continue automatically when a funding check succeeds before `wait_until`.\n- `funds_required`: Sending stopped because your balance cannot pay for more email. While `waiting_for_funds`, a manual or automatic top-up can restart sending before `wait_until`. If the broadcast is `paused`, add funds if needed, then resume it.\n- `wait_expired`: Status is `paused`. The automatic wait ended before sending continued. Add funds if needed, then resume the broadcast.",
@@ -4294,6 +4303,7 @@ class EmailBroadcastFailureReason(str, Enum):
     insufficient_funds = "insufficient_funds"
     quota_exceeded = "quota_exceeded"
     internal_error = "internal_error"
+    workspace_suspended = "workspace_suspended"
 
 
 class EmailBroadcast(BaseModel):
@@ -4325,7 +4335,7 @@ class EmailBroadcast(BaseModel):
     )] = None
     html_bytes: Annotated[Optional[int], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Size of the HTML body this broadcast sends, in bytes, or 0 when its content has no HTML part. Measured on the template version the broadcast sends, using the selected language. Recipient merge values can change its size. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which measure the content. Absent too when the broadcast has no template or its content can no longer be read.",
+        description="Size of the HTML body this broadcast sends, in bytes, or 0 when its content has no HTML part. Measured on the template version the broadcast sends, using the selected language. Recipient merge values can change its size. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending, resuming or canceling one returns, none of which measure the content. Absent too when the broadcast has no template or its content can no longer be read.",
         examples=[18432],
         ge=0,
     )] = None
@@ -4351,7 +4361,7 @@ class EmailBroadcast(BaseModel):
     )] = None
     headers: Annotated[Optional[Dict[str, str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Any custom email headers set on the broadcast. Returned on a single broadcast read and on the broadcast that creating, updating, sending or canceling one returns, and absent from the list. The unsubscribe headers we add ourselves are not included.",
+        description="Any custom email headers set on the broadcast. Returned on a single broadcast read and on the broadcast that creating, updating, sending, resuming or canceling one returns, and absent from the list. The unsubscribe headers we add ourselves are not included.",
     )] = None
     status: Annotated[EmailBroadcastStatus, Field(
         description="Where the broadcast itself has got to, separate from what happened to individual recipients: for that, read `sent_count`, `delivered_count`, `bounced_count` and `complained_count` below. When it is `failed`, `failure_reason` says why. When it is `waiting_for_funds` or `paused`, `funding_hold` says why and what happens next.",
@@ -4359,14 +4369,14 @@ class EmailBroadcast(BaseModel):
     )]
     funding_hold: Annotated[Optional[EmailBroadcastFundingHold], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nFunding recovery is declared ahead of server support. The send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nThe automatic wait lasts at most 20 minutes from the first time sending stops for funds. Later stops and top-ups do not extend it. Resuming a paused broadcast starts a new wait for any later stop.",
+        description="Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nThe send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nEach interruption can wait up to 20 minutes for funds. Checks, refused batches and partial top-ups during the same interruption do not extend its deadline. Automatic continuation or an explicit resume clears the hold; if sending later stops for funds again, a new 20-minute wait begins.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="What to do next about this broadcast, given the state it is in. Each entry names one action and\nsays why it is worth taking. Present on reads that compute it: an empty list means there is\nnothing to do, and the field is absent entirely on responses that do not report next actions.",
+        description="What to do next about this broadcast, given the state it is in. Each entry names one action and\nsays why it is worth taking. Responses that compute next actions include this field: an empty list means there is\nnothing to do. Other responses omit it.",
     )] = None
     failure_reason: Annotated[Optional[EmailBroadcastFailureReason], Field(
-        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` explains what went wrong. It is one of these:\n  - The broadcast has no template, or the template it uses no longer exists. Choose an existing template and send the broadcast again.\n  - The template has no published version, or its published version has no subject and no body. Publish the template, or add content and publish it.\n  - The template uses a loop or reads a value that a broadcast cannot provide. Remove it, or use a contact property instead, then publish the template again.\n  - The template requires a language, but the broadcast has not selected one. Set `template.language` to one of the template's languages and send the broadcast again.\n  - The selected language is not available on the published template version. Choose one of that version's languages, or publish a version that includes the selected language.\n  - The sending domain is no longer verified. Verify the domain again.\n  - The configured IP pool has no usable IP address.\n  - We could not hand the prepared message to the delivery system. This is a problem on our side.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.",
+        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` explains what went wrong. It is one of these:\n  - The broadcast has no template, or the template it uses no longer exists. Choose an existing template and send the broadcast again.\n  - The template has no published version, or its published version has no subject and no body. Publish the template, or add content and publish it.\n  - The template uses a loop or reads a value that a broadcast cannot provide. Remove it, or use a contact property instead, then publish the template again.\n  - The template requires a language, but the broadcast has not selected one. Set `template.language` to one of the template's languages and send the broadcast again.\n  - The selected language is not available on the published template version. Choose one of that version's languages, or publish a version that includes the selected language.\n  - The sending domain is no longer verified. Verify the domain again.\n  - The configured IP pool has no usable IP address.\n  - We could not hand the prepared message to the delivery system. This is a problem on our side.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.\n- `workspace_suspended`: The workspace is suspended, so the broadcast stopped sending. Recipients not yet sent to are not sent to, even after reactivation. Contact Bird support to reactivate the workspace.",
         examples=["null"],
     )] = None
     failure_detail: Annotated[Optional[str], Field(
@@ -4380,7 +4390,7 @@ class EmailBroadcast(BaseModel):
     )]
     sent_count: Annotated[Optional[int], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending or canceling it, none of which read the counters. List and single-broadcast reads return 0 when no delivery events are recorded. When counters are unavailable, those reads still return 200 and omit the counters. Read the broadcast again for the numbers.",
+        description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending, resuming or canceling it, none of which read the counters. List and single-broadcast reads return 0 when no delivery events are recorded. When counters are unavailable, those reads still return 200 and omit the counters. Read the broadcast again for the numbers.",
         examples=[4820],
         ge=0,
     )] = None
@@ -4416,7 +4426,7 @@ class EmailBroadcast(BaseModel):
     )] = None
     sending_ips: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The IP addresses this broadcast's messages went out from, up to 100 of them. A broadcast is spread across every address in its pool, so more than one can appear. The receiving mail systems name the address when they deliver, bounce or defer a message, so this stays absent until the first of those comes back. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending or canceling one returns, none of which read them. For delivery and latency broken down per address, read the sending-IP stats.",
+        description="The IP addresses this broadcast's messages went out from, up to 100 of them. A broadcast is spread across every address in its pool, so more than one can appear. The receiving mail systems name the address when they deliver, bounce or defer a message, so this stays absent until the first of those comes back. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending, resuming or canceling one returns, none of which read them. For delivery and latency broken down per address, read the sending-IP stats.",
     )] = None
     unique_opens_non_prefetched: Annotated[Optional[int], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -4763,7 +4773,7 @@ class EmailBroadcastInsufficientFundsBehavior(str, Enum):
 
 
 class EmailBroadcastSendQuota(BaseModel):
-    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\nThe optional `can_start` and `on_insufficient_funds` fields are declared ahead of server support for funding recovery. If `can_start` is absent, use `allowed` to check the current allowance and do not assume automatic waiting or resumability. An absent field is different from `can_start: false`, which explicitly says the broadcast cannot start.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit. `on_insufficient_funds` says what happens if the balance runs out mid-send. Like `limit_reason`, it is present only when you have `org:billing` read access."
+    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\nServers that support funding recovery return `can_start`; callers with billing read access also receive `on_insufficient_funds`. If `can_start` is absent, use `allowed` to check the current allowance and do not assume automatic waiting or resumability. An absent field is different from `can_start: false`, which explicitly says the broadcast cannot start.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit. `on_insufficient_funds` says what happens if the balance runs out mid-send. Like `limit_reason`, it is present only when you have `org:billing` read access."
     model_config = ConfigDict(extra="allow")
     recipients: Annotated[int, Field(
         description="Number of contacts the broadcast could reach now. Excludes contacts without an email address and contacts suppressed for the broadcast's category. Matches the sendable count from the broadcast's audience counts.",
@@ -4771,7 +4781,7 @@ class EmailBroadcastSendQuota(BaseModel):
         ge=0,
     )]
     allowed: Annotated[int, Field(
-        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients are currently covered. This happens if the audience exceeds the full email limit, which rejects the send, or if the remaining allowance cannot cover a batch. When `can_start` is present, use it to decide whether a balance-limited broadcast can start and wait for funds. If it is absent, a zero allowance does not provide a way to send.",
+        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients are currently covered. This happens if the audience exceeds a full daily or funded monthly limit, if a temporary funding restriction blocks sending, or if the remaining allowance cannot cover a batch. When `can_start` is present, use it to decide whether a balance-limited broadcast can start and wait for funds. If it is absent, a zero allowance does not provide a way to send.",
         examples=[5000],
         ge=0,
     )]
@@ -4792,7 +4802,7 @@ class EmailBroadcastSendQuota(BaseModel):
     )] = None
     resets_at: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="When usage resets to 0 for the email limit identified by `limited_by`, evaluated at `send_at`, or now if you omit it.\n\nA broadcast sent before this time uses the same window and the allowance left after other sends. A broadcast sent at or after this time uses a new window. If `recipients` exceeds the full `limit`, the send is rejected in any window with that limit. Pass the later time as `send_at` to check whether the other email limit still restricts the send.\n\nOmitted when no email limit restricts the send, when the reset is at or before `send_at`, or when the billing period has ended and the next one has not started.",
+        description="When usage resets to 0 for the email limit identified by `limited_by`, evaluated at `send_at`, or now if you omit it.\n\nA broadcast sent before this time uses the same window and the allowance left after other sends. A broadcast sent at or after this time uses a new window. If `recipients` exceeds a full daily or funded monthly limit, the send is rejected in any window with that limit. When `limit_reason` is `unfunded`, the reported `limit` can instead be a temporary funding restriction; use `can_start`, when present, to determine whether the broadcast can start and wait for funds. Pass the later time as `send_at` to check whether the other email limit still restricts the send.\n\nOmitted when no email limit restricts the send, when the reset is at or before `send_at`, or when the billing period has ended and the next one has not started.",
         examples=["2026-09-01T00:00:00Z"],
         min_length=1,
     )] = None
@@ -4806,11 +4816,11 @@ class EmailBroadcastSendQuota(BaseModel):
     )] = None
     on_insufficient_funds: Annotated[Optional[EmailBroadcastInsufficientFundsBehavior], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Declared ahead of server support for funding recovery. When returned in the send-allowance response, this describes what a broadcast does if your balance runs out while it is sending. Recipients already sent to are not affected either way.\n\n- `wait_for_top_up`: The broadcast waits up to 20 minutes for a manual or automatic top-up. It checks once a minute and continues by itself when funds cover the next batch of recipients, then pauses if the wait ends. Waiting does not change your automatic top-up settings or initiate a payment.\n- `pause`: The broadcast pauses until you add funds and resume it.",
+        description="When returned in the send-allowance response, this describes what a broadcast does if your balance runs out while it is sending. Recipients already sent to are not affected either way.\n\n- `wait_for_top_up`: The broadcast waits up to 20 minutes for a manual or automatic top-up. It checks once a minute and continues by itself when the insufficient-funds restriction clears, then pauses if the wait ends. Waiting does not change your automatic top-up settings or initiate a payment.\n- `pause`: The broadcast pauses until you add funds and resume it.",
     )] = None
     can_start: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="When present, whether the organization's email limits let this broadcast start at `send_at`, or now if you omit it. A balance that cannot pay for the next batch does not make this `false`: once started, the broadcast waits or pauses until funds return, as `on_insufficient_funds` describes.\n\nIt is `false` when no recipient would be sent, including when the audience exceeds the full daily or monthly limit or none of that limit remains. A `true` value does not reserve allowance or promise that every recipient is sent. Other checks still apply when you send.",
+        description="When present, whether the organization's email limits let this broadcast start at `send_at`, or now if you omit it. This ignores a temporary funding restriction, including exhausted included volume when paid overage is available. It still checks daily limits and the monthly limit that applies after funding is restored.\n\nIt is `false` when no recipient fits the daily or funded monthly limits, including when the audience exceeds a full daily or funded monthly limit, or when usage has exhausted either limit. The response field `remaining` can instead reflect the temporary funding restriction: with `limit_reason: unfunded`, `remaining: 0` can accompany `can_start: true` if those daily and funded monthly limits allow sending. The broadcast can then start and wait for funds. A `true` value does not reserve allowance or promise that every recipient is sent. Other checks still apply when you send.",
         examples=[True],
     )] = None
 
@@ -6077,7 +6087,7 @@ class SMSError(BaseModel):
     "Failure detail for a message that could not be delivered or was rejected."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[SMSErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason:\n\n- `invalid_destination`: The number is unassigned, ported out, or malformed.\n- `unreachable`: The handset is off or outside coverage.\n- `blocked_by_carrier`: The carrier filtered the message.\n- `blocked_by_fraud_protection`: Bird fraud protection blocked suspected SMS pumping.\n- `blocked_by_recipient`: The recipient device blocked the sender.\n- `landline_unreachable`: The destination is a landline that does not accept SMS.\n- `content_rejected`: The carrier rejected the content.\n- `sender_unregistered`: The sender is not registered for the destination.\n- `recipient_opted_out`: The recipient is on a suppression list.\n- `provider_unavailable`: The provider remained unavailable after retries.\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `unknown`: The failure could not be classified.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Standardized failure reason:\n\n- `invalid_destination`: The number is unassigned, ported out, or malformed.\n- `unreachable`: The handset is off or outside coverage.\n- `blocked_by_carrier`: The carrier filtered the message.\n- `blocked_by_fraud_protection`: Bird fraud protection blocked suspected SMS pumping.\n- `blocked_by_recipient`: The recipient device blocked the sender.\n- `landline_unreachable`: The destination is a landline that does not accept SMS.\n- `content_rejected`: The carrier rejected the content.\n- `sender_unregistered`: The sender is not registered for the destination.\n- `recipient_opted_out`: The recipient is on a suppression list.\n- `provider_unavailable`: The provider remained unavailable after retries.\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `workspace_suspended`: The workspace is suspended, so Bird stopped this message and will not send it after reactivation. In rare cases an earlier attempt that Bird could not confirm may still have been delivered. A message refused after it was charged keeps its charge. Contact Bird support to reactivate the workspace.\n- `unknown`: The failure could not be classified.\n\nThis is an open enum. Accept unrecognized values.",
     )]
     description: Annotated[str, Field(
         description="The failure in words: the provider's reason text, or Bird's explanation for a fraud protection block or a message refused before submission. Free-form, so branch on `code` and show this to a human.",
@@ -10503,7 +10513,7 @@ class WhatsAppError(BaseModel):
     "Failure detail for a message that could not be delivered or was rejected."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[WhatsAppErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n\nThis is an open enum. Accept unrecognized values.",
+        description="Standardized failure reason:\n\n- `insufficient_balance`: The workspace wallet could not fund the send.\n- `price_not_found`: No price was configured for the destination and template.\n- `internal_error`: An unexpected service failure occurred.\n- `undeliverable`: The recipient could not be reached.\n- `service_window_expired`: The 24-hour service window closed; send a template.\n- `rate_limited`: The send was throttled.\n- `recipient_suppressed`: The recipient is on the workspace suppression list.\n- `media_rejected`: WhatsApp could not fetch the media URL, or refused the file it found there; `description` carries its reason.\n- `workspace_suspended`: The workspace is suspended, so Bird stopped this message and will not send it after reactivation. In rare cases an earlier attempt that Bird could not confirm may still have been delivered. A message refused after it was charged keeps its charge. Contact Bird support to reactivate the workspace.\n\nThis is an open enum. Accept unrecognized values.",
     )]
     description: Annotated[str, Field(
         description="Human-readable explanation of the failure.",
@@ -13608,6 +13618,12 @@ class WhatsAppNumber(BaseModel):
         min_length=1,
         pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    meta_preverified_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="WhatsApp's own id for the number while we prepare it for you. We hand it to WhatsApp when you finish signing up, so WhatsApp knows this is the number we already verified for you. Absent for a number you brought yourself. WhatsApp discards the id once signup claims it, so an id still shown here on a connected number no longer names anything.",
+        examples=[106540352242922],
+        min_length=1,
+    )] = None
     verified_until: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="When we expect WhatsApp to release this pre-verified number if you have not finished signup by then. Present only while the number is `awaiting_signup`. Absent for a number pre-verified before we started recording this moment, and for a number you brought yourself.",
@@ -15741,7 +15757,7 @@ class AMBMessage(BaseModel):
         description="Whether a message was sent by the business or received from the customer:\n\n- `outbound`: A reply the business sent into the conversation.\n- `inbound`: A message the customer sent.",
     )]
     status: Annotated[AMBMessageStatus, Field(
-        description="Send status:\n\n- `accepted`: Accepted and queued for delivery to Apple.\n- `sent`: Handed to Apple. There is no delivery or read receipt on this\n  channel, so `sent` is the furthest an outbound message's status\n  advances.\n- `send_failed`: Sending stopped because of a business or conversation\n  restriction, a recipient opt-out, an Apple refusal, or exhausted attempts.\n  An earlier attempt may have reached Apple if its response or the local\n  record of success was lost. See `last_error` for why sending stopped.\n- `rejected`: Refused by Bird before any send attempt and never charged:\n  the destination has no price, the wallet could not fund the send, or the\n  content cannot be sent yet. See `last_error`.\n- `received`: Received as an inbound message.",
+        description="Send status:\n\n- `accepted`: Accepted and queued for delivery to Apple.\n- `sent`: Handed to Apple. There is no delivery or read receipt on this\n  channel, so `sent` is the furthest an outbound message's status\n  advances.\n- `send_failed`: Sending stopped because of a business or conversation\n  restriction, a recipient opt-out, an Apple refusal, a workspace\n  suspension, or exhausted attempts. A message stopped after it was charged\n  keeps its charge. An earlier attempt may have reached Apple if its\n  response or the local record of success was lost. See `last_error` for\n  why sending stopped.\n- `rejected`: Refused by Bird before any send attempt and never charged:\n  the destination has no price, the wallet could not fund the send, the\n  workspace is suspended, or the content cannot be sent yet. See\n  `last_error`.\n- `received`: Received as an inbound message.",
     )]
     kind: Annotated[AMBContentKind, Field(
         description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
@@ -23003,7 +23019,7 @@ class EmailThreadWritableFolder(str, Enum):
 
 
 class EmailThreadLabelsUpdate(BaseModel):
-    "Custom labels to add or remove. System and reserved names are refused; use read and folder for thread state. The resulting custom-label set must contain at most 20 labels; larger sets return 422."
+    "Custom labels to add or remove, or the full set to replace them with. Send `set` on its own; combining it with `add` or `remove` returns 422. System names are refused; use read and folder for thread state. Reserved names are refused too, except a label the conversation already carries from before its name was reserved, which can still be removed, and kept in a `set` in any casing. The resulting custom-label set must contain at most 20 labels; larger sets return 422. A custom name added or set that the workspace does not have yet becomes a workspace label that stays after it is removed from every conversation; once the workspace has 100 labels, a write that would create one more is refused with `E17058`. Custom label names match the workspace's labels in any casing, so adding `Urgent` where the workspace has `urgent` applies `urgent`, and responses return the workspace's spelling."
     model_config = ConfigDict(extra="allow")
     add: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -23013,6 +23029,11 @@ class EmailThreadLabelsUpdate(BaseModel):
     remove: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Labels to take off.",
+        max_length=20,
+    )] = None
+    set: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The custom labels the conversation should carry, replacing all of its current ones. An empty array removes every custom label.",
         max_length=20,
     )] = None
 
@@ -23030,7 +23051,7 @@ class EmailThreadUpdateRequest(BaseModel):
     )] = None
     labels: Annotated[Optional[EmailThreadLabelsUpdate], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Custom labels to add or remove. System and reserved names are refused; use read and folder for thread state. The resulting custom-label set must contain at most 20 labels; larger sets return 422.",
+        description="Custom labels to add or remove, or the full set to replace them with. Send `set` on its own; combining it with `add` or `remove` returns 422. System names are refused; use read and folder for thread state. Reserved names are refused too, except a label the conversation already carries from before its name was reserved, which can still be removed, and kept in a `set` in any casing. The resulting custom-label set must contain at most 20 labels; larger sets return 422. A custom name added or set that the workspace does not have yet becomes a workspace label that stays after it is removed from every conversation; once the workspace has 100 labels, a write that would create one more is refused with `E17058`. Custom label names match the workspace's labels in any casing, so adding `Urgent` where the workspace has `urgent` applies `urgent`, and responses return the workspace's spelling.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
         description="Contact to link this conversation to, or null to unlink the current contact.",
@@ -25116,6 +25137,7 @@ class EmailRejectionReason(str, Enum):
     domain_unverified = "domain_unverified"
     quota_exceeded = "quota_exceeded"
     recipient_not_allowed = "recipient_not_allowed"
+    workspace_suspended = "workspace_suspended"
 
 
 class EventEmailRejectedData(BaseModel):
@@ -25163,8 +25185,8 @@ class EventEmailRejectedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
-    rejection_reason: Annotated[EmailRejectionReason, Field(
-        description="Why an email was rejected before delivery.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).",
+    rejection_reason: Annotated[Annotated[Union[EmailRejectionReason, str], Field(union_mode="left_to_right")], Field(
+        description="Why an email was rejected before delivery.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).\n- `workspace_suspended`: The workspace is suspended, so this mail was not sent and will not be sent after reactivation. Contact Bird support to reactivate the workspace.",
     )]
 
 
@@ -26957,7 +26979,7 @@ class EventVerifyAttemptUndeliveredData(BaseModel):
         min_length=1,
     )]
     reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: A destination or session restriction prevented the\n  channel from being used. The verification can try the next eligible channel\n  while the session remains pending and unexpired.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
+        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: A destination or session restriction prevented the\n  channel from being used. The verification can try the next eligible channel\n  while the session remains pending and unexpired.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n- `workspace_suspended`: The workspace was suspended, so Bird stopped this\n  attempt and no other channel is tried. In rare cases the channel had already\n  accepted the passcode, so a passcode can still be checked while the\n  verification is `pending`. Contact Bird support to reactivate the workspace; verifications\n  created after reactivation send normally.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
     )]
     error: Annotated[Optional[str], Field(
         description="Diagnostic text describing the failure, for display only. Null when none was reported.",
@@ -27076,11 +27098,11 @@ class EventVerifyVerificationFailedData(BaseModel):
         description="Why a verification session reached its final state without succeeding: `attempts_exhausted` (too many incorrect passcodes), `ttl_elapsed` (the time window elapsed before a correct passcode), or `undeliverable` (no planned channel could deliver a passcode, so the recipient never had one to submit). Open enum: new reasons may be added over time, so treat any unrecognized value as a future reason rather than an error.",
     )]
     channel: Annotated[Optional[Annotated[Union[VerificationChannel, str], Field(union_mode="left_to_right")]], Field(
-        description="The last channel the verification tried, the one whose failure left it with nowhere else to go. Null when no channel was attributed.",
+        description="The last channel the verification tried, the one whose failure ended it. Null when no channel was attributed.",
         examples=["sms"],
     )]
     last_attempt_reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: A destination or session restriction prevented the\n  channel from being used. The verification can try the next eligible channel\n  while the session remains pending and unexpired.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
+        description="Why a passcode send did not deliver:\n\n- `carrier_rejected`: The SMS carrier rejected the send.\n- `hard_bounce`: The email permanently bounced.\n- `soft_bounce`: The email temporarily bounced, such as when a mailbox is full.\n- `undelivered`: The channel reported a generic delivery failure.\n- `channel_unavailable`: The channel could not be used, so the verification\n  moved to the next channel.\n- `channel_disabled`: Sending on the channel is temporarily disabled, so the\n  verification moved to the next channel.\n- `channel_restricted`: A destination or session restriction prevented the\n  channel from being used. The verification can try the next eligible channel\n  while the session remains pending and unexpired.\n- `delivery_timeout`: No delivery confirmation arrived before the channel's\n  timeout, so the verification moved to the next channel.\n- `not_billable`: The send could not be charged, so it was never handed to the\n  channel. Usually the workspace balance is too low to cover it. Topping up\n  the balance is what clears this.\n- `workspace_suspended`: The workspace was suspended, so Bird stopped this\n  attempt and no other channel is tried. In rare cases the channel had already\n  accepted the passcode, so a passcode can still be checked while the\n  verification is `pending`. Contact Bird support to reactivate the workspace; verifications\n  created after reactivation send normally.\n\nNew reasons may be added over time. Treat unrecognized values as reasons added\nlater rather than errors.",
     )]
     failed_at: Annotated[str, Field(
         description="Time the verification was resolved.",
@@ -27090,7 +27112,7 @@ class EventVerifyVerificationFailedData(BaseModel):
 
 
 class EventVerifyVerificationFailed(BaseModel):
-    "The verification ended without the recipient receiving a passcode: every planned channel reported that its send would not arrive."
+    "The verification ended without the recipient receiving a passcode: no channel Bird tried sent one, and Bird tries no further channel."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["verify.verification.failed"], Field(
         description="Always `verify.verification.failed` for this event.",

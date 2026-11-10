@@ -623,6 +623,7 @@ from bird._open_enums import (
     EmailCompetitiveCampaignSignal,
 
     EmailEventType,
+    EmailRejectionReason,
     EmailLookupFlag,
     EmailLookupReason,
     EmailLookupResult,
@@ -1334,6 +1335,7 @@ __all__ = [
     "EmailTemplateUseKind",
     "EmailTemplateParameterValueDomain",
     "EmailEventType",
+    "EmailRejectionReason",
     "EmailLookupFlag",
     "EmailLookupReason",
     "EmailLookupResult",

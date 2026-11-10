@@ -69,7 +69,7 @@ class EmailTemplatesVersionsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateVersion:
-        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`."""
+        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`. A deleted workspace template's published versions remain readable by template ID; its slug and draft do not."""
         return self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},
@@ -176,7 +176,7 @@ class AsyncEmailTemplatesVersionsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateVersion:
-        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`."""
+        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`. A deleted workspace template's published versions remain readable by template ID; its slug and draft do not."""
         return await self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},

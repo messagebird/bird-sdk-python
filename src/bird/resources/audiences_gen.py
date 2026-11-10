@@ -192,7 +192,7 @@ class Audiences(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete an audience and its memberships; contacts themselves are not deleted. Fails while a broadcast targeting the audience is scheduled, accepted, sending, or canceling.
+        """Delete an audience and its memberships; contacts themselves are not deleted. Fails while a broadcast targeting the audience is scheduled, accepted, sending, waiting_for_funds, paused, or canceling.
 
         ```python
         client.audiences.delete("adn_01krdgeqcxet5s7t44vh8rt9mg")
@@ -459,7 +459,7 @@ class AsyncAudiences(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete an audience and its memberships; contacts themselves are not deleted. Fails while a broadcast targeting the audience is scheduled, accepted, sending, or canceling.
+        """Delete an audience and its memberships; contacts themselves are not deleted. Fails while a broadcast targeting the audience is scheduled, accepted, sending, waiting_for_funds, paused, or canceling.
 
         ```python
         await client.audiences.delete("adn_01krdgeqcxet5s7t44vh8rt9mg")

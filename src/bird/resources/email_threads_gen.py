@@ -19,6 +19,7 @@ from bird.pagination import AsyncPage, SyncPage
 class EmailThreadLabelsUpdate(TypedDict, total=False):
     add: Sequence[str]
     remove: Sequence[str]
+    set: Sequence[str]
 
 
 class EmailThreadsListParams(TypedDict, total=False):
