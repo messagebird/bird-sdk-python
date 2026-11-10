@@ -26318,7 +26318,7 @@ class EventSMSFailedData(BaseModel):
 
 
 class EventSMSFailed(BaseModel):
-    "Message delivery failed permanently."
+    "The carrier reported that delivery failed for a reason not expected to clear. Bird does not retry the message, but a carrier report of another outcome that occurred later, such as `sms.delivered`, can follow."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.failed"], Field(
         description="Event type.",
@@ -26773,7 +26773,7 @@ class EventSMSUndeliveredData(BaseModel):
 
 
 class EventSMSUndelivered(BaseModel):
-    "The carrier reported a non-permanent failure to deliver the message."
+    "The carrier reported a non-permanent failure to deliver the message. Bird does not retry it, but a carrier report of another outcome that occurred later, such as `sms.delivered`, can follow."
     model_config = ConfigDict(extra="allow")
     type: Annotated[Literal["sms.undelivered"], Field(
         description="Event type.",

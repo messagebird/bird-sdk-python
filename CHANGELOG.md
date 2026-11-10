@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.131.1
+
+- Creating a number order now documents one exception to the non-refundable setup fee: it is refunded when the carrier delivers the number but it cannot be charged and is released, no sooner than 72 hours after the order was placed.
+- The `sms.failed` and `sms.undelivered` event docs no longer call them permanent or terminal: Bird does not retry such a message, but a carrier report of another outcome that occurred later arrives as its own event, such as `sms.delivered`. Keep the outcome with the latest `timestamp`.
+- Creating an SMS sender registration (`POST /v1/sms/senders/{sender_id}/registrations`) now documents that a `409` can mean the contract's billing frequency changed just before the call, which still charges the setup fee without keeping a registration, and to contact support instead of retrying.
+
 ## 0.131.0
 
 - **Breaking:** adding a custom label to a mailbox conversation (`client.email.threads.update`) now fails with E17058 when the label is new to the workspace and the workspace already uses 100 distinct labels. Applying a label the workspace already has keeps working, so a caller that reaches the cap can reuse one of the workspace's custom labels: listing a mailbox's labels (`client.email.mailboxes.labels`) returns them beside built-in labels such as `inbox` and `unread`, which label updates refuse, and getting a conversation (`client.email.threads.get`) shows its current labels.
