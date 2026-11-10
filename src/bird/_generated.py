@@ -22568,6 +22568,9 @@ class Mailbox(BaseModel):
     local_part_generated: Annotated[bool, Field(
         description="Whether we generated the local part of the address. `false` means a custom handle was chosen at creation. On the shared `inbox.ai` domain a custom handle counts against your plan's custom-handle allowance.",
     )]
+    last_message_at: Annotated[Optional[str], Field(
+        description="When the mailbox last sent or received a message. Bird records this activity from 26 August 2026, so compare `null` with `created_at`: a mailbox created after that date has had no activity, while an older one has had none since that date.",
+    )]
     created_at: Annotated[str, Field(
         description="When the mailbox was created.",
         min_length=1,

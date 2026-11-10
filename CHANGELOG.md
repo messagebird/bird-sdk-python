@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.132.0
+
+- Add `suspended_at` to workspaces: when Bird suspended the workspace, or `null` while it is active.
+
 ## 0.131.1
 
 - Creating a number order now documents one exception to the non-refundable setup fee: it is refunded when the carrier delivers the number but it cannot be charged and is released, no sooner than 72 hours after the order was placed.
