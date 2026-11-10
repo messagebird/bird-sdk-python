@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.0
+
+- **Breaking:** `Mailbox` gains the required `last_message_at`, when the mailbox last sent or received a message, recorded from 26 August 2026, where `null` on an older mailbox means no activity since that date; code that builds a `Mailbox` itself, such as a test fixture, must now set it.
+
 ## 0.132.0
 
 - Add `suspended_at` to workspaces: when Bird suspended the workspace, or `null` while it is active.
