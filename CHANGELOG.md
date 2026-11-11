@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.135.1
+
+- The SMS suppression model now says that a subscriber who opts out, opts back in and opts out again has two suppression records on file, not three.
+
 ## 0.135.0
 
 - **Breaking:** Upgrade the Python SDK before reading emergency compliance subjects created through the dashboard. Older SDKs cannot decode the new `number_emergency` subject kind.
