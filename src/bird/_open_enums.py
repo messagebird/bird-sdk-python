@@ -771,11 +771,15 @@ class VoiceLegRejectionReason:
     DESTINATION_NOT_ENABLED: Final = "destination_not_enabled"
     EMERGENCY_CAP_EXCEEDED: Final = "emergency_cap_exceeded"
     EMERGENCY_CARRIER_UNAVAILABLE: Final = "emergency_carrier_unavailable"
+    EMERGENCY_COUNTRY_MISMATCH: Final = "emergency_country_mismatch"
     EMERGENCY_NUMBER_INACTIVE: Final = "emergency_number_inactive"
     INSUFFICIENT_BALANCE: Final = "insufficient_balance"
     NO_ROUTE_FOUND: Final = "no_route_found"
     NUMBER_OWNERSHIP_NOT_VERIFIED: Final = "number_ownership_not_verified"
     ROUTING_NOT_CONFIGURED: Final = "routing_not_configured"
+    SEQUENCE_ARCHIVED: Final = "sequence_archived"
+    SEQUENCE_PAUSED: Final = "sequence_paused"
+    SEQUENCE_UNPUBLISHED: Final = "sequence_unpublished"
     SOURCE_NOT_ALLOWED: Final = "source_not_allowed"
 
 

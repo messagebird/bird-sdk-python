@@ -35,7 +35,7 @@ class ComplianceRequirements(Resource):
         identity_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> ComplianceRequirement:
-        """What one country asks for before it will approve one registration, with where each item stands and why any was refused. `subject_id` names the registration: a number's `nda_` id, an SMS sender registration's `scr_` id, or a party's `cid_` id. Without `subject_id` it answers the form with no submission behind it, every item unanswered except those `identity_id` prefills, and `program` turns required, because a country can run more than one and there is no registration to read it from. `satisfied` is whether every required item is approved or not applicable; `needs_input` separates items still waiting on you from answers already with a reviewer."""
+        """What one country asks for before it will approve one registration, with where each item stands and why any was refused. `subject_id` names the registration: a number's `nda_` id, an SMS sender registration's `scr_` id, an emergency service's `nes_` id, or a party's `cid_` id. Turn on emergency calling in the dashboard to create an emergency service, then use the `subject_id` in the number's `next` actions. Without `subject_id` it answers the form with no submission behind it, every item unanswered except those `identity_id` prefills, and `program` turns required, because a country can run more than one and there is no registration to read it from. `satisfied` is whether every required item is approved or not applicable; `needs_input` separates items still waiting on you from answers already with a reviewer."""
         return self._get(
             "/v1/compliance/requirements",
             {
@@ -61,7 +61,7 @@ class AsyncComplianceRequirements(AsyncResource):
         identity_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> ComplianceRequirement:
-        """What one country asks for before it will approve one registration, with where each item stands and why any was refused. `subject_id` names the registration: a number's `nda_` id, an SMS sender registration's `scr_` id, or a party's `cid_` id. Without `subject_id` it answers the form with no submission behind it, every item unanswered except those `identity_id` prefills, and `program` turns required, because a country can run more than one and there is no registration to read it from. `satisfied` is whether every required item is approved or not applicable; `needs_input` separates items still waiting on you from answers already with a reviewer."""
+        """What one country asks for before it will approve one registration, with where each item stands and why any was refused. `subject_id` names the registration: a number's `nda_` id, an SMS sender registration's `scr_` id, an emergency service's `nes_` id, or a party's `cid_` id. Turn on emergency calling in the dashboard to create an emergency service, then use the `subject_id` in the number's `next` actions. Without `subject_id` it answers the form with no submission behind it, every item unanswered except those `identity_id` prefills, and `program` turns required, because a country can run more than one and there is no registration to read it from. `satisfied` is whether every required item is approved or not applicable; `needs_input` separates items still waiting on you from answers already with a reviewer."""
         return await self._get(
             "/v1/compliance/requirements",
             {

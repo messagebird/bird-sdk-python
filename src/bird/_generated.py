@@ -8,6 +8,11 @@ from pydantic import ConfigDict, Field, RootModel
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     param: Annotated[str, Field(
@@ -179,11 +184,6 @@ class ErrorBody(BaseModel):
 class Error(BaseModel):
     model_config = ConfigDict(extra="allow")
     error: ErrorBody
-
-
-class SortOrder(str, Enum):
-    asc = "asc"
-    desc = "desc"
 
 
 class APIKeyID(RootModel[str]):
@@ -7665,7 +7665,7 @@ class ComplianceRequirementField(BaseModel):
         description="When this answer goes stale and must be supplied again. `null` when it does not expire.",
     )]
     editable_for_verifier_repair: Annotated[bool, Field(
-        description="Whether you may replace this accepted answer to correct the submission after external verification. This permission does not change its `state` or `reason`. Submit only answers whose content or attachment identity you change.",
+        description="Whether you may replace this accepted answer to correct the submission after external verification or update an approved emergency service address. This permission does not change its `state` or `reason`. Submit only answers whose content or attachment identity you change.",
     )]
     reason: Annotated[Optional[str], Field(
         description="Why this requirement was rejected, when it was. `null` otherwise.",
@@ -8382,6 +8382,7 @@ class AssetFolderUpdate(BaseModel):
 class ComplianceSubjectKind(str, Enum):
     sms_sender = "sms_sender"
     number = "number"
+    number_emergency = "number_emergency"
     identity = "identity"
 
 
@@ -8448,7 +8449,7 @@ class ComplianceRequirement(BaseModel):
         description="The registration these requirements are for, the same one you asked about. `null` when you asked without one, which is how a form read on its own says it is answering for nothing yet.",
         examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
-        pattern="^(scr|nda|cid)_[0-9a-hjkmnp-tv-z]{26}$",
+        pattern="^(scr|nda|nes|cid)_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     program: Annotated[Optional[Annotated[Union[ComplianceProgram, str], Field(union_mode="left_to_right")]], Field(
         description="The registration program these requirements belong to. `null` when the country runs no registration program at all, in which case nothing is required and the field list is empty.",
@@ -8469,7 +8470,7 @@ class ComplianceRequirement(BaseModel):
         description="Whether any submitted answer is awaiting or undergoing review. False after all answers have received verdicts. A closed verifier correction can remain unsatisfied with no review pending and no editable answers.",
     )]
     answers_editable: Annotated[bool, Field(
-        description="Whether you may change any answer, not only one that was refused or has gone stale. True for a number, business identity or SMS sender registration whose submission has not been approved yet, including answers awaiting review or already accepted, and for a closed submission when `resubmission_allowed` is true. An SMS sender registration goes to the carrier or registry when it is approved, so it stays editable only until then. A changed answer loses its verdict and is reviewed again. Send only the answers you change. False once the submission is approved: replace only answers in `fields` whose state is `not_supplied`, `rejected` or `expired`, or those marked `editable_for_verifier_repair`.",
+        description="Whether you may change any answer, not only one that was refused or has gone stale. True for a number, emergency calling service, business identity or SMS sender registration whose submission has not been approved yet, including answers awaiting review or already accepted, and for a closed submission when `resubmission_allowed` is true. An SMS sender registration goes to the carrier or registry when it is approved, so it stays editable only until then. A changed answer loses its verdict and is reviewed again. Send only the answers you change. False once the submission is approved: replace only answers in `fields` whose state is `not_supplied`, `rejected` or `expired`, or those marked `editable_for_verifier_repair`.",
     )]
     resubmission_allowed: Annotated[bool, Field(
         description="Whether Bird closed the previous submission but accepts corrected details for this registration. When `submission_id` is set, update that submission with your corrected answers and it is reviewed again. When `submission_id` is `null`, the form has changed since: create a new submission. `reason` says why the previous one was closed. False when nothing was closed, and when a closed submission cannot be sent again; contact support then.",
@@ -8550,13 +8551,13 @@ class ComplianceAnswer(BaseModel):
 class ComplianceSubmissionCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     subject_kind: Annotated[ComplianceSubjectKind, Field(
-        description="What is being registered.\n\n- `sms_sender`: a sender registered to send to one country.\n- `number`: a phone number you hold that needs ownership paperwork before it\n  can carry traffic.\n- `identity`: a business you operate as, registered once and reused by\n  later registrations that name it.",
+        description="What is being registered.\n\n- `sms_sender`: a sender registered to send to one country.\n- `number`: a phone number you hold that needs ownership paperwork before it\n  can carry traffic.\n- `number_emergency`: emergency calling on a dedicated number you hold. The\n  subject is created by turning emergency calling on for the number.\n- `identity`: a business you operate as, registered once and reused by\n  later registrations that name it.",
     )]
     subject_id: Annotated[str, Field(
-        description="What is being registered. For `sms_sender` this is the `scr_` id returned when you register a sender for a country. For `number` it is the `nda_` id of a dedicated number you hold, as returned by `GET /v1/numbers`. A shared short code (`nal_`) is not accepted: it is shared, so its ownership paperwork is not yours to file. For `identity` it is the `cid_` id of the party being registered, picked from the parties your workspace holds, as returned by `GET /v1/compliance/identities`.",
+        description="What is being registered. For `sms_sender` this is the `scr_` id returned when you register a sender for a country. For `number` it is the `nda_` id of a dedicated number you hold, as returned by `GET /v1/numbers`. For `number_emergency`, it is the `nes_` ID of the emergency service being registered. A shared short code (`nal_`) is not accepted: it is shared, so its ownership paperwork is not yours to file. For `identity` it is the `cid_` id of the party being registered, picked from the parties your workspace holds, as returned by `GET /v1/compliance/identities`.",
         examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
-        pattern="^(scr|nda|cid)_[0-9a-hjkmnp-tv-z]{26}$",
+        pattern="^(scr|nda|nes|cid)_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     program: Annotated[Annotated[Union[ComplianceProgram, str], Field(union_mode="left_to_right")], Field(
         description="The registration program a country runs. Available programs depend on the registered resource. An SMS sender registers under an authority regime (`alpha` or `numeric`). A phone number proves ownership under its number type (`mobile`, `local`, `national`, `short_code`, `short_code_fteu`, or `toll_free`), matching the values of `NumberType`. An identity registers your business itself under `business`, internationally: its coordinate's country is always `ZZ`. A value is therefore only meaningful alongside the subject it describes. More are added as coverage grows, so treat this as an open set rather than a fixed list.",
@@ -8645,7 +8646,7 @@ class ComplianceSubmission(BaseModel):
     subject_id: Annotated[str, Field(
         examples=["scr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
-        pattern="^(scr|nda|cid)_[0-9a-hjkmnp-tv-z]{26}$",
+        pattern="^(scr|nda|nes|cid)_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     program: Annotated[Union[ComplianceProgram, str], Field(union_mode="left_to_right")]
     country_code: Annotated[str, Field(
@@ -8680,7 +8681,7 @@ class ComplianceSubmission(BaseModel):
 
 
 class ComplianceSubmissionResupply(BaseModel):
-    "Replacement answers for an existing submission. Rejected, expired, or missing answers can\nbe supplied again; accepted answers normally cannot be changed. While the requirements\nresponse reports `answers_editable` with a `submission_id`, you can change any answer on that\nsubmission; send only the ones you change. With `submission_id` null, create a new submission instead.\n\nWhen the requirements response marks an accepted answer as `editable_for_verifier_repair`,\nyou can replace it during that open correction and before its deadline. Accepted-answer\nrepairs must change content; unchanged accepted entries are ignored. Rejected, expired,\nor missing answers follow the ordinary resupply rules, including same-value retries\nafter a grant is withdrawn. Supplied replacements are reviewed again."
+    "Replacement answers for an existing submission. Rejected, expired, or missing answers can\nbe supplied again; accepted answers normally cannot be changed. While the requirements\nresponse reports `answers_editable` with a `submission_id`, you can change any answer on that\nsubmission; send only the ones you change. With `submission_id` null, create a new submission instead.\n\nWhen the requirements response marks an accepted answer as `editable_for_verifier_repair`,\nyou can replace it during an open correction and before its deadline, or update an\napproved emergency service address. Accepted-answer\nrepairs must change content; unchanged accepted entries are ignored. Rejected, expired,\nor missing answers follow the ordinary resupply rules, including same-value retries\nafter a grant is withdrawn. Supplied replacements are reviewed again."
     model_config = ConfigDict(extra="allow")
     answers: Annotated[List[ComplianceAnswer], Field(min_length=1)]
 
@@ -13956,7 +13957,7 @@ class AMBBusinessAccount(BaseModel):
     )]
     status_reason: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Reason for the current operational suspension, when recorded. Review feedback is retained on the submission. May contain basic Markdown, such as emphasis and lists.",
+        description="Reason for the current rejection or suspension, when recorded. A rejection's feedback is here even when no submission carries it. May contain basic Markdown, such as emphasis and lists.",
         min_length=1,
     )] = None
     invitations_enabled: Annotated[bool, Field(
@@ -13979,7 +13980,7 @@ class AMBBusinessAccount(BaseModel):
     )] = None
     account_review_status: Annotated[Optional[Annotated[Union[AMBBusinessAccountReviewStatus, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Latest review outcome recorded by Bird staff.",
+        description="Latest review outcome, recorded by Bird staff or Bird's automated review. Absent while the business is a draft. `approved` can come without a submission, such as for a business that Apple approved under another messaging service provider before it moved to Bird.",
     )] = None
     finish_setup_url: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -14012,7 +14013,7 @@ class AMBBusinessAccountEvent(BaseModel):
     )]
     summary: Annotated[str, Field(min_length=1)]
     metadata: Annotated[Dict[str, Any], Field(
-        description="Details of the change. `source` identifies who recorded it, `customer`, `staff` or `automated_review`.",
+        description="Details of the change. `source` identifies who recorded it, `customer`, `staff` or `automated_review`. Status, review and suspension events have `from` and `to`, and `reason` when Bird staff recorded one. An automated review event has `submission_id` instead, and its feedback is on that submission. An invitation access event has `enabled`.",
     )]
     created_at: Annotated[str, Field(min_length=1)]
 
@@ -14197,7 +14198,7 @@ class AMBBusinessAccountUpdate(BaseModel):
     )] = None
     apple_business_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The Business ID Apple issued for this brand. Accepted only while the account has not yet been submitted and is connected. Updating it does not submit the business.",
+        description="The Business ID Apple issued for this brand. Accepted only while the account is a draft and connected, including after Bird staff return it to draft. Updating it does not submit the business.",
         examples=["b52d6267-2b62-4f8a-8842-0533d0f1dc07"],
         min_length=1,
     )] = None
@@ -22544,12 +22545,12 @@ class Mailbox(BaseModel):
         examples=["k7q2mzxw4h6p5ra3@eu1.inbound.bird.com"],
     )]
     name: Annotated[Optional[str], Field(
-        description="Sender name shown alongside the address in outgoing mail. `null` when unset.",
+        description="Optional sender name recipients see in the From header of outgoing mail. We recommend setting it so recipients can recognize the sender. `null` when unset.",
         examples=["Acme Concierge"],
         max_length=255,
     )]
     display_name: Annotated[Optional[str], Field(
-        description="Name shown to your team in the dashboard and tools. Defaults to `name` when no override is set. When `name` is unset, outgoing mail uses this value as the sender name.",
+        description="Name shown to your team in the dashboard and tools. Defaults to `name` when no override is set.",
         examples=["Customer Support"],
         max_length=255,
     )]
@@ -22612,7 +22613,7 @@ class Mailbox(BaseModel):
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="What to do next with this mailbox. The response that creates it suggests subscribing to the mail it receives. Forwarding-address setup suggests configuring the email provider. Other reads of one mailbox return an empty list, and lists omit it.",
+        description="What to do next with this mailbox. The response that creates it suggests subscribing to the mail it receives. Forwarding-address setup suggests configuring the email provider. Create and update responses recommend setting the sender name when it is unset. Other single-mailbox responses return an empty list, and lists omit this field.",
     )] = None
 
 
@@ -22666,13 +22667,13 @@ class MailboxCreate(BaseModel):
     )] = None
     name: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Sender name shown alongside the address in outgoing mail. Must contain a non-whitespace character and cannot contain carriage returns or line feeds.",
+        description="Optional sender name recipients see in the From header of outgoing mail. We recommend setting it so recipients can recognize the sender. Must contain a non-whitespace character and cannot contain carriage returns or line feeds.",
         max_length=255,
         min_length=1,
     )] = None
     display_name: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Name shown to your team in the dashboard and tools. Defaults to `name` when omitted. When `name` is unset, outgoing mail uses this value as the sender name.",
+        description="Name shown to your team in the dashboard and tools. Defaults to `name` when omitted.",
         examples=["Acme Concierge"],
         max_length=255,
         min_length=1,
@@ -22717,12 +22718,12 @@ class MailboxUpdate(BaseModel):
     "Fields to update on a mailbox. Omitted fields are unchanged. Fields set to `null` are cleared. The address and domain are immutable."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
-        description="Sender name shown alongside the address in outgoing mail. Must contain a non-whitespace character and cannot contain carriage returns or line feeds. `null` clears it.",
+        description="Optional sender name recipients see in the From header of outgoing mail. We recommend setting it so recipients can recognize the sender. Must contain a non-whitespace character and cannot contain carriage returns or line feeds. `null` clears it.",
         max_length=255,
         min_length=1,
     )] = None
     display_name: Annotated[Optional[str], Field(
-        description="Name shown to your team in the dashboard and tools. `null` clears the override and uses `name`. When `name` is unset, outgoing mail uses this value as the sender name.",
+        description="Name shown to your team in the dashboard and tools. `null` clears the override and uses `name`.",
         max_length=255,
     )] = None
     default_reply_to: Annotated[Optional[str], Field(
@@ -27313,7 +27314,7 @@ class EventVoiceCallEndedData(BaseModel):
         description="Call status.\n\nA call that has ended carries one of:\n\n- `answered` means it connected and the far end picked up.\n- `no_answer` means nobody picked up before the call timed out.\n- `rejected` means it was refused rather than attempted. Either we turned it\n  away before dialing a carrier, in which case `rejection_reason` names the\n  check it failed where there was one, or the far end declined it.\n- `failed` means it was attempted and did not work, and `sip_response_code`\n  is what came back.\n- `unknown` means the outcome could not be determined. Contact support with\n  the call `id` if you see one.\n\nAn active call carries `ringing` before it is picked up and `in_progress`\nafterward. The call list's `status` filter takes any mix of the two sets.\n\n`busy` and `canceled` are reserved for incoming calls delivered to your own\nnumbers: `busy` for a called party that rejected the call as busy, `canceled`\nfor a caller who hung up before it was picked up. Neither is emitted yet and\nboth outcomes are reported as `failed` today.",
     )]
     sip_response_code: Annotated[Optional[int], Field(
-        description="Final SIP response code received from the carrier. Null when no SIP response was received, for example on timeout or DNS failure.",
+        description="Final SIP response code for the leg, including a Bird refusal. Null when no SIP response was received, for example on timeout or DNS failure.",
         examples=[200],
         ge=100,
     )]
@@ -28389,7 +28390,11 @@ class VoiceLegRejectionReason(str, Enum):
     calls_per_second_exceeded = "calls_per_second_exceeded"
     call_not_permitted = "call_not_permitted"
     number_ownership_not_verified = "number_ownership_not_verified"
+    sequence_paused = "sequence_paused"
+    sequence_archived = "sequence_archived"
+    sequence_unpublished = "sequence_unpublished"
     emergency_number_inactive = "emergency_number_inactive"
+    emergency_country_mismatch = "emergency_country_mismatch"
     emergency_cap_exceeded = "emergency_cap_exceeded"
     emergency_carrier_unavailable = "emergency_carrier_unavailable"
 
@@ -28443,13 +28448,13 @@ class VoiceLegInboundRouteSequence(BaseModel):
         description="Which answer handled this incoming leg.\n\n- `reject`: the call was refused.\n- `trunk`: the call was delivered to one of your SIP trunks.\n- `forward`: the call was forwarded to one of your verified caller IDs.\n- `sequence`: the call was handled by one of your sequences.\n- `ring_group`: the call rang one of your ring groups.",
     )]
     sequence_id: Annotated[str, Field(
-        description="The sequence that handled the leg. Recorded as it was at the time, so it may name a sequence you have since changed or deleted.",
+        description="The sequence selected for the leg. Recorded as it was at the time, so it may name a sequence you have since changed or deleted. A refused leg may have no sequence run.",
         examples=["vsq_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^vsq_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     entry_node_id: Annotated[str, Field(
-        description="The entry the leg started from in the publication that handled it. Recorded as it was at the time, so it may name an entry the sequence no longer has.",
+        description="The selected entry. Recorded as it was at the time, so it may name an entry the sequence no longer has; selection does not mean a run was admitted.",
         max_length=64,
         min_length=1,
         pattern="^[a-z][a-z0-9_]{0,63}$",
@@ -28627,13 +28632,13 @@ class VoiceLeg(BaseModel):
     )] = None
     status: VoiceCallStatus
     sip_response_code: Annotated[Optional[int], Field(
-        description="Final SIP response code received from the carrier. `null` when no SIP response was received, for example on timeout or DNS failure.",
+        description="Final SIP response code for the leg. `null` when no SIP response was received, for example on timeout or DNS failure.",
         examples=[200],
         ge=100,
     )] = None
     rejection_reason: Annotated[Optional[Annotated[Union[VoiceLegRejectionReason, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Why we rejected the leg. Absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A refusal caused by the number's\nconfiguration has no rejection reason; the route records that\nconfiguration.",
+        description="Why we rejected the leg. Sequence-state reasons require\n`voice_management:read`; the field is absent without that permission.\nAlso absent on connected legs and legs rejected\nby the carrier or recipient. For carrier or recipient rejections, see\n`sip_response_code`; a `6xx` decline gives the leg a `rejected` status.\n\nRead alongside `route` when present. A number's own configured rejection\nhas no rejection reason; the route records that configuration. An\nunavailable sequence has a reason identifying its state when you have\nthat permission.",
     )] = None
     route: Annotated[Optional[VoiceLegInboundRoute], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -29442,7 +29447,7 @@ class VoiceTrunkUpdate(BaseModel):
     )] = None
     inbound_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether this trunk may receive calls. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. The gateways remain configured. Omit the field to leave it unchanged.",
+        description="Whether this trunk may receive calls. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. Clear an attached emergency number in the dashboard before turning inbound off. The gateways remain configured. Omit the field to leave it unchanged.",
         examples=[True],
     )] = None
     media_bypass: Annotated[Optional[bool], Field(

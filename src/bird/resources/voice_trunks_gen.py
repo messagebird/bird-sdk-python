@@ -180,7 +180,7 @@ class VoiceTrunksBase(Resource):
         session_credentials_enabled: bool | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceTrunk:
-        """Change a SIP trunk's directions, name, access control and Digest offer. A direction has to be enabled before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `inbound_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. Turning it back on does not restore those routes, so confirm that change with the user first.
+        """Change a SIP trunk's directions, name, access control and Digest offer. A direction has to be enabled before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `inbound_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. If an emergency number is attached, clear it in the dashboard before turning inbound off. Turning it back on does not restore those routes, so confirm that change with the user first.
 
         ```python
         trunk = client.voice.trunks.update(
@@ -219,7 +219,7 @@ class VoiceTrunksBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a SIP trunk by ID. Calls in progress are not affected; new calls cannot use the trunk. Its generated domain is not reused.
+        """Delete a SIP trunk by ID. Clear an attached emergency number in the dashboard first. Calls in progress are not affected; new calls cannot use the trunk. Its generated domain is not reused.
 
         ```python
         client.voice.trunks.delete("trunk-id")
@@ -332,7 +332,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
         session_credentials_enabled: bool | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceTrunk:
-        """Change a SIP trunk's directions, name, access control and Digest offer. A direction has to be enabled before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `inbound_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. Turning it back on does not restore those routes, so confirm that change with the user first.
+        """Change a SIP trunk's directions, name, access control and Digest offer. A direction has to be enabled before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `inbound_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. If an emergency number is attached, clear it in the dashboard before turning inbound off. Turning it back on does not restore those routes, so confirm that change with the user first.
 
         ```python
         trunk = await client.voice.trunks.update(
@@ -371,7 +371,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Delete a SIP trunk by ID. Calls in progress are not affected; new calls cannot use the trunk. Its generated domain is not reused.
+        """Delete a SIP trunk by ID. Clear an attached emergency number in the dashboard first. Calls in progress are not affected; new calls cannot use the trunk. Its generated domain is not reused.
 
         ```python
         await client.voice.trunks.delete("trunk-id")

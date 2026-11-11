@@ -81,7 +81,7 @@ class VoiceLegs(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceLeg:
-        """Fetch one leg by ID, at any point in its lifecycle. A leg still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known leg; use `voice.legs.list` to find legs in the first place. When a leg was refused, `rejection_reason` names the gate that turned it away.
+        """Fetch one leg by ID, at any point in its lifecycle. A leg still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known leg; use `voice.legs.list` to find legs in the first place. When a leg was refused, `rejection_reason` can name the gate that turned it away. Sequence refusal reasons require `voice_management:read`; absence may mean the caller lacks that permission.
 
         ```python
         call = client.voice.legs.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
@@ -146,7 +146,7 @@ class AsyncVoiceLegs(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> VoiceLeg:
-        """Fetch one leg by ID, at any point in its lifecycle. A leg still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known leg; use `voice.legs.list` to find legs in the first place. When a leg was refused, `rejection_reason` names the gate that turned it away.
+        """Fetch one leg by ID, at any point in its lifecycle. A leg still ringing or connected carries no economics yet: `duration_ms`, `billable_ms`, `ended_at`, and `cost` are null until it ends, and the same ID then returns the settled record. Poll here to watch one known leg; use `voice.legs.list` to find legs in the first place. When a leg was refused, `rejection_reason` can name the gate that turned it away. Sequence refusal reasons require `voice_management:read`; absence may mean the caller lacks that permission.
 
         ```python
         call = await client.voice.legs.get("vcl_01k0p3v9wera3v6q6xw3e9y2mh")
