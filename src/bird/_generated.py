@@ -2647,7 +2647,7 @@ class AMBMessageKindStatsPoint(BaseModel):
     "Outbound counts and latency percentiles for a single message content kind over the requested period."
     model_config = ConfigDict(extra="allow")
     message_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
     )]
     counts: Annotated[AMBOutboundStatsCounts, Field(
         description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
@@ -7344,7 +7344,7 @@ class SMSSuppression(BaseModel):
     )] = None
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
     last_asserted_at: Annotated[str, Field(
-        description="When we last recorded the subscriber opting out of this sender. Later than `created_at` when they texted a stop keyword again while already suppressed, which adds no new record but does earn another confirmation reply.",
+        description="When we last recorded the subscriber opting out of this sender. Later than `created_at` when they texted a stop keyword again, or your workspace added it again, while already suppressed. A repeat adds no new record; a repeated stop keyword also earns another confirmation reply.",
         min_length=1,
     )]
 
@@ -15421,7 +15421,7 @@ class AMBIMessageApp(BaseModel):
 
 
 class AMBNativePayment(BaseModel):
-    "Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials."
+    "An Apple Pay request. Read-only. It appears on existing messages, and sends and templates do not accept it. Apple Pay requests are in preview. Contains no payment token or provider credentials."
     model_config = ConfigDict(extra="allow")
     payment_id: Annotated[str, Field(
         examples=["apay_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -15435,7 +15435,7 @@ class AMBAuthenticationID(RootModel[str]):
 
 
 class AMBNativeAuthentication(BaseModel):
-    "Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials."
+    "An identity verification request. Read-only. It appears on existing messages, and sends and templates do not accept it. Contains no authorization parameters or credentials."
     model_config = ConfigDict(extra="allow")
     authentication_id: Annotated[str, Field(
         examples=["amauth_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -15445,7 +15445,7 @@ class AMBNativeAuthentication(BaseModel):
 
 
 class AMBInteractive(BaseModel):
-    "Something for the customer to tap: exactly one of `quick_reply`, `list_picker`, `event` (a time picker), `dynamic` (a form) or `imessage_app`. To introduce it with text or files, send `text` alongside it; that text arrives as its own bubble first. Apple Pay and identity verification requests are created through their conversation endpoints and read back here as `payment` and `authenticate`."
+    "Something for the customer to tap: exactly one of `quick_reply`, `list_picker`, `event` (a time picker), `dynamic` (a form) or `imessage_app`. To introduce it with text or files, send `text` alongside it; that text arrives as its own bubble first. `payment` and `authenticate` are read-only. They appear on existing messages that contain an Apple Pay or identity verification request. Sends and templates do not accept them."
     model_config = ConfigDict(extra="allow")
     received_message: Annotated[Optional[AMBMessageBubble], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -15486,11 +15486,11 @@ class AMBInteractive(BaseModel):
     )] = None
     payment: Annotated[Optional[AMBNativePayment], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Apple Pay request created through the conversation payment endpoint. Contains no payment token or provider credentials.",
+        description="An Apple Pay request. Read-only. It appears on existing messages, and sends and templates do not accept it. Apple Pay requests are in preview. Contains no payment token or provider credentials.",
     )] = None
     authenticate: Annotated[Optional[AMBNativeAuthentication], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Authentication attempt created through the conversation authentication endpoint. Contains no authorization parameters or credentials.",
+        description="An identity verification request. Read-only. It appears on existing messages, and sends and templates do not accept it. Contains no authorization parameters or credentials.",
     )] = None
 
 
@@ -15789,7 +15789,7 @@ class AMBMessage(BaseModel):
         description="Send status:\n\n- `accepted`: Accepted and queued for delivery to Apple.\n- `sent`: Handed to Apple. There is no delivery or read receipt on this\n  channel, so `sent` is the furthest an outbound message's status\n  advances.\n- `send_failed`: Sending stopped because of a business or conversation\n  restriction, a recipient opt-out, an Apple refusal, a workspace\n  suspension, or exhausted attempts. A message stopped after it was charged\n  keeps its charge. An earlier attempt may have reached Apple if its\n  response or the local record of success was lost. See `last_error` for\n  why sending stopped.\n- `rejected`: Refused by Bird before any send attempt and never charged:\n  the destination has no price, the wallet could not fund the send, the\n  workspace is suspended, or the content cannot be sent yet. See\n  `last_error`.\n- `received`: Received as an inbound message.",
     )]
     kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
     )]
     source: Annotated[Optional[AMBMessageSource], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -16667,7 +16667,7 @@ class AMBTemplateSummary(BaseModel):
         description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
     )]
     content_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
     )]
     customize_before_use: Annotated[bool, Field(
         description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
@@ -16772,7 +16772,7 @@ class AMBTemplate(BaseModel):
         description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
     )]
     content_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. Create Apple Pay and authentication requests through the conversation payment and authentication operations.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request created through the conversation payment operations.\n- authenticate: An identity verification request created through the conversation authentication operations.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
     )]
     customize_before_use: Annotated[bool, Field(
         description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
@@ -28541,10 +28541,10 @@ class VoiceLegMediaPath(BaseModel):
 
 
 class VoiceLegCost(BaseModel):
-    "What was charged for a leg, split into the components that make it up."
+    "The rated Voice charges for a leg, split into their components. For Flash calling (coming soon), this covers only network usage and excludes the verification attempt fee. A Flash leg that rang without an answer has a total of zero and a null `outbound_amount` because there was no connected usage to charge. The Verify attempt cost includes both charges."
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
-        description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
+        description="Sum of the Voice components below, as a decimal string. Net of tax, which applies to your wallet balance rather than to an individual charge. For Flash calling (coming soon), this excludes the verification attempt fee and can be `0.000000` for a rated, unanswered leg.",
         examples=[0.013000],
         min_length=1,
     )]
@@ -28687,7 +28687,7 @@ class VoiceLeg(BaseModel):
     )] = None
     cost: Annotated[Optional[VoiceLegCost], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="What was charged for a leg, split into the components that make it up.",
+        description="The rated Voice charges for a leg, split into their components. For Flash calling (coming soon), this covers only network usage and excludes the verification attempt fee. A Flash leg that rang without an answer has a total of zero and a null `outbound_amount` because there was no connected usage to charge. The Verify attempt cost includes both charges.",
     )] = None
 
 
