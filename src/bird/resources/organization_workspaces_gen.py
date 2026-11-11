@@ -42,7 +42,7 @@ class OrganizationWorkspacesUpdateParams(TypedDict, total=False):
     name: str
 
 
-class OrganizationWorkspaces(Resource):
+class OrganizationWorkspacesBase(Resource):
     def list(
         self,
         *,
@@ -163,7 +163,7 @@ class OrganizationWorkspaces(Resource):
         self._delete(f"/v1/organization/workspaces/{quote(workspace_id, safe='')}", options)
 
 
-class AsyncOrganizationWorkspaces(AsyncResource):
+class AsyncOrganizationWorkspacesBase(AsyncResource):
     def list(
         self,
         *,

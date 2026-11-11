@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from bird._base_client import AsyncAPIClient, SyncAPIClient
-from bird.resources.organization_workspaces_gen import (
+from bird.resources.organization_workspaces import (
     AsyncOrganizationWorkspaces,
     OrganizationWorkspaces,
 )

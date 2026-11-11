@@ -52,7 +52,7 @@ class AssetsUploads(Resource):
         folder_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> AssetUploadSessionInstruction:
-        """Creates or recovers an upload session for a fixed file. Calculate its size and SHA-256 in code, supply a fresh client_reference, then follow the returned state and next steps. When upload is present, PUT the original bytes using it and call `assets.uploads.complete`. File bytes must stay outside tool arguments. Per region, new sessions are capped at 20 unexpired sessions per workspace, 100 per organization, and 500 MiB reserved per organization. E20021 means wait for capacity. Completed and cancelled sessions count until expiry; byte reservations remain until cleanup succeeds.
+        """Creates or recovers an upload session for an initial source file. Calculate its size and SHA-256 in code, supply a fresh client_reference, then follow the returned state and next steps. When upload is present, PUT bytes matching the returned file descriptor using it and call `assets.uploads.complete`. File bytes must stay outside tool arguments. Per region, new sessions are capped at 20 unexpired sessions per workspace, 100 per organization, and 500 MiB reserved per organization. E20021 means wait for capacity. Completed and cancelled sessions count until expiry; byte reservations remain until cleanup succeeds.
 
         ```python
         import hashlib
@@ -96,7 +96,7 @@ class AssetsUploads(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> AssetUploadBrowserHandoff:
-        """Use assets.uploads.handoff only when the code environment cannot PUT to the upload hostname and the customer cannot or does not want to change its network settings. It returns a Bird page where an authorized person selects the original file and publishes it. A generated file must first be downloaded. The person's browser still needs access to the storage hostname. Opening the page does not finish the upload; use assets.uploads.get with the original connection to read the saved result.
+        """Use assets.uploads.handoff only when the code environment cannot PUT to the upload hostname and the customer cannot or does not want to change its network settings. It returns a Bird page where an authorized person selects the local file they want to publish, even if chat processing changed its bytes. A generated file must first be downloaded. The person's browser still needs access to the storage hostname. Opening the page does not finish the upload; use assets.uploads.get with the original connection to read the saved result.
 
         ```python
         handoff = client.assets.uploads.handoff("aus_01krdgeqcxet5s7t44vh8rt9mg")
@@ -137,7 +137,7 @@ class AssetsUploads(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> AssetUploadSessionPrepared:
-        """Returns another PUT instruction for the same frozen file. It does not extend the session or change the file. Refreshes require at least 30 seconds between instructions.
+        """Returns another PUT instruction for the active source file. It does not extend the session or change the file. Refreshes require at least 30 seconds between instructions.
 
         ```python
         upload = client.assets.uploads.prepare("aus_01krdgeqcxet5s7t44vh8rt9mg")
@@ -203,7 +203,7 @@ class AsyncAssetsUploads(AsyncResource):
         folder_id: str | None = None,
         options: RequestOptions | None = None,
     ) -> AssetUploadSessionInstruction:
-        """Creates or recovers an upload session for a fixed file. Calculate its size and SHA-256 in code, supply a fresh client_reference, then follow the returned state and next steps. When upload is present, PUT the original bytes using it and call `assets.uploads.complete`. File bytes must stay outside tool arguments. Per region, new sessions are capped at 20 unexpired sessions per workspace, 100 per organization, and 500 MiB reserved per organization. E20021 means wait for capacity. Completed and cancelled sessions count until expiry; byte reservations remain until cleanup succeeds.
+        """Creates or recovers an upload session for an initial source file. Calculate its size and SHA-256 in code, supply a fresh client_reference, then follow the returned state and next steps. When upload is present, PUT bytes matching the returned file descriptor using it and call `assets.uploads.complete`. File bytes must stay outside tool arguments. Per region, new sessions are capped at 20 unexpired sessions per workspace, 100 per organization, and 500 MiB reserved per organization. E20021 means wait for capacity. Completed and cancelled sessions count until expiry; byte reservations remain until cleanup succeeds.
 
         ```python
         import hashlib
@@ -247,7 +247,7 @@ class AsyncAssetsUploads(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> AssetUploadBrowserHandoff:
-        """Use assets.uploads.handoff only when the code environment cannot PUT to the upload hostname and the customer cannot or does not want to change its network settings. It returns a Bird page where an authorized person selects the original file and publishes it. A generated file must first be downloaded. The person's browser still needs access to the storage hostname. Opening the page does not finish the upload; use assets.uploads.get with the original connection to read the saved result.
+        """Use assets.uploads.handoff only when the code environment cannot PUT to the upload hostname and the customer cannot or does not want to change its network settings. It returns a Bird page where an authorized person selects the local file they want to publish, even if chat processing changed its bytes. A generated file must first be downloaded. The person's browser still needs access to the storage hostname. Opening the page does not finish the upload; use assets.uploads.get with the original connection to read the saved result.
 
         ```python
         handoff = await client.assets.uploads.handoff("aus_01krdgeqcxet5s7t44vh8rt9mg")
@@ -288,7 +288,7 @@ class AsyncAssetsUploads(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> AssetUploadSessionPrepared:
-        """Returns another PUT instruction for the same frozen file. It does not extend the session or change the file. Refreshes require at least 30 seconds between instructions.
+        """Returns another PUT instruction for the active source file. It does not extend the session or change the file. Refreshes require at least 30 seconds between instructions.
 
         ```python
         upload = await client.assets.uploads.prepare("aus_01krdgeqcxet5s7t44vh8rt9mg")

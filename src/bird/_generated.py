@@ -3064,6 +3064,243 @@ class OrganizationWorkspaceUpdate(BaseModel):
     )] = None
 
 
+class WhatsAppDataLocalizationRegion(str, Enum):
+    AU = "AU"
+    ID = "ID"
+    IN = "IN"
+    JP = "JP"
+    SG = "SG"
+    KR = "KR"
+    DE = "DE"
+    CH = "CH"
+    GB = "GB"
+    BR = "BR"
+    BH = "BH"
+    ZA = "ZA"
+    AE = "AE"
+    CA = "CA"
+
+
+class OrganizationWorkspaceWhatsAppNumberCreate(BaseModel):
+    "A number your multi-partner solution onboarded, and the workspace label and storage country it takes. `data_localization_region` cannot be changed once the number is connected, so set it in this call if your customer needs one."
+    model_config = ConfigDict(extra="allow")
+    waba: Annotated[str, Field(
+        description="The WhatsApp Business Account your Embedded Signup returned, from the session info's `messaging_account_ids`.",
+        examples=[102290129340398],
+        min_length=1,
+        pattern="^[0-9]+$",
+    )]
+    meta_phone_number_id: Annotated[str, Field(
+        description="The phone number your Embedded Signup returned, from the session info's `phone_number_id`.",
+        examples=[109364591979012],
+        min_length=1,
+        pattern="^[0-9]+$",
+    )]
+    name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The workspace's own label for the number. Leave it out and the number's own phone number stands in. A number already connected in the workspace keeps its label unless you pass one. This has no bearing on what WhatsApp displays to people the number messages.",
+        examples=["Northwind Support"],
+        max_length=100,
+        min_length=1,
+    )] = None
+    data_localization_region: Annotated[Optional[WhatsAppDataLocalizationRegion], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="A country where WhatsApp can store a business phone number's message content at rest, as its two-letter ISO 3166 code.",
+    )] = None
+
+
+class WhatsAppNumberID(RootModel[str]):
+    root: str
+
+
+class AllocatedNumberID(RootModel[str]):
+    root: str
+
+
+class WhatsAppNumberScope(str, Enum):
+    system = "system"
+    workspace = "workspace"
+
+
+class WhatsAppNumberStatus(str, Enum):
+    awaiting_signup = "awaiting_signup"
+    banned = "banned"
+    connected = "connected"
+    deleted = "deleted"
+    disconnected = "disconnected"
+    failed = "failed"
+    flagged = "flagged"
+    migrated = "migrated"
+    pending = "pending"
+    preparing = "preparing"
+    rate_limited = "rate_limited"
+    restricted = "restricted"
+
+
+class WhatsAppNumberErrorCode(str, Enum):
+    registration_pin_rejected = "registration_pin_rejected"
+    registration_pin_rate_limited = "registration_pin_rate_limited"
+    registration_attempts_exhausted = "registration_attempts_exhausted"
+    number_verification_required = "number_verification_required"
+    number_not_registered = "number_not_registered"
+    number_already_linked = "number_already_linked"
+    number_already_in_use = "number_already_in_use"
+    verification_code_not_received = "verification_code_not_received"
+    verification_rate_limited = "verification_rate_limited"
+    business_account_locked = "business_account_locked"
+    business_verification_required = "business_verification_required"
+    credit_currency_mismatch = "credit_currency_mismatch"
+    billing_close = "billing_close"
+    permission_denied = "permission_denied"
+    invalid_request = "invalid_request"
+    internal_error = "internal_error"
+
+
+class WhatsAppNumberError(BaseModel):
+    "Why a number's connection was refused for good. `code` is the standardized reason. `description` explains the failure where one was recorded, and `meta_error_code` carries WhatsApp's own code when available. It accompanies the `failed` status only; a number still being retried carries no error."
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Annotated[Union[WhatsAppNumberErrorCode, str], Field(union_mode="left_to_right")], Field(
+        description="Standardized failure reason.",
+    )]
+    description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Why the connection failed: WhatsApp's own words, in the language of the account it refused, when WhatsApp answered; our own explanation when the number was refused before WhatsApp was asked; a generic sentence when WhatsApp refused without giving a reason. Absent when the attempt failed without ever reaching WhatsApp, which leaves `code` as the only account of the failure. Show it to the person who owns the number; never match on its text.",
+        examples=["Cannot Create Certificate: Please ensure two-factor authentication is disabled."],
+        min_length=1,
+    )] = None
+    meta_error_code: Annotated[Optional[str], Field(
+        description="WhatsApp's most specific code for the refusal: its error subcode where it sent one, otherwise its top-level code. Null when WhatsApp did not provide a code. Treat it as an opaque string.",
+        examples=[2388001],
+    )] = None
+
+
+class WhatsAppNumberQualityRating(str, Enum):
+    green = "green"
+    yellow = "yellow"
+    red = "red"
+    unknown = "unknown"
+
+
+class WhatsAppNumberMessagingLimit(str, Enum):
+    tier_50 = "tier_50"
+    tier_250 = "tier_250"
+    tier_1k = "tier_1k"
+    tier_10k = "tier_10k"
+    tier_100k = "tier_100k"
+    tier_unlimited = "tier_unlimited"
+
+
+class WhatsAppNumberThroughputLevel(str, Enum):
+    standard = "standard"
+
+
+class WhatsAppNumber(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        description="Unique identifier for the connected number.",
+        examples=["wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    waba: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The WhatsApp Business Account this number is connected under. Present only for a number your workspace connected itself.",
+        examples=[102290129340398],
+        min_length=1,
+    )] = None
+    phone_number: Annotated[Optional[str], Field(
+        description="The number in E.164 format. Null only while the number itself is not yet known: a number your workspace holds carries its E.164 from the moment setup starts, so a value here does not mean the number can send. Check `status` for connection state.",
+        examples=[+15550001234],
+    )]
+    number_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The number you hold with us that this WhatsApp number was connected from, as its id in GET /v1/numbers. Absent for a number you brought yourself.",
+        examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    meta_preverified_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="WhatsApp's own id for the number while we prepare it for you. We hand it to WhatsApp when you finish signing up, so WhatsApp knows this is the number we already verified for you. Absent for a number you brought yourself. WhatsApp discards the id once signup claims it, so an id still shown here on a connected number no longer names anything.",
+        examples=[106540352242922],
+        min_length=1,
+    )] = None
+    verified_until: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When we expect WhatsApp to release this pre-verified number if you have not finished signup by then. Present only while the number is `awaiting_signup`. Absent for a number pre-verified before we started recording this moment, and for a number you brought yourself.",
+        examples=["2026-11-19T10:22:31Z"],
+        min_length=1,
+    )] = None
+    name: Annotated[str, Field(
+        description="Your workspace's own label for this number, given when it was connected and changeable afterwards. It has no bearing on what WhatsApp displays to people the number messages; `GET /v1/whatsapp/numbers/{number_id}/profile` returns that as `display_name`. For a number we operate on your behalf, this is our own label instead and cannot be changed.",
+        examples=["Sales EU"],
+        max_length=100,
+        min_length=1,
+    )]
+    scope: Annotated[WhatsAppNumberScope, Field(
+        description="Whether the number sends under a WhatsApp Business Account we operate on your behalf (`system`) or one your workspace connected itself (`workspace`).",
+    )]
+    data_localization_region: Annotated[Optional[WhatsAppDataLocalizationRegion], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The country this number's message content is stored at rest in, as its two-letter ISO 3166 code. Absent when it uses WhatsApp's default storage. It can differ from the region requested at connection when WhatsApp requires a particular country for the number.",
+    )] = None
+    status: Annotated[Annotated[Union[WhatsAppNumberStatus, str], Field(union_mode="left_to_right")], Field(
+        description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`. A connected virtual +1 555 or +1 711 number still has a daily sending limit until its current name is approved. Read `display_name_status` from the live profile for display name approval.",
+    )]
+    next: Annotated[Optional[List[NextAction]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="What to do next about this number, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nWhile `status` is `awaiting_signup` this carries the browser step that finishes\nthe connection, because embedded signup sits behind an OAuth screen no API call\ncan stand in for.",
+    )] = None
+    error: Annotated[Optional[WhatsAppNumberError], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Why this number's connection was refused for good. Present only while `status` is `failed`. A retryable step records its cause on a still-`pending` number without setting this field, because that cause is not a refusal yet, so a connection you are still waiting on reports no error here.",
+    )] = None
+    finish_setup_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Where a person finishes connecting this number, present only while `status` is `awaiting_signup`. Finishing means completing WhatsApp's embedded signup, which is a browser flow behind an OAuth screen: it cannot be done over the API, so open this link and have someone with access to the workspace complete it. The number is offered to them already verified. Once they finish, `status` moves on and this link is no longer returned.",
+        examples=["https://bird.com/dashboard/w/ws_01krdgeqcxet5s7t44vh8rt9mg/whatsapp/numbers?finish_setup_number=wan_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+    )] = None
+    quality_rating: Annotated[Optional[Annotated[Union[WhatsAppNumberQualityRating, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="WhatsApp's quality rating for this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
+    )] = None
+    messaging_limit: Annotated[Optional[Annotated[Union[WhatsAppNumberMessagingLimit, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The messaging limit WhatsApp applied to this number's business portfolio as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
+    )] = None
+    throughput_level: Annotated[Optional[Annotated[Union[WhatsAppNumberThroughputLevel, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The send rate WhatsApp allowed this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
+    )] = None
+    is_official_business_account: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether WhatsApp grants this number Official Business Account status as of `meta_synced_at`. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf. WhatsApp grants the status per number, so two numbers on one WhatsApp Business Account can differ. The status also decides whether a rename is possible here: a number that has it cannot be renamed through `PATCH /v1/whatsapp/numbers/{number_id}/profile` at all, and has to be renamed through WhatsApp support instead.",
+    )] = None
+    is_on_business_app: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether this number is also in use on the WhatsApp Business app, so the business keeps sending one-to-one messages from the app while you send through the API. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf.",
+    )] = None
+    meta_synced_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When this number's state was last read from WhatsApp. `status`, `quality_rating`, `messaging_limit`, `throughput_level`, and `is_official_business_account` all belong to that reading rather than representing live values. We re-read roughly hourly, so a change at WhatsApp can be up to an hour old here. Absent for a number we have never read back and for a number we operate on your behalf.",
+        min_length=1,
+    )] = None
+    pre_verification_requested_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When we last asked WhatsApp to send this number a verification code, which we do only for a number your workspace connected itself from a number you hold with us. Absent for a number we operate on your behalf, and for one you connected through Embedded Signup with a code you read yourself. Wait a few hours after this before repairing a number whose verification failed: WhatsApp rotates the routes it verifies over during that period, and throttles a number asked repeatedly in a short window. Distinct from `updated_at`, which any change to the number moves.",
+        min_length=1,
+    )] = None
+    created_at: Annotated[str, Field(
+        description="When this number was submitted for connection.",
+        min_length=1,
+    )]
+    updated_at: Annotated[str, Field(
+        description="When this number was last changed.",
+        min_length=1,
+    )]
+
+
 class RealtimeEventName(RootModel[str]):
     root: str
 
@@ -4106,6 +4343,10 @@ class AudienceID(RootModel[str]):
     root: str
 
 
+class ContactID(RootModel[str]):
+    root: str
+
+
 class EmailBroadcastParameterName(RootModel[str]):
     root: str
 
@@ -4215,10 +4456,6 @@ class EmailBroadcastParameterProblemSite(str, Enum):
     text = "text"
     from_name = "from_name"
     reply_to = "reply_to"
-
-
-class ContactID(RootModel[str]):
-    root: str
 
 
 class EmailBroadcastParameterProblem(BaseModel):
@@ -7615,27 +7852,27 @@ class AttachmentUpload(BaseModel):
 
 
 class AssetUploadFile(BaseModel):
-    "Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes."
+    "Exact properties of the active source file. Calculate size and SHA-256 from its bytes before creating a session or preparing a browser-selected source. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes."
     model_config = ConfigDict(extra="allow")
     filename: Annotated[str, Field(
-        description="Original filename, including its extension.",
+        description="Source filename, including its extension.",
         examples=["invoice.pdf"],
         max_length=255,
         min_length=1,
     )]
     content_type: Annotated[str, Field(
-        description="Media type of the original file. Supported values are `image/png`, `image/jpeg`, `image/gif`, `video/mp4`, `video/webm`, `video/quicktime`, `audio/mpeg`, `audio/mp4`, `audio/ogg`, `audio/wav`, and `application/pdf`.\n\nSupply the exact value without parameters. Unsupported values return `E20001`. Completion checks this against the file's contents.",
+        description="Media type of the source file. Supported values are `image/png`, `image/jpeg`, `image/gif`, `video/mp4`, `video/webm`, `video/quicktime`, `audio/mpeg`, `audio/mp4`, `audio/ogg`, `audio/wav`, and `application/pdf`.\n\nSupply the exact value without parameters. Unsupported values return `E20001`. Completion checks this against the file's contents.",
         examples=["application/pdf"],
         min_length=1,
     )]
     size_bytes: Annotated[int, Field(
-        description="Exact size of the original file in bytes.",
+        description="Exact size of the source file in bytes.",
         examples=[1024],
         ge=1,
         le=25000000,
     )]
     sha256: Annotated[str, Field(
-        description="SHA-256 of the original bytes, encoded as lowercase hexadecimal.",
+        description="SHA-256 of the source bytes, encoded as lowercase hexadecimal.",
         examples=["4e2090a479f7ce6b17ad31f991988f12571bcafbd4a441cc4063644fc1400ae0"],
         max_length=64,
         min_length=64,
@@ -7657,7 +7894,7 @@ class AssetUploadSessionCreate(BaseModel):
         min_length=36,
     )]
     file: Annotated[AssetUploadFile, Field(
-        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+        description="Exact properties of the active source file. Calculate size and SHA-256 from its bytes before creating a session or preparing a browser-selected source. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
     )]
     name: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -7721,7 +7958,7 @@ class AssetUploadSessionError(BaseModel):
 
 
 class AssetUploadInstruction(BaseModel):
-    "Send the original file bytes to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds."
+    "Send the active source bytes described by the session to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds."
     model_config = ConfigDict(extra="allow")
     method: Annotated[Literal["PUT"], Field(
         description="HTTP method for transferring the file.",
@@ -7745,7 +7982,7 @@ class AssetUploadInstruction(BaseModel):
 
 
 class AssetUploadSessionInstruction(BaseModel):
-    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its file and metadata are frozen. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
+    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its metadata is frozen. The file identifies the active upload source; a signed-in person can bind their selected file when preparing the browser fallback. Completion validates the bytes against the active source. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["aus_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -7773,7 +8010,7 @@ class AssetUploadSessionInstruction(BaseModel):
         pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     file: Annotated[AssetUploadFile, Field(
-        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+        description="Exact properties of the active source file. Calculate size and SHA-256 from its bytes before creating a session or preparing a browser-selected source. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
     )]
     result: Annotated[Optional[AssetUploadReceipt], Field(
         description="Saved publication receipt, or null until completed.",
@@ -7786,7 +8023,7 @@ class AssetUploadSessionInstruction(BaseModel):
     )]
     upload: Annotated[Optional[AssetUploadInstruction], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Send the original file bytes to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds.",
+        description="Send the active source bytes described by the session to this URL with the exact headers and content length. Send no Bird credentials or cookies. Keep the URL private and call complete after the PUT succeeds.",
     )] = None
 
 
@@ -7851,7 +8088,7 @@ class Asset(BaseModel):
 
 
 class AssetUploadSessionDetails(BaseModel):
-    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its file and metadata are frozen. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
+    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its metadata is frozen. The file identifies the active upload source; a signed-in person can bind their selected file when preparing the browser fallback. Completion validates the bytes against the active source. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["aus_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -7879,7 +8116,7 @@ class AssetUploadSessionDetails(BaseModel):
         pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     file: Annotated[AssetUploadFile, Field(
-        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+        description="Exact properties of the active source file. Calculate size and SHA-256 from its bytes before creating a session or preparing a browser-selected source. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
     )]
     result: Annotated[Optional[AssetUploadReceipt], Field(
         description="Saved publication receipt, or null until completed.",
@@ -7896,7 +8133,7 @@ class AssetUploadSessionDetails(BaseModel):
 
 
 class AssetUploadSessionPrepared(BaseModel):
-    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its file and metadata are frozen. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
+    "An upload session owned by the workspace and the OAuth connection or API key that created it. Its metadata is frozen. The file identifies the active upload source; a signed-in person can bind their selected file when preparing the browser fallback. Completion validates the bytes against the active source. Sessions expire after one hour; receipts remain available for at least 24 hours after expiry while cleanup finishes."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["aus_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -7925,7 +8162,7 @@ class AssetUploadSessionPrepared(BaseModel):
         pattern="^asf_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     file: Annotated[AssetUploadFile, Field(
-        description="Exact properties of the original file. Calculate size and SHA-256 from its bytes before creating a session. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
+        description="Exact properties of the active source file. Calculate size and SHA-256 from its bytes before creating a session or preparing a browser-selected source. Images allow up to 5,242,880 bytes; other supported media allow up to 25,000,000 bytes.",
     )]
     result: Annotated[Optional[AssetUploadReceipt], Field(
         description="Saved publication receipt, or null until completed.",
@@ -8653,10 +8890,6 @@ class SMSSenderSourceKind(str, Enum):
     number = "number"
     shared_number = "shared_number"
     alpha = "alpha"
-
-
-class AllocatedNumberID(RootModel[str]):
-    root: str
 
 
 class SMSSenderSortField(str, Enum):
@@ -9481,10 +9714,6 @@ class VerificationNextChannelRequest(BaseModel):
 
 
 class DomainID(RootModel[str]):
-    root: str
-
-
-class WhatsAppNumberID(RootModel[str]):
     root: str
 
 
@@ -13363,38 +13592,6 @@ class WhatsAppInboundStatsByPhoneNumberResponse(BaseModel):
     )]
 
 
-class WhatsAppDataLocalizationRegion(str, Enum):
-    AU = "AU"
-    ID = "ID"
-    IN = "IN"
-    JP = "JP"
-    SG = "SG"
-    KR = "KR"
-    DE = "DE"
-    CH = "CH"
-    GB = "GB"
-    BR = "BR"
-    BH = "BH"
-    ZA = "ZA"
-    AE = "AE"
-    CA = "CA"
-
-
-class WhatsAppNumberStatus(str, Enum):
-    awaiting_signup = "awaiting_signup"
-    banned = "banned"
-    connected = "connected"
-    deleted = "deleted"
-    disconnected = "disconnected"
-    failed = "failed"
-    flagged = "flagged"
-    migrated = "migrated"
-    pending = "pending"
-    preparing = "preparing"
-    rate_limited = "rate_limited"
-    restricted = "restricted"
-
-
 class WhatsAppAgentNotificationStatus(str, Enum):
     accepted = "accepted"
     success = "success"
@@ -13527,175 +13724,6 @@ class WhatsAppAgentNotificationCreate(BaseModel):
         description="Details the agent may draw on when it writes to the contact, as one JSON string. WhatsApp passes it to the agent unchanged and does not read it itself.",
         examples=["{\"order_id\":\"88213\",\"carrier\":\"ACME Courier\",\"eta\":\"2026-10-02\"}"],
         max_length=4096,
-        min_length=1,
-    )]
-
-
-class WhatsAppNumberScope(str, Enum):
-    system = "system"
-    workspace = "workspace"
-
-
-class WhatsAppNumberErrorCode(str, Enum):
-    registration_pin_rejected = "registration_pin_rejected"
-    registration_pin_rate_limited = "registration_pin_rate_limited"
-    registration_attempts_exhausted = "registration_attempts_exhausted"
-    number_verification_required = "number_verification_required"
-    number_not_registered = "number_not_registered"
-    number_already_linked = "number_already_linked"
-    number_already_in_use = "number_already_in_use"
-    verification_code_not_received = "verification_code_not_received"
-    verification_rate_limited = "verification_rate_limited"
-    business_account_locked = "business_account_locked"
-    business_verification_required = "business_verification_required"
-    credit_currency_mismatch = "credit_currency_mismatch"
-    billing_close = "billing_close"
-    permission_denied = "permission_denied"
-    invalid_request = "invalid_request"
-    internal_error = "internal_error"
-
-
-class WhatsAppNumberError(BaseModel):
-    "Why a number's connection was refused for good. `code` is the standardized reason. `description` explains the failure where one was recorded, and `meta_error_code` carries WhatsApp's own code when available. It accompanies the `failed` status only; a number still being retried carries no error."
-    model_config = ConfigDict(extra="allow")
-    code: Annotated[Annotated[Union[WhatsAppNumberErrorCode, str], Field(union_mode="left_to_right")], Field(
-        description="Standardized failure reason.",
-    )]
-    description: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="Why the connection failed: WhatsApp's own words, in the language of the account it refused, when WhatsApp answered; our own explanation when the number was refused before WhatsApp was asked; a generic sentence when WhatsApp refused without giving a reason. Absent when the attempt failed without ever reaching WhatsApp, which leaves `code` as the only account of the failure. Show it to the person who owns the number; never match on its text.",
-        examples=["Cannot Create Certificate: Please ensure two-factor authentication is disabled."],
-        min_length=1,
-    )] = None
-    meta_error_code: Annotated[Optional[str], Field(
-        description="WhatsApp's most specific code for the refusal: its error subcode where it sent one, otherwise its top-level code. Null when WhatsApp did not provide a code. Treat it as an opaque string.",
-        examples=[2388001],
-    )] = None
-
-
-class WhatsAppNumberQualityRating(str, Enum):
-    green = "green"
-    yellow = "yellow"
-    red = "red"
-    unknown = "unknown"
-
-
-class WhatsAppNumberMessagingLimit(str, Enum):
-    tier_50 = "tier_50"
-    tier_250 = "tier_250"
-    tier_1k = "tier_1k"
-    tier_10k = "tier_10k"
-    tier_100k = "tier_100k"
-    tier_unlimited = "tier_unlimited"
-
-
-class WhatsAppNumberThroughputLevel(str, Enum):
-    standard = "standard"
-
-
-class WhatsAppNumber(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    id: Annotated[str, Field(
-        description="Unique identifier for the connected number.",
-        examples=["wan_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^wan_[0-9a-hjkmnp-tv-z]{26}$",
-    )]
-    waba: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="The WhatsApp Business Account this number is connected under. Present only for a number your workspace connected itself.",
-        examples=[102290129340398],
-        min_length=1,
-    )] = None
-    phone_number: Annotated[Optional[str], Field(
-        description="The number in E.164 format. Null only while the number itself is not yet known: a number your workspace holds carries its E.164 from the moment setup starts, so a value here does not mean the number can send. Check `status` for connection state.",
-        examples=[+15550001234],
-    )]
-    number_id: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="The number you hold with us that this WhatsApp number was connected from, as its id in GET /v1/numbers. Absent for a number you brought yourself.",
-        examples=["nda_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-        pattern="^(nda|nal)_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
-    meta_preverified_id: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="WhatsApp's own id for the number while we prepare it for you. We hand it to WhatsApp when you finish signing up, so WhatsApp knows this is the number we already verified for you. Absent for a number you brought yourself. WhatsApp discards the id once signup claims it, so an id still shown here on a connected number no longer names anything.",
-        examples=[106540352242922],
-        min_length=1,
-    )] = None
-    verified_until: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="When we expect WhatsApp to release this pre-verified number if you have not finished signup by then. Present only while the number is `awaiting_signup`. Absent for a number pre-verified before we started recording this moment, and for a number you brought yourself.",
-        examples=["2026-11-19T10:22:31Z"],
-        min_length=1,
-    )] = None
-    name: Annotated[str, Field(
-        description="Your workspace's own label for this number, given when it was connected and changeable afterwards. It has no bearing on what WhatsApp displays to people the number messages; `GET /v1/whatsapp/numbers/{number_id}/profile` returns that as `display_name`. For a number we operate on your behalf, this is our own label instead and cannot be changed.",
-        examples=["Sales EU"],
-        max_length=100,
-        min_length=1,
-    )]
-    scope: Annotated[WhatsAppNumberScope, Field(
-        description="Whether the number sends under a WhatsApp Business Account we operate on your behalf (`system`) or one your workspace connected itself (`workspace`).",
-    )]
-    data_localization_region: Annotated[Optional[WhatsAppDataLocalizationRegion], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="The country this number's message content is stored at rest in, as its two-letter ISO 3166 code. Absent when it uses WhatsApp's default storage. It can differ from the region requested at connection when WhatsApp requires a particular country for the number.",
-    )] = None
-    status: Annotated[Annotated[Union[WhatsAppNumberStatus, str], Field(union_mode="left_to_right")], Field(
-        description="WhatsApp's own state for this number as of `meta_synced_at`, except for the three states we answer ourselves because WhatsApp holds nothing to report. A connection we are still verifying reads `preparing`, one waiting for someone to finish signup reads `awaiting_signup`, and a permanently refused one reads `failed`, with `error` saying why. `pending` is WhatsApp's own token for a number it does not hold as registered, and is also what a number with no stored WhatsApp status reads, including after setup completes, so it does not by itself establish whether setup is complete. A number we operate on your behalf reads `connected` as our own assertion rather than a reading from WhatsApp for every number we ship today; that tier carries no `meta_synced_at`. A connected virtual +1 555 or +1 711 number still has a daily sending limit until its current name is approved. Read `display_name_status` from the live profile for display name approval.",
-    )]
-    next: Annotated[Optional[List[NextAction]], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="What to do next about this number, given the state it is in. Each entry names one\naction and says why it is worth taking, so you can act on this response without\nworking out the order yourself. Present on reads that compute it: an empty list\nmeans there is nothing to do, and the field is absent entirely on responses that\ndo not report next actions.\n\nWhile `status` is `awaiting_signup` this carries the browser step that finishes\nthe connection, because embedded signup sits behind an OAuth screen no API call\ncan stand in for.",
-    )] = None
-    error: Annotated[Optional[WhatsAppNumberError], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="Why this number's connection was refused for good. Present only while `status` is `failed`. A retryable step records its cause on a still-`pending` number without setting this field, because that cause is not a refusal yet, so a connection you are still waiting on reports no error here.",
-    )] = None
-    finish_setup_url: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="Where a person finishes connecting this number, present only while `status` is `awaiting_signup`. Finishing means completing WhatsApp's embedded signup, which is a browser flow behind an OAuth screen: it cannot be done over the API, so open this link and have someone with access to the workspace complete it. The number is offered to them already verified. Once they finish, `status` moves on and this link is no longer returned.",
-        examples=["https://bird.com/dashboard/w/ws_01krdgeqcxet5s7t44vh8rt9mg/whatsapp/numbers?finish_setup_number=wan_01krdgeqcxet5s7t44vh8rt9mg"],
-        min_length=1,
-    )] = None
-    quality_rating: Annotated[Optional[Annotated[Union[WhatsAppNumberQualityRating, str], Field(union_mode="left_to_right")]], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="WhatsApp's quality rating for this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
-    )] = None
-    messaging_limit: Annotated[Optional[Annotated[Union[WhatsAppNumberMessagingLimit, str], Field(union_mode="left_to_right")]], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="The messaging limit WhatsApp applied to this number's business portfolio as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
-    )] = None
-    throughput_level: Annotated[Optional[Annotated[Union[WhatsAppNumberThroughputLevel, str], Field(union_mode="left_to_right")]], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="The send rate WhatsApp allowed this number as of `meta_synced_at`. Absent until WhatsApp has reported one, and always absent for a number we operate on your behalf.",
-    )] = None
-    is_official_business_account: Annotated[Optional[bool], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="Whether WhatsApp grants this number Official Business Account status as of `meta_synced_at`. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf. WhatsApp grants the status per number, so two numbers on one WhatsApp Business Account can differ. The status also decides whether a rename is possible here: a number that has it cannot be renamed through `PATCH /v1/whatsapp/numbers/{number_id}/profile` at all, and has to be renamed through WhatsApp support instead.",
-    )] = None
-    is_on_business_app: Annotated[Optional[bool], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="Whether this number is also in use on the WhatsApp Business app, so the business keeps sending one-to-one messages from the app while you send through the API. Absent until WhatsApp has reported it, and always absent for a number we operate on your behalf.",
-    )] = None
-    meta_synced_at: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="When this number's state was last read from WhatsApp. `status`, `quality_rating`, `messaging_limit`, `throughput_level`, and `is_official_business_account` all belong to that reading rather than representing live values. We re-read roughly hourly, so a change at WhatsApp can be up to an hour old here. Absent for a number we have never read back and for a number we operate on your behalf.",
-        min_length=1,
-    )] = None
-    pre_verification_requested_at: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="When we last asked WhatsApp to send this number a verification code, which we do only for a number your workspace connected itself from a number you hold with us. Absent for a number we operate on your behalf, and for one you connected through Embedded Signup with a code you read yourself. Wait a few hours after this before repairing a number whose verification failed: WhatsApp rotates the routes it verifies over during that period, and throttles a number asked repeatedly in a short window. Distinct from `updated_at`, which any change to the number moves.",
-        min_length=1,
-    )] = None
-    created_at: Annotated[str, Field(
-        description="When this number was submitted for connection.",
-        min_length=1,
-    )]
-    updated_at: Annotated[str, Field(
-        description="When this number was last changed.",
         min_length=1,
     )]
 
