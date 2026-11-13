@@ -998,6 +998,7 @@ class WhatsAppNumberErrorCode:
     NUMBER_ALREADY_LINKED: Final = "number_already_linked"
     NUMBER_NOT_REGISTERED: Final = "number_not_registered"
     NUMBER_VERIFICATION_REQUIRED: Final = "number_verification_required"
+    PAYMENT_METHOD_CONFLICT: Final = "payment_method_conflict"
     PERMISSION_DENIED: Final = "permission_denied"
     REGISTRATION_ATTEMPTS_EXHAUSTED: Final = "registration_attempts_exhausted"
     REGISTRATION_PIN_RATE_LIMITED: Final = "registration_pin_rate_limited"

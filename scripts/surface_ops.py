@@ -63,6 +63,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/email/broadcasts/{broadcast_id}": {"delete", "get", "patch"},
     "/v1/email/broadcasts/{broadcast_id}/send": {"post"},
     "/v1/email/broadcasts/{broadcast_id}/cancel": {"post"},
+    "/v1/email/broadcasts/{broadcast_id}/resume": {"post"},
     "/v1/email/broadcasts/{broadcast_id}/events": {"get"},
     "/v1/email/broadcasts/{broadcast_id}/recipients": {"get"},
     "/v1/email/broadcasts/{broadcast_id}/counts": {"get"},

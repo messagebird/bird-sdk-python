@@ -3150,6 +3150,7 @@ class WhatsAppNumberErrorCode(str, Enum):
     business_account_locked = "business_account_locked"
     business_verification_required = "business_verification_required"
     credit_currency_mismatch = "credit_currency_mismatch"
+    payment_method_conflict = "payment_method_conflict"
     billing_close = "billing_close"
     permission_denied = "permission_denied"
     invalid_request = "invalid_request"
@@ -5463,6 +5464,14 @@ class EmailBroadcastSendNowRequest(BaseModel):
     scheduled_at: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. Leave it out to send straight away.",
+    )] = None
+
+
+class EmailBroadcastResume(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    confirm: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Acknowledgment that the message reaches the remaining recipients later than intended. It is required to resume a broadcast that started sending at least 24 hours ago. Before setting it, read the broadcast's `started_at` and have a reviewer with `email_management:read` check its pinned template version using `template.id` and `template.version_id`. Workspace versions retain the original content. Built-in template lookups (`scope: system`) show current catalogue content. Broadcasts with frozen content keep it, but older broadcasts can read the catalogue again when resumed. Neither a current lookup nor an earlier message alone proves what remaining recipients will receive. Leave the broadcast paused unless you can verify that content. Ask an authorized teammate if you lack that permission. It does not skip the funds or concurrent-broadcast checks.",
     )] = None
 
 
@@ -12009,7 +12018,7 @@ class WhatsAppConversationUpdateRequest(BaseModel):
     )] = None
     labels: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Labels chosen by your workspace. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nEach label must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace. Duplicate labels are rejected. The names `all`, `archived`, `assigned`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `pinned`, `read`, `snoozed`, `spam`, `starred`, `trash`, and `unread` are reserved in every casing.",
+        description="Labels from your workspace's label list. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nA name matches the workspace's labels in any casing: adding \"Urgent\" where the workspace has \"urgent\" applies \"urgent\", and responses return the workspace's spelling. A name the workspace doesn't have yet becomes a new label. It must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace, and can't take the workspace past its limit of 100 labels. A new label can't use a reserved name: `all`, `archive`, `archived`, `assigned`, `blocked`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `outbox`, `pinned`, `read`, `scheduled`, `sent`, `snoozed`, `spam`, `starred`, `trash` or `unread`, in any casing. A label the workspace already has keeps working even if its name is reserved.",
         max_length=20,
     )] = None
     read: Annotated[Optional[str], Field(
@@ -16289,7 +16298,7 @@ class AMBConversationUpdate(BaseModel):
     )] = None
     labels: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Labels chosen by your workspace. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nEach label must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace. Duplicate labels are rejected. The names `all`, `archived`, `assigned`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `pinned`, `read`, `snoozed`, `spam`, `starred`, `trash`, and `unread` are reserved in every casing.",
+        description="Labels from your workspace's label list. On update, this replaces the full set; pass an empty array to clear every label. Labels do not change read state or inbox status.\n\nA name matches the workspace's labels in any casing: adding \"Urgent\" where the workspace has \"urgent\" applies \"urgent\", and responses return the workspace's spelling. A name the workspace doesn't have yet becomes a new label. It must contain 1 to 64 characters, with no commas, control characters, or leading or trailing whitespace, and can't take the workspace past its limit of 100 labels. A new label can't use a reserved name: `all`, `archive`, `archived`, `assigned`, `blocked`, `closed`, `deleted`, `draft`, `drafts`, `flagged`, `important`, `inbox`, `junk`, `muted`, `none`, `open`, `outbox`, `pinned`, `read`, `scheduled`, `sent`, `snoozed`, `spam`, `starred`, `trash` or `unread`, in any casing. A label the workspace already has keeps working even if its name is reserved.",
         max_length=20,
     )] = None
     read: Annotated[Optional[str], Field(
@@ -28946,7 +28955,12 @@ class AvailableNumber(BaseModel):
     )]
     ownership_address_scope: Annotated[Optional[Annotated[Union[AvailableNumberOwnershipAddressScope, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Where the carrier requires the business address on this number's ownership registration\nto be. Present only when the carrier itself registers the number before it carries\ntraffic and states a rule; omitted otherwise. An address that does not meet the rule\nis refused after purchase, and only an address that meets it can fix the registration.\n\n- `anywhere`: any business address.\n- `country`: a business address in the number's country.\n- `number_area`: a business address inside the number's own area code, for example in\n  Amsterdam for an Amsterdam (020) number.",
+        description="Where the carrier requires the business address on this number's ownership registration\nto be. Present only when the carrier itself registers the number before it carries\ntraffic, as `anywhere` when it restricts no address; omitted otherwise. An address that does not meet the rule\nis refused after purchase, and only an address that meets it can fix the registration.\nIf the paperwork is not approved by the registration deadline, the number is removed:\nany setup fee is credited back, and the first recurring charge is not refunded.\n\n- `anywhere`: any business address.\n- `country`: a business address in the number's country.\n- `number_area`: a business address inside the number's own area code, for example in\n  Amsterdam for an Amsterdam (020) number. `ownership_address_area_name` names the area\n  when it is known.",
+    )] = None
+    ownership_address_area_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Name of the area this local number belongs to, for example `Amsterdam`: the area a `number_area` `ownership_address_scope` refers to. Text for display; the address is not checked against it before purchase. Omitted when the number has no `number_area` rule or the area is not known.",
+        min_length=1,
     )] = None
     pricing: Annotated[Optional[AvailableNumberPricing], Field(
         json_schema_extra={"x-bird-nullable": False},

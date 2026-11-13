@@ -61,6 +61,12 @@ def broadcasts_cancel() -> None:
     print(broadcast.status)
 
 
+def broadcasts_resume() -> None:
+    # Confirm only after verifying the content remaining recipients will receive and started_at. Leave unverifiable content paused.
+    broadcast = client.broadcasts.resume("eb_01krdgeqcxet5s7t44vh8rt9mg", confirm=True)
+    print(broadcast.status)
+
+
 def broadcasts_send_quota() -> None:
     quota = client.broadcasts.send_quota("eb_01krdgeqcxet5s7t44vh8rt9mg")
     if quota.allowed < quota.recipients:

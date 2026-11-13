@@ -80,6 +80,7 @@ def test_surface_conformance() -> None:
     assert callable(client.broadcasts.delete)
     assert callable(client.broadcasts.send)
     assert callable(client.broadcasts.cancel)
+    assert callable(client.broadcasts.resume)
     assert callable(client.broadcasts.list_events)
     assert callable(client.broadcasts.list_recipients)
     assert callable(client.broadcasts.counts)
