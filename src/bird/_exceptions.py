@@ -38,6 +38,9 @@ class ErrorType(str, Enum):
     internal = "internal_error"
     not_implemented = "not_implemented_error"
     service_unavailable = "service_unavailable_error"
+    gone = "gone_error"
+    too_early = "too_early_error"
+    client_closed_request = "client_closed_request_error"
 
 
 @dataclass(frozen=True)
@@ -202,10 +205,13 @@ _STATUS_TYPES: dict[int, ErrorType] = {
     409: ErrorType.conflict,
     412: ErrorType.precondition,
     413: ErrorType.payload_too_large,
+    410: ErrorType.gone,
     421: ErrorType.misdirected,
     422: ErrorType.validation,
+    425: ErrorType.too_early,
     428: ErrorType.precondition,
     429: ErrorType.rate_limit,
+    499: ErrorType.client_closed_request,
     501: ErrorType.not_implemented,
     503: ErrorType.service_unavailable,
 }

@@ -299,7 +299,11 @@ class SyncAPIClient(BaseClient):
         while True:
             last: httpx.Response | None = None
             try:
-                response = self._client.send(request)
+                response = self._client.send(
+                    request,
+                    # A caller's http_client may follow redirects by default.
+                    follow_redirects=False if success_status is not None else httpx.USE_CLIENT_DEFAULT,
+                )
             except httpx.TimeoutException as exc:
                 if retries_left <= 0:
                     raise APITimeoutError() from exc
@@ -374,7 +378,10 @@ class AsyncAPIClient(BaseClient):
         while True:
             last: httpx.Response | None = None
             try:
-                response = await self._client.send(request)
+                response = await self._client.send(
+                    request,
+                    follow_redirects=False if success_status is not None else httpx.USE_CLIENT_DEFAULT,
+                )
             except httpx.TimeoutException as exc:
                 if retries_left <= 0:
                     raise APITimeoutError() from exc

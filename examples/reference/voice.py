@@ -197,3 +197,15 @@ def voice_create_call() -> None:
         },
     )
     print(call.id, call.initial_leg_id)
+
+
+def voice_call_recordings() -> None:
+    inventory = client.voice.calls.recordings.list("vcs_01krdgeqcxet5s7t44vh8rt9mg")
+    for recording in inventory.recordings:
+        print(recording.leg_id, recording.id)
+
+
+def voice_call_transcript() -> None:
+    transcript = client.voice.calls.transcript("vcs_01krdgeqcxet5s7t44vh8rt9mg")
+    for cue in transcript.cues:
+        print(cue.text)

@@ -32,7 +32,7 @@ class VoiceLegsListParams(TypedDict, total=False):
     ending_before: str
 
 
-class VoiceLegs(Resource):
+class VoiceLegsBase(Resource):
     def list(
         self,
         *,
@@ -97,7 +97,7 @@ class VoiceLegs(Resource):
         )
 
 
-class AsyncVoiceLegs(AsyncResource):
+class AsyncVoiceLegsBase(AsyncResource):
     def list(
         self,
         *,

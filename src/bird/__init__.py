@@ -52,6 +52,7 @@ from bird.resources.broadcasts import BroadcastUpdateParams
 from bird.resources.webhooks import WebhooksCreateParams
 from bird.resources.email_gen import EmailContentParams, EmailRecipientsParams
 from bird.resources.compliance_attachments import ComplianceAttachment, ComplianceFile
+from bird.resources.voice_legs_recordings import VoiceRecordingAudio
 from bird.resources.whatsapp_messages import WhatsappMedia
 from bird.resources.whatsapp_business_accounts_gen import (
     WhatsappBusinessAccountsListParams,
@@ -229,7 +230,9 @@ from bird._generated import (
     SMSSenderCreate,
     SMSSenderRequirementList,
     VoiceCall,
+    VoiceCallTranscript,
     VoiceLeg,
+    VoiceLegRecordings,
     VoiceTrunk,
     VoiceTrunkGateway,
     VoiceTrunkGatewayList,
@@ -653,6 +656,7 @@ from bird._open_enums import (
     VerificationTerminalReason,
     VoiceLegMediaEncryption,
     VoiceLegRejectionReason,
+    VoiceLegTranscriptSource,
     VoicePartyEndpointType,
     WhatsAppBusinessAccountMarketingMessagesStatus,
     WhatsAppBusinessAccountReviewStatus,
@@ -1205,6 +1209,7 @@ __all__ = [
     "ComplianceAttachment",
     "ComplianceFile",
     "WhatsappMedia",
+    "VoiceRecordingAudio",
     "WhatsappSendParams",
     "WhatsAppMessage",
     "WhatsAppEvent",
@@ -1279,6 +1284,8 @@ __all__ = [
     "CreateVoiceCallSequenceRequest",
     "VoiceCallsCreateParams",
     "VoiceCall",
+    "VoiceCallTranscript",
+    "VoiceLegRecordings",
     "VoiceLegsListParams",
     "VoiceVerifiedNumbersCreateParams",
     "VoiceVerifiedNumbersListParams",
@@ -1366,6 +1373,7 @@ __all__ = [
     "VerificationTerminalReason",
     "VoiceLegMediaEncryption",
     "VoiceLegRejectionReason",
+    "VoiceLegTranscriptSource",
     "VoicePartyEndpointType",
     "WhatsAppBusinessAccountMarketingMessagesStatus",
     "WhatsAppBusinessAccountReviewStatus",

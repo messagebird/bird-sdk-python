@@ -5471,7 +5471,7 @@ class EmailBroadcastResume(BaseModel):
     model_config = ConfigDict(extra="allow")
     confirm: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Acknowledgment that the message reaches the remaining recipients later than intended. It is required to resume a broadcast that started sending at least 24 hours ago. Before setting it, read the broadcast's `started_at` and have a reviewer with `email_management:read` check its pinned template version using `template.id` and `template.version_id`. Workspace versions retain the original content. Built-in template lookups (`scope: system`) show current catalogue content. Broadcasts with frozen content keep it, but older broadcasts can read the catalogue again when resumed. Neither a current lookup nor an earlier message alone proves what remaining recipients will receive. Leave the broadcast paused unless you can verify that content. Ask an authorized teammate if you lack that permission. It does not skip the funds or concurrent-broadcast checks.",
+        description="Acknowledgment that the message reaches the remaining recipients later than intended. It is required to resume a broadcast that started sending at least 24 hours ago. Before setting it, read the broadcast's `started_at` and have a reviewer with `email_management:read` read its template by `template.id` to check `scope`, then, for a workspace template or one the template read reports deleted (`404`), its pinned version using `template.id` and `template.version_id`. Workspace versions retain the original content. A built-in template (`scope: system`) shows current catalogue content, and only the template read returns `scope`. Broadcasts with frozen content keep it, but older broadcasts can read the catalogue again when resumed. Neither a current lookup nor an earlier message alone proves what remaining recipients will receive. Leave the broadcast paused unless you can verify that content. Ask an authorized teammate if you lack that permission. It does not skip the funds or concurrent-broadcast checks.",
     )] = None
 
 
@@ -28351,6 +28351,39 @@ class VoiceParty(BaseModel):
     )] = None
 
 
+class VoiceCallTranscriptID(RootModel[str]):
+    root: str
+
+
+class VoiceCallMediaID(RootModel[str]):
+    root: str
+
+
+class VoiceLegTranscriptState(str, Enum):
+    available = "available"
+    failed = "failed"
+
+
+class VoiceLegChannel(str, Enum):
+    rx = "rx"
+    tx = "tx"
+
+
+class VoiceLegTranscriptCue(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    seq: Annotated[int, Field(description="Position of this cue in the transcript.")]
+    start_ms: Annotated[Optional[int], Field(
+        description="Offset of this cue from the start of its stream, in milliseconds. Set on `aligned` cues; `null` when nothing measured it, because a zero would be a claim about timing that was never made.",
+    )] = None
+    end_ms: Annotated[Optional[int], Field(
+        description="Offset of the end of this cue from the start of its stream. `null` on the same terms as `start_ms`.",
+    )] = None
+    text: Annotated[str, Field(
+        description="What was transcribed for this cue. Empty on the single cue of a stream where nothing was heard.",
+        min_length=0,
+    )]
+
+
 class VoiceSessionCredential(BaseModel):
     "A short-lived SIP digest credential for a calling client. The `password` is returned once and cannot be recovered. Create a new credential if you lose it."
     model_config = ConfigDict(extra="allow")
@@ -28951,7 +28984,7 @@ class AvailableNumber(BaseModel):
         description="Capabilities supported by this number.",
     )]
     ownership_registration_required: Annotated[bool, Field(
-        description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any `pricing.setup_price` is charged during purchase, plus any tax. The recurring charge, net of tax `pricing.recurring_price` multiplied by `pricing.intervals_per_charge`, is taken with any tax at assignment and at each renewal, even while approval is pending; assignment may follow completion of a pending supplier order.",
+        description="Whether ownership paperwork must be approved before outbound SMS and voice use. Customer availability accounts for organization exemptions; admin supplier searches report the general country and number-type requirement. You can acquire the number, including Bird stock, and submit paperwork afterward. Any `pricing.setup_price` is charged at assignment for Bird stock and usually on delivery for a carrier number, plus any tax. The recurring charge, net of tax `pricing.recurring_price` multiplied by `pricing.intervals_per_charge`, is taken with any tax at assignment and at each renewal, even while approval is pending; assignment may follow completion of a pending supplier order.",
     )]
     ownership_address_scope: Annotated[Optional[Annotated[Union[AvailableNumberOwnershipAddressScope, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -30650,6 +30683,178 @@ class VoiceLegList(BaseModel):
     )]
 
 
+class VoiceLegMediaState(str, Enum):
+    open = "open"
+    available = "available"
+    failed = "failed"
+    purged = "purged"
+
+
+class VoiceLegRecordingMedia(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vcm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    leg_id: Annotated[str, Field(
+        examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    call_id: Annotated[Optional[str], Field(
+        description="`null` on a stream captured before calls existed, which only its leg addresses.",
+        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    codec: Annotated[str, Field(
+        description="Codec of the stored payload.",
+        examples=["PCMU"],
+        min_length=1,
+    )]
+    state: VoiceLegMediaState
+    offset_ms: Annotated[int, Field(
+        description="Length of the announcement that played before capture started. Zero when nothing was announced. It is not a position on a call clock.",
+    )]
+    audio_ms: Annotated[int, Field(
+        description="Length of the payload itself. This runs shorter than `ended_at - started_at` by the silence before the first packet, so use it for anything about the sound and the window for anything about the leg.",
+    )]
+    source_party: Annotated[Optional[VoiceParty], Field(
+        description="The party this audio was captured from, which is what says whose voice it\ncarries. `channel` only says which direction of the leg the stream came\nfrom. A recording view's `number` identifies a number associated with\nthat view, which can be an outbound destination.\n\n`null` on a stream stored before the platform recorded a party for it.",
+    )] = None
+    started_at: Annotated[str, Field(
+        description="When capture started, which is after any announcement rather than at the answer.",
+        min_length=1,
+    )]
+    ended_at: Annotated[Optional[str], Field(
+        description="When capture ended, or null while capture is open or its end is unknown.",
+        min_length=1,
+    )]
+
+
+class VoiceCallRecordingID(RootModel[str]):
+    root: str
+
+
+class VoiceLegRecording(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vrc_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vrc_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    leg_id: Annotated[str, Field(
+        examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    call_id: Annotated[Optional[str], Field(
+        description="`null` on a recording captured before calls existed.",
+        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    number: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The number associated with this recording view, when one was recorded. It can be an outbound destination. Omitted for numberless calls.",
+        min_length=1,
+    )] = None
+    channel: Annotated[VoiceLegChannel, Field(
+        description="It does not say whose voice it is.",
+    )]
+    media_id: Annotated[str, Field(
+        examples=["vcm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    media_started_at: Annotated[str, Field(
+        description="When the referenced stream started, which a view captured from the far leg does not share with its own `started_at`.",
+        min_length=1,
+    )]
+    started_at: Annotated[str, Field(min_length=1)]
+    ended_at: Annotated[Optional[str], Field(
+        description="When capture ended, or null while capture is open or its end is unknown.",
+        min_length=1,
+    )]
+
+
+class VoiceLegTranscriptSource(str, Enum):
+    whole = "whole"
+    aligned = "aligned"
+    live = "live"
+
+
+class VoiceLegTranscript(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["vct_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vct_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    leg_id: Annotated[str, Field(
+        examples=["vcl_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcl_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    call_id: Annotated[Optional[str], Field(
+        description="`null` on a transcript of a stream captured before calls existed.",
+        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    media_id: Annotated[str, Field(
+        examples=["vcm_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcm_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    media_started_at: Annotated[str, Field(
+        description="When that stream started. A transcript is retained with the stream it describes rather than on its own transcription lag.",
+        min_length=1,
+    )]
+    state: VoiceLegTranscriptState
+    source: Annotated[Union[VoiceLegTranscriptSource, str], Field(union_mode="left_to_right")]
+    model: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The model that produced it.",
+    )] = None
+    channel: Annotated[VoiceLegChannel, Field(
+        description="The direction of the transcribed stream.",
+    )]
+    cues: Annotated[List[VoiceLegTranscriptCue], Field(
+        description="The transcript, in order. Concatenating cues across streams reads as prose nobody spoke, and a reader matching over it can match the wrong party's words.",
+    )]
+    source_party: Annotated[Optional[VoiceParty], Field(
+        description="The party this audio was captured from, which is what says whose voice it\ncarries. `channel` only says which direction of the leg the stream came\nfrom. A recording view's `number` identifies a number associated with\nthat view, which can be an outbound destination.\n\n`null` on a stream stored before the platform recorded a party for it.",
+    )] = None
+    created_at: Annotated[str, Field(min_length=1)]
+
+
+class VoiceLegRecordings(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    media: Annotated[List[VoiceLegRecordingMedia], Field(
+        description="The stored audio this read covers, each stream once.",
+    )]
+    recordings: Annotated[List[VoiceLegRecording], Field(
+        description="Each leg's view of that audio.",
+    )]
+    transcripts: Annotated[List[VoiceLegTranscript], Field(
+        description="Every transcription attempt over that audio, including failed ones.",
+    )]
+    truncated: Annotated[bool, Field(
+        description="Whether a collection above was cut at this read's per-collection limit of\n500. When `true`, there is more than is shown here and this response is not\nthe whole set.\n\n`false` means no collection hit that limit, and a collection that could\nnot be read in full fails the request rather than returning a short\nanswer. What `false` does not establish is that every recording made has\narrived: delivery into this store is asynchronous, so a recording made\nmoments ago can be absent from a complete read.",
+    )]
+    evaluated_at: Annotated[str, Field(
+        description="The instant each collection's retention was decided at. Nothing here stays true because you are still holding the response. A recording can expire after it.",
+        min_length=1,
+    )]
+
+
+class VoiceRecordingDisposition(str, Enum):
+    inline = "inline"
+    attachment = "attachment"
+
+
 class VoiceSequenceDefinitionNode(BaseModel):
     "An authored node object. Drafts retain incomplete configuration, input and connections for later validation. Connections map output port names to objects with explicit node_id and port fields; validation reports incomplete or invalid targets. Omitted connections or an empty map leaves every output unconnected, with behavior determined by the node contract."
     model_config = ConfigDict(extra="allow")
@@ -30911,6 +31116,46 @@ class CreateVoiceCallRequest(BaseModel):
     )] = None
     sequence: Annotated[CreateVoiceCallSequenceRequest, Field(
         description="Supply exactly one of `id`, to run a saved sequence's active publication, or `definition`, to run a sequence once without saving it.",
+    )]
+
+
+class VoiceCallTranscriptCue(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    party: Annotated[Optional[int], Field(
+        description="Index into the transcript's `parties` of the party who spoke this cue,\nthe party its stream was captured from. `null` on a stream with no recorded\nparty.",
+        ge=0,
+    )]
+    start_at: Annotated[Optional[str], Field(
+        description="When this cue began, measured on its stream. `null` on a transcript that timed nothing, whose cues are placed at their stream's start.",
+    )]
+    end_at: Annotated[Optional[str], Field(
+        description="When this cue ended. `null` on the same terms as `start_at`.",
+    )]
+    text: Annotated[str, Field(
+        description="What was transcribed for this cue.",
+        min_length=1,
+    )]
+
+
+class VoiceCallTranscript(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    call_id: Annotated[str, Field(
+        examples=["vcs_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^vcs_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    parties: Annotated[List[VoiceParty], Field(
+        description="Each distinct stored party heard in `cues`, once. A stream with no recorded party adds nothing here; its cues carry a `null` party.",
+    )]
+    cues: Annotated[List[VoiceCallTranscriptCue], Field(
+        description="Every cue of the call in spoken order. A cue without times sits at the start of its stream.",
+    )]
+    complete: Annotated[bool, Field(
+        description="`false` when a stream's every transcription failed, or the read was cut\nat its limit. `true` does not mean every stream has cues: a stream where\nnothing was heard, one never transcribed, or one whose transcript has not\narrived yet contributes none and leaves this `true`.",
+    )]
+    evaluated_at: Annotated[str, Field(
+        description="The instant retention was decided at. A transcript can expire after it.",
+        min_length=1,
     )]
 
 

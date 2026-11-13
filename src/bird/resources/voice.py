@@ -3,8 +3,8 @@ from __future__ import annotations
 from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird.resources.voice_verified_numbers_gen import AsyncVoiceVerifiedNumbers, VoiceVerifiedNumbers
 from bird.resources.voice_destinations_gen import AsyncVoiceDestinations, VoiceDestinations
-from bird.resources.voice_calls_gen import AsyncVoiceCalls, VoiceCalls
-from bird.resources.voice_legs_gen import AsyncVoiceLegs, VoiceLegs
+from bird.resources.voice_calls import AsyncVoiceCalls, VoiceCalls
+from bird.resources.voice_legs import AsyncVoiceLegs, VoiceLegs
 from bird.resources.voice_numbers_gen import AsyncVoiceNumbers, VoiceNumbers
 from bird.resources.voice_ring_groups import AsyncVoiceRingGroups, VoiceRingGroups
 from bird.resources.voice_settings_gen import AsyncVoiceSettingsResource, VoiceSettingsResource

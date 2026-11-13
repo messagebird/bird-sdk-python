@@ -783,6 +783,14 @@ class VoiceLegRejectionReason:
     SOURCE_NOT_ALLOWED: Final = "source_not_allowed"
 
 
+class VoiceLegTranscriptSource:
+    """Values of VoiceLegTranscriptSource known at this SDK version (open enum)."""
+
+    ALIGNED: Final = "aligned"
+    LIVE: Final = "live"
+    WHOLE: Final = "whole"
+
+
 class VoicePartyEndpointType:
     """Values of VoicePartyEndpointType known at this SDK version (open enum)."""
 
@@ -1224,6 +1232,7 @@ __all__ = [
     "VerificationTerminalReason",
     "VoiceLegMediaEncryption",
     "VoiceLegRejectionReason",
+    "VoiceLegTranscriptSource",
     "VoicePartyEndpointType",
     "VoiceVerifiedNumberStatus",
     "WhatsAppBusinessAccountMarketingMessagesStatus",

@@ -7,11 +7,20 @@ fields (remediation + next) round-trip through from_response.
 
 from __future__ import annotations
 
+import enum
 import json
+import typing
 
 import pytest
 
-from bird._exceptions import NextAction, QuotaContext, ValidationError, from_response
+from bird._exceptions import (
+    ErrorType,
+    NextAction,
+    QuotaContext,
+    ValidationError,
+    _infer_type,
+    from_response,
+)
 from bird._generated import ErrorBody
 from bird._generated import NextAction as WireNextAction
 
@@ -154,3 +163,27 @@ def test_from_response_surfaces_quota_context() -> None:
     bare = from_response(422, json.dumps({"error": {"type": "validation_error", "code": "E06009", "message": "x"}}), {})
     assert isinstance(bare, ValidationError)
     assert bare.quota is None
+
+
+def _wire_error_types() -> set[str]:
+    annotation = ErrorBody.model_fields["type"].annotation
+    if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
+        return {member.value for member in annotation}
+    return {arg for arg in typing.get_args(annotation) if isinstance(arg, str)}
+
+
+def test_error_type_covers_the_wire_enum() -> None:
+    """ErrorType is hand-listed, so a type the spec adds would otherwise make
+    ErrorType(err.type) raise; too_early_error shipped that way."""
+    wire = _wire_error_types()
+    assert wire, "found no ErrorBody.type values; the generated model changed shape"
+    assert wire <= {member.value for member in ErrorType}, wire - {m.value for m in ErrorType}
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [(410, ErrorType.gone), (425, ErrorType.too_early), (499, ErrorType.client_closed_request)],
+)
+def test_infer_type_from_bodyless_status(status: int, expected: ErrorType) -> None:
+    assert _infer_type(status) == expected
+    assert from_response(status, b"upstream", {}).type == expected

@@ -57,22 +57,22 @@ def _storage_timeout(
     return client_timeout
 
 
-def _storage_failed(err: Exception) -> APIConnectionError:
+def _storage_failed(err: Exception, method: str = "media") -> APIConnectionError:
     # Same reason as _storage_refused: the caller recovers from every storage
     # failure the same way, and an httpx type leaking out would be the only
-    # place this SDK raises one.
+    # place this SDK raises one. method is the SDK method that mints a fresh link.
     return APIConnectionError(
-        f"downloading media failed: {err}; call media again for a fresh link"
+        f"downloading media failed: {err}; call {method} again for a fresh link"
     )
 
 
-def _storage_refused(status: int) -> APIConnectionError:
+def _storage_refused(status: int, method: str = "media") -> APIConnectionError:
     # Never routed through from_response: a storage XML body is no Bird error
     # envelope, and a 403 mapped that way would report the caller's own key as
     # lacking permission.
     return APIConnectionError(
         f"storage refused the download link (status {status}): the link expired "
-        "or was refused, call media again for a fresh link"
+        f"or was refused, call {method} again for a fresh link"
     )
 
 
