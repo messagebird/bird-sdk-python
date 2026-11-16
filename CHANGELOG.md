@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.138.0
+
+- Add optional `brand_id` to individual and batch email requests. Brand selection is in preview. Explicit input returns `422` when selection is unavailable; omitted or null input preserves existing behavior.
+- Expose `brand_id` on email message responses and outbound lifecycle events. Brand attribution is in preview.
+
 ## 0.137.0
 
 - Add ErrorType.too_early, ErrorType.gone and ErrorType.client_closed_request for `too_early_error` (425), `gone_error` (410) and `client_closed_request_error` (499), so ErrorType(err.type) no longer raises for them; an error response with no body at those statuses now carries the matching `type` instead of `bad_request_error`.

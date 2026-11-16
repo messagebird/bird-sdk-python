@@ -27,6 +27,8 @@ from bird._types import (
     EmailAddressInput,
     EmailDefaults,
     EmailSendParams,
+    Omit,
+    omit,
     RequestOptions,
 )
 from .email_gen import AsyncEmailBase, EmailBase
@@ -79,6 +81,7 @@ def _send_body(
     attachments: Sequence[Attachment] | None,
     scheduled_at: str | datetime | None,
     defaults: EmailDefaults | None,
+    brand_id: str | None | Omit = omit,
 ) -> dict[str, Any]:
     # A per-send value wins; an unset field falls back to the client's EmailDefaults
     #. `from_` maps to the wire field "from" (a Python keyword). `template`
@@ -119,6 +122,7 @@ def _send_body(
         "category":     category     if category     is not None else d.get("category"),
         "attachments":  attachments,
         "scheduled_at": scheduled_at.isoformat() if isinstance(scheduled_at, datetime) else scheduled_at,
+        "brand_id":     brand_id,
     })
 
 
@@ -157,6 +161,7 @@ def _batch_body(
             attachments=m.get("attachments"),
             scheduled_at=m.get("scheduled_at"),
             defaults=defaults,
+            brand_id=m.get("brand_id", omit),
         )
         for m in messages
     ]
@@ -212,6 +217,7 @@ class Email(EmailBase):
         category: str | None = None,
         attachments: Sequence[Attachment] | None = None,
         scheduled_at: str | datetime | None = None,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
         """Send an email and return the created message.
@@ -297,7 +303,7 @@ class Email(EmailBase):
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            scheduled_at=scheduled_at, defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults, brand_id=brand_id,
         )
         response = self._client.request("POST", _PATH, body=body, **_opts(options))
         return EmailMessage.model_validate(response.json())
@@ -391,6 +397,7 @@ class AsyncEmail(AsyncEmailBase):
         category: str | None = None,
         attachments: Sequence[Attachment] | None = None,
         scheduled_at: str | datetime | None = None,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
         body = _send_body(
@@ -399,7 +406,7 @@ class AsyncEmail(AsyncEmailBase):
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            scheduled_at=scheduled_at, defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults, brand_id=brand_id,
         )
         response = await self._client.request("POST", _PATH, body=body, **_opts(options))
         return EmailMessage.model_validate(response.json())
@@ -432,6 +439,7 @@ class EmailWithRawResponse:
         track_opens: bool | None = None, track_clicks: bool | None = None,
         ip_pool_id: str | None = None, category: str | None = None,
         attachments: Sequence[Attachment] | None = None, scheduled_at: str | datetime | None = None,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
@@ -440,7 +448,7 @@ class EmailWithRawResponse:
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            scheduled_at=scheduled_at, defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults, brand_id=brand_id,
         )
         return APIResponse(self._client.request("POST", _PATH, body=body, **_opts(options)), EmailMessage)
 
@@ -465,6 +473,7 @@ class AsyncEmailWithRawResponse:
         track_opens: bool | None = None, track_clicks: bool | None = None,
         ip_pool_id: str | None = None, category: str | None = None,
         attachments: Sequence[Attachment] | None = None, scheduled_at: str | datetime | None = None,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> APIResponse[EmailMessage]:
         body = _send_body(
@@ -473,7 +482,7 @@ class AsyncEmailWithRawResponse:
             cc=cc, bcc=bcc, reply_to=reply_to, headers=headers, tags=tags,
             metadata=metadata, track_opens=track_opens, track_clicks=track_clicks,
             ip_pool_id=ip_pool_id, category=category, attachments=attachments,
-            scheduled_at=scheduled_at, defaults=self._defaults,
+            scheduled_at=scheduled_at, defaults=self._defaults, brand_id=brand_id,
         )
         return APIResponse(await self._client.request("POST", _PATH, body=body, **_opts(options)), EmailMessage)
 

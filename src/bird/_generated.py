@@ -13,6 +13,10 @@ class SortOrder(str, Enum):
     desc = "desc"
 
 
+class BrandID(RootModel[str]):
+    root: str
+
+
 class ErrorDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     param: Annotated[str, Field(
@@ -3780,6 +3784,12 @@ class EmailMessage(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EmailMessageList(BaseModel):
@@ -3972,6 +3982,12 @@ class EmailMessageSendRequest(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="Send at this future time instead of immediately, at least 30 seconds and at most 30 days ahead; outside that range returns `422`. The message returns `accepted` and reads as `scheduled` until it sends, and the message cancel endpoint cancels it before then. Scheduled sends count against your plan's monthly scheduled-email allowance, and a send over it returns `422`. A stored template's published version, language and parameter values are pinned at acceptance, so a later publication does not change what sends; deleting the template before the message is due rejects it with `generation_failure`. Sender eligibility and send-volume allowance are checked again when it is due. Batch items take this field too, so one batch can mix scheduled and immediate messages.",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Preview: selects the business whose email preferences and unsubscribe page apply; explicit input returns `422` when selection is unavailable. When selection is available, omission or null selects the workspace's default Brand. The selection stays fixed for scheduled sends and retries. An explicit ID must belong to this workspace and must not be archived. An unknown, foreign or archived Brand returns `422`. Omitted or null values preserve existing sending behavior while selection is unavailable.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EmailMessageBatchRequest(BaseModel):
@@ -4031,6 +4047,12 @@ class EmailMessageBatchItem(BaseModel):
     scheduled_at: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="When this item is scheduled to send, for an item created with a future send time. Absent for an item that sends immediately.",
+    )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
 
 
@@ -5456,6 +5478,12 @@ class EmailBroadcastTestResult(BaseModel):
     scheduled_at: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
+    )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
 
 
@@ -24352,6 +24380,12 @@ class EventEmailAcceptedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventEmailAccepted(BaseModel):
@@ -24425,6 +24459,12 @@ class EventEmailBouncedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
     )]
@@ -24492,6 +24532,12 @@ class EventEmailCanceledData(BaseModel):
         max_length=255,
         min_length=1,
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventEmailCanceled(BaseModel):
@@ -24557,6 +24603,12 @@ class EventEmailClickedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     url: Annotated[str, Field(
         description="The URL the recipient clicked.",
         examples=["https://bird.com/welcome"],
@@ -24635,6 +24687,12 @@ class EventEmailComplainedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     feedback_type: Annotated[Optional[str], Field(
         description="The kind of feedback the mailbox provider reported (such as `abuse` or `fraud`), or null when the provider did not specify one.",
         examples=["abuse"],
@@ -24704,6 +24762,12 @@ class EventEmailDeferredData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
     )]
@@ -24786,6 +24850,12 @@ class EventEmailDeliveredData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventEmailDelivered(BaseModel):
@@ -24851,6 +24921,12 @@ class EventEmailListUnsubscribedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventEmailListUnsubscribed(BaseModel):
@@ -24916,6 +24992,12 @@ class EventEmailOpenedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     ip_address: Annotated[Optional[str], Field(
         description="IP address of the client that opened the email, or null when it is not known.",
         examples=["203.0.113.9"],
@@ -24989,6 +25071,12 @@ class EventEmailOutOfBandBounceData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     bounce_type: Annotated[EmailBounceType, Field(
         description="Bounce classification.\n\n- `hard`: A permanent failure, such as an invalid address or a domain that does not exist.\n- `soft`: A transient failure, such as a full mailbox or a server that is temporarily unavailable.\n- `block`: The receiving mail server refused the sending IP on reputation grounds.\n- `admin`: An administrative refusal, such as relaying denied or a blocklisted domain.\n- `undetermined`: The receiving server's response was ambiguous.",
     )]
@@ -25075,6 +25163,12 @@ class EventEmailProcessedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventEmailProcessed(BaseModel):
@@ -25226,6 +25320,12 @@ class EventEmailRejectedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     rejection_reason: Annotated[Annotated[Union[EmailRejectionReason, str], Field(union_mode="left_to_right")], Field(
         description="Why an email was rejected before delivery.\n\n- `recipient_suppressed`: The recipient is on the workspace suppression list, so\n  delivery was never attempted.\n- `transmission_failed`: The message could not be transmitted for delivery.\n- `generation_failure`: The message could not be built for delivery (template or\n  content issue).\n- `policy_rejection`: The message was refused by sending policy.\n- `domain_unverified`: The sending domain was not verified.\n- `quota_exceeded`: The organization's send quota was reached.\n- `recipient_not_allowed`: A recipient was not permitted for this send (for shared\n  onboarding-domain sends, recipients must be verified workspace members).\n- `workspace_suspended`: The workspace is suspended, so this mail was not sent and will not be sent after reactivation. Contact Bird support to reactivate the workspace.",
     )]
@@ -25274,6 +25374,12 @@ class EventEmailScheduledData(BaseModel):
         examples=["INV-1234"],
         max_length=255,
         min_length=1,
+    )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     scheduled_at: Annotated[str, Field(
         description="When the message is scheduled to send.",
@@ -25345,6 +25451,12 @@ class EventEmailUnsubscribedData(BaseModel):
         min_length=1,
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventEmailUnsubscribed(BaseModel):

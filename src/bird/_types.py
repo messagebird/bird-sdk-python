@@ -82,6 +82,7 @@ class EmailSendParams(_EmailSendRequired, total=False):
     template, omit ``subject``/``html``/``text`` and personalize with
     ``parameters``."""
 
+    brand_id: str | None | Omit
     from_: EmailAddressInput
     subject: str
     html: str
