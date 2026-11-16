@@ -7359,26 +7359,26 @@ class SMSSuppression(BaseModel):
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
+    )]
     effective_at: Annotated[str, Field(
         description="When the subscriber opted out, as reported by whoever reported it. This is what orders one subscriber's history, and it can be earlier than `created_at` when a message reached us late.",
         min_length=1,
     )]
     ended_at: Annotated[Optional[str], Field(
         description="When this stopped applying. Null while it is still stopping messages.",
-    )] = None
+    )]
     ended_reason: Annotated[Optional[Annotated[Union[SMSSuppressionEndReason, str], Field(union_mode="left_to_right")]], Field(
         description="What ended it. Null while it is still stopping messages.",
-    )] = None
+    )]
     ended_effective_at: Annotated[Optional[str], Field(
         description="When the subscriber opted back in, as reported. Null while it is still stopping messages.",
-    )] = None
+    )]
     source_end_sms_id: Annotated[Optional[str], Field(
         description="The inbound message the subscriber opted back in with, when there was one. Null while it is still stopping messages, and when something other than a start keyword ended it.",
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^sms_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
+    )]
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
     last_asserted_at: Annotated[str, Field(
         description="When we last recorded the subscriber opting out of this sender. Later than `created_at` when they texted a stop keyword again, or your workspace added it again, while already suppressed. A repeat adds no new record; a repeated stop keyword also earns another confirmation reply.",
@@ -14097,6 +14097,11 @@ class AMBSuppressionOrigin(str, Enum):
     gone = "gone"
 
 
+class AMBSuppressionCoverage(str, Enum):
+    all = "all"
+    invitations = "invitations"
+
+
 class AMBMessageID(RootModel[str]):
     root: str
 
@@ -14105,19 +14110,14 @@ class AMBEventID(RootModel[str]):
     root: str
 
 
-class AMBSuppressionAppliesTo(str, Enum):
-    all = "all"
-    invitations = "invitations"
-
-
-class AMBSuppressionEndedReason(str, Enum):
+class AMBSuppressionEndReason(str, Enum):
     user = "user"
     api_key = "api_key"
     reinitiated = "reinitiated"
 
 
 class AMBSuppression(BaseModel):
-    "One retained suppression episode for an address. A null account scope covers the same address in every account in the workspace; it does not link different opaque identities."
+    "One period during which messages to an address are stopped: when it started, what started it, and what ended it. The address is a phone number or the opaque identifier Apple assigns to a customer's conversation with a business. A customer who closes a conversation, returns, and closes it again has two of these on record rather than one current state, the first ended and the second in force, and each keeps its own dates once it ends. The list returns the periods in force; fetch one by ID to read an ended one."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["asp_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -14125,12 +14125,13 @@ class AMBSuppression(BaseModel):
         pattern="^asp_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     business_account_id: Annotated[Optional[str], Field(
+        description="The business account this stops. Null when it stops the address for every account in the workspace. A workspace-wide suppression covers the same address everywhere; it does not link the different opaque identifiers one person holds with different accounts.",
         examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     address: Annotated[str, Field(
-        description="Canonical E.164 phone number, or the exact opaque identifier Apple supplied.",
+        description="The customer: a phone number in E.164 format, or the exact opaque identifier Apple supplied. `address_type` says which.",
         examples=[+15551234567],
         max_length=1024,
         min_length=1,
@@ -14139,50 +14140,47 @@ class AMBSuppression(BaseModel):
         description="What kind of value `address` holds.\n\n- `phone_number` means `address` is the customer's phone number. Apple's CloseSession event carries a phone number rather than an opaque identifier, so a suppression opened by a close on a conversation identified by phone number takes this kind.\n- `opaque_user_id` means `address` is the opaque identifier Apple assigns to the customer's conversation with the business, stable across a close and a later re-initiation.",
     )]
     reason: Annotated[Annotated[Union[AMBSuppressionReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why the handle is suppressed. `manual` means it was added directly through this API or the dashboard. `opted_out` covers every case where Apple or the customer signaled they should not be contacted: a close, a permanent delivery failure, a declined invitation, or a stop keyword. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+        description="Why messages are stopped. `manual` means your workspace added it through this API or the dashboard. `opted_out` means the customer or Apple signaled they should not be contacted, such as a close of the conversation. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
     )]
     origin: Annotated[Annotated[Union[AMBSuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
-        description="Who created the episode. user and api_key identify manual blocks. close_session and gone are protected automatic conversation facts. Phone invitation opt-outs are recorded as preferences.",
+        description="How the suppression came to exist:\n\n- `user`: someone acting in the dashboard.\n- `api_key`: an API call.\n- `close_session`: Apple reporting that the customer closed the conversation.\n- `gone`: Apple refusing a send because the customer had closed the conversation.\n\n`user` and `api_key` are the manual suppressions, the ones you can end. The two closes are\nthe customer's own statement and end when they return. A customer declining or opting out of\ninvitations by phone number is recorded as a preference rather than here.",
     )]
-    applies_to: Annotated[Annotated[Union[AMBSuppressionAppliesTo, str], Field(union_mode="left_to_right")], Field(
-        description="Paths blocked by this episode. Treat unknown values as blocking.",
-        min_length=1,
+    applies_to: Annotated[Annotated[Union[AMBSuppressionCoverage, str], Field(union_mode="left_to_right")], Field(
+        description="What this stops. `all` stops every outbound path to the address: operator and automated replies, API sends, typing indicators and invitations. `invitations` stops invitations to the phone number and leaves an open conversation reachable. Treat unrecognized values as stopping everything.",
+    )]
+    blocking: Annotated[bool, Field(
+        description="Whether this is stopping messages right now; `applies_to` says what it stops. Always true in a list, which carries only the suppressions in force; false when you fetch one by ID that has since ended, which is also when `ended_at` is set.",
     )]
     source_message_id: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
+        description="The outbound message Apple refused because the customer had closed the conversation, when that is what opened this. Null for a close Apple reported and for a manual suppression.",
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     source_event_id: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
+        description="The conversation event recording the close Apple reported, when that is what opened this. Null for a refused send and for a manual suppression.",
         examples=["aev_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^aev_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    effective_at: Annotated[str, Field(
+        description="When the customer closed the conversation, as reported by Apple; when Apple refused a send because the conversation was closed; or when a manual suppression was added. This is what orders the list, and it can differ from `created_at`: earlier when a close reached us late, later when the customer closed the conversation again while this was in force, which moves it to that later close.",
+        min_length=1,
+    )]
+    created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
+    ended_at: Annotated[Optional[str], Field(
+        description="When this stopped applying. Null while it is still stopping messages.",
+    )]
+    ended_reason: Optional[Annotated[Union[AMBSuppressionEndReason, str], Field(union_mode="left_to_right")]]
+    ended_effective_at: Annotated[Optional[str], Field(
+        description="When the customer returned to the conversation, as reported by Apple, or when your workspace ended it. Null while it is still stopping messages.",
+    )]
     source_end_message_id: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
+        description="The message the customer returned with, when there was one. Null while it is still stopping messages, and when something other than a customer message ended it: your workspace ending it, or the customer returning by accepting an invitation.",
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    effective_at: Annotated[str, Field(
-        description="When the blocking state took effect.",
-        min_length=1,
-    )]
-    created_at: Annotated[str, Field(
-        description="When Bird recorded this episode.",
-        min_length=1,
-    )]
-    ended_at: Annotated[Optional[str], Field(
-        description="When Bird recorded the end, or null while active.",
-    )]
-    ended_reason: Annotated[Optional[Annotated[Union[AMBSuppressionEndedReason, str], Field(union_mode="left_to_right")]], Field(
-        description="What ended the episode, or null while active. Customers can end only manual episodes.",
-    )]
-    ended_effective_at: Annotated[Optional[str], Field(
-        description="When the end took effect, or null while active.",
-    )]
 
 
 class AMBBusinessAccountList(BaseModel):
@@ -16358,10 +16356,15 @@ class AMBConversationTypingRequest(BaseModel):
     )]
 
 
+class AMBSuppressionReasonFilter(str, Enum):
+    manual = "manual"
+    opted_out = "opted_out"
+
+
 class AMBSuppressionList(BaseModel):
     model_config = ConfigDict(extra="allow")
     data: Annotated[List[AMBSuppression], Field(
-        description="Active suppression episodes for the workspace, most recently effective first. Episodes that have ended are left out; fetch one by ID to read it.",
+        description="Page of suppressions in force, most recent first by `effective_at`. Ended suppressions are left out; fetch one by ID to read it.",
     )]
     next_cursor: Annotated[Optional[str], Field(
         description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
@@ -16378,6 +16381,7 @@ class AMBSuppressionList(BaseModel):
 
 
 class AMBSuppressionCreate(BaseModel):
+    "Stops messages to one address, for one business account or for every account in the workspace."
     model_config = ConfigDict(extra="allow")
     business_account_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -16386,7 +16390,7 @@ class AMBSuppressionCreate(BaseModel):
         pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     address: Annotated[str, Field(
-        description="The phone number or opaque identifier to suppress. For a phone number, supply canonical E.164 with a leading plus sign.",
+        description="The customer to stop messaging: a phone number in E.164 format with a leading plus sign, or the exact opaque identifier Apple supplied. `address_type` says which.",
         examples=[+15551234567],
         max_length=1024,
         min_length=1,
@@ -17313,17 +17317,17 @@ class WhatsAppSuppressionOrigin(str, Enum):
     user = "user"
 
 
-class WhatsAppSuppressionAppliesTo(str, Enum):
+class WhatsAppSuppressionCoverage(str, Enum):
     all = "all"
 
 
-class WhatsAppSuppressionEndedReason(str, Enum):
+class WhatsAppSuppressionEndReason(str, Enum):
     api_key = "api_key"
     user = "user"
 
 
 class WhatsAppSuppression(BaseModel):
-    "One period during which an address is suppressed: when it started and, once it is over, what ended it. An address suppressed, ended and suppressed again has two of these on record rather than one current state. The list returns the periods in force; fetch one by ID to read one that has ended."
+    "One period during which messages to a WhatsApp address are stopped: when it started, what started it, and what ended it. An address suppressed, ended and suppressed again has two of these on record rather than one current state, the first ended and the second in force, and each keeps its own dates once it ends. The list returns the periods in force; fetch one by ID to read an ended one."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["was_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -17336,43 +17340,46 @@ class WhatsAppSuppression(BaseModel):
         min_length=1,
     )]
     waba: Annotated[Optional[str], Field(
-        description="The WhatsApp Business Account the suppression is limited to, identified by its WhatsApp-issued account ID, or null when it covers the whole workspace.",
+        description="The WhatsApp Business Account this stops, identified by its WhatsApp-issued account ID. Null when it stops the address for every account in the workspace, whichever one sends.",
         examples=["null"],
-    )] = None
+    )]
     reason: Annotated[Annotated[Union[WhatsAppSuppressionReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why the address is suppressed. `manual` means it was added directly rather than created automatically from a delivery outcome. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
-        min_length=1,
+        description="Why the address cannot be messaged:\n\n- `manual`: Your workspace added the suppression through the API or the dashboard, and can end it.",
     )]
     origin: Annotated[Annotated[Union[WhatsAppSuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
-        description="How the suppression came to exist: `api_key` (added through the API with an API key) or `user` (added by a user in the dashboard). This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
-        min_length=1,
+        description="How the suppression came to exist:\n\n- `api_key`: an API call.\n- `user`: someone acting in the dashboard.\n\nKept beside the reason because one reason can arrive by more than one route.",
     )]
-    applies_to: Annotated[Annotated[Union[WhatsAppSuppressionAppliesTo, str], Field(union_mode="left_to_right")], Field(
-        description="Blocking policy. `all` blocks every message category. Treat an unrecognized value as blocking.",
-        min_length=1,
+    applies_to: Annotated[Annotated[Union[WhatsAppSuppressionCoverage, str], Field(union_mode="left_to_right")], Field(
+        description="Message categories blocked for this address. `all` blocks every category, including authentication and transactional messages, and is the only value in use. Treat unrecognized values as blocking every category.",
+    )]
+    blocking: Annotated[bool, Field(
+        description="Whether this is stopping messages right now. Always true in a list, which carries only the suppressions in force; false when you fetch one by ID that has since ended, which is also when `ended_at` is set.",
     )]
     source_whatsapp_id: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="ID of the WhatsApp message that caused this address to be suppressed, when the suppression was created automatically. Omitted for addresses added manually.",
+        description="The WhatsApp message a suppression was opened from. Null for a manual suppression, and Bird records no other kind today, so this is null on every record.",
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
-    ended_at: Annotated[Optional[str], Field(
-        description="When this stopped applying. Null while it is still stopping messages, which is the case for every record in the list.",
-    )] = None
-    ended_reason: Annotated[Optional[Annotated[Union[WhatsAppSuppressionEndedReason, str], Field(union_mode="left_to_right")]], Field(
-        description="What ended it: `api_key` (deleted through the API with an API key) or `user` (deleted by a user in the dashboard). Null while it is still stopping messages. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
-    )] = None
-    created_at: Annotated[str, Field(
-        description="When the suppression was created.",
+    effective_at: Annotated[str, Field(
+        description="When the suppression took effect. For one added through the API or the dashboard this is when it was added, so it matches `created_at`. This is what orders the list.",
         min_length=1,
     )]
+    ended_at: Annotated[Optional[str], Field(
+        description="When this stopped applying. Null while it is still stopping messages.",
+    )]
+    ended_reason: Optional[Annotated[Union[WhatsAppSuppressionEndReason, str], Field(union_mode="left_to_right")]]
+    ended_effective_at: Annotated[Optional[str], Field(
+        description="When the end took effect. For one ended through the API or the dashboard this matches `ended_at`. Null while it is still stopping messages.",
+    )]
+    created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
 
 
 class WhatsAppSuppressionList(BaseModel):
     model_config = ConfigDict(extra="allow")
-    data: List[WhatsAppSuppression]
+    data: Annotated[List[WhatsAppSuppression], Field(
+        description="Page of suppressions in force, most recent first by `effective_at`. Ended suppressions are left out; fetch one by ID to read it.",
+    )]
     next_cursor: Annotated[Optional[str], Field(
         description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
         examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
@@ -17388,15 +17395,16 @@ class WhatsAppSuppressionList(BaseModel):
 
 
 class WhatsAppSuppressionCreate(BaseModel):
+    "Stops messages to one WhatsApp address, for one business account or for every account in the workspace."
     model_config = ConfigDict(extra="allow")
     address: Annotated[str, Field(
-        description="WhatsApp address to suppress. For a phone number, supply canonical E.164 with a leading plus sign, such as `+5511977670804`. A value that is not a valid phone number returns a `422`.",
+        description="The WhatsApp address to stop messaging. For a phone number, supply canonical E.164 with a leading plus sign, such as `+5511977670804`. A value that is not a valid phone number or business-scoped user ID returns `422`.",
         examples=[+5511977670804],
         min_length=1,
     )]
     waba: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Limit the suppression to messages sent from this WhatsApp Business Account, identified by its WhatsApp-issued account ID. Omit it to block the address for the whole workspace, whichever account sends.",
+        description="The WhatsApp Business Account to stop, identified by its WhatsApp-issued account ID or by the `waa_` ID Bird gives it. Either form resolves to the same account, and the suppression stores and returns the WhatsApp-issued one. Omit it to stop the address for the whole workspace, whichever account sends. An account that is not one of yours returns `404` on a single create, and its row reports `error` in a bulk create.",
         examples=[102290129340398],
         max_length=64,
         min_length=1,
@@ -24227,10 +24235,10 @@ class EventAMBSuppressionCreatedData(BaseModel):
         description="What kind of value `address` holds.\n\n- `phone_number` means `address` is the customer's phone number. Apple's CloseSession event carries a phone number rather than an opaque identifier, so a suppression opened by a close on a conversation identified by phone number takes this kind.\n- `opaque_user_id` means `address` is the opaque identifier Apple assigns to the customer's conversation with the business, stable across a close and a later re-initiation.",
     )]
     reason: Annotated[Annotated[Union[AMBSuppressionReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why the handle is suppressed. `manual` means it was added directly through this API or the dashboard. `opted_out` covers every case where Apple or the customer signaled they should not be contacted: a close, a permanent delivery failure, a declined invitation, or a stop keyword. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
+        description="Why messages are stopped. `manual` means your workspace added it through this API or the dashboard. `opted_out` means the customer or Apple signaled they should not be contacted, such as a close of the conversation. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
     )]
     origin: Annotated[Annotated[Union[AMBSuppressionOrigin, str], Field(union_mode="left_to_right")], Field(
-        description="Who created the episode. user and api_key identify manual blocks. close_session and gone are protected automatic conversation facts. Phone invitation opt-outs are recorded as preferences.",
+        description="How the suppression came to exist:\n\n- `user`: someone acting in the dashboard.\n- `api_key`: an API call.\n- `close_session`: Apple reporting that the customer closed the conversation.\n- `gone`: Apple refusing a send because the customer had closed the conversation.\n\n`user` and `api_key` are the manual suppressions, the ones you can end. The two closes are\nthe customer's own statement and end when they return. A customer declining or opting out of\ninvitations by phone number is recorded as a preference rather than here.",
     )]
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -28165,10 +28173,6 @@ class EventWhatsAppSent(BaseModel):
     )]
 
 
-class EventWhatsAppSuppressionCreatedDataReason(str, Enum):
-    manual = "manual"
-
-
 class EventWhatsAppSuppressionCreatedData(BaseModel):
     "Payload of the whatsapp_suppression.created event."
     model_config = ConfigDict(extra="allow")
@@ -28186,9 +28190,8 @@ class EventWhatsAppSuppressionCreatedData(BaseModel):
         description="The WhatsApp Business Account the suppression is limited to, identified by its WhatsApp-issued account ID, or null when it covers the whole workspace.",
         examples=["null"],
     )]
-    reason: Annotated[Annotated[Union[EventWhatsAppSuppressionCreatedDataReason, str], Field(union_mode="left_to_right")], Field(
-        description="Why the address is suppressed. `manual` means it was added directly rather than created automatically from a delivery outcome. This list grows over time, so treat an unknown value as informational rather than rejecting the record.",
-        min_length=1,
+    reason: Annotated[Annotated[Union[WhatsAppSuppressionReason, str], Field(union_mode="left_to_right")], Field(
+        description="Why the address cannot be messaged:\n\n- `manual`: Your workspace added the suppression through the API or the dashboard, and can end it.",
     )]
     workspace_id: Annotated[str, Field(
         examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -30609,7 +30612,7 @@ class Esim(BaseModel):
         description="Whether ongoing package consumption reporting is available. Separate from daily usage history. Null package consumption values mean no measurement is available.",
     )]
     ready_until: Annotated[Optional[str], Field(
-        description="Activate (first network use) before this moment or the eSIM expires. Null once activated.",
+        description="Guaranteed deadline for first network use, derived from the initial purchase's accepted activation window. The activation window is separate from package validity. Null when the window is unconfirmed, first use has been reported, or the eSIM has been released. Top-ups do not restart this deadline.",
     )] = None
     activated_at: Annotated[Optional[str], Field(
         description="When the eSIM first used a mobile network. Null until then.",
@@ -31482,6 +31485,11 @@ class EsimOfferBundlePricing(BaseModel):
 class EsimOfferSummary(BaseModel):
     "Compact offer row for lists: the full offer minus the embedded zone. Fetch the offer or its zone for the country list."
     model_config = ConfigDict(extra="allow")
+    activation_window_days: Annotated[Optional[int], Field(
+        description="Guaranteed days from purchase (order acceptance) to first network use for a new eSIM. The activation window is separate from package validity. Null means the activation window is unconfirmed, not unlimited. This window does not restart when topping up an existing eSIM.",
+        ge=1,
+        le=3650,
+    )]
     id: Annotated[str, Field(
         examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -31548,6 +31556,11 @@ class EsimOfferList(BaseModel):
 class EsimOffer(BaseModel):
     "A purchasable offer from the curated catalog: the commercial terms for prepaid data in one coverage zone, priced as your workspace is billed. The coverage itself lives on the referenced zone, shared by every offer selling the same footprint."
     model_config = ConfigDict(extra="allow")
+    activation_window_days: Annotated[Optional[int], Field(
+        description="Guaranteed days from purchase (order acceptance) to first network use for a new eSIM. The activation window is separate from package validity. Null means the activation window is unconfirmed, not unlimited. This window does not restart when topping up an existing eSIM.",
+        ge=1,
+        le=3650,
+    )]
     id: Annotated[str, Field(
         examples=["eof_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,

@@ -83,6 +83,21 @@ class AMBMessageEventType:
     AMB_SENT: Final = "amb.sent"
 
 
+class AMBSuppressionCoverage:
+    """Values of AMBSuppressionCoverage known at this SDK version (open enum)."""
+
+    ALL: Final = "all"
+    INVITATIONS: Final = "invitations"
+
+
+class AMBSuppressionEndReason:
+    """Values of AMBSuppressionEndReason known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    REINITIATED: Final = "reinitiated"
+    USER: Final = "user"
+
+
 class AMBSuppressionOrigin:
     """Values of AMBSuppressionOrigin known at this SDK version (open enum)."""
 
@@ -1067,6 +1082,32 @@ class WhatsAppStatsMessageCategory:
     UTILITY: Final = "utility"
 
 
+class WhatsAppSuppressionCoverage:
+    """Values of WhatsAppSuppressionCoverage known at this SDK version (open enum)."""
+
+    ALL: Final = "all"
+
+
+class WhatsAppSuppressionEndReason:
+    """Values of WhatsAppSuppressionEndReason known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    USER: Final = "user"
+
+
+class WhatsAppSuppressionOrigin:
+    """Values of WhatsAppSuppressionOrigin known at this SDK version (open enum)."""
+
+    API_KEY: Final = "api_key"
+    USER: Final = "user"
+
+
+class WhatsAppSuppressionReason:
+    """Values of WhatsAppSuppressionReason known at this SDK version (open enum)."""
+
+    MANUAL: Final = "manual"
+
+
 class WhatsAppTemplateBidStrategy:
     """Values of WhatsAppTemplateBidStrategy known at this SDK version (open enum)."""
 
@@ -1166,6 +1207,8 @@ __all__ = [
     "AMBFormKeyboardType",
     "AMBFormTextContentType",
     "AMBMessageEventType",
+    "AMBSuppressionCoverage",
+    "AMBSuppressionEndReason",
     "AMBSuppressionOrigin",
     "AMBSuppressionReason",
     "AssetKind",
@@ -1259,6 +1302,10 @@ __all__ = [
     "WhatsAppNumberStatus",
     "WhatsAppNumberThroughputLevel",
     "WhatsAppStatsMessageCategory",
+    "WhatsAppSuppressionCoverage",
+    "WhatsAppSuppressionEndReason",
+    "WhatsAppSuppressionOrigin",
+    "WhatsAppSuppressionReason",
     "WhatsAppTemplateBidStrategy",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",

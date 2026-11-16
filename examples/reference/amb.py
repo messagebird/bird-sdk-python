@@ -183,14 +183,14 @@ def amb_suppressions_get() -> None:
     result = client.amb.suppressions.get('asp_01krdgeqcxet5s7t44vh8rt9mg')
     print(result)
 
-def amb_suppressions_delete() -> None:
-    result = client.amb.suppressions.delete('asp_01krdgeqcxet5s7t44vh8rt9mg')
+def amb_suppressions_remove() -> None:
+    result = client.amb.suppressions.remove('asp_01krdgeqcxet5s7t44vh8rt9mg')
     print(result)
 
 def amb_suppressions_list() -> None:
     result = client.amb.suppressions.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
     print(result)
 
-def amb_suppressions_create() -> None:
-    result = client.amb.suppressions.create(address='opaque-customer', address_type='opaque_user_id')
+def amb_suppressions_add() -> None:
+    result = client.amb.suppressions.add(address='opaque-customer', address_type='opaque_user_id')
     print(result)

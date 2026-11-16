@@ -240,22 +240,22 @@ async def _ex_42() -> None:
 
 
 async def _ex_43() -> None:
-    result = client.amb.suppressions.create(address='opaque-customer', address_type='opaque_user_id')
+    result = client.amb.suppressions.add(address='opaque-customer', address_type='opaque_user_id')
     print(result)
 
 
 async def _ex_44() -> None:
-    result = client.amb.suppressions.delete('asp_01krdgeqcxet5s7t44vh8rt9mg')
-    print(result)
-
-
-async def _ex_45() -> None:
     result = client.amb.suppressions.get('asp_01krdgeqcxet5s7t44vh8rt9mg')
     print(result)
 
 
-async def _ex_46() -> None:
+async def _ex_45() -> None:
     result = client.amb.suppressions.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
+    print(result)
+
+
+async def _ex_46() -> None:
+    result = client.amb.suppressions.remove('asp_01krdgeqcxet5s7t44vh8rt9mg')
     print(result)
 
 
@@ -2658,8 +2658,8 @@ async def _ex_397() -> None:
 
 
 async def _ex_398() -> None:
-    # address is a prefix, so a partial value matches every address under it.
-    suppressions = client.whatsapp.suppressions.list(address="+1555")
+    # address matches one complete address exactly; a partial number returns nothing.
+    suppressions = client.whatsapp.suppressions.list(address="+15550001234")
     for suppression in suppressions.data or []:
         print(suppression.address, suppression.waba or "every account")
 

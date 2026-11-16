@@ -400,8 +400,8 @@ def whatsapp_keyword_rules_delete() -> None:
 
 
 def whatsapp_suppressions_list() -> None:
-    # address is a prefix, so a partial value matches every address under it.
-    suppressions = client.whatsapp.suppressions.list(address="+1555")
+    # address matches one complete address exactly; a partial number returns nothing.
+    suppressions = client.whatsapp.suppressions.list(address="+15550001234")
     for suppression in suppressions.data or []:
         print(suppression.address, suppression.waba or "every account")
 

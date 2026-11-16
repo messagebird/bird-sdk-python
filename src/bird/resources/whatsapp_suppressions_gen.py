@@ -19,6 +19,7 @@ class WhatsappSuppressionsListParams(TypedDict, total=False):
     """Query params for ``client.whatsapp.suppressions.list``. Every key is optional."""
 
     address: str
+    waba: str
     reason: str
     limit: int
     starting_after: str
@@ -40,23 +41,25 @@ class WhatsappSuppressions(Resource):
         self,
         *,
         address: str | None = None,
+        waba: str | None = None,
         reason: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[WhatsAppSuppression]:
-        """List the workspace's recorded WhatsApp suppression addresses as a cursor page.
+        """List the workspace's WhatsApp suppressions (addresses blocked for one business account or for the whole workspace) as a cursor page.
 
         ```python
-        # address is a prefix, so a partial value matches every address under it.
-        suppressions = client.whatsapp.suppressions.list(address="+1555")
+        # address matches one complete address exactly; a partial number returns nothing.
+        suppressions = client.whatsapp.suppressions.list(address="+15550001234")
         for suppression in suppressions.data or []:
             print(suppression.address, suppression.waba or "every account")
         ```
         """
         query = {
             "address": address,
+            "waba": waba,
             "reason": reason,
             "limit": limit,
             "starting_after": starting_after,
@@ -92,7 +95,7 @@ class WhatsappSuppressions(Resource):
         waba: str | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppSuppression:
-        """Record a WhatsApp address on the workspace suppression list.
+        """Stop messages to one WhatsApp address, for one business account or for the whole workspace.
 
         ```python
         # Omit waba to block the address for the whole workspace, whichever account
@@ -142,23 +145,25 @@ class AsyncWhatsappSuppressions(AsyncResource):
         self,
         *,
         address: str | None = None,
+        waba: str | None = None,
         reason: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[WhatsAppSuppression]:
-        """List the workspace's recorded WhatsApp suppression addresses as a cursor page.
+        """List the workspace's WhatsApp suppressions (addresses blocked for one business account or for the whole workspace) as a cursor page.
 
         ```python
-        # address is a prefix, so a partial value matches every address under it.
-        suppressions = await client.whatsapp.suppressions.list(address="+1555")
+        # address matches one complete address exactly; a partial number returns nothing.
+        suppressions = await client.whatsapp.suppressions.list(address="+15550001234")
         for suppression in suppressions.data or []:
             print(suppression.address, suppression.waba or "every account")
         ```
         """
         query = {
             "address": address,
+            "waba": waba,
             "reason": reason,
             "limit": limit,
             "starting_after": starting_after,
@@ -194,7 +199,7 @@ class AsyncWhatsappSuppressions(AsyncResource):
         waba: str | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppSuppression:
-        """Record a WhatsApp address on the workspace suppression list.
+        """Stop messages to one WhatsApp address, for one business account or for the whole workspace.
 
         ```python
         # Omit waba to block the address for the whole workspace, whichever account

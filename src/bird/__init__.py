@@ -465,7 +465,7 @@ from bird.resources.amb_routing_rules_gen import (
 )
 from bird.resources.amb_suppressions_gen import (
     AmbSuppressionsListParams,
-    AmbSuppressionsCreateParams,
+    AmbSuppressionsAddParams,
 )
 from bird.resources.amb_business_accounts_events_gen import AmbBusinessAccountsEventsListParams
 from bird.resources.amb_business_accounts_gen import (
@@ -594,6 +594,8 @@ from bird._open_enums import (
     AMBFormTextContentType,
     AMBSuppressionOrigin,
     AMBSuppressionReason,
+    AMBSuppressionCoverage,
+    AMBSuppressionEndReason,
     ComplianceItemState,
     ComplianceObligationReason,
     ComplianceObligationState,
@@ -682,6 +684,10 @@ from bird._open_enums import (
     WhatsAppNumberStatus,
     WhatsAppNumberThroughputLevel,
     WhatsAppStatsMessageCategory,
+    WhatsAppSuppressionReason,
+    WhatsAppSuppressionOrigin,
+    WhatsAppSuppressionCoverage,
+    WhatsAppSuppressionEndReason,
     WhatsAppTemplateBidStrategy,
     WhatsAppTemplateCategory,
     WhatsAppTemplateLanguageStatus,
@@ -876,7 +882,7 @@ __all__ = [
     "AmbStatsInboundHourlyParams",
     "AmbStatsInboundSummaryParams",
     "AmbStatsSummaryParams",
-    "AmbSuppressionsCreateParams",
+    "AmbSuppressionsAddParams",
     "AmbSuppressionsListParams",
 
     "AmbSendParams",
@@ -944,6 +950,8 @@ __all__ = [
     "AMBFormTextContentType",
     "AMBSuppressionOrigin",
     "AMBSuppressionReason",
+    "AMBSuppressionCoverage",
+    "AMBSuppressionEndReason",
     "ComplianceItemState",
     "ComplianceObligationReason",
     "ComplianceObligationState",
@@ -1399,6 +1407,10 @@ __all__ = [
     "WhatsAppNumberStatus",
     "WhatsAppNumberThroughputLevel",
     "WhatsAppStatsMessageCategory",
+    "WhatsAppSuppressionReason",
+    "WhatsAppSuppressionOrigin",
+    "WhatsAppSuppressionCoverage",
+    "WhatsAppSuppressionEndReason",
     "WhatsAppTemplateBidStrategy",
     "WhatsAppTemplateCategory",
     "WhatsAppTemplateLanguageStatus",

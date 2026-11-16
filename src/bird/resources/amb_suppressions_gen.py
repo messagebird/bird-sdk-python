@@ -27,13 +27,13 @@ class AmbSuppressionsListParams(TypedDict, total=False):
     ending_before: str
 
 
-class _AmbSuppressionsCreateRequired(TypedDict):
+class _AmbSuppressionsAddRequired(TypedDict):
     address: str
     address_type: str
 
 
-class AmbSuppressionsCreateParams(_AmbSuppressionsCreateRequired, total=False):
-    """Params for ``client.amb.suppressions.create``. ``address`` and ``address_type`` are required."""
+class AmbSuppressionsAddParams(_AmbSuppressionsAddRequired, total=False):
+    """Params for ``client.amb.suppressions.add``. ``address`` and ``address_type`` are required."""
 
     business_account_id: str
 
@@ -45,7 +45,7 @@ class AmbSuppressions(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> AMBSuppression:
-        """Returns the suppression episode for the given ID, including one that has already ended. An ended episode keeps its dates and reports when and how it ended.
+        """Read one Apple Messages for Business suppression: the address and account it covers, why messages are stopped, what it stops, and whether it is still in force. To check whether you may message someone, list suppressions filtered by their address instead.
 
         ```python
         result = client.amb.suppressions.get('asp_01krdgeqcxet5s7t44vh8rt9mg')
@@ -59,16 +59,16 @@ class AmbSuppressions(Resource):
             options,
         )
 
-    def delete(
+    def remove(
         self,
         suppression_id: str,
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Ends a manual suppression while retaining its history. Recipient opt-outs and automatic conversation facts cannot be ended through this endpoint.
+        """End a manual Apple Messages for Business suppression. Only reason `manual` can be ended this way: a customer's own close is refused. Messages stay blocked while another suppression covers the address, while the conversation is closed, or while phone invitation consent is revoked in preferences.
 
         ```python
-        result = client.amb.suppressions.delete('asp_01krdgeqcxet5s7t44vh8rt9mg')
+        result = client.amb.suppressions.remove('asp_01krdgeqcxet5s7t44vh8rt9mg')
         print(result)
         ```
         """
@@ -86,7 +86,7 @@ class AmbSuppressions(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[AMBSuppression]:
-        """Returns a paginated list of the workspace's active Apple Messages for Business suppressions: customers who have opted out of one brand, or of the whole workspace. Episodes that have ended are left out; fetch one by ID to read it. Filter by `business_account_id` to see one brand's suppressions, including the workspace-wide ones that block it too.
+        """List the workspace's Apple Messages for Business suppressions (addresses blocked for one business account or for the whole workspace) as a cursor page.
 
         ```python
         result = client.amb.suppressions.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
@@ -104,7 +104,7 @@ class AmbSuppressions(Resource):
         }
         return SyncPage(self._client, "/v1/amb/suppressions", query, AMBSuppression, options)
 
-    def create(
+    def add(
         self,
         *,
         business_account_id: str | None = None,
@@ -112,10 +112,10 @@ class AmbSuppressions(Resource):
         address_type: str,
         options: RequestOptions | None = None,
     ) -> AMBSuppression:
-        """Manually opens a suppression episode for a address, blocking every outbound path to it: operator and automated replies, API sends, typing indicators, and invitations. Set `business_account_id` to block the address for one brand only, or omit it to block the address for every brand in the workspace. If the address already has an active episode with reason `manual`, the API returns `200` with the existing episode instead of creating a second one.
+        """Stop messages to one address, for one business account or for the whole workspace. Blocks every outbound path to it: replies, API sends, typing indicators and invitations.
 
         ```python
-        result = client.amb.suppressions.create(address='opaque-customer', address_type='opaque_user_id')
+        result = client.amb.suppressions.add(address='opaque-customer', address_type='opaque_user_id')
         print(result)
         ```
         """
@@ -143,7 +143,7 @@ class AsyncAmbSuppressions(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> AMBSuppression:
-        """Returns the suppression episode for the given ID, including one that has already ended. An ended episode keeps its dates and reports when and how it ended.
+        """Read one Apple Messages for Business suppression: the address and account it covers, why messages are stopped, what it stops, and whether it is still in force. To check whether you may message someone, list suppressions filtered by their address instead.
 
         ```python
         result = await client.amb.suppressions.get('asp_01krdgeqcxet5s7t44vh8rt9mg')
@@ -157,16 +157,16 @@ class AsyncAmbSuppressions(AsyncResource):
             options,
         )
 
-    async def delete(
+    async def remove(
         self,
         suppression_id: str,
         *,
         options: RequestOptions | None = None,
     ) -> None:
-        """Ends a manual suppression while retaining its history. Recipient opt-outs and automatic conversation facts cannot be ended through this endpoint.
+        """End a manual Apple Messages for Business suppression. Only reason `manual` can be ended this way: a customer's own close is refused. Messages stay blocked while another suppression covers the address, while the conversation is closed, or while phone invitation consent is revoked in preferences.
 
         ```python
-        result = await client.amb.suppressions.delete('asp_01krdgeqcxet5s7t44vh8rt9mg')
+        result = await client.amb.suppressions.remove('asp_01krdgeqcxet5s7t44vh8rt9mg')
         print(result)
         ```
         """
@@ -184,7 +184,7 @@ class AsyncAmbSuppressions(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[AMBSuppression]:
-        """Returns a paginated list of the workspace's active Apple Messages for Business suppressions: customers who have opted out of one brand, or of the whole workspace. Episodes that have ended are left out; fetch one by ID to read it. Filter by `business_account_id` to see one brand's suppressions, including the workspace-wide ones that block it too.
+        """List the workspace's Apple Messages for Business suppressions (addresses blocked for one business account or for the whole workspace) as a cursor page.
 
         ```python
         result = await client.amb.suppressions.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
@@ -202,7 +202,7 @@ class AsyncAmbSuppressions(AsyncResource):
         }
         return AsyncPage(self._client, "/v1/amb/suppressions", query, AMBSuppression, options)
 
-    async def create(
+    async def add(
         self,
         *,
         business_account_id: str | None = None,
@@ -210,10 +210,10 @@ class AsyncAmbSuppressions(AsyncResource):
         address_type: str,
         options: RequestOptions | None = None,
     ) -> AMBSuppression:
-        """Manually opens a suppression episode for a address, blocking every outbound path to it: operator and automated replies, API sends, typing indicators, and invitations. Set `business_account_id` to block the address for one brand only, or omit it to block the address for every brand in the workspace. If the address already has an active episode with reason `manual`, the API returns `200` with the existing episode instead of creating a second one.
+        """Stop messages to one address, for one business account or for the whole workspace. Blocks every outbound path to it: replies, API sends, typing indicators and invitations.
 
         ```python
-        result = await client.amb.suppressions.create(address='opaque-customer', address_type='opaque_user_id')
+        result = await client.amb.suppressions.add(address='opaque-customer', address_type='opaque_user_id')
         print(result)
         ```
         """
