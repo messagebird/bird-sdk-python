@@ -500,7 +500,7 @@ class WorkspaceQuotaUsage(BaseModel):
     )]
     observed_at: Annotated[str, Field(description="When usage was read.", min_length=1)]
     organization_limit: Annotated[int, Field(
-        description="The organization limit requests were checked against when usage was read.",
+        description="The organization limit requests were checked against when usage was read. The value `9223372036854775807` represents no limit.",
         ge=0,
     )]
     organization_used: Annotated[Optional[int], Field(
@@ -557,7 +557,7 @@ class WorkspaceQuota(BaseModel):
         ge=0,
     )]
     organization_limit: Annotated[int, Field(
-        description="The organization's limit, shared by all its workspaces.",
+        description="The organization's limit, shared by all its workspaces. The value `9223372036854775807` represents no limit.",
         ge=0,
     )]
     organization_source: Annotated[Annotated[Union[QuotaSource, str], Field(union_mode="left_to_right")], Field(
@@ -567,7 +567,7 @@ class WorkspaceQuota(BaseModel):
         description="The workspace's own saved limit. `null` when none is saved; `limit_source` and `automatic_limit` then show whether an automatic share applies.",
     )]
     limit: Annotated[int, Field(
-        description="The lower of the organization limit currently applied to requests and the workspace's active limit or automatic share. The applied organization limit can briefly differ from the configured `organization_limit` after a change. A request can still be refused below this value when other workspaces use the shared organization limit.",
+        description="The lower of the organization limit currently applied to requests and the workspace's active limit or automatic share. The applied organization limit can briefly differ from the configured `organization_limit` after a change. A request can still be refused below this value when other workspaces use the shared organization limit. The value `9223372036854775807` represents no limit.",
         ge=0,
     )]
     limit_source: Annotated[Annotated[Union[WorkspaceQuotaLimitSource, str], Field(union_mode="left_to_right")], Field(
@@ -8608,7 +8608,7 @@ class ComplianceSubmissionCreate(BaseModel):
     )]
     identity_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="An existing party this registration is for. It fills in the business details you left out from what that party already holds, and each single-value answer you file about the party is written back onto it for next time, whatever the verdict. Documents and multi-value answers are asked fresh each time. Send this or `identity`, never both. An id belonging to another organization is rejected; nothing is created here. When `subject_kind` is `identity`, send neither: `subject_id` already names the party.",
+        description="An existing party this registration is for. It fills in the business details you left out from what that party already holds (except `business_website` on a business verification), and each single-value answer you file about the party is written back onto it for next time, whatever the verdict. Documents and multi-value answers are asked fresh each time. Send this or `identity`, never both. An id belonging to another organization is rejected; nothing is created here. When `subject_kind` is `identity`, send neither: `subject_id` already names the party.",
         examples=["cid_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
@@ -8618,7 +8618,25 @@ class ComplianceSubmissionCreate(BaseModel):
         description="Registers this on behalf of a party you have not stored yet, creating it as part\nof the submission so you do not need a separate call. Exclusive with\n`identity_id`.\n\nEach time you send this you get a new party. Single-value identity answers filed for one\nare reused by registrations naming the same party. Documents and lists are\nsupplied separately for each registration. Send this once and use the\n`identity_id` from the response for the countries that follow.",
     )] = None
     answers: Annotated[List[ComplianceAnswer], Field(
-        description="Every answer at once. Because submissions have no multi-call draft, send a complete set. Anything missing or malformed comes back named. A requirement the named party already answers may be left out; one you send anyway wins over what the party holds.",
+        description="Every answer at once. Because submissions have no multi-call draft, send a complete set. Anything missing or malformed comes back named. A requirement the named party already answers may be left out; one you send anyway wins over what the party holds. A business verification never fills in `business_website`: when you send it, its domain is the one your organization proves and `contact_email` must be on, so leave it out if the business's website is on another domain.",
+        min_length=1,
+    )]
+
+
+class ComplianceDomainProofMethod(str, Enum):
+    member_login = "member_login"
+    sso_domain = "sso_domain"
+
+
+class ComplianceDomainProof(BaseModel):
+    "How your organization proved it controls the business's domain, for a business verification."
+    model_config = ConfigDict(extra="allow")
+    method: Annotated[Annotated[Union[ComplianceDomainProofMethod, str], Field(union_mode="left_to_right")], Field(
+        description="How the domain was proven.\n\n- `member_login`: a member of this workspace signs in with a verified address at the domain.\n- `sso_domain`: the domain is your organization's verified single sign-on domain.",
+    )]
+    domain: Annotated[str, Field(
+        description="The business's registrable domain, such as `acme.com`.",
+        examples=["acme.com"],
         min_length=1,
     )]
 
@@ -8698,6 +8716,17 @@ class ComplianceSubmission(BaseModel):
         min_length=1,
         pattern="^cid_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    domain_proof: Annotated[Optional[ComplianceDomainProof], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="For a business verification, how your organization proved it controls the business's domain. Absent otherwise.",
+    )] = None
+    verifying_user_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="For a business verification, the member who acts for the business. Absent otherwise.",
+        examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^usr_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     satisfied: Annotated[bool, Field(
         description="Whether this country's requirements are met. `true` once the submission is approved and every required requirement is approved or marked not applicable. This can remain true when an external verifier requests a correction. Once you submit that correction, it must pass review before this becomes true again, including any optional answers you change.",
     )]
@@ -13850,6 +13879,10 @@ class WhatsAppNumberEventList(BaseModel):
     )]
 
 
+class VoiceNumberID(RootModel[str]):
+    root: str
+
+
 class WhatsAppDisplayNameStatus(str, Enum):
     approved = "approved"
     available_without_review = "available_without_review"
@@ -14156,18 +14189,23 @@ class AMBSuppression(BaseModel):
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
+    )]
     source_event_id: Annotated[Optional[str], Field(
         description="The conversation event recording the close Apple reported, when that is what opened this. Null for a refused send and for a manual suppression.",
         examples=["aev_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^aev_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
+    )]
     effective_at: Annotated[str, Field(
         description="When the customer closed the conversation, as reported by Apple; when Apple refused a send because the conversation was closed; or when a manual suppression was added. This is what orders the list, and it can differ from `created_at`: earlier when a close reached us late, later when the customer closed the conversation again while this was in force, which moves it to that later close.",
         min_length=1,
     )]
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
+    last_asserted_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When we last recorded this suppression being stated. Later than `created_at` when your workspace added it again while it was already in force; a repeat adds no new record.",
+        min_length=1,
+    )] = None
     ended_at: Annotated[Optional[str], Field(
         description="When this stopped applying. Null while it is still stopping messages.",
     )]
@@ -14180,7 +14218,7 @@ class AMBSuppression(BaseModel):
         examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
+    )]
 
 
 class AMBBusinessAccountList(BaseModel):
@@ -15757,6 +15795,63 @@ class AMBInteractiveReply(BaseModel):
     )] = None
 
 
+class AMBMessagePartKind(str, Enum):
+    text = "text"
+    link_preview = "link_preview"
+    rich_link = "rich_link"
+    interactive = "interactive"
+
+
+class AMBMessagePart(BaseModel):
+    "One part of the split an outbound message was sent in. `title`, `image_url` and `layout` record what a card showed, as measured when the part was sent, not what a request chose. They are absent when an earlier attempt of a retried send sent the part."
+    model_config = ConfigDict(extra="allow")
+    kind: Annotated[Annotated[Union[AMBMessagePartKind, str], Field(union_mode="left_to_right")], Field(
+        description="What one part of an outbound message was:\n\n- `text`: Part of the message's text, with the attachments placed in it.\n- `link_preview`: A link from the text, sent as a preview Bird built from the page.\n- `rich_link`: The message's own `rich_link`.\n- `interactive`: The message's own `interactive`.",
+    )]
+    body: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The text this part sent. U+FFFC marks an attachment's place, as in `text.body`.",
+        examples=["Track your order:"],
+        min_length=1,
+    )] = None
+    subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The message's subject, on the part that had it.",
+        examples=["Your order"],
+        min_length=1,
+    )] = None
+    attachments: Annotated[Optional[List[int]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Positions in `text.attachments` of the attachments this part sent.",
+    )] = None
+    url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The link a `link_preview` part previewed, as Bird sent it.",
+        examples=["https://example.com/orders/123"],
+        min_length=1,
+    )] = None
+    title: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The title a `link_preview` part showed, read from the page when the part was sent. A title longer than 512 bytes is cut to that length. Absent when an earlier attempt of a retried send sent the part.",
+        examples=["Your order"],
+        min_length=1,
+    )] = None
+    image_url: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The page image a `link_preview` part showed, as the address it was fetched from when the part was sent. Absent when the address is longer than 2,048 bytes, and when an earlier attempt of a retried send sent the part.",
+        examples=["https://example.com/orders/123/cover.png"],
+        min_length=1,
+    )] = None
+    layout: Annotated[Optional[AMBRichLinkLayout], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="How Apple displays a rich link's image. Apple picks the layout from the image's shape and width, so the image is resized or cropped to produce the one you choose:\n\n- `icon` shows a small image beside the title. The image is scaled to under 150 px wide. Use it for logos.\n- `square` shows a square image. The image is cropped to a square and sized to 240 px, or as small as 150 px when it needs to fit Apple's 200 kB limit.\n- `large` shows a wide image. A square or portrait image is cropped to a 2:1 rectangle, and a landscape image keeps its shape.\n\n`square` enlarges an image whose shorter side is under 240 px, and `large` one narrower than 240 px, which can blur it. Omit `layout` to keep the image's own shape, so Apple picks the layout from its shape and width.",
+    )] = None
+    sent: Annotated[bool, Field(
+        description="Whether Bird saw Apple accept this part. After a failed send, the part that failed and every part after it are `false`, but a `false` part may still have arrived if Apple's answer was lost, so do not resend it on that alone.",
+        examples=[True],
+    )]
+
+
 class AMBError(BaseModel):
     "Failure detail for a message or invitation that could not be sent or was rejected."
     model_config = ConfigDict(extra="allow")
@@ -15845,6 +15940,10 @@ class AMBMessage(BaseModel):
     interactive_reply: Annotated[Optional[AMBInteractiveReply], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="What the customer answered, on an inbound message replying to an interactive message.",
+    )] = None
+    parts: Annotated[Optional[List[AMBMessagePart]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The parts an outbound message was sent as, in the order Bird sent them, so one message can arrive as several. Each link in the text goes as its own preview. A `rich_link` takes the place of the first copy of its URL in the text, which splits the text around it, and goes last when the text does not contain it. An `interactive` goes after the text. A card part that the finishing attempt sent also says what it showed. A message can also go out as one `rich_link` or `interactive` part that has its text. Set when the send finishes as `sent` or `send_failed`. Absent on inbound messages, when the text could not be split so nothing was sent, such as a text with more than 20 links, and on older messages, so treat a missing `parts` as unknown.",
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -17360,7 +17459,7 @@ class WhatsAppSuppression(BaseModel):
         examples=["wam_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^wam_[0-9a-hjkmnp-tv-z]{26}$",
-    )] = None
+    )]
     effective_at: Annotated[str, Field(
         description="When the suppression took effect. For one added through the API or the dashboard this is when it was added, so it matches `created_at`. This is what orders the list.",
         min_length=1,
@@ -17373,6 +17472,11 @@ class WhatsAppSuppression(BaseModel):
         description="When the end took effect. For one ended through the API or the dashboard this matches `ended_at`. Null while it is still stopping messages.",
     )]
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
+    last_asserted_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When we last recorded this suppression being stated. Later than `created_at` when your workspace added it again while it was already in force; a repeat adds no new record.",
+        min_length=1,
+    )] = None
 
 
 class WhatsAppSuppressionList(BaseModel):
@@ -29256,10 +29360,6 @@ class AutomationPortKey(RootModel[str]):
     root: str
 
 
-class VoiceNumberID(RootModel[str]):
-    root: str
-
-
 class BillingResolvedPrice(BaseModel):
     model_config = ConfigDict(extra="allow")
     is_priced: Annotated[bool, Field(
@@ -31112,10 +31212,6 @@ class VoiceSequenceDefinition(BaseModel):
     )] = None
 
 
-class VoiceSequencePhoneNumber(RootModel[str]):
-    root: str
-
-
 class VoiceSequenceRunID(RootModel[str]):
     root: str
 
@@ -31182,6 +31278,10 @@ class VoiceCall(BaseModel):
     sequence: Annotated[Optional[VoiceCallSequence], Field(
         json_schema_extra={"x-bird-nullable": False},
     )] = None
+
+
+class VoiceSequencePhoneNumber(RootModel[str]):
+    root: str
 
 
 class CreateVoiceCallSequenceRequest(BaseModel):

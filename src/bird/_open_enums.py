@@ -83,6 +83,15 @@ class AMBMessageEventType:
     AMB_SENT: Final = "amb.sent"
 
 
+class AMBMessagePartKind:
+    """Values of AMBMessagePartKind known at this SDK version (open enum)."""
+
+    INTERACTIVE: Final = "interactive"
+    LINK_PREVIEW: Final = "link_preview"
+    RICH_LINK: Final = "rich_link"
+    TEXT: Final = "text"
+
+
 class AMBSuppressionCoverage:
     """Values of AMBSuppressionCoverage known at this SDK version (open enum)."""
 
@@ -129,6 +138,13 @@ class AssetReferenceUsage:
     BOTH: Final = "both"
     DRAFT: Final = "draft"
     PUBLISHED: Final = "published"
+
+
+class ComplianceDomainProofMethod:
+    """Values of ComplianceDomainProofMethod known at this SDK version (open enum)."""
+
+    MEMBER_LOGIN: Final = "member_login"
+    SSO_DOMAIN: Final = "sso_domain"
 
 
 class ComplianceItemState:
@@ -1207,12 +1223,14 @@ __all__ = [
     "AMBFormKeyboardType",
     "AMBFormTextContentType",
     "AMBMessageEventType",
+    "AMBMessagePartKind",
     "AMBSuppressionCoverage",
     "AMBSuppressionEndReason",
     "AMBSuppressionOrigin",
     "AMBSuppressionReason",
     "AssetKind",
     "AssetReferenceUsage",
+    "ComplianceDomainProofMethod",
     "ComplianceItemState",
     "ComplianceObligationReason",
     "ComplianceObligationState",
