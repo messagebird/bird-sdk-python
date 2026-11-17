@@ -53,6 +53,7 @@ from bird.resources.webhooks import WebhooksCreateParams
 from bird.resources.email_gen import EmailContentParams, EmailRecipientsParams
 from bird.resources.compliance_attachments import ComplianceAttachment, ComplianceFile
 from bird.resources.voice_legs_recordings import VoiceRecordingAudio
+from bird.resources.sms_messages import SmsMediaDownload
 from bird.resources.whatsapp_messages import WhatsappMedia
 from bird.resources.whatsapp_business_accounts_gen import (
     WhatsappBusinessAccountsListParams,
@@ -1223,6 +1224,7 @@ __all__ = [
     "ComplianceAttachment",
     "ComplianceFile",
     "WhatsappMedia",
+    "SmsMediaDownload",
     "VoiceRecordingAudio",
     "WhatsappSendParams",
     "WhatsAppMessage",

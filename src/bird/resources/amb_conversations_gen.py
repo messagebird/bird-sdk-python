@@ -7,6 +7,7 @@ from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
+    AMBAuthentication,
     AMBConversation,
     AMBConversationTypingRequest,
     AMBConversationUpdate,
@@ -185,6 +186,35 @@ class AmbConversations(Resource):
             options,
         )
 
+    def request_authentication(
+        self,
+        conversation_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AMBAuthentication:
+        """Sends a native sign-in request to an open conversation whose device_capabilities include AUTH2. Returns the request as pending; keep its id. The outcome arrives as an amb.authentication.updated webhook event, or read the request. A new request supersedes an unfinished one in the same conversation, so retry with the same idempotency key."""
+        return self._action(
+            "POST",
+            f"/v1/amb/conversations/{quote(conversation_id, safe='')}/authentications",
+            AMBAuthentication,
+            options,
+        )
+
+    def get_authentication(
+        self,
+        conversation_id: str,
+        authentication_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AMBAuthentication:
+        """Reads one authentication request by its conversation and request IDs. A succeeded request includes the verified identity. Use it when the amb.authentication.updated webhook event has not arrived by expires_at; the read can briefly trail the event."""
+        return self._get(
+            f"/v1/amb/conversations/{quote(conversation_id, safe='')}/authentications/{quote(authentication_id, safe='')}",
+            {},
+            AMBAuthentication,
+            options,
+        )
+
     def list(
         self,
         *,
@@ -335,6 +365,35 @@ class AsyncAmbConversations(AsyncResource):
             "POST",
             f"/v1/amb/conversations/{quote(conversation_id, safe='')}/typing",
             body,
+            options,
+        )
+
+    async def request_authentication(
+        self,
+        conversation_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AMBAuthentication:
+        """Sends a native sign-in request to an open conversation whose device_capabilities include AUTH2. Returns the request as pending; keep its id. The outcome arrives as an amb.authentication.updated webhook event, or read the request. A new request supersedes an unfinished one in the same conversation, so retry with the same idempotency key."""
+        return await self._action(
+            "POST",
+            f"/v1/amb/conversations/{quote(conversation_id, safe='')}/authentications",
+            AMBAuthentication,
+            options,
+        )
+
+    async def get_authentication(
+        self,
+        conversation_id: str,
+        authentication_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> AMBAuthentication:
+        """Reads one authentication request by its conversation and request IDs. A succeeded request includes the verified identity. Use it when the amb.authentication.updated webhook event has not arrived by expires_at; the read can briefly trail the event."""
+        return await self._get(
+            f"/v1/amb/conversations/{quote(conversation_id, safe='')}/authentications/{quote(authentication_id, safe='')}",
+            {},
+            AMBAuthentication,
             options,
         )
 

@@ -35,6 +35,7 @@ class EmailTemplatesListParams(TypedDict, total=False):
     category: str
     source: str
     theme: str
+    status: str
     q: str
     limit: int
     starting_after: str
@@ -85,13 +86,14 @@ class EmailTemplatesBase(Resource):
         category: str | None = None,
         source: str | None = None,
         theme: str | None = None,
+        status: str | None = None,
         q: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailTemplateSummary]:
-        """List email templates as a cursor page. The list covers both the workspace's own templates and our built-in `system` templates. Filter to one tier with `scope`, and filter further by category, source, theme, or a search across slug, name, and description. A theme narrows the built-in catalog to one of its five visual themes, so naming one returns built-ins alone.
+        """List email templates as a cursor page. The list covers both the workspace's own templates and our built-in `system` templates. Filter to one tier with `scope`, and filter further by category, source, theme, status, or a search across slug, name, and description. `status=active` returns only sendable templates, built-ins included. A theme narrows the built-in catalog to one of its five visual themes, so naming one returns built-ins alone.
 
         ```python
         for template in client.email.templates.list(scope="workspace"):
@@ -103,6 +105,7 @@ class EmailTemplatesBase(Resource):
             "category": category,
             "source": source,
             "theme": theme,
+            "status": status,
             "q": q,
             "limit": limit,
             "starting_after": starting_after,
@@ -245,13 +248,14 @@ class AsyncEmailTemplatesBase(AsyncResource):
         category: str | None = None,
         source: str | None = None,
         theme: str | None = None,
+        status: str | None = None,
         q: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailTemplateSummary]:
-        """List email templates as a cursor page. The list covers both the workspace's own templates and our built-in `system` templates. Filter to one tier with `scope`, and filter further by category, source, theme, or a search across slug, name, and description. A theme narrows the built-in catalog to one of its five visual themes, so naming one returns built-ins alone.
+        """List email templates as a cursor page. The list covers both the workspace's own templates and our built-in `system` templates. Filter to one tier with `scope`, and filter further by category, source, theme, status, or a search across slug, name, and description. `status=active` returns only sendable templates, built-ins included. A theme narrows the built-in catalog to one of its five visual themes, so naming one returns built-ins alone.
 
         ```python
         async for template in client.email.templates.list(scope="workspace"):
@@ -263,6 +267,7 @@ class AsyncEmailTemplatesBase(AsyncResource):
             "category": category,
             "source": source,
             "theme": theme,
+            "status": status,
             "q": q,
             "limit": limit,
             "starting_after": starting_after,

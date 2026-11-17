@@ -15,6 +15,7 @@ class WebhookEventType:
     """Webhook event types known at this SDK version (open enum)."""
 
     AMB_ACCEPTED: Final = "amb.accepted"
+    AMB_AUTHENTICATION_UPDATED: Final = "amb.authentication.updated"
     AMB_CONVERSATION_CLOSED: Final = "amb.conversation_closed"
     AMB_CONVERSATION_REOPENED: Final = "amb.conversation_reopened"
     AMB_CONVERSATION_STARTED: Final = "amb.conversation_started"

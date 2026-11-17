@@ -1,11 +1,11 @@
-"""Use the ``client.sms`` channel to send an SMS (free text or by stored
-template), read a message, and list the message log.
+"""Use ``client.sms`` to send SMS or MMS, read a message, and list the message log.
 
-A send carries one of ``text`` (with ``category`` and ``from_``), a ``template``
-(by id or slug, with its ``parameters``), or ``binary`` (with ``category``
-``transactional``). A workspace template requires an owned ``from_``; a built-in
-template selects its sender and rejects ``from_``. The content forms are mutually
-exclusive.
+Supply direct content (``text`` and/or ``media_urls``), a stored ``template``, or
+``binary``. Direct content needs ``category`` and ``from_`` unless a messaging
+profile supplies them. A workspace template requires an owned ``from_``; a
+built-in template selects its sender and rejects ``from_``. A ``subject`` or
+``media_urls`` selects MMS for +1 recipients. MMS requires text or at least one
+absolute HTTP(S) media URL; templates and binary cannot carry MMS fields.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from bird._base_client import AsyncAPIClient, SyncAPIClient
 from bird._generated import SMSMessage, SMSMessageBatchResponse
 from bird._types import Omit, RequestOptions, omit
 from bird.resources.sms_gen import AsyncSmsBase, SmsBase
+from bird.resources.sms_messages import AsyncSmsMessages, SmsMessages
 from bird.resources.sms_stats import AsyncSmsStats, SmsStats
 
 _PATH = "/v1/sms/messages"
@@ -33,6 +34,8 @@ def _send_body(
     to: str,
     from_: str | None = None,
     text: str | None = None,
+    subject: str | None = None,
+    media_urls: Sequence[str] | None = None,
     category: str | None = None,
     template: str | None = None,
     language: str | None = None,
@@ -61,6 +64,8 @@ def _send_body(
         "to": to,
         "from": from_,
         "text": text,
+        "subject": subject,
+        "media_urls": media_urls,
         "category": category,
         "tags": tags,
         "metadata": metadata,
@@ -98,6 +103,8 @@ def _message_body(m: Mapping[str, Any]) -> dict[str, Any]:
         to=m["to"],
         from_=m.get("from_"),
         text=m.get("text"),
+        subject=m.get("subject"),
+        media_urls=m.get("media_urls"),
         category=m.get("category"),
         template=m.get("template"),
         language=m.get("language"),
@@ -122,6 +129,7 @@ class Sms(SmsBase):
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
         self.stats = SmsStats(client)
+        self.messages = SmsMessages(client)
 
     def send(
         self,
@@ -129,6 +137,8 @@ class Sms(SmsBase):
         to: str,
         from_: str | None = None,
         text: str | None = None,
+        subject: str | None = None,
+        media_urls: Sequence[str] | None = None,
         category: str | None = None,
         template: str | None = None,
         language: str | None = None,
@@ -146,11 +156,15 @@ class Sms(SmsBase):
         binary: Mapping[str, str] | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Send one SMS to a single recipient. Supply one of ``text`` (with a
-        ``category`` and ``from_``), a stored ``template`` (by id or slug, with
+        """Send one SMS or MMS to a single recipient. Supply direct content
+        (``text`` and/or ``media_urls``), a stored ``template`` (by id or slug, with
         ``parameters``), or ``binary`` (with ``category`` ``transactional``). A workspace template requires an owned
         ``from_``; a built-in template selects its sender and rejects ``from_``.
         The API accepts the message for delivery. Read it back with ``get`` for the latest status.
+
+        A ``subject`` or ``media_urls`` selects MMS for +1 recipients. Supply
+        text or at least one absolute HTTP(S) media URL. Templates and binary
+        cannot carry MMS fields.
 
         ``callback_url`` takes three states: leave it out to use the messaging
         profile's URL, pass a URL to receive this message's events there, or pass
@@ -175,7 +189,8 @@ class Sms(SmsBase):
         ```
         """
         body = _send_body(
-            to=to, from_=from_, text=text, category=category, template=template,
+            to=to, from_=from_, text=text, subject=subject, media_urls=media_urls,
+            category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
             smart_encoding=smart_encoding, ignore_suppression=ignore_suppression,
             callback_url=callback_url, messaging_profile_id=messaging_profile_id,
@@ -224,6 +239,7 @@ class AsyncSms(AsyncSmsBase):
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
         self.stats = AsyncSmsStats(client)
+        self.messages = AsyncSmsMessages(client)
 
     async def send(
         self,
@@ -231,6 +247,8 @@ class AsyncSms(AsyncSmsBase):
         to: str,
         from_: str | None = None,
         text: str | None = None,
+        subject: str | None = None,
+        media_urls: Sequence[str] | None = None,
         category: str | None = None,
         template: str | None = None,
         language: str | None = None,
@@ -248,13 +266,14 @@ class AsyncSms(AsyncSmsBase):
         binary: Mapping[str, str] | None = None,
         options: RequestOptions | None = None,
     ) -> SMSMessage:
-        """Send one SMS to a single recipient (free text, by template, or binary).
+        """Send one SMS or MMS to a single recipient.
 
         A workspace template requires an owned ``from_``; a built-in template
         selects its sender and rejects ``from_``.
         """
         body = _send_body(
-            to=to, from_=from_, text=text, category=category, template=template,
+            to=to, from_=from_, text=text, subject=subject, media_urls=media_urls,
+            category=category, template=template,
             language=language, parameters=parameters, tags=tags, metadata=metadata,
             smart_encoding=smart_encoding, ignore_suppression=ignore_suppression,
             callback_url=callback_url, messaging_profile_id=messaging_profile_id,

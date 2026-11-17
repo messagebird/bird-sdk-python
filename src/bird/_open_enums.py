@@ -143,6 +143,7 @@ class AssetReferenceUsage:
 class ComplianceDomainProofMethod:
     """Values of ComplianceDomainProofMethod known at this SDK version (open enum)."""
 
+    CONTACT_CONFIRMATION: Final = "contact_confirmation"
     MEMBER_LOGIN: Final = "member_login"
     SSO_DOMAIN: Final = "sso_domain"
 
@@ -151,6 +152,7 @@ class ComplianceItemState:
     """Values of ComplianceItemState known at this SDK version (open enum)."""
 
     APPROVED: Final = "approved"
+    AWAITING_CONFIRMATION: Final = "awaiting_confirmation"
     EXPIRED: Final = "expired"
     IN_REVIEW: Final = "in_review"
     NOT_APPLICABLE: Final = "not_applicable"

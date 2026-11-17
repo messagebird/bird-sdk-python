@@ -49,6 +49,11 @@ def compliance_submissions_resupply() -> None:
     print(submission.satisfied)
 
 
+def compliance_submissions_send_contact_confirmation() -> None:
+    submission = client.compliance_submissions.send_contact_confirmation("csb_01krdgeqcxet5s7t44vh8rt9mg")
+    print(submission.id)
+
+
 def compliance_attachments_list() -> None:
     for attachment in client.compliance_attachments.list():
         print(attachment.id, attachment.filename, attachment.status)

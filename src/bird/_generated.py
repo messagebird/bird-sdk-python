@@ -1978,7 +1978,7 @@ class SMSInboundOperatorStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     mcc_mnc: Annotated[str, Field(
         description="Mobile country code and mobile network code of the network the sending subscriber is on. The breakdown keys on this rather than on an operator name because the carrier reports a name only where a surcharge applies, which would leave most of the world in one unnamed bucket.",
-        examples=[311480],
+        examples=["311480"],
         min_length=1,
     )]
     received: Annotated[int, Field(
@@ -2976,7 +2976,7 @@ class Money(BaseModel):
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
         description="Decimal amount as a string, in major currency units.",
-        examples=[0.00995],
+        examples=["0.00995"],
         min_length=1,
     )]
     currency_code: Annotated[str, Field(
@@ -3083,13 +3083,13 @@ class OrganizationWorkspaceWhatsAppNumberCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     waba: Annotated[str, Field(
         description="The WhatsApp Business Account your Embedded Signup returned, from the session info's `messaging_account_ids`.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
         pattern="^[0-9]+$",
     )]
     meta_phone_number_id: Annotated[str, Field(
         description="The phone number your Embedded Signup returned, from the session info's `phone_number_id`.",
-        examples=[109364591979012],
+        examples=["109364591979012"],
         min_length=1,
         pattern="^[0-9]+$",
     )]
@@ -3168,7 +3168,7 @@ class WhatsAppNumberError(BaseModel):
     )] = None
     meta_error_code: Annotated[Optional[str], Field(
         description="WhatsApp's most specific code for the refusal: its error subcode where it sent one, otherwise its top-level code. Null when WhatsApp did not provide a code. Treat it as an opaque string.",
-        examples=[2388001],
+        examples=["2388001"],
     )] = None
 
 
@@ -3203,12 +3203,12 @@ class WhatsAppNumber(BaseModel):
     waba: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp Business Account this number is connected under. Present only for a number your workspace connected itself.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
     )] = None
     phone_number: Annotated[Optional[str], Field(
         description="The number in E.164 format. Null only while the number itself is not yet known: a number your workspace holds carries its E.164 from the moment setup starts, so a value here does not mean the number can send. Check `status` for connection state.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
     )]
     number_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -3220,7 +3220,7 @@ class WhatsAppNumber(BaseModel):
     meta_preverified_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="WhatsApp's own id for the number while we prepare it for you. We hand it to WhatsApp when you finish signing up, so WhatsApp knows this is the number we already verified for you. Absent for a number you brought yourself. WhatsApp discards the id once signup claims it, so an id still shown here on a connected number no longer names anything.",
-        examples=[106540352242922],
+        examples=["106540352242922"],
         min_length=1,
     )] = None
     verified_until: Annotated[Optional[str], Field(
@@ -3336,7 +3336,7 @@ class RealtimePublish(BaseModel):
     exclude_connection_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
-        examples=[123.4567],
+        examples=["123.4567"],
         min_length=1,
     )] = None
     include: Annotated[Optional[List[RealtimeChannelInclude]], Field(
@@ -3396,7 +3396,7 @@ class RealtimeBatchEvent(BaseModel):
     exclude_connection_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Exclude this connection from delivery, to avoid echoing a change back to the client that triggered it. The value is the client's connection id, assigned when its connection is established.",
-        examples=[123.4567],
+        examples=["123.4567"],
         min_length=1,
     )] = None
     include: Annotated[Optional[List[RealtimeChannelInclude]], Field(
@@ -4136,7 +4136,7 @@ class EmailRecipient(BaseModel):
     )] = None
     bounce_code: Annotated[Optional[str], Field(
         description="SMTP reply code returned by the receiving mail server for `bounced` and `deferred` rows, or null when none was provided.",
-        examples=[550],
+        examples=["550"],
     )] = None
     bounce_description: Annotated[Optional[str], Field(
         description="Human-readable reason the receiving mail server gave for the bounce or deferral, or null when none was provided.",
@@ -4639,7 +4639,7 @@ class EmailBroadcast(BaseModel):
     )]
     sent_count: Annotated[Optional[int], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="How many recipients the broadcast has been sent to, counting every recipient whose status is `processed` or later. The number rises while the broadcast is `sending` and stops changing once the broadcast has finished. These counters are exact. The email stats endpoints report on the same sending but are approximate, so use these numbers when you need the precise count. Absent when the broadcast comes back from creating, updating, sending, resuming or canceling it, none of which read the counters. List and single-broadcast reads return 0 when no delivery events are recorded. When counters are unavailable, those reads still return 200 and omit the counters. Read the broadcast again for the numbers.",
+        description="Saved count of recipients whose status is `processed` or later. Counters refresh periodically and can change after the broadcast reaches `sent`. Read the broadcast again to get the latest saved totals. These counts use exact retained delivery and engagement records; the email stats endpoints report approximate totals.\n\nList and single-broadcast reads return the last saved values during refresh delays or failures. A new broadcast starts with saved zero counters, which remain until its first refresh. Counters are absent while historical totals have not been calculated or their retained history is incomplete. A failure to read saved counters fails the request. Creating, updating, sending, resuming, and canceling a broadcast return no counters.",
         examples=[4820],
         ge=0,
     )] = None
@@ -4675,7 +4675,7 @@ class EmailBroadcast(BaseModel):
     )] = None
     sending_ips: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The IP addresses this broadcast's messages went out from, up to 100 of them. A broadcast is spread across every address in its pool, so more than one can appear. The receiving mail systems name the address when they deliver, bounce or defer a message, so this stays absent until the first of those comes back. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending, resuming or canceling one returns, none of which read them. For delivery and latency broken down per address, read the sending-IP stats.",
+        description="The saved IP addresses this broadcast's messages went out from, up to 100 of them. These refresh with the counters and stay absent when the saved counters are unavailable or incomplete. A broadcast is spread across every address in its pool, so more than one can appear. The receiving mail systems name the address when they deliver, bounce or defer a message, so this stays absent until the first of those comes back. Returned on a single broadcast read, and absent from the list and from the broadcast that creating, updating, sending, resuming or canceling one returns, none of which read them. For delivery and latency broken down per address, read the sending-IP stats.",
     )] = None
     unique_opens_non_prefetched: Annotated[Optional[int], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -5562,7 +5562,7 @@ class Contact(BaseModel):
     )]
     phone_number: Annotated[Optional[str], Field(
         description="The contact's phone number in normalized international form: a leading `+` and four to 15 digits. We normalize formatting but do not verify the number against numbering-plan metadata. The number is unique within the workspace. Because carriers recycle disconnected numbers, use `external_id` as the durable key for your own records. `null` when the contact has no phone number.",
-        examples=[+31612345678],
+        examples=["+31612345678"],
         max_length=16,
         min_length=5,
     )]
@@ -5620,7 +5620,7 @@ class ContactCreateRequest(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The contact's phone number in E.164 format, including the leading `+` and country code. Spaces and punctuation are accepted and stripped; the number is stored in its canonical form, which may differ from what you send, and is unique within the workspace. An empty string is treated as if the field were omitted. Supply an email address, a phone number, or both.",
-        examples=[+31612345678],
+        examples=["+31612345678"],
         max_length=32,
     )] = None
     first_name: Annotated[Optional[str], Field(
@@ -5902,13 +5902,13 @@ class Preference(BaseModel):
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
         description="The sender the statement is limited to, or null when it covers the whole channel. On SMS this is the originator the person replied to; on WhatsApp it identifies the business account that messaged them; on Apple Messages for Business it is the Apple business ID used for invitations. Email preferences use brand_id instead, so sender_scope is always null there.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Part of the key that identifies a statement, alongside `sender_scope`.",
@@ -5967,7 +5967,7 @@ class PreferenceIndividualCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=320,
         min_length=1,
     )]
@@ -5984,7 +5984,7 @@ class PreferenceIndividualCreate(BaseModel):
     sender_scope: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account; on Apple Messages for Business it is the Apple business ID used for invitations. Not supported on email, where preferences belong to the selected Brand.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         max_length=255,
         min_length=1,
     )] = None
@@ -6270,6 +6270,11 @@ class SMSMessageCategory(str, Enum):
     service = "service"
 
 
+class SMSContentType(str, Enum):
+    sms = "sms"
+    mms = "mms"
+
+
 class SMSMessageID(RootModel[str]):
     root: str
 
@@ -6324,18 +6329,19 @@ class SMSSegmentsEncoding(str, Enum):
     GSM_7BIT = "GSM_7BIT"
     UCS2 = "UCS2"
     BINARY = "BINARY"
+    MMS = "MMS"
 
 
 class SMSSegments(BaseModel):
-    "Segment breakdown for the message body. Segment count drives billing."
+    "Billable SMS segments, or one unit for MMS."
     model_config = ConfigDict(extra="allow")
     count: Annotated[int, Field(
-        description="Number of segments the body is split into. Each segment is a billable unit.",
+        description="Number of billable units. MMS always has one unit and is not split into SMS segments.",
         examples=[1],
         ge=1,
     )]
     encoding: Annotated[SMSSegmentsEncoding, Field(
-        description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.\n\n`BINARY` marks an 8-bit binary payload, sent as one segment, where `characters` counts its octets. Only a binary send produces it.",
+        description="Encoding used for the body. The `GSM_7BIT` encoding fits 160 septets\n(seven-bit units) in one segment, or 153 per part in a multi-segment\nmessage. The `UCS2` encoding applies when the body contains a character\noutside the GSM 03.38 alphabet, including emoji, CJK, and some accented\ncharacters. It fits 70 UTF-16 code units in one segment, or 67 per part.\n\nNeither limit counts characters, and both alphabets have characters that\ncost two units. Under `GSM_7BIT` there are ten such entries, and they are\nthe whole set: `^`, `{`, `}`, `\\`, `[`, `]`, `~`, `|`, `€`, and the form\nfeed control. Eighty of those fill a single segment. Under `UCS2` an emoji\noutside the Basic Multilingual Plane is a surrogate pair costing two code\nunits, so 35 of those fill a single segment.\n\n`MMS` marks a multimedia message billed as one unit; `characters` counts text code points.\n\n`BINARY` marks an 8-bit binary payload, sent as one segment, where `characters` counts its octets. Only a binary send produces it.",
         min_length=1,
     )]
     characters: Annotated[int, Field(
@@ -6350,7 +6356,7 @@ class MessageCost(BaseModel):
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
         description="Total charged, as a decimal string: the sum of the components below. Net of tax, which applies to your wallet balance rather than to an individual charge.",
-        examples=[0.00990],
+        examples=["0.00990"],
         min_length=1,
     )]
     currency_code: Annotated[str, Field(
@@ -6362,11 +6368,11 @@ class MessageCost(BaseModel):
     )]
     transaction_amount: Annotated[Optional[str], Field(
         description="What we charged to carry the message, as a decimal string. `null` when this component was not priced; `\"0.00000\"` when it priced at zero.",
-        examples=[0.00790],
+        examples=["0.00790"],
     )]
     passthrough_amount: Annotated[Optional[str], Field(
         description="Third-party fees we pass on, as a decimal string, such as US 10DLC carrier surcharges. `null` when this component was not priced; `\"0.00000\"` when it priced at zero.",
-        examples=[0.00200],
+        examples=["0.00200"],
     )]
 
 
@@ -6429,6 +6435,34 @@ class SMSInReplyToMessage(BaseModel):
     )] = None
 
 
+class SMSFileID(RootModel[str]):
+    root: str
+
+
+class SMSMedia(BaseModel):
+    "A media attachment on an MMS. Inbound attachments include carrier metadata even when their contents could not be retrieved. Outbound attachments retain the submitted URL."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="ID of the stored attachment. Absent for outbound URLs and inbound attachments that were not stored.",
+        examples=["smf_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^smf_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    mime_type: Annotated[str, Field(
+        description="Carrier-reported media type for inbound attachments; application/octet-stream when unknown or outbound.",
+        examples=["image/jpeg"],
+        min_length=1,
+    )]
+    filename: Annotated[Optional[str], Field(
+        description="Filename the sender's device supplied, when it supplied one.",
+        examples=["photo.jpg"],
+    )] = None
+    url: Annotated[Optional[str], Field(
+        description="Where to download the attachment, kept for 30 days after the message is received. Null when the attachment was not stored, for example because Bird could not retrieve it from the carrier. For outbound MMS this is the submitted URL, whose availability the caller controls.",
+    )] = None
+
+
 class SMSMessageDirection(str, Enum):
     outbound = "outbound"
     inbound = "inbound"
@@ -6436,6 +6470,10 @@ class SMSMessageDirection(str, Enum):
 
 class SMSMessage(BaseModel):
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -6448,18 +6486,18 @@ class SMSMessage(BaseModel):
     status: SMSMessageStatus
     to: Annotated[str, Field(
         description="Where the message went. On an outbound message this is the recipient's phone number in E.164 format; on an inbound one it is your own number that received it.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="Where the message came from. On an outbound message this is the sender you sent it from: an E.164 number, an alphanumeric sender ID, or a short code. On an inbound message, this is the phone number that sent it to you.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     text: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The message body. Every message carries body text, attachments, or both, so this is absent only on a received message that carried attachments and no text, and on a binary message, which returns `binary` instead. For a template send, this is the rendered text after parameter substitution. System template messages preserve the surrounding text and mask sensitive codes with one asterisk per digit. Authentication messages without declared sensitive variables return `**REDACTED**`. The recipient receives the real code; message history retains only its masked representation.",
+        description="The message body. Absent on media-only or subject-only MMS and on a binary message, which returns `binary` instead. For a template send, this is the rendered text after parameter substitution. System template messages preserve the surrounding text and mask sensitive codes with one asterisk per digit. Authentication messages without declared sensitive variables return `**REDACTED**`. The recipient receives the real code; message history retains only its masked representation.",
         examples=["Your order has shipped and is on its way."],
         min_length=1,
     )] = None
@@ -6506,7 +6544,7 @@ class SMSMessage(BaseModel):
         pattern="^mpr_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -6547,7 +6585,7 @@ class SMSMessage(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent until the carrier is identified.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
     last_error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -6563,6 +6601,14 @@ class SMSMessage(BaseModel):
     in_reply_to_message: Annotated[Optional[SMSInReplyToMessage], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="On a received message, the outbound message it was paired with through its messaging profile's outbound matching. Absent on outbound messages and on received messages that were not paired.",
+    )] = None
+    subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="MMS subject. Absent on any message that carries none.",
+    )] = None
+    media: Annotated[Optional[List[SMSMedia]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="MMS attachments. Omitted when absent or redacted for an authentication send. Outbound entries retain submitted URLs; inbound entries describe stored attachments.",
     )] = None
     created_at: Annotated[str, Field(
         description="When the message was accepted (outbound) or received (inbound).",
@@ -6657,11 +6703,11 @@ class SMSTemplateSend(BaseModel):
 
 
 class SMSMessageSendRequest(BaseModel):
-    "A message to send. Supply exactly one of `text` (free-text, which also requires `category` unless a messaging profile supplies a default), `template` (a stored template, whose category is derived), or `binary` (which also requires `category`). Supplying more than one, or none, is rejected."
+    "A message to send. Supply direct content (`text` and/or `media_urls`, with an optional `subject`), a stored `template`, or `binary`. A nonempty subject or media list selects MMS, which requires a recipient with calling code +1 and is charged as one message. Direct content requires `category` unless a messaging profile supplies a default. A subject alone is rejected."
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
         description="Recipient phone number in E.164 format (for example `+14155550100`), or in national format when you also pass `to_country_code`. One recipient per message. The number is stored and returned in canonical E.164; a recipient that cannot be routed returns a `422` `SMSInvalidRecipient`.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         min_length=1,
     )]
     to_country_code: Annotated[Optional[str], Field(
@@ -6674,12 +6720,12 @@ class SMSMessageSendRequest(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="Sender the workspace holds: a number it owns in E.164, such as `+15557654321`, a short code, such as `24680`, or an alphanumeric sender ID it has claimed, such as `MyBrand`. Any other sender returns `422` `SMSSenderNotConfigured`, and an alphanumeric sender must also be permitted, and where required registered, for the destination country. Required on a free-text send and a workspace-template send, unless the profile in `messaging_profile_id` selects a sender for the destination country or has a default sender; omitting it otherwise returns `422`. A built-in template selects its sender itself and rejects `from`.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )] = None
     text: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Free-text message body, required unless `template` is set; the two are mutually exclusive. From 1 character up to 12 segments, roughly 1836 GSM-7 or 804 UCS-2 characters, since the two encodings fit different numbers of characters in a segment. Bird does not truncate: a longer body returns `422`.",
+        description="Message body. Required for direct content unless `media_urls` is nonempty. Text-only SMS allows up to 12 segments; longer SMS returns `422`. MMS text is sent without SMS segmentation or smart encoding.",
         examples=["Your verification code is 123456."],
         min_length=1,
     )] = None
@@ -6726,7 +6772,11 @@ class SMSMessageSendRequest(BaseModel):
     )] = None
     media_urls: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Preview feature: multimedia (MMS) attachments. Currently unavailable; supplying this field returns `422 SMSUnsupportedFeature`.",
+        description="Absolute HTTP(S) attachment URLs accessible without authentication. A nonempty list selects MMS. Keep URLs accessible through delivery retries. The carrier checks downloads after acceptance: each file may be at most 600 KiB and the total at most 900 KiB. Unreachable, nonpublic or oversized media fails asynchronously through delivery status.",
+    )] = None
+    subject: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="MMS subject. A nonempty subject selects MMS and requires text or media. Cannot accompany a template or binary payload.",
     )] = None
     messaging_profile_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -6738,7 +6788,7 @@ class SMSMessageSendRequest(BaseModel):
     )] = None
     template: Annotated[Optional[SMSTemplateSend], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Send using a stored template instead of free text. The category is derived from the template, so `category` and `media_urls` are rejected. A workspace template requires `from`; a built-in template selects its sender and rejects `from`.",
+        description="Send using a stored template instead of free text. The category is derived from the template, so `category`, `subject` and `media_urls` are rejected. A workspace template requires `from`; a built-in template selects its sender and rejects `from`.",
     )] = None
     broadcast_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -6839,7 +6889,7 @@ class SMSEvent(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Present on `sms.sent` and `sms.delivered` once identified, absent otherwise.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
     error: Annotated[Optional[SMSError], Field(
         description="Failure detail for a message that could not be delivered or was rejected.",
@@ -7364,13 +7414,13 @@ class SMSSuppression(BaseModel):
     )]
     destination: Annotated[str, Field(
         description="The subscriber, in E.164 format.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=20,
         min_length=2,
     )]
     originator: Annotated[str, Field(
         description="The sender this stops. A suppression covers one sender, so your other senders still reach this subscriber. Opting out of one of your programs does not opt out of the others.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         max_length=20,
         min_length=1,
     )]
@@ -7435,13 +7485,13 @@ class SMSSuppressionCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     destination: Annotated[str, Field(
         description="The subscriber to stop messaging, in E.164 format.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=20,
         min_length=2,
     )]
     originator: Annotated[str, Field(
         description="The sender to stop. Your other senders keep reaching this subscriber, so stopping every one of them means one call per sender.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         max_length=20,
         min_length=1,
     )]
@@ -7492,7 +7542,7 @@ class SMSKeywordRule(BaseModel):
     )] = None
     number: Annotated[Optional[str], Field(
         description="Narrows the rule to one of your numbers in E.164 format, instead of every number you hold in the country. Null means it applies to all of them.",
-        examples=[+18005551234],
+        examples=["+18005551234"],
         min_length=1,
     )] = None
     keywords: Annotated[List[str], Field(
@@ -7556,7 +7606,7 @@ class SMSKeywordRuleCreate(BaseModel):
     )] = None
     number: Annotated[Optional[str], Field(
         description="Narrows the rule to one number you hold, in E.164 format or as a short code. Omit to cover every number you hold in the country. The number must be one of yours and able to receive messages.",
-        examples=[+18005551234],
+        examples=["+18005551234"],
         min_length=1,
     )] = None
     keywords: Annotated[Optional[List[str]], Field(
@@ -7648,6 +7698,7 @@ class ComplianceItemState(str, Enum):
     rejected = "rejected"
     not_applicable = "not_applicable"
     expired = "expired"
+    awaiting_confirmation = "awaiting_confirmation"
 
 
 class ComplianceRequirementField(BaseModel):
@@ -8522,13 +8573,13 @@ class ComplianceRequirement(BaseModel):
         description="Whether this country's requirements are met. `true` when no requirements apply, or once the submission is approved and every required requirement is approved or marked not applicable. This can remain true when an external verifier requests a correction. Once you submit that correction, it must pass review before this becomes true again, including any optional answers you change.",
     )]
     needs_input: Annotated[bool, Field(
-        description="Whether anything is waiting on you. True when a required requirement has no answer, its answer was refused or has gone stale, the registration needs correction as described by `reason`, or a closed submission accepts corrected details (`resubmission_allowed`). False does not imply that review is pending: a closed verifier correction can leave the requirements unsatisfied with no editable answers. Read `review_pending` to determine whether an answer is awaiting review. Read this independently of `satisfied`, which reports whether your paperwork is accepted. An unresolved verifier correction also sets it while the matching grant is live and the correction deadline has not passed, until you supply updated details. At the deadline or after grant withdrawal, an unresolved rejection alone does not set it because accepted answers can no longer be replaced. A corrected optional answer that is rejected or expires still needs your input through ordinary resupply, including after that deadline.",
+        description="Whether anything is waiting on you. True when a required requirement has no answer, its answer was refused or has gone stale, a business contact has not yet confirmed its emailed link (`awaiting_confirmation`), the registration needs correction as described by `reason`, or a closed submission accepts corrected details (`resubmission_allowed`). False does not imply that review is pending: a closed verifier correction can leave the requirements unsatisfied with no editable answers. Read `review_pending` to determine whether an answer is awaiting review. Read this independently of `satisfied`, which reports whether your paperwork is accepted. An unresolved verifier correction also sets it while the matching grant is live and the correction deadline has not passed, until you supply updated details. At the deadline or after grant withdrawal, an unresolved rejection alone does not set it because accepted answers can no longer be replaced. A corrected optional answer that is rejected or expires still needs your input through ordinary resupply, including after that deadline.",
     )]
     review_pending: Annotated[bool, Field(
         description="Whether any submitted answer is awaiting or undergoing review. False after all answers have received verdicts. A closed verifier correction can remain unsatisfied with no review pending and no editable answers.",
     )]
     answers_editable: Annotated[bool, Field(
-        description="Whether you may change any answer, not only one that was refused or has gone stale. True for a number, emergency calling service, business identity or SMS sender registration whose submission has not been approved yet, including answers awaiting review or already accepted, and for a closed submission when `resubmission_allowed` is true. An SMS sender registration goes to the carrier or registry when it is approved, so it stays editable only until then. A changed answer loses its verdict and is reviewed again. Send only the answers you change. False once the submission is approved: replace only answers in `fields` whose state is `not_supplied`, `rejected` or `expired`, or those marked `editable_for_verifier_repair`.",
+        description="Whether you may change any answer, not only one that was refused or has gone stale. True for a number, emergency calling service, business identity or SMS sender registration whose submission has not been approved yet, including answers awaiting review or already accepted, and for a closed submission when `resubmission_allowed` is true. An SMS sender registration goes to the carrier or registry when it is approved, so it stays editable only until then. A changed answer loses its verdict and is reviewed again. Send only the answers you change. False once the submission is approved: replace only answers in `fields` whose state is `not_supplied`, `rejected`, `expired` or `awaiting_confirmation`, or those marked `editable_for_verifier_repair`.",
     )]
     resubmission_allowed: Annotated[bool, Field(
         description="Whether Bird closed the previous submission but accepts corrected details for this registration. When `submission_id` is set, update that submission with your corrected answers and it is reviewed again. When `submission_id` is `null`, the form has changed since: create a new submission. `reason` says why the previous one was closed. False when nothing was closed, and when a closed submission cannot be sent again; contact support then.",
@@ -8582,7 +8633,7 @@ class ComplianceAnswer(BaseModel):
     value: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The answer, for a requirement answered inline. Send every answer as a string whatever its data type, so a number goes as `\"1500\"` and a yes-or-no as `\"true\"`.",
-        examples=[90012768],
+        examples=["90012768"],
         min_length=1,
     )] = None
     attachment_id: Annotated[Optional[str], Field(
@@ -8647,13 +8698,14 @@ class ComplianceSubmissionCreate(BaseModel):
 class ComplianceDomainProofMethod(str, Enum):
     member_login = "member_login"
     sso_domain = "sso_domain"
+    contact_confirmation = "contact_confirmation"
 
 
 class ComplianceDomainProof(BaseModel):
     "How your organization proved it controls the business's domain, for a business verification."
     model_config = ConfigDict(extra="allow")
     method: Annotated[Annotated[Union[ComplianceDomainProofMethod, str], Field(union_mode="left_to_right")], Field(
-        description="How the domain was proven.\n\n- `member_login`: a member of this workspace signs in with a verified address at the domain.\n- `sso_domain`: the domain is your organization's verified single sign-on domain.",
+        description="How the domain was proven.\n\n- `member_login`: a member of this workspace signs in with a verified address at the domain.\n- `sso_domain`: the domain is your organization's verified single sign-on domain.\n- `contact_confirmation`: the business contact confirmed a link we emailed to their address at the domain.",
     )]
     domain: Annotated[str, Field(
         description="The business's registrable domain, such as `acme.com`.",
@@ -8941,7 +8993,7 @@ class SMSInboundNumberStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     number: Annotated[str, Field(
         description="The Bird number the messages arrived on, in E.164, or the short code they were sent to. This is the same value the message resource exposes as `to`.",
-        examples=[+14155557701],
+        examples=["+14155557701"],
         min_length=1,
     )]
     received: Annotated[int, Field(
@@ -9634,7 +9686,7 @@ class VerificationTo(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The recipient's phone number in E.164 format, with the leading `+` and country code (for example `+15551234567`). A number in any other format is rejected as an invalid recipient (`422`).",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )] = None
 
@@ -9764,7 +9816,7 @@ class VerificationCheckRequest(BaseModel):
     )]
     code: Annotated[str, Field(
         description="The passcode the recipient received. Passcodes are numeric; submit the digits exactly as delivered. An incorrect value is a normal `200` outcome with `success: false`. It does not return an error.",
-        examples=[123456],
+        examples=["123456"],
         max_length=12,
         min_length=4,
     )]
@@ -9825,7 +9877,7 @@ class WhatsAppTemplateExampleParameter(BaseModel):
     text: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="An example value for a text parameter. Present when `type` is `text`.",
-        examples=[123456],
+        examples=["123456"],
         min_length=1,
     )] = None
     url: Annotated[Optional[str], Field(
@@ -9882,7 +9934,7 @@ class WhatsAppTemplateButton(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The number the button dials. Present on dial buttons.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         min_length=1,
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameter]], Field(
@@ -10020,7 +10072,7 @@ class WhatsAppAddress(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Phone number in E.164 format, when known.",
-        examples=[+15550001111],
+        examples=["+15550001111"],
         min_length=1,
     )] = None
     bsuid: Annotated[Optional[str], Field(
@@ -10434,7 +10486,7 @@ class WhatsAppContactPhone(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The number as the card holds it, normalized to E.164 where we can parse it. A card is whatever the contact's device stored, so a number that no country's numbering plan accepts, an extension among them, is passed through exactly as it arrived rather than dropped. Parse defensively: most values are E.164 and none is guaranteed to be.",
-        examples=[+16505551234],
+        examples=["+16505551234"],
     )] = None
     type: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -10489,7 +10541,7 @@ class WhatsAppContactAddress(BaseModel):
     )] = None
     zip: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        examples=[94025],
+        examples=["94025"],
     )] = None
     country: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -10838,7 +10890,7 @@ class WhatsAppError(BaseModel):
     )]
     meta_error_code: Annotated[Optional[str], Field(
         description="Raw error code from the WhatsApp Cloud API, when available, for low-level debugging.",
-        examples=[131026],
+        examples=["131026"],
     )] = None
     occurred_at: Annotated[str, Field(
         description="When the failure occurred.",
@@ -11582,7 +11634,7 @@ class WhatsAppContactPhoneSend(BaseModel):
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="E.164 enables a chat button; other formats show an invite button.",
-        examples=[+16505551234],
+        examples=["+16505551234"],
         max_length=32,
         min_length=1,
     )]
@@ -11647,7 +11699,7 @@ class WhatsAppContactAddressSend(BaseModel):
     )] = None
     zip: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        examples=[94025],
+        examples=["94025"],
         max_length=128,
     )] = None
     country: Annotated[Optional[str], Field(
@@ -11707,14 +11759,14 @@ class WhatsAppMessageSendRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     to: Annotated[str, Field(
         description="Recipient E.164 number, business-scoped user ID (BSUID, such as `US.13491208655302741918`), or group ID (such as `wag_01krdgeqcxet5s7t44vh8rt9mg`). OTP templates require a phone number. For replies, use the inbound sender identity and receiving business number.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         alias="from",
         description="Connected E.164 number owned by this workspace; for authored templates, use the same WhatsApp Business Account. Omit for Bird-managed templates and groups; required otherwise.",
-        examples=[+13124495648],
+        examples=["+13124495648"],
         min_length=1,
     )] = None
     template: Annotated[Optional[WhatsAppTemplateSend], Field(
@@ -11957,7 +12009,7 @@ class WhatsAppConversationRecipient(BaseModel):
     )]
     phone_number: Annotated[Optional[str], Field(
         description="Contact phone number in E.164 format, or null when unknown.",
-        examples=[+15550001111],
+        examples=["+15550001111"],
         min_length=1,
     )]
     display_name: Annotated[Optional[str], Field(
@@ -12019,7 +12071,7 @@ class WhatsAppConversation(BaseModel):
     )]
     business_phone_number: Annotated[Optional[str], Field(
         description="Your WhatsApp business phone number this conversation runs on, in E.164 format. It stays the same when you remove the number and connect it again. Null when Bird holds no phone number for it.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         min_length=1,
     )]
     recipient: Annotated[WhatsAppConversationRecipient, Field(
@@ -12195,7 +12247,7 @@ class WhatsAppGroupError(BaseModel):
     )]
     meta_error_code: Annotated[Optional[str], Field(
         description="WhatsApp's most specific code for the refusal: its error subcode where it sent one, otherwise its top-level code. Treat it as an opaque string. Null when the failure was Bird's own verdict rather than a WhatsApp refusal.",
-        examples=[2388024],
+        examples=["2388024"],
     )] = None
 
 
@@ -12253,7 +12305,7 @@ class WhatsAppGroupParticipant(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Phone number in E.164 format. Absent when WhatsApp withholds it, which it does for anyone who has not shared their number with your business, so a group is normally a mix of participants with one and without.",
-        examples=[+16505551234],
+        examples=["+16505551234"],
         min_length=1,
     )] = None
     username: Annotated[Optional[str], Field(
@@ -12301,7 +12353,7 @@ class WhatsAppGroup(BaseModel):
     )]
     waba: Annotated[Optional[str], Field(
         description="Meta's identifier for the WhatsApp Business Account recorded when the group was created. This is a historical snapshot, not a live account directory projection. Null for a number we operate on your behalf, whose account is not yours to see.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
     )]
     subject: Annotated[str, Field(
@@ -12473,7 +12525,7 @@ class WhatsAppGroupJoinRequest(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Phone number in E.164 format. Absent when WhatsApp withholds it, which it does for anyone who has not shared their number with your business.",
-        examples=[+16505551234],
+        examples=["+16505551234"],
         min_length=1,
     )] = None
     username: Annotated[Optional[str], Field(
@@ -12591,7 +12643,7 @@ class WhatsAppTemplateSubmissionError(BaseModel):
     )]
     meta_error_code: Annotated[Optional[str], Field(
         description="WhatsApp's most specific code for the refusal: its error subcode when it sent one, otherwise its top-level code. Opaque, treat it as a string. Absent when the failure was Bird's own verdict rather than a WhatsApp refusal.",
-        examples=[2388043],
+        examples=["2388043"],
     )] = None
 
 
@@ -12659,7 +12711,7 @@ class WhatsAppTemplate(BaseModel):
     waba: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp Business Account that holds this template's languages at Meta. Absent on a built-in template: those live on a WABA that Bird manages centrally rather than on your account, so it is not yours to reconcile against and is not disclosed.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
     )] = None
     category: Annotated[Annotated[Union[WhatsAppTemplateCategory, str], Field(union_mode="left_to_right")], Field(
         description="Meta's content classification for a template.\n\n- `authentication`: delivers one-time passcodes.\n- `utility`: delivers transaction-triggered updates (receipts, order status).\n- `marketing`: carries promotional content.\n\nThe category determines the sender number and price. This is an open enum.\nAccept unrecognized values.",
@@ -12828,7 +12880,7 @@ class WhatsAppTemplateExampleParameterWrite(BaseModel):
     text: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The example value. Send it when `type` is `text`. May be empty on a draft; required before submission.",
-        examples=[123456],
+        examples=["123456"],
     )] = None
     url: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -12877,7 +12929,7 @@ class WhatsAppTemplateButtonWrite(BaseModel):
     phone_number: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The number a `phone_number` button dials, in international format. Some countries publish numbers with a leading zero after the country calling code; WhatsApp strips that zero, so give a number that dials without it. May be empty on a draft; required before submission.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         max_length=20,
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
@@ -13010,7 +13062,7 @@ class WhatsAppTemplateCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     waba: Annotated[str, Field(
         description="The WhatsApp Business Account to author this template on. A template belongs to one account at Meta and is reviewed, approved and sent under it, so every create names the account explicitly. It must be an account connected to this workspace.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
     )]
     slug: Annotated[str, Field(
@@ -13243,7 +13295,7 @@ class WhatsAppTemplateDuplicate(BaseModel):
     model_config = ConfigDict(extra="allow")
     waba: Annotated[str, Field(
         description="The WhatsApp Business Account the copy is created on. A template belongs to one account at Meta. Meta reviews, approves, and sends it under that account. The copy therefore names its account rather than taking the source's. A built-in template's account is not one you can submit against. It must be an account connected to this workspace.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
     )]
     slug: Annotated[Optional[str], Field(
@@ -13601,7 +13653,7 @@ class WhatsAppPhoneNumberStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The business sender phone number in E.164 form.",
-        examples=[+13124495569],
+        examples=["+13124495569"],
         min_length=1,
     )]
     shared: Annotated[bool, Field(
@@ -13645,7 +13697,7 @@ class WhatsAppInboundPhoneNumberStatsPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The business phone number that received the messages, in E.164 form.",
-        examples=[+13124495569],
+        examples=["+13124495569"],
         min_length=1,
     )]
     received: Annotated[int, Field(
@@ -13692,7 +13744,7 @@ class WhatsAppAgentNotificationError(BaseModel):
     )]
     meta_error_code: Annotated[Optional[str], Field(
         description="WhatsApp's most specific code when it refused the notification outright: its error subcode where it sent one, otherwise its top-level code. Treat it as an opaque string. Null when WhatsApp took the notification and reported the failure later, which carries no code, and when the failure was Bird's own verdict.",
-        examples=[100],
+        examples=["100"],
     )]
 
 
@@ -13708,12 +13760,12 @@ class WhatsAppAgentNotification(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="The business number whose agent the notification was sent to, in E.164 format.",
-        examples=[+13124495648],
+        examples=["+13124495648"],
         min_length=1,
     )]
     to: Annotated[str, Field(
         description="The contact the notification was about, as you addressed it: a phone number in E.164 format, or a business-scoped user ID.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     name: Annotated[str, Field(
@@ -13778,12 +13830,12 @@ class WhatsAppAgentNotificationCreate(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="The business phone number whose agent should act on the notification, in E.164 format (for example `+13124495648`), the same form a message's `from` takes. It must be a number this workspace has connected and that runs an agent.",
-        examples=[+13124495648],
+        examples=["+13124495648"],
         min_length=1,
     )]
     to: Annotated[str, Field(
         description="The contact the notification is about: a phone number in E.164 format (for example `+14155551234`), or the contact's business-scoped user ID (for example `US.13491208655302741918`), the same forms a message's `to` accepts. A phone number is normalized before the call reaches WhatsApp, so spacing does not matter. WhatsApp documents a phone number for this call; a business-scoped user ID is passed through as given.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     name: Annotated[str, Field(
@@ -14173,7 +14225,7 @@ class AMBSuppression(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The customer: a phone number in E.164 format, or the exact opaque identifier Apple supplied. `address_type` says which.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         max_length=1024,
         min_length=1,
     )]
@@ -14211,7 +14263,7 @@ class AMBSuppression(BaseModel):
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
     last_asserted_at: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="When we last recorded this suppression being stated. Later than `created_at` when your workspace added it again while it was already in force; a repeat adds no new record.",
+        description="When we last recorded this suppression being stated. Later than `created_at` when it was stated again while already in force: your workspace adding it again, or the customer closing the conversation again. A repeat adds no new record.",
         min_length=1,
     )] = None
     ended_at: Annotated[Optional[str], Field(
@@ -14379,6 +14431,10 @@ class AMBBusinessAccountSubmissionCreate(BaseModel):
         min_length=1,
         pattern="^tca_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+
+
+class AMBAuthenticationProviderID(RootModel[str]):
+    root: str
 
 
 class AMBEntryPoint(BaseModel):
@@ -15808,7 +15864,7 @@ class AMBMessagePartKind(str, Enum):
 
 
 class AMBMessagePart(BaseModel):
-    "One part of the split an outbound message was sent in. `title`, `image_url` and `layout` record what a card showed, as measured when the part was sent, not what a request chose. They are absent when an earlier attempt of a retried send sent the part."
+    "One part of the split an outbound message was sent in. `title`, `image_url` and `layout` record what a card showed, not what a request chose. Bird reads them when it sends the part, except on a `rich_link` Apple built from its URL, where it reads the linked page around the time Apple accepts the part. They can be absent, as each field says."
     model_config = ConfigDict(extra="allow")
     kind: Annotated[Annotated[Union[AMBMessagePartKind, str], Field(union_mode="left_to_right")], Field(
         description="What one part of an outbound message was:\n\n- `text`: Part of the message's text, with the attachments placed in it.\n- `link_preview`: A link from the text, sent as a preview Bird built from the page.\n- `rich_link`: The message's own `rich_link`.\n- `interactive`: The message's own `interactive`.",
@@ -15837,13 +15893,13 @@ class AMBMessagePart(BaseModel):
     )] = None
     title: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The title a `link_preview` part showed, read from the page when the part was sent. A title longer than 512 bytes is cut to that length. Absent when an earlier attempt of a retried send sent the part.",
+        description="The title a card showed. On a `link_preview` part it is the page's title, read when the part was sent. On a `rich_link` part Apple built from its URL it is the title Apple returned for the card, or the linked page's title when Apple returned none. A title longer than 512 bytes is cut to that length. Absent on other parts, on a part Apple did not accept, and on a `rich_link` Apple built when neither Apple nor a page Bird could read supplied a title. On a `link_preview` part it is also absent when Bird sent the part in an earlier attempt of a retried send, or had to save the send's result again.",
         examples=["Your order"],
         min_length=1,
     )] = None
     image_url: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The page image a `link_preview` part showed, as the address it was fetched from when the part was sent. Absent when the address is longer than 2,048 bytes, and when an earlier attempt of a retried send sent the part.",
+        description="The address of the image a card showed. On a `link_preview` part it is the page image Bird fetched and sent. On a `rich_link` part Apple built from its URL it is the image the linked page offers, read around the time Apple accepted the part. Apple builds that card on the device, so the image it shows can differ. On both kinds the address is the page's own. Bird keeps no copy of the image, and the address can stop serving it later. Absent on other parts, on a part Apple did not accept, when the address is longer than 2,048 bytes, and when Bird could not read the page or the page offers no image. On a `link_preview` part it is also absent when Bird sent the part in an earlier attempt of a retried send, or had to save the send's result again.",
         examples=["https://example.com/orders/123/cover.png"],
         min_length=1,
     )] = None
@@ -15948,7 +16004,7 @@ class AMBMessage(BaseModel):
     )] = None
     parts: Annotated[Optional[List[AMBMessagePart]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The parts an outbound message was sent as, in the order Bird sent them, so one message can arrive as several. Each link in the text goes as its own preview. A `rich_link` takes the place of the first copy of its URL in the text, which splits the text around it, and goes last when the text does not contain it. An `interactive` goes after the text. A card part that the finishing attempt sent also says what it showed. A message can also go out as one `rich_link` or `interactive` part that has its text. Set when the send finishes as `sent` or `send_failed`. Absent on inbound messages, when the text could not be split so nothing was sent, such as a text with more than 20 links, and on older messages, so treat a missing `parts` as unknown.",
+        description="The parts an outbound message was sent as, in the order Bird sent them, so one message can arrive as several. Each link in the text goes as its own preview. A `rich_link` takes the place of the first copy of its URL in the text, which splits the text around it, and goes last when the text does not contain it. An `interactive` goes after the text. A card part also says what it showed, when Bird still has that when the send finishes. A message can also go out as one `rich_link` or `interactive` part that has its text. Set when the send finishes as `sent` or `send_failed`. Absent on inbound messages, when the text could not be split so nothing was sent, such as a text with more than 20 links, and on older messages, so treat a missing `parts` as unknown.",
     )] = None
     in_reply_to_message_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -16218,6 +16274,10 @@ class AMBConversationRecipient(BaseModel):
         description="Customer phone number, or null when unknown. An invitation's destination remains on the invitation's `to` field.",
         min_length=1,
     )]
+    display_name: Annotated[Optional[str], Field(
+        description="Name from the last successful identity verification, or null when none was collected. It can refer to a previous verification and does not establish a current login session.",
+        min_length=1,
+    )] = None
 
 
 class AMBConversationRouting(BaseModel):
@@ -16302,6 +16362,149 @@ class AMBConversationClosedReason(str, Enum):
     gone = "gone"
 
 
+class AMBAuthenticationStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    succeeded = "succeeded"
+    failed = "failed"
+    cancelled = "cancelled"
+    expired = "expired"
+    superseded = "superseded"
+
+
+class AMBVerifiedIdentity(BaseModel):
+    "Validated identity claims. Verification does not create a persistent login session or grant access to customer systems."
+    model_config = ConfigDict(extra="allow")
+    issuer: Annotated[str, Field(
+        description="Issuer that verified the identity.",
+        min_length=1,
+    )]
+    subject: Annotated[str, Field(
+        description="Provider-issued user identifier. Not necessarily your CRM customer ID.",
+        max_length=255,
+        min_length=1,
+    )]
+    name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Name supplied by the provider when name collection is enabled.",
+        max_length=512,
+        min_length=1,
+    )] = None
+    email: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Email supplied by the provider when email collection is enabled.",
+        max_length=320,
+        min_length=1,
+    )] = None
+    email_verified: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether the provider verified this email address.",
+    )] = None
+    authenticated_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When the provider says the user authenticated. May precede this verification.",
+        min_length=1,
+    )] = None
+    verified_at: Annotated[str, Field(
+        description="When Bird completed identity validation and confirmed the originating Messages conversation.",
+        min_length=1,
+    )]
+
+
+class AMBAuthentication(BaseModel):
+    "A single attempt to verify the identity associated with an Apple Messages for Business conversation."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["amauth_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amauth_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    conversation_id: Annotated[str, Field(
+        examples=["acv_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^acv_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    provider_id: Annotated[str, Field(
+        examples=["aauthp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aauthp_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    provider_revision: Annotated[int, Field(
+        description="Provider revision used by this attempt.",
+        ge=1,
+    )]
+    message_id: Annotated[Optional[str], Field(
+        description="Authentication message reference, or null before acceptance.",
+        examples=["amb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    status: Annotated[AMBAuthenticationStatus, Field(
+        description="Progress of an authentication request. Every value except `pending` and `processing` is terminal.\n\n- `pending`: the sign-in message was accepted and the customer has not finished.\n- `processing`: the authorization code is being exchanged or Bird is waiting for confirmation from the originating Messages device.\n- `succeeded`: the identity was validated and the originating Messages device confirmed sign-in.\n- `failed`: delivery, identity verification or device confirmation failed, or the provider callback was replayed.\n- `cancelled`: the customer or the provider declined authorization.\n- `expired`: the request passed its ten-minute lifetime.\n- `superseded`: a newer request, or a change to the conversation, business or provider, replaced the request.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When the attempt was created.",
+        min_length=1,
+    )]
+    expires_at: Annotated[str, Field(
+        description="When this attempt expires.",
+        min_length=1,
+    )]
+    completed_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When the attempt reached a terminal outcome.",
+        min_length=1,
+    )] = None
+    failure_code: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Why the request did not succeed. Contains no provider response or credentials.\n\n- `authentication_expired`: ten minutes passed. Request a new sign-in.\n- `new_authentication`: a newer request replaced this one.\n- `conversation_closed` and `conversation_changed`: the conversation closed or reopened. Wait for the customer to write again.\n- `configuration_changed`: the provider settings changed or the business was disconnected.\n- `user_cancelled`, `apple_authentication_cancel`: the customer declined.\n- `provider_rejected`, `token_exchange_failed`, `identity_verification_failed`: the provider response could not be accepted. Check the provider settings, then request a new sign-in.\n- `processing_interrupted`: the exchange or device confirmation did not finish within one minute. Ask the customer to sign in again and return to Messages.\n- `apple_authentication_failure`: the Messages device reported a failed sign-in. Request a new sign-in.\n- `authentication_replayed`: the provider callback was used more than once. Request a new sign-in.\n- `message_submission_failed`, `message_failed`: the sign-in message could not be sent.\n\nOther values are message delivery reasons passed through unchanged.",
+        max_length=128,
+        min_length=1,
+    )] = None
+    identity: Annotated[Optional[AMBVerifiedIdentity], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Validated identity claims. Verification does not create a persistent login session or grant access to customer systems.",
+    )] = None
+
+
+class AMBConversationVerifiedIdentity(BaseModel):
+    "Most recent successful identity verification for this conversation."
+    model_config = ConfigDict(extra="allow")
+    authentication_id: Annotated[str, Field(
+        examples=["amauth_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amauth_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    provider_id: Annotated[str, Field(
+        examples=["aauthp_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^aauthp_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    provider_revision: Annotated[int, Field(
+        description="Provider revision used for verification.",
+        ge=1,
+    )]
+    identity: Annotated[AMBVerifiedIdentity, Field(
+        description="Validated identity claims. Verification does not create a persistent login session or grant access to customer systems.",
+    )]
+    historical: Annotated[bool, Field(
+        description="The conversation or provider changed after verification. This result is retained as history.",
+    )]
+
+
+class AMBConversationAuthentication(BaseModel):
+    "Latest attempt and last successful verification. A new pending attempt does not erase an earlier success."
+    model_config = ConfigDict(extra="allow")
+    latest_attempt: Annotated[Optional[AMBAuthentication], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="A single attempt to verify the identity associated with an Apple Messages for Business conversation.",
+    )] = None
+    last_verified: Annotated[Optional[AMBConversationVerifiedIdentity], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Most recent successful identity verification for this conversation.",
+    )] = None
+
+
 class AMBConversation(BaseModel):
     "A conversation between your business and one customer on Apple Messages for Business. It holds the customer's device capabilities, the console's read state, assignment, and labels, and the routing queue the conversation is in."
     model_config = ConfigDict(extra="allow")
@@ -16374,6 +16577,10 @@ class AMBConversation(BaseModel):
         description="When this conversation last changed.",
         min_length=1,
     )]
+    authentication: Annotated[Optional[AMBConversationAuthentication], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Latest authentication request and the last verified identity. Included when you read one conversation, not in list results.",
+    )] = None
 
 
 class AMBConversationList(BaseModel):
@@ -16492,7 +16699,7 @@ class AMBSuppressionCreate(BaseModel):
     )] = None
     address: Annotated[str, Field(
         description="The customer to stop messaging: a phone number in E.164 format with a leading plus sign, or the exact opaque identifier Apple supplied. `address_type` says which.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         max_length=1024,
         min_length=1,
     )]
@@ -17215,7 +17422,7 @@ class WhatsAppBusinessPortfolio(BaseModel):
     model_config = ConfigDict(extra="allow")
     meta_id: Annotated[str, Field(
         description="Meta's identifier for the portfolio. Treat it as an opaque string.",
-        examples=[178563218361309],
+        examples=["178563218361309"],
         min_length=1,
     )]
     name: Annotated[Optional[str], Field(
@@ -17291,7 +17498,7 @@ class WhatsAppMetaHealthEntity(BaseModel):
     entity_type: Annotated[Union[WhatsAppMetaHealthEntityType, str], Field(union_mode="left_to_right")]
     meta_id: Annotated[str, Field(
         description="Meta's identifier for the node. Treat it as an opaque string.",
-        examples=[1028574859896003],
+        examples=["1028574859896003"],
         min_length=1,
     )]
     can_send_message: Annotated[WhatsAppMetaHealthVerdict, Field(
@@ -17330,7 +17537,7 @@ class WhatsAppBusinessAccount(BaseModel):
     )]
     waba: Annotated[str, Field(
         description="Meta's own identifier for this WhatsApp Business Account. This is the value to send when creating a template on the account.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
     )]
     name: Annotated[str, Field(
@@ -17434,7 +17641,7 @@ class WhatsAppSuppression(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The suppressed WhatsApp address. For a phone number this is canonical E.164 with a leading plus sign, such as `+5511977670804`.",
-        examples=[+5511977670804],
+        examples=["+5511977670804"],
         min_length=1,
     )]
     waba: Annotated[Optional[str], Field(
@@ -17500,13 +17707,13 @@ class WhatsAppSuppressionCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     address: Annotated[str, Field(
         description="The WhatsApp address to stop messaging. For a phone number, supply canonical E.164 with a leading plus sign, such as `+5511977670804`. A value that is not a valid phone number or business-scoped user ID returns `422`.",
-        examples=[+5511977670804],
+        examples=["+5511977670804"],
         min_length=1,
     )]
     waba: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The WhatsApp Business Account to stop, identified by its WhatsApp-issued account ID or by the `waa_` ID Bird gives it. Either form resolves to the same account, and the suppression stores and returns the WhatsApp-issued one. Omit it to stop the address for the whole workspace, whichever account sends. An account that is not one of yours returns `404` on a single create, and its row reports `error` in a bulk create.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         max_length=64,
         min_length=1,
     )] = None
@@ -17547,7 +17754,7 @@ class WhatsAppKeywordRule(BaseModel):
     )] = None
     waba: Annotated[Optional[str], Field(
         description="The WhatsApp Business Account the rule is limited to, identified by its WhatsApp-issued account ID, or null when it covers every account in your workspace. Bird's own rules are always null.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
     )] = None
     keywords: Annotated[List[str], Field(
         description="The keywords this rule adds. For one of Bird's own rules this is the full set Bird ships. For a rule you created it is only what you added on top: it never restates or removes Bird's keywords, so `effective_keywords` is what actually matches.",
@@ -17599,7 +17806,7 @@ class WhatsAppKeywordRuleCreate(BaseModel):
     waba: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Limit the rule to one WhatsApp Business Account, identified by its WhatsApp-issued account ID or by the `waa_` ID Bird gives it. Either form resolves to the same account, and the rule stores and returns the WhatsApp-issued one. Omit it to cover every account in your workspace. The account must be one of yours.",
-        examples=[102290129340398],
+        examples=["102290129340398"],
         min_length=1,
     )] = None
     keywords: Annotated[Optional[List[str]], Field(
@@ -17644,7 +17851,7 @@ class EmailInboxInsightsWeighting(BaseModel):
     model_config = ConfigDict(extra="allow")
     weight_set_id: Annotated[str, Field(
         description="The measurement's own identifier for the audience mix, carried through so a client can tell two weightings apart without comparing `basis` strings. No operation accepts it.",
-        examples=[12],
+        examples=["12"],
         min_length=1,
     )]
     source: Annotated[Optional[EmailInboxInsightsWeightingSource], Field(
@@ -18581,7 +18788,7 @@ class EmailInboxInsightsIndustry(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="The measurement's own identifier for this industry, carried through so a client can tell two cohorts apart without comparing labels. No operation accepts it.",
-        examples=[44],
+        examples=["44"],
         min_length=1,
     )]
     name: Annotated[str, Field(
@@ -18661,7 +18868,7 @@ class EmailInboxInsightsSeedTestRow(BaseModel):
     model_config = ConfigDict(extra="allow")
     test_id: Annotated[str, Field(
         description="The test's identifier. It is a string and needs to stay one: the values are long enough that any language storing every number as a floating point value will round them, and a rounded identifier matches no test.",
-        examples=[91901],
+        examples=["91901"],
         min_length=1,
     )]
     subject: Annotated[Optional[str], Field(
@@ -18844,7 +19051,7 @@ class EmailInboxInsightsSeedTestDetail(BaseModel):
     model_config = ConfigDict(extra="allow")
     test_id: Annotated[str, Field(
         description="The test's identifier. It is a string and needs to stay one: the values are long enough that any language storing every number as a floating point value will round them, and a rounded identifier matches no test.",
-        examples=[91901],
+        examples=["91901"],
         min_length=1,
     )]
     subject: Annotated[Optional[str], Field(
@@ -20880,7 +21087,7 @@ class EmailCompetitiveCampaignSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="The identifier for this campaign. Use it to fetch this one campaign on its own.\n\nIt is a string, and it needs to stay one. The values are long enough that\nJavaScript, and any other language that stores every number as a floating point\nvalue, will round them, and a rounded identifier matches no campaign at all.\nCompare it and pass it back as text.",
-        examples=[3914827265],
+        examples=["3914827265"],
         min_length=1,
     )]
     subject: Annotated[str, Field(
@@ -21057,7 +21264,7 @@ class EmailCompetitiveCampaign(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         description="The identifier for this campaign. Use it to fetch this one campaign on its own.\n\nIt is a string, and it needs to stay one. The values are long enough that\nJavaScript, and any other language that stores every number as a floating point\nvalue, will round them, and a rounded identifier matches no campaign at all.\nCompare it and pass it back as text.",
-        examples=[3914827265],
+        examples=["3914827265"],
         min_length=1,
     )]
     subject: Annotated[str, Field(
@@ -21160,7 +21367,7 @@ class EmailCompetitiveWatchlistBrandCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     brand_id: Annotated[str, Field(
         description="Identifier of the brand in the panel's catalog, used to add it to the watchlist. It is a string for the same reason a campaign id is: the values are wide enough that a client storing every number as a floating point value would round them, and a rounded identifier matches no brand at all.",
-        examples=[81531],
+        examples=["81531"],
         max_length=19,
         min_length=1,
         pattern="^[0-9]+$",
@@ -21178,7 +21385,7 @@ class EmailCompetitiveWatchlistBrand(BaseModel):
         pattern="^cwb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[str, Field(
-        examples=[81531],
+        examples=["81531"],
         max_length=19,
         min_length=1,
         pattern="^[0-9]+$",
@@ -21356,7 +21563,7 @@ class EmailCompetitiveBrandMatch(BaseModel):
     "A brand matching a search, ready to be added to the watchlist."
     model_config = ConfigDict(extra="allow")
     brand_id: Annotated[str, Field(
-        examples=[81531],
+        examples=["81531"],
         max_length=19,
         min_length=1,
         pattern="^[0-9]+$",
@@ -23748,6 +23955,7 @@ class WebhookEndpointStatus(str, Enum):
 
 class WebhookEventType(str, Enum):
     amb_accepted = "amb.accepted"
+    amb_authentication_updated = "amb.authentication.updated"
     amb_conversation_closed = "amb.conversation_closed"
     amb_conversation_reopened = "amb.conversation_reopened"
     amb_conversation_started = "amb.conversation_started"
@@ -24131,6 +24339,40 @@ class EventAMBAccepted(BaseModel):
     )]
 
 
+class EventAMBAuthenticationData(BaseModel):
+    "Business routing context and the authentication request at its terminal status."
+    model_config = ConfigDict(extra="allow")
+    workspace_id: Annotated[str, Field(
+        examples=["ws_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^ws_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    business_account_id: Annotated[str, Field(
+        examples=["abz_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^abz_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    authentication: Annotated[AMBAuthentication, Field(
+        description="A single attempt to verify the identity associated with an Apple Messages for Business conversation.",
+    )]
+
+
+class EventAMBAuthenticationUpdated(BaseModel):
+    "An Apple Messages for Business authentication request reached a terminal status. A request produces at most one event, and none when its business is disconnected. Read the request to recover a missing outcome. The event never contains the customer's tokens or authorization code."
+    model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["amb.authentication.updated"], Field(
+        description="Always `amb.authentication.updated` for this event.",
+    )]
+    timestamp: Annotated[str, Field(
+        description="When the request reached its terminal status, independent of webhook delivery time.",
+        examples=["2026-11-11T09:14:27Z"],
+        min_length=1,
+    )]
+    data: Annotated[EventAMBAuthenticationData, Field(
+        description="Business routing context and the authentication request at its terminal status.",
+    )]
+
+
 class EventAMBConversationData(BaseModel):
     "Conversation identity and routing context when a lifecycle event occurred."
     model_config = ConfigDict(extra="allow")
@@ -24303,7 +24545,7 @@ class EventAMBSuppressionCreatedData(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The canonical phone number or exact opaque Apple identifier that was suppressed.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         max_length=1024,
         min_length=1,
     )]
@@ -24560,7 +24802,7 @@ class EventEmailBouncedData(BaseModel):
     )]
     bounce_code: Annotated[Optional[str], Field(
         description="SMTP reply code returned by the receiving mail server, or null when none was provided.",
-        examples=[550],
+        examples=["550"],
     )]
     bounce_description: Annotated[Optional[str], Field(
         description="Human-readable reason the receiving mail server gave for the bounce, or null when none was provided.",
@@ -25172,7 +25414,7 @@ class EventEmailOutOfBandBounceData(BaseModel):
     )]
     bounce_code: Annotated[Optional[str], Field(
         description="SMTP reply code returned by the receiving mail server, or null when none was provided.",
-        examples=[550],
+        examples=["550"],
     )]
     bounce_description: Annotated[Optional[str], Field(
         description="Human-readable reason the receiving mail server gave for the bounce, or null when none was provided.",
@@ -25948,13 +26190,13 @@ class EventPreferenceDeletedData(BaseModel):
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
         description="The sender the statement is limited to, or null when it covers the whole channel. On Apple Messages for Business, this is the Apple business ID used to send invitations. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
@@ -26006,13 +26248,13 @@ class EventPreferenceGrantedData(BaseModel):
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
         description="The sender the statement is limited to, or null when it covers the whole channel. On Apple Messages for Business, this is the Apple business ID used to send invitations. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
@@ -26064,13 +26306,13 @@ class EventPreferenceRevokedData(BaseModel):
     channel: Annotated[Union[PreferenceChannel, str], Field(union_mode="left_to_right")]
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=320,
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
         description="The sender the statement is limited to, or null when it covers the whole channel. On Apple Messages for Business, this is the Apple business ID used to send invitations. Present-with-null on every payload of this type: it is part of the key alongside `topic_id`, and pinning its presence keeps a subscriber from ever learning `(handle, channel)` as the unique key.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
@@ -26109,6 +26351,10 @@ class EventPreferenceRevoked(BaseModel):
 class EventSMSAcceptedData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26121,13 +26367,13 @@ class EventSMSAcceptedData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26180,7 +26426,7 @@ class EventSMSAcceptedData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -26220,6 +26466,10 @@ class EventSMSAccepted(BaseModel):
 class EventSMSDeliveredData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26232,13 +26482,13 @@ class EventSMSDeliveredData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26291,7 +26541,7 @@ class EventSMSDeliveredData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -26316,7 +26566,7 @@ class EventSMSDeliveredData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
 
 
@@ -26341,6 +26591,10 @@ class EventSMSDelivered(BaseModel):
 class EventSMSExpiredData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26353,13 +26607,13 @@ class EventSMSExpiredData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26412,7 +26666,7 @@ class EventSMSExpiredData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -26440,7 +26694,7 @@ class EventSMSExpiredData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
 
 
@@ -26465,6 +26719,10 @@ class EventSMSExpired(BaseModel):
 class EventSMSFailedData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26477,13 +26735,13 @@ class EventSMSFailedData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26536,7 +26794,7 @@ class EventSMSFailedData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -26564,7 +26822,7 @@ class EventSMSFailedData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
 
 
@@ -26589,6 +26847,10 @@ class EventSMSFailed(BaseModel):
 class EventSMSReceivedData(BaseModel):
     "Payload of the sms.received event."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26601,13 +26863,13 @@ class EventSMSReceivedData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="Your number that received the message: an E.164 number, or a short code.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender: an E.164 number, or a short code or alphanumeric sender ID when the message came from one.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     messaging_profile_id: Annotated[Optional[str], Field(
@@ -26626,7 +26888,7 @@ class EventSMSReceivedData(BaseModel):
         min_length=1,
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     carrier: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -26636,7 +26898,7 @@ class EventSMSReceivedData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when not known.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
     country_code: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -26653,6 +26915,10 @@ class EventSMSReceivedData(BaseModel):
     subject: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Subject line. Absent when the message carried none.",
+    )] = None
+    media: Annotated[Optional[List[SMSMedia]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Attachments on the message. Omitted when the message carried none.",
     )] = None
 
 
@@ -26675,6 +26941,10 @@ class EventSMSReceived(BaseModel):
 class EventSMSRejectedData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26687,13 +26957,13 @@ class EventSMSRejectedData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26746,7 +27016,7 @@ class EventSMSRejectedData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -26774,7 +27044,7 @@ class EventSMSRejectedData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
 
 
@@ -26799,6 +27069,10 @@ class EventSMSRejected(BaseModel):
 class EventSMSSentData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26811,13 +27085,13 @@ class EventSMSSentData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26870,7 +27144,7 @@ class EventSMSSentData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -26895,7 +27169,7 @@ class EventSMSSentData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
 
 
@@ -26920,6 +27194,10 @@ class EventSMSSent(BaseModel):
 class EventSMSUndeliveredData(BaseModel):
     "Fields shared by every outbound SMS lifecycle event payload."
     model_config = ConfigDict(extra="allow")
+    content_type: Annotated[Optional[SMSContentType], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Message content type. A nonempty subject or media list selects MMS.",
+    )] = None
     sms_id: Annotated[str, Field(
         examples=["sms_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -26932,13 +27210,13 @@ class EventSMSUndeliveredData(BaseModel):
     )]
     to: Annotated[str, Field(
         description="The recipient's phone number, in E.164 format.",
-        examples=[+15551234567],
+        examples=["+15551234567"],
         min_length=1,
     )]
     from_: Annotated[str, Field(
         alias="from",
         description="The sender you sent the message from: an E.164 number, an alphanumeric sender ID, or a short code.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         min_length=1,
     )]
     tags: Annotated[Optional[List[Tag]], Field(
@@ -26991,7 +27269,7 @@ class EventSMSUndeliveredData(BaseModel):
         pattern="^[A-Za-z]{2}$",
     )] = None
     segments: Annotated[SMSSegments, Field(
-        description="Segment breakdown for the message body. Segment count drives billing.",
+        description="Billable SMS segments, or one unit for MMS.",
     )]
     cost: Annotated[Optional[MessageCost], Field(
         description="What was charged for a message, split into the components that make it up. `null` until at least one component has been priced.",
@@ -27019,7 +27297,7 @@ class EventSMSUndeliveredData(BaseModel):
     mcc_mnc: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Mobile country code and mobile network code of the carrier. Absent when the carrier does not report one.",
-        examples=[311480],
+        examples=["311480"],
     )] = None
 
 
@@ -27051,13 +27329,13 @@ class EventSMSSuppressionCreatedData(BaseModel):
     )]
     destination: Annotated[str, Field(
         description="The subscriber, in E.164 format.",
-        examples=[+15550001234],
+        examples=["+15550001234"],
         max_length=20,
         min_length=2,
     )]
     originator: Annotated[str, Field(
         description="The sender this stops. An SMS suppression is the exact (sender, recipient) pair, so your other senders still reach this subscriber.",
-        examples=[+15557654321],
+        examples=["+15557654321"],
         max_length=20,
         min_length=1,
     )]
@@ -27109,7 +27387,7 @@ class EventVerifyAttemptDeliveredData(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         min_length=1,
     )]
     carrier: Annotated[Optional[str], Field(
@@ -27118,7 +27396,7 @@ class EventVerifyAttemptDeliveredData(BaseModel):
     )]
     mcc_mnc: Annotated[Optional[str], Field(
         description="Mobile country code and mobile network code of the delivering carrier, when reported. Always null for email, WhatsApp, Telegram, and voice.",
-        examples=[311480],
+        examples=["311480"],
     )]
     delivered_at: Annotated[str, Field(
         description="Time delivery was confirmed.",
@@ -27169,13 +27447,13 @@ class EventVerifyAttemptSentData(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         min_length=1,
     )]
     from_: Annotated[Optional[str], Field(
         alias="from",
         description="The sender the passcode was sent from: a phone number, alphanumeric sender ID, short code, or email address. Null when the channel exposes no sender.",
-        examples=[29999],
+        examples=["29999"],
     )]
     sent_at: Annotated[str, Field(
         description="Time the passcode was dispatched.",
@@ -27226,7 +27504,7 @@ class EventVerifyAttemptUndeliveredData(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The single address this attempt was dispatched to, an E.164 phone number or an email address.",
-        examples=[+14155550100],
+        examples=["+14155550100"],
         min_length=1,
     )]
     reason: Annotated[Annotated[Union[VerificationAttemptFailureReason, str], Field(union_mode="left_to_right")], Field(
@@ -27468,12 +27746,12 @@ class EventVoiceCallAnsweredData(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     to: Annotated[str, Field(
         description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
-        examples=[+16505559876],
+        examples=["+16505559876"],
         min_length=1,
     )]
 
@@ -27521,12 +27799,12 @@ class EventVoiceCallEndedData(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     to: Annotated[str, Field(
         description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
-        examples=[+16505559876],
+        examples=["+16505559876"],
         min_length=1,
     )]
     status: Annotated[VoiceCallStatus, Field(
@@ -27592,12 +27870,12 @@ class EventVoiceCallInitiatedData(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     to: Annotated[str, Field(
         description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
-        examples=[+16505559876],
+        examples=["+16505559876"],
         min_length=1,
     )]
 
@@ -27852,7 +28130,7 @@ class WhatsAppGroupJoinRequestSummary(BaseModel):
     )]
     phone_number: Annotated[Optional[str], Field(
         description="Phone number in E.164 format. Null when WhatsApp withholds it, which it does for anyone who has not shared their number with your business.",
-        examples=[+16505551234],
+        examples=["+16505551234"],
         min_length=1,
     )]
     username: Annotated[Optional[str], Field(
@@ -28273,7 +28551,7 @@ class EventWhatsAppSuppressionCreatedData(BaseModel):
     )]
     address: Annotated[str, Field(
         description="The suppressed WhatsApp address. For a phone number this is canonical E.164 with a leading plus sign, such as `+5511977670804`.",
-        examples=[+5511977670804],
+        examples=["+5511977670804"],
         min_length=1,
     )]
     waba: Annotated[Optional[str], Field(
@@ -28316,8 +28594,8 @@ class WebhookTestResponseStatus(str, Enum):
     failed = "failed"
 
 
-class WebhookEvent(RootModel[EventAMBAccepted | EventAMBConversationClosed | EventAMBConversationReopened | EventAMBConversationStarted | EventAMBReceived | EventAMBRejected | EventAMBSendFailed | EventAMBSent | EventAMBSuppressionCreated | EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
-    root: EventAMBAccepted | EventAMBConversationClosed | EventAMBConversationReopened | EventAMBConversationStarted | EventAMBReceived | EventAMBRejected | EventAMBSendFailed | EventAMBSent | EventAMBSuppressionCreated | EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
+class WebhookEvent(RootModel[EventAMBAccepted | EventAMBAuthenticationUpdated | EventAMBConversationClosed | EventAMBConversationReopened | EventAMBConversationStarted | EventAMBReceived | EventAMBRejected | EventAMBSendFailed | EventAMBSent | EventAMBSuppressionCreated | EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated]):
+    root: EventAMBAccepted | EventAMBAuthenticationUpdated | EventAMBConversationClosed | EventAMBConversationReopened | EventAMBConversationStarted | EventAMBReceived | EventAMBRejected | EventAMBSendFailed | EventAMBSent | EventAMBSuppressionCreated | EventDomainFailed | EventDomainVerified | EventEmailAccepted | EventEmailBounced | EventEmailCanceled | EventEmailClicked | EventEmailComplained | EventEmailDeferred | EventEmailDelivered | EventEmailListUnsubscribed | EventEmailOpened | EventEmailOutOfBandBounce | EventEmailProcessed | EventEmailReceived | EventEmailRejected | EventEmailScheduled | EventEmailUnsubscribed | EventEmailMailboxMessageDelivered | EventEmailMailboxMessageFailed | EventEmailMailboxMessageReceived | EventEmailMailboxMessageSent | EventEmailMailboxSuspended | EventEmailMailboxThreadCreated | EventEmailSuppressionCreated | EventPreferenceDeleted | EventPreferenceGranted | EventPreferenceRevoked | EventSMSAccepted | EventSMSDelivered | EventSMSExpired | EventSMSFailed | EventSMSReceived | EventSMSRejected | EventSMSSent | EventSMSUndelivered | EventSMSSuppressionCreated | EventVerifyAttemptDelivered | EventVerifyAttemptSent | EventVerifyAttemptUndelivered | EventVerifyVerificationCreated | EventVerifyVerificationFailed | EventVerifyVerificationVerified | EventVoiceCallAnswered | EventVoiceCallEnded | EventVoiceCallInitiated | EventWhatsAppAccepted | EventWhatsAppDelivered | EventWhatsAppFailed | EventWhatsAppGroupJoinRequestCreated | EventWhatsAppGroupJoinRequestRevoked | EventWhatsAppReacted | EventWhatsAppRead | EventWhatsAppReceived | EventWhatsAppRejected | EventWhatsAppSent | EventWhatsAppSuppressionCreated
 
 
 class WebhookTestResponse(BaseModel):
@@ -28489,7 +28767,7 @@ class VoicePartyBridgePSTNEndpoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     forward_to: Annotated[str, Field(
         description="The number the platform placed the leg onward to, in E.164. The party's own `address` is the number that was dialled, so the two together are one hop of the call.",
-        examples=[+31612345678],
+        examples=["+31612345678"],
         max_length=16,
         min_length=3,
         pattern="^\\+[1-9][0-9]{1,14}$",
@@ -28531,7 +28809,7 @@ class VoiceParty(BaseModel):
     )] = None
     address: Annotated[Optional[str], Field(
         description="This side's own address, in E.164 or as a `sip:` URI. `null` when the observation carried none, which does not say whether one was withheld, missing, or nonexistent.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
     )] = None
     overdial_suffix: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -28671,7 +28949,7 @@ class VoiceLegInboundRouteForward(BaseModel):
     )]
     forward_to: Annotated[str, Field(
         description="The number the leg was forwarded to, in E.164 format. Recorded as it was at the time, so it may name a number you have since stopped verifying.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     forward_as: Annotated[VoiceInboundForwardAs, Field(
@@ -28794,7 +29072,7 @@ class VoiceLegCost(BaseModel):
     model_config = ConfigDict(extra="allow")
     amount: Annotated[str, Field(
         description="Sum of the Voice components below, as a decimal string. Net of tax, which applies to your wallet balance rather than to an individual charge. For Flash calling (coming soon), this excludes the verification attempt fee and can be `0.000000` for a rated, unanswered leg.",
-        examples=[0.013000],
+        examples=["0.013000"],
         min_length=1,
     )]
     currency_code: Annotated[str, Field(
@@ -28806,7 +29084,7 @@ class VoiceLegCost(BaseModel):
     )]
     outbound_amount: Annotated[Optional[str], Field(
         description="What we charged to carry the leg to the destination network, as a decimal string. `null` until this component is priced.",
-        examples=[0.013000],
+        examples=["0.013000"],
     )]
     inbound_amount: Annotated[Optional[str], Field(
         description="What we charged to receive the leg from the originating network, as a decimal string. Only a leg that arrived at your number can carry it. `null` until this component is priced.",
@@ -28844,12 +29122,12 @@ class VoiceLeg(BaseModel):
     from_: Annotated[str, Field(
         alias="from",
         description="The calling party: an E.164 number, a SIP extension on a trunk call, or the `usr_` ID of a browser caller to a workspace user or ring group. A withheld caller may be `anonymous`.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     to: Annotated[str, Field(
         description="The dialled destination: an E.164 number, a SIP extension such as `1001` on a trunk call, or the `usr_`, `vrg_` or `vsq_` ID of the workspace user, ring group or sequence a browser called.",
-        examples=[+16505559876],
+        examples=["+16505559876"],
         min_length=1,
     )]
     overdial_suffix: Annotated[Optional[str], Field(
@@ -29304,7 +29582,7 @@ class NumbersOrderCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     number: Annotated[str, Field(
         description="The number to acquire, in E.164 format, as returned by `GET /v1/numbers/available`.",
-        examples=[+18005550100],
+        examples=["+18005550100"],
         min_length=1,
     )]
     reference: Annotated[Optional[str], Field(
@@ -29349,7 +29627,7 @@ class BillingResolvedPrice(BaseModel):
     unit_price: Money
     tax_rate: Annotated[str, Field(
         description="The tax rate applied to this price for your organization, as a decimal (for example `0.21` for 21%). `0` if your organization is tax-exempt or no tax applies.",
-        examples=[0.21],
+        examples=["0.21"],
         min_length=1,
     )]
     tax_amount: Money
@@ -29425,22 +29703,22 @@ class BillingWallet(BaseModel):
     )]
     balance: Annotated[str, Field(
         description="Balance you can spend, in currency units. Usage is charged as it happens, so this drops within seconds of sending and can be lower than the balance the wallet transactions add up to, which only reflects charges that have settled. Funds held for upcoming renewals are also excluded. Credit headroom is reported separately in `credit_limit`, and postpaid accounts can keep spending past a zero balance up to that limit.",
-        examples=[118.00],
+        examples=["118.00"],
         min_length=1,
     )]
     settled_balance: Annotated[str, Field(
         description="Settled wallet balance in currency units, before active reservations are deducted.",
-        examples=[150.00],
+        examples=["150.00"],
         min_length=1,
     )]
     renewal_reserved: Annotated[str, Field(
         description="Amount currently held for prepared subscription renewals and scheduled plan changes, in currency units.",
-        examples=[25.00],
+        examples=["25.00"],
         min_length=1,
     )]
     renewal_required: Annotated[str, Field(
         description="Total amount required for prepared subscription renewals and scheduled plan changes, including tax, in currency units.",
-        examples=[30.00],
+        examples=["30.00"],
         min_length=1,
     )]
     collection_status: Annotated[BillingWalletCollectionStatus, Field(
@@ -29448,27 +29726,27 @@ class BillingWallet(BaseModel):
     )]
     collection_renewal: Annotated[str, Field(
         description="Part of collection_required needed for unfunded renewal fees, in exact currency units.",
-        examples=[30.004],
+        examples=["30.004"],
         min_length=1,
     )]
     collection_required: Annotated[str, Field(
         description="Total wallet funding still required by the current automatic collection run, in exact currency units.",
-        examples=[42.00],
+        examples=["42.00"],
         min_length=1,
     )]
     collection_usage_buffer: Annotated[str, Field(
         description="Part of collection_required needed for the configured auto-topup amount, in currency units.",
-        examples=[10.00],
+        examples=["10.00"],
         min_length=1,
     )]
     collection_deficit: Annotated[str, Field(
         description="Part of collection_required needed to cover the wallet shortfall after reservations and approved credit, in currency units.",
-        examples=[2.00],
+        examples=["2.00"],
         min_length=1,
     )]
     credit_limit: Annotated[str, Field(
         description="Credit limit in currency units. `0.00` for prepaid wallets.",
-        examples=[0.00],
+        examples=["0.00"],
         min_length=1,
     )]
     provisional: Annotated[bool, Field(
@@ -29915,7 +30193,7 @@ class VoiceCallRouteForward(BaseModel):
     )]
     forward_to: Annotated[str, Field(
         description="The number calls are forwarded to, in E.164 format. It has to be one of your verified caller IDs. That is checked when you set it and again on every call it forwards, so a caller ID you later remove stops forwarding rather than carrying on.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     forward_as: Annotated[VoiceInboundForwardAs, Field(
@@ -29981,7 +30259,7 @@ class VoiceNumber(BaseModel):
     )]
     phone_number: Annotated[str, Field(
         description="The phone number in E.164 format.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     country_code: Annotated[Optional[str], Field(
@@ -30145,7 +30423,7 @@ class VoiceVerifiedNumber(BaseModel):
     )]
     phone_number: Annotated[str, Field(
         description="The phone number in E.164 format registered as an outbound caller ID.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     name: Annotated[Optional[str], Field(
@@ -30187,7 +30465,7 @@ class VoiceVerifiedNumberCreate(BaseModel):
     model_config = ConfigDict(extra="allow")
     phone_number: Annotated[str, Field(
         description="The phone number to register as an outbound caller ID, in E.164 format (a leading `+` followed by the country code and national number). Must be unique within the workspace. Creating the verified number starts verification: a verification call is placed to this number.",
-        examples=[+14155551234],
+        examples=["+14155551234"],
         min_length=1,
     )]
     name: Annotated[Optional[str], Field(
@@ -30215,7 +30493,7 @@ class VoiceVerifiedNumberVerifyRequest(BaseModel):
     code: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="The 6-digit verification code read out by the verification call. Required until ownership is verified. Omit it when retrying activation of an already verified number.",
-        examples=[123456],
+        examples=["123456"],
         max_length=6,
         min_length=6,
         pattern="^\\d{6}$",
@@ -30645,11 +30923,11 @@ class Esim(BaseModel):
     mode: EsimMode
     iccid: Annotated[Optional[str], Field(
         description="ICCID of the eSIM profile. Null while no profile is allocated yet, for example when provisioning failed before allocation.",
-        examples=[8944500212345678912],
+        examples=["8944500212345678912"],
     )]
     phone_number: Annotated[Optional[str], Field(
         description="Phone number attached to this eSIM, in E.164 format, as the supplier reports it. Null while none is on record: a data-only plan comes with no number, and a plan that includes one reports it after provisioning.",
-        examples=[+31612345678],
+        examples=["+31612345678"],
     )]
     capabilities: Annotated[Optional[EsimServiceCapabilities], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -31389,7 +31667,7 @@ class VoiceDestination(BaseModel):
     dial_code: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="International dialling prefix, without the leading plus. Absent for countries that have none.",
-        examples=[31],
+        examples=["31"],
     )] = None
     region: Annotated[Optional[Annotated[Union[DestinationRegion, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -32320,11 +32598,11 @@ class EsimSummary(BaseModel):
     mode: EsimMode
     iccid: Annotated[Optional[str], Field(
         description="ICCID of the eSIM profile, or null while none is allocated.",
-        examples=[8944500212345678912],
+        examples=["8944500212345678912"],
     )]
     phone_number: Annotated[Optional[str], Field(
         description="Phone number attached to this eSIM, in E.164 format, as the supplier reports it. Null while none is on record.",
-        examples=[+31612345678],
+        examples=["+31612345678"],
     )]
     display_name: Annotated[Optional[str], Field(
         description="Free-text label for your own reference.",

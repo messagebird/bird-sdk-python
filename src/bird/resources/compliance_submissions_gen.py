@@ -109,7 +109,7 @@ class ComplianceSubmissions(Resource):
         answers: Sequence[ComplianceAnswer],
         options: RequestOptions | None = None,
     ) -> ComplianceSubmission:
-        """Replaces rejected, expired, or missing answers on an existing submission. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed, except while `answers_editable` is true on the requirements: then any changed answer is reviewed again, and a closed submission with `resubmission_allowed` reopens. During an open verifier correction and before its deadline, you can replace selected accepted answers. An approved emergency calling submission also permits changes to its service-address fields; correct business details in the number's ownership submission, whose ID is available in `ownership.submission_id` on `numbers.get` when present; contact support if those answers are locked or the carrier identity cannot be reconciled. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
+        """Replaces rejected, expired, or missing answers on an existing submission, and a business contact still `awaiting_confirmation`. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed, except while `answers_editable` is true on the requirements: then any changed answer is reviewed again, and a closed submission with `resubmission_allowed` reopens. During an open verifier correction and before its deadline, you can replace selected accepted answers. An approved emergency calling submission also permits changes to its service-address fields; correct business details in the number's ownership submission, whose ID is available in `ownership.submission_id` on `numbers.get` when present; contact support if those answers are locked or the carrier identity cannot be reconciled. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
         body = to_wire(
             ComplianceSubmissionResupply,
             {
@@ -120,6 +120,20 @@ class ComplianceSubmissions(Resource):
             "POST",
             f"/v1/compliance/submissions/{quote(submission_id, safe='')}/resupply",
             body,
+            ComplianceSubmission,
+            options,
+        )
+
+    def send_contact_confirmation(
+        self,
+        submission_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> ComplianceSubmission:
+        """Sends the business contact a new confirmation link for a business verification whose `contact_email` is `awaiting_confirmation` on `compliance_submissions.get`. The previous link stops working. To change the address, resupply `contact_email` instead."""
+        return self._action(
+            "POST",
+            f"/v1/compliance/submissions/{quote(submission_id, safe='')}/contact-confirmation",
             ComplianceSubmission,
             options,
         )
@@ -180,7 +194,7 @@ class AsyncComplianceSubmissions(AsyncResource):
         answers: Sequence[ComplianceAnswer],
         options: RequestOptions | None = None,
     ) -> ComplianceSubmission:
-        """Replaces rejected, expired, or missing answers on an existing submission. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed, except while `answers_editable` is true on the requirements: then any changed answer is reviewed again, and a closed submission with `resubmission_allowed` reopens. During an open verifier correction and before its deadline, you can replace selected accepted answers. An approved emergency calling submission also permits changes to its service-address fields; correct business details in the number's ownership submission, whose ID is available in `ownership.submission_id` on `numbers.get` when present; contact support if those answers are locked or the carrier identity cannot be reconciled. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
+        """Replaces rejected, expired, or missing answers on an existing submission, and a business contact still `awaiting_confirmation`. Read `compliance_requirements.get` for the fields and correction feedback. Accepted answers normally cannot be changed, except while `answers_editable` is true on the requirements: then any changed answer is reviewed again, and a closed submission with `resubmission_allowed` reopens. During an open verifier correction and before its deadline, you can replace selected accepted answers. An approved emergency calling submission also permits changes to its service-address fields; correct business details in the number's ownership submission, whose ID is available in `ownership.submission_id` on `numbers.get` when present; contact support if those answers are locked or the carrier identity cannot be reconciled. Unchanged entries are ignored; at least one answer must change. Changed answers are reviewed again. These answers are a legal representation under the business's name."""
         body = to_wire(
             ComplianceSubmissionResupply,
             {
@@ -191,6 +205,20 @@ class AsyncComplianceSubmissions(AsyncResource):
             "POST",
             f"/v1/compliance/submissions/{quote(submission_id, safe='')}/resupply",
             body,
+            ComplianceSubmission,
+            options,
+        )
+
+    async def send_contact_confirmation(
+        self,
+        submission_id: str,
+        *,
+        options: RequestOptions | None = None,
+    ) -> ComplianceSubmission:
+        """Sends the business contact a new confirmation link for a business verification whose `contact_email` is `awaiting_confirmation` on `compliance_submissions.get`. The previous link stops working. To change the address, resupply `contact_email` instead."""
+        return await self._action(
+            "POST",
+            f"/v1/compliance/submissions/{quote(submission_id, safe='')}/contact-confirmation",
             ComplianceSubmission,
             options,
         )
