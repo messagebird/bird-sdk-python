@@ -42,6 +42,7 @@ class BroadcastUpdateParams(TypedDict, total=False):
 
     from_: EmailAddressInput
     audience_id: str
+    brand_id: str | None | Omit
     template: EmailBroadcastTemplateUpdate | None | Omit
     reply_to: Sequence[EmailAddressInput] | None
     headers: Mapping[str, str]
@@ -129,6 +130,7 @@ def _create_body(
     language: str | None = None,
     parameters: Mapping[str, Any] | None | Omit = omit,
     parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
+    brand_id: str | None | Omit = omit,
 ) -> dict[str, Any]:
     fields: dict[str, Any] = {
         "from": from_,
@@ -154,6 +156,8 @@ def _create_body(
             wire = "from" if key == "from_" else key
             if fields.get(wire) is None and (value := defaults.get(key)) is not None:
                 fields[wire] = value
+    if not isinstance(brand_id, Omit):
+        fields["brand_id"] = brand_id
     body = to_wire(EmailBroadcastCreateRequest, fields)
     if parameters is not None and not isinstance(parameters, Omit):
         body["template"]["parameters"] = dict(parameters)
@@ -174,6 +178,7 @@ def _update_body(
     track_clicks: bool | None,
     ip_pool_id: str | None | Omit,
     category: str | None,
+    brand_id: str | None | Omit = omit,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {}
     if from_ is not None:
@@ -200,6 +205,8 @@ def _update_body(
         body["ip_pool_id"] = ip_pool_id
     if category is not None:
         body["category"] = category
+    if not isinstance(brand_id, Omit):
+        body["brand_id"] = brand_id
     return to_wire(EmailBroadcastUpdateRequest, body)
 
 
@@ -216,6 +223,7 @@ def _parameter_operation_body(
     reply_to: Sequence[EmailAddressInput] | None | Omit,
     headers: Mapping[str, str] | Omit,
     contact_id: str | Omit = omit,
+    brand_id: str | None | Omit = omit,
 ) -> dict[str, Any]:
     if isinstance(template, Mapping) and "parameters" in template:
         if not isinstance(template["parameters"], Mapping):
@@ -225,7 +233,7 @@ def _parameter_operation_body(
         if not isinstance(overrides, Mapping) or not all(isinstance(v, Mapping) for v in overrides.values()):
             raise BirdError("template.parameter_overrides must map each language to a JSON object")
     body: dict[str, Any] = {}
-    for key, value in (("template", template), ("from", from_), ("reply_to", reply_to), ("headers", headers), ("contact_id", contact_id)):
+    for key, value in (("template", template), ("from", from_), ("reply_to", reply_to), ("headers", headers), ("contact_id", contact_id), ("brand_id", brand_id)):
         if not isinstance(value, Omit):
             body[key] = value
     return body
@@ -243,6 +251,7 @@ class Broadcasts(BroadcastsBase):
         *,
         from_: EmailAddressInput | None = None,
         audience_id: str | None = None,
+        brand_id: str | None | Omit = omit,
         template: str | None = None,
         reply_to: Sequence[EmailAddressInput] | None = None,
         headers: Mapping[str, str] | None = None,
@@ -268,6 +277,9 @@ class Broadcasts(BroadcastsBase):
         it has to be an exact match for a language on the published version, so
         ``fr-CA`` does not select ``fr``.
 
+        ``brand_id`` is preview business selection. Omitted or ``None`` uses
+        the default Brand at first scheduling or sending when available.
+
         ```python
         broadcast = client.broadcasts.create(
             from_="newsletter@example.com",
@@ -280,7 +292,7 @@ class Broadcasts(BroadcastsBase):
         body = _create_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
-            self._defaults, language, parameters, parameter_overrides,
+            self._defaults, language, parameters, parameter_overrides, brand_id,
         )
         return self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -290,6 +302,7 @@ class Broadcasts(BroadcastsBase):
         *,
         from_: EmailAddressInput | None = None,
         audience_id: str | None = None,
+        brand_id: str | None | Omit = omit,
         template: EmailBroadcastTemplateUpdate | None | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | None = None,
@@ -305,7 +318,8 @@ class Broadcasts(BroadcastsBase):
         it as it now stands. Omitted arguments keep their current value;
         ``template``, ``reply_to`` and ``ip_pool_id`` take
         ``None`` to clear. A broadcast that has started sending can no longer be edited
-        and raises a ``409``.
+        and raises a ``409``. ``brand_id`` can change only while draft;
+        ``None`` clears the selection and omission retains it.
 
         ```python
         from bird import EmailBroadcastTemplateUpdate
@@ -319,7 +333,7 @@ class Broadcasts(BroadcastsBase):
         """
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category,
+            track_opens, track_clicks, ip_pool_id, category, brand_id,
         )
         return self._write(
             "PATCH",
@@ -362,13 +376,18 @@ class Broadcasts(BroadcastsBase):
         from_: EmailAddressInput | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | Omit = omit,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcastValidationResult:
         """Check the broadcast's saved inputs, or the ones given here, against
         the template's current published version without saving anything or
         evaluating recipients. ``template`` takes the same ``language``,
         ``parameters`` and ``parameter_overrides`` an update would; omitted
-        arguments use what the broadcast already has.
+        arguments use what the broadcast already has. Preview ``brand_id`` selection
+        changes only this operation. Explicit IDs require selection to be enabled.
+        ``None`` selects the default when enabled or clears to unbranded otherwise.
+        After ``brand_unavailable``, preview again with an available ID or ``None``
+        and use the same override and fresh fingerprint for the test.
 
         ```python
         result = client.broadcasts.validate(
@@ -378,7 +397,7 @@ class Broadcasts(BroadcastsBase):
         print(result.ready_for_admission, result.problems)
         ```
         """
-        body = _parameter_operation_body(template, from_, reply_to, headers)
+        body = _parameter_operation_body(template, from_, reply_to, headers, brand_id=brand_id)
         body = to_wire(EmailBroadcastValidationRequest, body)
         return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/validate", body, EmailBroadcastValidationResult, options)
 
@@ -391,6 +410,7 @@ class Broadcasts(BroadcastsBase):
         from_: EmailAddressInput | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | Omit = omit,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcastPreviewResult:
         """Render the broadcast's current published content for one contact,
@@ -407,7 +427,7 @@ class Broadcasts(BroadcastsBase):
         print(preview.subject, preview.preview_fingerprint)
         ```
         """
-        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id, brand_id)
         body = to_wire(EmailBroadcastPreviewRequest, body)
         return self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/preview", body, EmailBroadcastPreviewResult, options)
 
@@ -422,6 +442,7 @@ class Broadcasts(BroadcastsBase):
         from_: EmailAddressInput | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | Omit = omit,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
         """Send the exact content a fresh preview rendered to one authorized
@@ -447,7 +468,7 @@ class Broadcasts(BroadcastsBase):
         print(accepted.id, accepted.status)
         ```
         """
-        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id, brand_id)
         body["to"] = to
         body["preview_fingerprint"] = preview_fingerprint
         body = to_wire(EmailBroadcastTestRequest, body)
@@ -468,6 +489,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         *,
         from_: EmailAddressInput | None = None,
         audience_id: str | None = None,
+        brand_id: str | None | Omit = omit,
         template: str | None = None,
         reply_to: Sequence[EmailAddressInput] | None = None,
         headers: Mapping[str, str] | None = None,
@@ -488,7 +510,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         body = _create_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
-            self._defaults, language, parameters, parameter_overrides,
+            self._defaults, language, parameters, parameter_overrides, brand_id,
         )
         return await self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -498,6 +520,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         *,
         from_: EmailAddressInput | None = None,
         audience_id: str | None = None,
+        brand_id: str | None | Omit = omit,
         template: EmailBroadcastTemplateUpdate | None | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | None = None,
@@ -512,7 +535,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         """Change a draft or scheduled broadcast. See `Broadcasts.update`."""
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
-            track_opens, track_clicks, ip_pool_id, category,
+            track_opens, track_clicks, ip_pool_id, category, brand_id,
         )
         return await self._write(
             "PATCH",
@@ -546,10 +569,11 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         from_: EmailAddressInput | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | Omit = omit,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcastValidationResult:
         """Check a broadcast's inputs without saving. See `Broadcasts.validate`."""
-        body = _parameter_operation_body(template, from_, reply_to, headers)
+        body = _parameter_operation_body(template, from_, reply_to, headers, brand_id=brand_id)
         body = to_wire(EmailBroadcastValidationRequest, body)
         return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/validate", body, EmailBroadcastValidationResult, options)
 
@@ -562,10 +586,11 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         from_: EmailAddressInput | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | Omit = omit,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcastPreviewResult:
         """Render a broadcast for one contact. See `Broadcasts.preview`."""
-        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id, brand_id)
         body = to_wire(EmailBroadcastPreviewRequest, body)
         return await self._write("POST", f"/v1/email/broadcasts/{quote(broadcast_id, safe='')}/preview", body, EmailBroadcastPreviewResult, options)
 
@@ -580,10 +605,11 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         from_: EmailAddressInput | Omit = omit,
         reply_to: Sequence[EmailAddressInput] | None | Omit = omit,
         headers: Mapping[str, str] | Omit = omit,
+        brand_id: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailMessage:
         """Send a rendered test to one member. See `Broadcasts.test`."""
-        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id)
+        body = _parameter_operation_body(template, from_, reply_to, headers, contact_id, brand_id)
         body["to"] = to
         body["preview_fingerprint"] = preview_fingerprint
         body = to_wire(EmailBroadcastTestRequest, body)

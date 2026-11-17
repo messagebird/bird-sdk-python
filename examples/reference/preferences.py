@@ -28,8 +28,8 @@ def preferences_create() -> None:
         consented_at="2026-08-20T14:03:10Z",
         source="signup-form-v2",
     )
-    if result.preference:
-        print(result.applied, result.preference.id)
+    if result.applied and result.preference and result.preference.status == "granted":
+        print(result.preference.id)
 
 
 def preferences_delete() -> None:

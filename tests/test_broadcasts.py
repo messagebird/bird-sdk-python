@@ -112,6 +112,7 @@ def test_create_takes_a_params_dict_splatted() -> None:
         return_value=httpx.Response(200, json=_broadcast())
     )
     params: BroadcastCreateParams = {
+        "brand_id": "bnd_01krdgeqcxet5s7t44vh8rt9mg",
         "from_": "newsletter@acme.com",
         "audience_id": "adn_01krdgeqcxet5s7t44vh8rt9mg",
         "template": "emt_01krdgeqcxet5s7t44vh8rt9mg",
@@ -124,6 +125,7 @@ def test_create_takes_a_params_dict_splatted() -> None:
     assert body["from"] == "newsletter@acme.com"
     assert body["template"] == {"id": "emt_01krdgeqcxet5s7t44vh8rt9mg", "language": "nl"}
     assert body["scheduled_at"] == "2026-08-01T09:00:00Z"
+    assert body["brand_id"] == "bnd_01krdgeqcxet5s7t44vh8rt9mg"
 
 
 @respx.mock
@@ -132,11 +134,13 @@ def test_update_takes_a_params_dict_splatted() -> None:
         return_value=httpx.Response(200, json=_broadcast())
     )
     params: BroadcastUpdateParams = {
+        "brand_id": None,
         "template": EmailBroadcastTemplateUpdate(id="emt_01krdgeqcxet5s7t44vh8rt9mg", language=None),
     }
     client().broadcasts.update(ID1, **params)
     body = json.loads(route.calls.last.request.content)
     assert body["template"] == {"id": "emt_01krdgeqcxet5s7t44vh8rt9mg", "language": None}
+    assert body["brand_id"] is None
 
 
 @respx.mock

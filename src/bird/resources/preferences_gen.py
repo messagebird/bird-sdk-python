@@ -18,6 +18,7 @@ class PreferencesListParams(TypedDict, total=False):
 
     channel: str
     handle: str
+    brand_id: str
     limit: int
     starting_after: str
     ending_before: str
@@ -29,6 +30,7 @@ class PreferencesBase(Resource):
         *,
         channel: str | None = None,
         handle: str | None = None,
+        brand_id: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -44,6 +46,7 @@ class PreferencesBase(Resource):
         query = {
             "channel": channel,
             "handle": handle,
+            "brand_id": brand_id,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
@@ -77,6 +80,7 @@ class AsyncPreferencesBase(AsyncResource):
         *,
         channel: str | None = None,
         handle: str | None = None,
+        brand_id: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -92,6 +96,7 @@ class AsyncPreferencesBase(AsyncResource):
         query = {
             "channel": channel,
             "handle": handle,
+            "brand_id": brand_id,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,

@@ -273,6 +273,7 @@ class PreferenceCreateParams(_PreferenceCreateRequired, total=False):
     ``status`` are required. ``consented_at`` accepts a timezone-aware
     ``datetime`` (serialized to RFC 3339) or an already-wire string."""
 
+    brand_id: str | None | Omit
     coverage: str
     sender_scope: str
     source: str
@@ -287,6 +288,7 @@ class BroadcastCreateParams(TypedDict, total=False):
     ``datetime`` (serialized to RFC 3339) or an already-wire string, and is only
     meaningful alongside ``send``."""
 
+    brand_id: str | None | Omit
     from_: EmailAddressInput
     audience_id: str
     template: str

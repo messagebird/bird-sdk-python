@@ -1606,8 +1606,8 @@ async def _ex_233() -> None:
         consented_at="2026-08-20T14:03:10Z",
         source="signup-form-v2",
     )
-    if result.preference:
-        print(result.applied, result.preference.id)
+    if result.applied and result.preference and result.preference.status == "granted":
+        print(result.preference.id)
 
 
 async def _ex_234() -> None:

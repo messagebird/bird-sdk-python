@@ -222,6 +222,7 @@ class EmailBroadcastParameterProblemCode:
     """Values of EmailBroadcastParameterProblemCode known at this SDK version (open enum)."""
 
     AUDIENCE_UNAVAILABLE: Final = "audience_unavailable"
+    BRAND_UNAVAILABLE: Final = "brand_unavailable"
     CONTACT_PROPERTY_UNKNOWN: Final = "contact_property_unknown"
     LANGUAGE_UNAVAILABLE: Final = "language_unavailable"
     PARAMETER_BYTES_EXCEEDED: Final = "parameter_bytes_exceeded"
@@ -592,6 +593,7 @@ class PreferenceOrigin:
     """Values of PreferenceOrigin known at this SDK version (open enum)."""
 
     API_KEY: Final = "api_key"
+    COMPLAINT: Final = "complaint"
     IMPORT: Final = "import"
     KEYWORD: Final = "keyword"
     PREFERENCE_PAGE: Final = "preference_page"

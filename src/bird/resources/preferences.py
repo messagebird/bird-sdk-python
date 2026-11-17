@@ -12,9 +12,9 @@ from datetime import datetime
 from urllib.parse import quote
 
 from bird._exceptions import BirdError
-from bird._generated import PreferenceCreate, PreferenceWriteResult
+from bird._generated import PreferenceIndividualCreate, PreferenceWriteResult
 from bird._models import to_wire
-from bird._types import RequestOptions
+from bird._types import Omit, RequestOptions, omit
 from bird.resources.preferences_gen import AsyncPreferencesBase, PreferencesBase
 
 _NAIVE_CONSENTED_AT = (
@@ -46,6 +46,7 @@ class Preferences(PreferencesBase):
         channel: str,
         handle: str,
         status: str,
+        brand_id: str | None | Omit = omit,
         coverage: str | None = None,
         sender_scope: str | None = None,
         source: str | None = None,
@@ -53,12 +54,17 @@ class Preferences(PreferencesBase):
         options: RequestOptions | None = None,
     ) -> PreferenceWriteResult:
         """Record one preference statement for a handle. Writing is an upsert
-        keyed by channel + handle (+ ``sender_scope``): a ``201`` means the key
-        had no record and this created one, a ``200`` means the key already
-        had one and this returns its surviving record — whether this
-        statement replaced it, repeated it, or was refused as older than the
-        one on file. Granting over a stored opt-out needs a ``consented_at``
-        later than the opt-out.
+        keyed by channel + handle (+ ``sender_scope`` and email Brand). A ``201``
+        means a live record was created; ``200`` covers updates and refusals.
+        Ordering and complaint protection can return ``applied: false``.
+        Inspect ``preference`` alongside ``applied``: a newer opt-out or deletion
+        returns ``applied: false`` with the revoked preference or ``None``,
+        even when consent history is retained.
+        Granting over a stored opt-out needs a ``consented_at``
+        later than the opt-out. Only this individual operation can clear an email
+        Brand complaint with newer consent; bulk writes and imports cannot.
+        ``source`` can describe how you collected consent. Other
+        opt-outs and delivery blocks still apply.
 
         ```python
         from datetime import datetime, timezone
@@ -70,11 +76,11 @@ class Preferences(PreferencesBase):
             consented_at=datetime.now(timezone.utc),
             source="signup-form-v2",
         )
-        print(result.applied, result.preference.id)
+        print(result.applied, result.preference.id if result.preference else None)
         ```
         """
         body = to_wire(
-            PreferenceCreate,
+            PreferenceIndividualCreate,
             {
                 "channel": channel,
                 "handle": handle,
@@ -83,6 +89,7 @@ class Preferences(PreferencesBase):
                 "sender_scope": sender_scope,
                 "source": source,
                 "consented_at": _consented_at_wire(consented_at),
+                "brand_id": brand_id,
             },
         )
         return self._write("POST", "/v1/preferences", body, PreferenceWriteResult, options)
@@ -97,9 +104,9 @@ class Preferences(PreferencesBase):
         Answers ``200`` with the write result rather than ``204``: the delete
         is ordered like any other statement, so ``applied: false`` means a
         newer statement survived it — returned in ``preference`` — rather
-        than the key being cleared. A statement the person made themselves
-        (an unsubscribe link, a STOP keyword) cannot be deleted this way and
-        raises a ``422``.
+        than the key being cleared. Recipient-origin opt-outs and active Brand
+        complaints cannot be deleted this way (``422 E25005``). Only individual
+        opt-in with newer consent can clear a Brand complaint.
 
         ```python
         result = client.preferences.delete("prf_01krdgeqcxet5s7t44vh8rt9mg")
@@ -124,6 +131,7 @@ class AsyncPreferences(AsyncPreferencesBase):
         channel: str,
         handle: str,
         status: str,
+        brand_id: str | None | Omit = omit,
         coverage: str | None = None,
         sender_scope: str | None = None,
         source: str | None = None,
@@ -132,7 +140,7 @@ class AsyncPreferences(AsyncPreferencesBase):
     ) -> PreferenceWriteResult:
         """Record one preference statement. See `Preferences.create`."""
         body = to_wire(
-            PreferenceCreate,
+            PreferenceIndividualCreate,
             {
                 "channel": channel,
                 "handle": handle,
@@ -141,6 +149,7 @@ class AsyncPreferences(AsyncPreferencesBase):
                 "sender_scope": sender_scope,
                 "source": source,
                 "consented_at": _consented_at_wire(consented_at),
+                "brand_id": brand_id,
             },
         )
         return await self._write("POST", "/v1/preferences", body, PreferenceWriteResult, options)

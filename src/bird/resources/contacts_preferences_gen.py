@@ -16,6 +16,7 @@ from bird.pagination import AsyncPage, SyncPage
 class ContactsPreferencesListParams(TypedDict, total=False):
     """Query params for ``client.contacts.preferences.list``. Every key is optional."""
 
+    brand_id: str
     limit: int
     starting_after: str
     ending_before: str
@@ -26,6 +27,7 @@ class ContactsPreferences(Resource):
         self,
         contact_id: str,
         *,
+        brand_id: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -39,6 +41,7 @@ class ContactsPreferences(Resource):
         ```
         """
         query = {
+            "brand_id": brand_id,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,
@@ -51,6 +54,7 @@ class AsyncContactsPreferences(AsyncResource):
         self,
         contact_id: str,
         *,
+        brand_id: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
         ending_before: str | None = None,
@@ -64,6 +68,7 @@ class AsyncContactsPreferences(AsyncResource):
         ```
         """
         query = {
+            "brand_id": brand_id,
             "limit": limit,
             "starting_after": starting_after,
             "ending_before": ending_before,

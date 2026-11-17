@@ -289,7 +289,6 @@ class Workspace(BaseModel):
     )] = None
     suspended_at: Annotated[Optional[str], Field(
         description="When Bird suspended the workspace. `null` while the workspace is active. A suspended workspace cannot send messages, place calls other than emergency calls, or buy numbers or eSIMs. Its members can still sign in, read it and change its configuration.",
-        examples=["null"],
     )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
@@ -1172,7 +1171,6 @@ class EmailStatsTagsResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -1299,7 +1297,6 @@ class EmailStatsByMailboxProviderResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -1344,7 +1341,6 @@ class EmailStatsByRecipientDomainResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -1418,7 +1414,6 @@ class EmailStatsByBounceCodeResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -1461,7 +1456,6 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -3035,7 +3029,6 @@ class OrganizationWorkspaceList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -3801,7 +3794,6 @@ class EmailMessageList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -4193,7 +4185,6 @@ class EmailRecipientList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -4324,7 +4315,6 @@ class EmailEventList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -4457,6 +4447,7 @@ class EmailBroadcastParameterProblemCode(str, Enum):
     language_unavailable = "language_unavailable"
     sender_unavailable = "sender_unavailable"
     audience_unavailable = "audience_unavailable"
+    brand_unavailable = "brand_unavailable"
     recipient_render_failed = "recipient_render_failed"
     render_budget_exceeded = "render_budget_exceeded"
     transport_missing = "transport_missing"
@@ -4485,7 +4476,7 @@ class EmailBroadcastParameterProblem(BaseModel):
     "One problem with a broadcast's template inputs. A diagnostic names the input or field it is about and never includes its value."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[EmailBroadcastParameterProblemCode, str], Field(union_mode="left_to_right")], Field(
-        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
+        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `brand_unavailable`: the saved Brand is archived or unavailable for selection. Preview with an available Brand override before sending a test.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
     )]
     phase: Annotated[Annotated[Union[EmailBroadcastParameterProblemPhase, str], Field(union_mode="left_to_right")], Field(
         description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
@@ -4524,7 +4515,7 @@ class EmailBroadcastFailureParameters(BaseModel):
     "Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[EmailBroadcastParameterProblemCode, str], Field(union_mode="left_to_right")], Field(
-        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
+        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `brand_unavailable`: the saved Brand is archived or unavailable for selection. Preview with an available Brand override before sending a test.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
     )]
     phase: Annotated[Annotated[Union[EmailBroadcastParameterProblemPhase, str], Field(union_mode="left_to_right")], Field(
         description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
@@ -4637,11 +4628,9 @@ class EmailBroadcast(BaseModel):
     )] = None
     failure_reason: Annotated[Optional[EmailBroadcastFailureReason], Field(
         description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` explains what went wrong. It is one of these:\n  - The broadcast has no template, or the template it uses no longer exists. Choose an existing template and send the broadcast again.\n  - The template has no published version, or its published version has no subject and no body. Publish the template, or add content and publish it.\n  - The template uses a loop or reads a value that a broadcast cannot provide. Remove it, or use a contact property instead, then publish the template again.\n  - The template requires a language, but the broadcast has not selected one. Set `template.language` to one of the template's languages and send the broadcast again.\n  - The selected language is not available on the published template version. Choose one of that version's languages, or publish a version that includes the selected language.\n  - The sending domain is no longer verified. Verify the domain again.\n  - The configured IP pool has no usable IP address.\n  - We could not hand the prepared message to the delivery system. This is a problem on our side.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.\n- `workspace_suspended`: The workspace is suspended, so the broadcast stopped sending. Recipients not yet sent to are not sent to, even after reactivation. Contact Bird support to reactivate the workspace.",
-        examples=["null"],
     )] = None
     failure_detail: Annotated[Optional[str], Field(
         description="A sentence explaining the failure in more detail than `failure_reason` does, and `null` when the broadcast has not failed. Show it to the person using your app. Do not write code that reads it, because the wording can change. Branch on `failure_reason` instead.",
-        examples=["null"],
     )] = None
     recipient_count: Annotated[int, Field(
         description="Number of recipients after suppressed addresses are removed from the audience. This is 0 until sending starts and the audience becomes a recipient list.",
@@ -4755,6 +4744,12 @@ class EmailBroadcast(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values.",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EmailBroadcastList(BaseModel):
@@ -4768,7 +4763,6 @@ class EmailBroadcastList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -4872,6 +4866,12 @@ class EmailBroadcastCreateRequest(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. It requires `send` to be true, so a `scheduled_at` on its own is refused rather than saved on the draft.",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Preview: selects the business whose email preferences and unsubscribe page apply. Explicit selection returns `422` when unavailable. When available, omission or null selects the workspace's default Brand when the broadcast is first scheduled or sent. An explicit ID must belong to this workspace and be active; unknown, foreign or archived IDs return `422`. The selected Brand stays fixed through delivery and retries. Omitted or null input preserves existing sending behavior while selection is unavailable.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EmailBroadcastTemplateUpdate(BaseModel):
@@ -4955,6 +4955,12 @@ class EmailBroadcastUpdateRequest(BaseModel):
     category: Annotated[Optional[EmailBroadcastUpdateRequestCategory], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="What kind of email this is. It decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing` is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way reaches people who have already unsubscribed from you.",
+    )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Preview: changes the business whose email preferences and unsubscribe page apply while this broadcast is a draft. Omission keeps the selection; null clears it so the workspace's default Brand is selected at first scheduling or sending. Explicit selection returns `422` when unavailable or when the ID is unknown, belongs to another workspace or is archived. Changing the Brand on a scheduled broadcast returns `422`. Broadcasts that are no longer editable retain the existing `409` conflict response.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
 
 
@@ -5141,6 +5147,12 @@ class EmailBroadcastValidationRequest(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Preview Brand selection. An explicit ID is unavailable until selection is enabled. Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null resolves the workspace default when selection is enabled; otherwise it clears the request's Brand to unbranded. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EmailBroadcastResolution(BaseModel):
@@ -5186,7 +5198,7 @@ class EmailBroadcastValidationResult(BaseModel):
     "Whether the broadcast's current template and inputs pass validation. Validation does not save, fix a template version or evaluate recipients."
     model_config = ConfigDict(extra="allow")
     ready_for_admission: Annotated[bool, Field(
-        description="Whether the current template and supplied broadcast inputs pass validation, including checks that the sender and audience can be used. Sending also checks permissions, limits, the audience's recipients and their values, so `true` does not guarantee the broadcast sends.",
+        description="Whether the current template and supplied broadcast inputs pass validation, including checks that the sender, audience and selected Brand can be used. Sending also checks permissions, limits, the audience's recipients and their values, so `true` does not guarantee the broadcast sends.",
     )]
     resolution: Annotated[Optional[EmailBroadcastResolution], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -5227,6 +5239,12 @@ class EmailBroadcastPreviewRequest(BaseModel):
     headers: Annotated[Optional[Dict[str, str]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
+    )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Preview Brand selection. An explicit ID is unavailable until selection is enabled. Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null resolves the workspace default when selection is enabled; otherwise it clears the request's Brand to unbranded. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     contact_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -5299,6 +5317,12 @@ class EmailBroadcastTestRequest(BaseModel):
     headers: Annotated[Optional[Dict[str, str]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
+    )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Preview Brand selection. An explicit ID is unavailable until selection is enabled. Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null resolves the workspace default when selection is enabled; otherwise it clears the request's Brand to unbranded. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     contact_id: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -5575,7 +5599,6 @@ class ContactList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -5693,11 +5716,9 @@ class ContactUpsertEntry(BaseModel):
     )]
     phone_number: Annotated[Optional[str], Field(
         description="Phone number this entry carried, in its normalized international form. `null` when the entry carried none. A row rejected for an invalid phone echoes the value as sent, trimmed, since no normalized form exists.",
-        examples=["null"],
     )]
     external_id: Annotated[Optional[str], Field(
         description="Your own identifier for this entry, when the entry supplied one.",
-        examples=["null"],
     )]
 
 
@@ -5831,7 +5852,6 @@ class AudienceList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -5868,10 +5888,11 @@ class PreferenceOrigin(str, Enum):
     api_key = "api_key"
     user = "user"
     import_ = "import"
+    complaint = "complaint"
 
 
 class Preference(BaseModel):
-    "One person's current stated preference for one channel: whether they have consented to or opted out of receiving messages at a handle, and how much traffic the statement covers. A key holds one current statement (a newer statement replaces it, an older one is refused), and the full history behind the current state is kept internally. `sender_scope` and `topic_id` are part of the key: a preference with both null applies channel-wide."
+    "One person's current stated preference for one channel: whether they have consented to or opted out of receiving messages at a handle, and how much traffic the statement covers. A key holds one current statement (a newer statement replaces it, an older one is refused), and the full history behind the current state is kept internally. `sender_scope` and `topic_id` are part of the key: a preference with both null applies to the selected email Brand, or channel-wide for other channels."
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
         examples=["prf_01krdgeqcxet5s7t44vh8rt9mg"],
@@ -5886,12 +5907,11 @@ class Preference(BaseModel):
         min_length=1,
     )]
     sender_scope: Annotated[Optional[str], Field(
-        description="The sender the statement is limited to, or null when it covers the whole channel. On SMS this is the originator the person replied to; on WhatsApp it identifies the business account that messaged them; on Apple Messages for Business it is the Apple business ID used for invitations. Email preferences are always channel-wide, so it is always null there.",
+        description="The sender the statement is limited to, or null when it covers the whole channel. On SMS this is the originator the person replied to; on WhatsApp it identifies the business account that messaged them; on Apple Messages for Business it is the Apple business ID used for invitations. Email preferences use brand_id instead, so sender_scope is always null there.",
         examples=[+15557654321],
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Part of the key that identifies a statement, alongside `sender_scope`.",
-        examples=["null"],
     )]
     status: PreferenceStatus
     coverage: PreferenceCoverage
@@ -5914,6 +5934,12 @@ class Preference(BaseModel):
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="The business this email preference belongs to. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
@@ -5929,7 +5955,6 @@ class PreferenceList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -5937,8 +5962,8 @@ class PreferenceList(BaseModel):
     )]
 
 
-class PreferenceCreate(BaseModel):
-    "Records one preference statement for a handle. Writing is an upsert by key (channel, handle, sender scope, and topic), and statements are causally ordered: a statement dated older than the key's current one is refused and returned with `applied: false` rather than applied out of order."
+class PreferenceIndividualCreate(BaseModel):
+    "Records one recipient's preference. For email, a granted statement with consented_at strictly later than a Brand complaint can clear that complaint. Bulk writes and imports cannot clear complaints. Other applicable opt-outs and delivery blocks still apply."
     model_config = ConfigDict(extra="allow")
     handle: Annotated[str, Field(
         description="Who the statement is about: an email address on the email channel, a phone number in E.164 format on SMS, WhatsApp, and Apple Messages for Business.",
@@ -5958,14 +5983,14 @@ class PreferenceCreate(BaseModel):
     )] = None
     sender_scope: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account; on Apple Messages for Business it is the Apple business ID used for invitations. Not supported on email, where preferences are always channel-wide.",
+        description="Limit the statement to one sender instead of the whole channel. On SMS this is the originator; on WhatsApp it identifies the business account; on Apple Messages for Business it is the Apple business ID used for invitations. Not supported on email, where preferences belong to the selected Brand.",
         examples=[+15557654321],
         max_length=255,
         min_length=1,
     )] = None
     source: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Free-form note on where the statement came from: a form name, an import batch, a campaign. Stored verbatim and returned on the preference.",
+        description="Free-form note on where the statement came from: a form name, an import batch, a campaign. For a grant, it can describe how you collected consent. Stored verbatim and returned on the preference; Bird does not verify this note. It does not grant permission to clear a complaint.",
         examples=["signup-form-v2"],
         max_length=255,
         min_length=1,
@@ -5974,6 +5999,12 @@ class PreferenceCreate(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="When the person consented, on a `granted` statement. Required evidence when granting over a stored opt-out: the grant applies only if this is later than the opt-out it reverses. May not be in the future.",
     )] = None
+    brand_id: Annotated[Optional[str], Field(
+        description="Brand selection is in preview. Select the business for an email preference. Omitted or null selects the original business. Unsupported on other channels. An additional Brand supports non_transactional coverage only. Explicit selection returns 422 when unavailable. Existing opt-outs can be recorded for archived Brands; grants to archived Brands return 422. Consent grants for active additional Brands return 422 when unavailable. A Brand not found in this workspace returns 404.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class PreferenceTransitionID(RootModel[str]):
@@ -5981,10 +6012,10 @@ class PreferenceTransitionID(RootModel[str]):
 
 
 class PreferenceWriteResult(BaseModel):
-    "The outcome of one preference write or delete. `applied: true` means the request took effect: either it changed the record, or an identical statement already had. `applied: false` means it was refused as older than the key's current statement; `preference` then carries the statement that survived, and `transition_id` identifies the refusal on the key's record."
+    "The outcome of one preference write or delete. `applied: true` means the request took effect, including an identical repeat. `applied: false` means it was refused because a newer statement or protected complaint survives; `preference` carries the statement that survived, and `transition_id` identifies the operation on the key's record."
     model_config = ConfigDict(extra="allow")
     applied: Annotated[bool, Field(
-        description="Whether the request took effect. False only when it was refused as out of order; the surviving, newer statement is returned in `preference`.",
+        description="Whether the request took effect. False when causal ordering or protected complaint rules refuse the request; the surviving statement is returned in `preference`. A grant returns false when a newer opt-out or deletion survives, even if its consent history is retained.",
     )]
     transition_id: Annotated[Optional[str], Field(
         description="Identifies this write on the key's record, for applied and refused requests alike. Null when the write was a repeat of the current statement and recorded nothing new.",
@@ -5993,7 +6024,7 @@ class PreferenceWriteResult(BaseModel):
         pattern="^prt_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     preference: Annotated[Optional[Preference], Field(
-        description="The key's surviving statement. Null after an applied delete, when the key is back to having no record.",
+        description="The key's surviving statement. Null after an applied delete, when the key is back to having no record. It is also null after a refused grant when a later deletion remains in force.",
     )]
 
 
@@ -6049,7 +6080,6 @@ class ContactPropertyList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -6203,7 +6233,6 @@ class AudienceMemberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -6559,7 +6588,6 @@ class SMSMessageList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -6952,7 +6980,6 @@ class SMSTemplateList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -7163,7 +7190,6 @@ class SMSTemplateVersionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -7397,7 +7423,6 @@ class SMSSuppressionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -7814,7 +7839,6 @@ class ComplianceIdentityList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -7862,7 +7886,6 @@ class AttachmentList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -8263,7 +8286,6 @@ class AssetList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -8371,7 +8393,6 @@ class AssetFolderList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -9035,7 +9056,6 @@ class SMSSenderList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -10975,7 +10995,6 @@ class WhatsAppMessageList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -11902,7 +11921,6 @@ class WhatsAppReactionEventList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -12053,7 +12071,6 @@ class WhatsAppConversationList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -12129,7 +12146,6 @@ class WhatsAppConversationEventList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -12351,7 +12367,6 @@ class WhatsAppGroupList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -12485,7 +12500,6 @@ class WhatsAppGroupJoinRequestList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -12717,7 +12731,6 @@ class WhatsAppTemplateList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -13159,7 +13172,6 @@ class WhatsAppTemplateVersionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -13753,7 +13765,6 @@ class WhatsAppAgentNotificationList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -13806,7 +13817,6 @@ class WhatsAppNumberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -13871,7 +13881,6 @@ class WhatsAppNumberEventList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -14097,7 +14106,6 @@ class AMBBusinessAccountEventList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -14232,7 +14240,6 @@ class AMBBusinessAccountList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -14325,7 +14332,6 @@ class AMBBusinessAccountSubmission(BaseModel):
     )]
     decided_by: Annotated[Optional[Annotated[Union[AMBBusinessAccountSubmissionDecider, str], Field(union_mode="left_to_right")]], Field(
         description="Who recorded this attempt's outcome, `automated_review` when Bird's automated review rejected it or `staff`. Null while the attempt waits, and for outcomes recorded before automated reviews.",
-        examples=["null"],
     )]
     created_at: Annotated[str, Field(min_length=1)]
     next: Annotated[Optional[List[NextAction]], Field(
@@ -14344,7 +14350,6 @@ class AMBBusinessAccountSubmissionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -16052,7 +16057,6 @@ class AMBMessageList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -16383,7 +16387,6 @@ class AMBConversationList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -16471,7 +16474,6 @@ class AMBSuppressionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -16864,7 +16866,6 @@ class AMBTemplateList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -17025,7 +17026,6 @@ class AMBTemplateVersionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -17395,7 +17395,6 @@ class WhatsAppBusinessAccountList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -17440,7 +17439,6 @@ class WhatsAppSuppression(BaseModel):
     )]
     waba: Annotated[Optional[str], Field(
         description="The WhatsApp Business Account this stops, identified by its WhatsApp-issued account ID. Null when it stops the address for every account in the workspace, whichever one sends.",
-        examples=["null"],
     )]
     reason: Annotated[Annotated[Union[WhatsAppSuppressionReason, str], Field(union_mode="left_to_right")], Field(
         description="Why the address cannot be messaged:\n\n- `manual`: Your workspace added the suppression through the API or the dashboard, and can end it.",
@@ -17490,7 +17488,6 @@ class WhatsAppSuppressionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -17864,7 +17861,7 @@ class EmailInboxInsightsPlacementSeriesPoint(BaseModel):
     )]
     mailbox_provider: Annotated[Optional[str], Field(
         description="The provider this point describes, or null on the domain-wide line. Per-provider points appear only when the request named providers.",
-        examples=["null"],
+        examples=["gmail"],
         min_length=1,
     )]
     inbox_rate_percent: Annotated[Optional[float], Field(
@@ -19115,7 +19112,6 @@ class EmailInboxInsightsDomains(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -19837,7 +19833,6 @@ class EmailStatsBySendingIpResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -19882,7 +19877,6 @@ class EmailStatsBySendingDomainResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -19927,7 +19921,6 @@ class EmailStatsByCategoryResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -19977,7 +19970,6 @@ class EmailStatsByMailboxProviderRegionResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -20023,7 +20015,6 @@ class EmailStatsByTemplateResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -20114,7 +20105,6 @@ class EmailStatsByLocationResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -20160,7 +20150,6 @@ class EmailStatsByClientResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -20202,7 +20191,6 @@ class EmailStatsByBroadcastResponse(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -20581,7 +20569,6 @@ class DomainList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -20812,7 +20799,6 @@ class SuppressionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -21278,7 +21264,6 @@ class EmailCompetitiveCampaignFeed(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -21533,7 +21518,6 @@ class EmailTemplateSummary(BaseModel):
     )]
     theme: Annotated[Optional[Annotated[Union[EmailTemplateTheme, str], Field(union_mode="left_to_right")]], Field(
         description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
-        examples=["null"],
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
@@ -21597,7 +21581,6 @@ class EmailTemplateList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -21729,7 +21712,6 @@ class EmailTemplate(BaseModel):
     )]
     theme: Annotated[Optional[Annotated[Union[EmailTemplateTheme, str], Field(union_mode="left_to_right")]], Field(
         description="The visual theme a built-in template is designed in, or null for a template your workspace authored (which has no theme).",
-        examples=["null"],
     )]
     draft_version_id: Annotated[Optional[str], Field(
         description="The current editable draft version. Null for a built-in `system` template, which has no draft.",
@@ -22266,7 +22248,6 @@ class EmailTemplateVersionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -22308,7 +22289,6 @@ class EmailTemplateBroadcastList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -22775,7 +22755,6 @@ class MailboxList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -23007,7 +22986,6 @@ class ReceiveRuleList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -23185,7 +23163,6 @@ class EmailThreadList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -23435,7 +23412,6 @@ class EmailThreadMessageList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -23588,7 +23564,6 @@ class EmailMailboxScheduledMessageList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -23859,7 +23834,6 @@ class WebhookEndpoint(BaseModel):
     )] = None
     filter: Annotated[Optional[WebhookFilter], Field(
         description="Mailbox scope configured through filter, or null.",
-        examples=["null"],
     )]
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
         description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).",
@@ -23889,7 +23863,6 @@ class WebhookEndpointList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -23996,7 +23969,6 @@ class WebhookEndpointCreated(BaseModel):
     )] = None
     filter: Annotated[Optional[WebhookFilter], Field(
         description="Mailbox scope configured through filter, or null.",
-        examples=["null"],
     )]
     events: Annotated[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]], Field(
         description="Event types this endpoint is subscribed to; only matching events are delivered. Change the set with [Update a webhook endpoint](/docs/api/reference/update-webhook).",
@@ -25696,7 +25668,6 @@ class EventEmailMailboxMessageReceivedData(BaseModel):
     )]
     route_id: Annotated[Optional[str], Field(
         description="ID (ein_…) of the explicit inbound route that matched, or null when the message was delivered by the virtual exact-address route.",
-        examples=["null"],
     )] = None
     from_: Annotated[str, Field(
         alias="from",
@@ -25987,7 +25958,6 @@ class EventPreferenceDeletedData(BaseModel):
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
-        examples=["null"],
     )]
     coverage: PreferenceCoverage
     contact_id: Annotated[Optional[str], Field(
@@ -25996,6 +25966,12 @@ class EventPreferenceDeletedData(BaseModel):
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business this email preference belongs to. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventPreferenceDeleted(BaseModel):
@@ -26040,7 +26016,6 @@ class EventPreferenceGrantedData(BaseModel):
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
-        examples=["null"],
     )]
     coverage: PreferenceCoverage
     contact_id: Annotated[Optional[str], Field(
@@ -26049,6 +26024,12 @@ class EventPreferenceGrantedData(BaseModel):
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business this email preference belongs to. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventPreferenceGranted(BaseModel):
@@ -26093,7 +26074,6 @@ class EventPreferenceRevokedData(BaseModel):
     )]
     topic_id: Annotated[Optional[str], Field(
         description="The topic the statement is limited to, or null when it covers every topic. Reserved: always null in v1. Present-with-null for the same reason as `sender_scope`.",
-        examples=["null"],
     )]
     coverage: PreferenceCoverage
     contact_id: Annotated[Optional[str], Field(
@@ -26102,6 +26082,12 @@ class EventPreferenceRevokedData(BaseModel):
         min_length=1,
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )]
+    brand_id: Annotated[Optional[str], Field(
+        description="The business this email preference belongs to. Brand attribution is in preview.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
 
 
 class EventPreferenceRevoked(BaseModel):
@@ -28292,7 +28278,6 @@ class EventWhatsAppSuppressionCreatedData(BaseModel):
     )]
     waba: Annotated[Optional[str], Field(
         description="The WhatsApp Business Account the suppression is limited to, identified by its WhatsApp-issued account ID, or null when it covers the whole workspace.",
-        examples=["null"],
     )]
     reason: Annotated[Annotated[Union[WhatsAppSuppressionReason, str], Field(union_mode="left_to_right")], Field(
         description="Why the address cannot be messaged:\n\n- `manual`: Your workspace added the suppression through the API or the dashboard, and can end it.",
@@ -28470,7 +28455,6 @@ class WebhookAttemptList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -28763,6 +28747,10 @@ class VoiceLegAnsweredByUser(BaseModel):
     )]
 
 
+class VoiceLegAnsweredBy(RootModel[VoiceLegAnsweredByUser]):
+    root: VoiceLegAnsweredByUser
+
+
 class VoiceMediaQuality(BaseModel):
     model_config = ConfigDict(extra="allow")
     mos: Annotated[float, Field(
@@ -28822,19 +28810,15 @@ class VoiceLegCost(BaseModel):
     )]
     inbound_amount: Annotated[Optional[str], Field(
         description="What we charged to receive the leg from the originating network, as a decimal string. Only a leg that arrived at your number can carry it. `null` until this component is priced.",
-        examples=["null"],
     )]
     call_handling_amount: Annotated[Optional[str], Field(
         description="What we charged for handling the call itself, as a decimal string. A call is charged for handling once, however many legs it has, so only one leg's record carries it. `null` until this component is priced.",
-        examples=["null"],
     )]
     recording_amount: Annotated[Optional[str], Field(
         description="What we charged to record the leg, as a decimal string, billed per second over the same billable time as the rest of the leg. `null` until this component is priced.",
-        examples=["null"],
     )]
     transcription_amount: Annotated[Optional[str], Field(
         description="What we charged to transcribe the leg's audio, as a decimal string, billed per second of recorded audio rather than for the length of the leg. A transcript is produced after the leg ends, so this can appear after the rest of the cost. `null` until this component is priced.",
-        examples=["null"],
     )]
 
 
@@ -28917,7 +28901,7 @@ class VoiceLeg(BaseModel):
     answered_at: Annotated[Optional[str], Field(
         description="When the leg was answered (`200` OK received). `null` for unanswered legs.",
     )] = None
-    answered_by: Annotated[Optional[Any], Field(
+    answered_by: Annotated[Optional[VoiceLegAnsweredBy], Field(
         description="Who answered when Bird rang your workspace users for this leg, through a ring group or a browser call to a user or a ring group. When a sequence rings more than once, it names who answered the latest ring. `null` when no workspace user answered, on legs recorded before this field existed, or when the API does not support the stored answerer kind. New kinds may be added; handle unknown `type` values as future answerer kinds.",
     )] = None
     ended_at: Annotated[Optional[str], Field(
@@ -29066,7 +29050,6 @@ class NumberPricing(BaseModel):
     )]
     error: Annotated[Optional[ErrorBody], Field(
         description="A retryable failure to read the price. Retry a GET of the number; do not repeat a completed write. `null` when the price was read or no price applies.",
-        examples=["null"],
     )]
 
 
@@ -29150,7 +29133,6 @@ class NumberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -29229,7 +29211,6 @@ class AvailableNumberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -29296,7 +29277,6 @@ class NumbersOrderList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -29615,7 +29595,6 @@ class VoiceTrunkList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -30038,7 +30017,6 @@ class VoiceNumberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -30198,7 +30176,6 @@ class VoiceVerifiedNumberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -30890,7 +30867,6 @@ class VoiceLegList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -31488,7 +31464,6 @@ class EsimZoneList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -31641,7 +31616,6 @@ class EsimOfferList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -31742,7 +31716,6 @@ class EsimOrderList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -32129,7 +32102,6 @@ class EsimRecurringSubscriptionList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -32221,7 +32193,6 @@ class EsimRecurringPeriodList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -32258,7 +32229,6 @@ class EsimSubscriberList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
@@ -32377,7 +32347,6 @@ class EsimList(BaseModel):
     )]
     prev_cursor: Annotated[Optional[str], Field(
         description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
-        examples=["null"],
     )]
     refresh_cursor: Annotated[Optional[str], Field(
         description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
