@@ -1463,6 +1463,11 @@ class EmailStatsByComplaintTypeResponse(BaseModel):
     )]
 
 
+class SMSContentType(str, Enum):
+    sms = "sms"
+    mms = "mms"
+
+
 class SMSStatsSummaryPeriod(BaseModel):
     "The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds."
     model_config = ConfigDict(extra="allow")
@@ -1799,6 +1804,36 @@ class SMSStatsByCategoryResponse(BaseModel):
     )]
 
 
+class SMSContentTypeStatsPoint(BaseModel):
+    "Aggregate delivery and latency stats for a single message type over the requested period."
+    model_config = ConfigDict(extra="allow")
+    content_type: Annotated[SMSContentType, Field(
+        description="Message type used for reporting. Previously recorded statistics remain attributed to SMS. New activity uses the message type.",
+    )]
+    delivery: SMSDeliveryStats
+    latency: SMSLatencyStats
+    trend: Annotated[Optional[List[SMSStatsPoint]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Per-bucket lifecycle counts for this message type, using `trend_grain`. Includes only buckets with activity. Present when `include_trend=true`.",
+    )] = None
+
+
+class SMSStatsByContentTypeResponse(BaseModel):
+    "Per-message-type breakdown for the requested period, ranked by the `sort` metric (default `accepted`) descending and capped at the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSContentTypeStatsPoint], Field(
+        description="Message-type breakdown rows, ranked by the `sort` metric (default `accepted`) descending. Empty when no messages were sent in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct message types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[2],
+        ge=0,
+    )]
+
+
 class SMSTagStatsPoint(BaseModel):
     "Aggregate delivery and latency stats for a single tag (`name:value`) over the requested period."
     model_config = ConfigDict(extra="allow")
@@ -1969,6 +2004,35 @@ class SMSInboundStatsByCountryResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total number of distinct countries the messages arrived in with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
         examples=[12],
+        ge=0,
+    )]
+
+
+class SMSInboundContentTypeStatsPoint(BaseModel):
+    "Received-message volume for one message type."
+    model_config = ConfigDict(extra="allow")
+    content_type: Annotated[SMSContentType, Field(
+        description="Message type used for reporting. Previously recorded statistics remain attributed to SMS. New activity uses the message type.",
+    )]
+    received: Annotated[int, Field(
+        description="Distinct messages received on numbers in this message type during the period.",
+        examples=[1840],
+        ge=0,
+    )]
+
+
+class SMSInboundStatsByContentTypeResponse(BaseModel):
+    "Received-message volume broken down by message type, ranked by volume."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[SMSStatsSummaryPeriod, Field(
+        description="The window the server actually computed against. The summary serves two window grains: calendar days (bounds are YYYY-MM-DD) and hours (bounds are RFC 3339 instants on the hour). The grain of `from` and `to` mirrors the grain of the request's bounds.",
+    )]
+    data: Annotated[List[SMSInboundContentTypeStatsPoint], Field(
+        description="One row per message type with activity in the period, most messages first, capped at the requested `limit`. A message type with no messages in the period is absent rather than zero-filled, because unlike a time bucket it is not part of a continuous axis.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct message types with activity in the period, regardless of `limit`. When it exceeds the number of rows returned, the ranking was capped; raise `limit` (up to 200) or narrow the window to see more.",
+        examples=[2],
         ge=0,
     )]
 
@@ -6268,11 +6332,6 @@ class SMSMessageCategory(str, Enum):
     marketing = "marketing"
     authentication = "authentication"
     service = "service"
-
-
-class SMSContentType(str, Enum):
-    sms = "sms"
-    mms = "mms"
 
 
 class SMSMessageID(RootModel[str]):
@@ -14261,11 +14320,10 @@ class AMBSuppression(BaseModel):
         min_length=1,
     )]
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
-    last_asserted_at: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
+    last_asserted_at: Annotated[str, Field(
         description="When we last recorded this suppression being stated. Later than `created_at` when it was stated again while already in force: your workspace adding it again, or the customer closing the conversation again. A repeat adds no new record.",
         min_length=1,
-    )] = None
+    )]
     ended_at: Annotated[Optional[str], Field(
         description="When this stopped applying. Null while it is still stopping messages.",
     )]
@@ -17677,11 +17735,10 @@ class WhatsAppSuppression(BaseModel):
         description="When the end took effect. For one ended through the API or the dashboard this matches `ended_at`. Null while it is still stopping messages.",
     )]
     created_at: Annotated[str, Field(description="When we recorded it.", min_length=1)]
-    last_asserted_at: Annotated[Optional[str], Field(
-        json_schema_extra={"x-bird-nullable": False},
+    last_asserted_at: Annotated[str, Field(
         description="When we last recorded this suppression being stated. Later than `created_at` when your workspace added it again while it was already in force; a repeat adds no new record.",
         min_length=1,
-    )] = None
+    )]
 
 
 class WhatsAppSuppressionList(BaseModel):
@@ -17757,10 +17814,13 @@ class WhatsAppKeywordRule(BaseModel):
         examples=["102290129340398"],
     )] = None
     keywords: Annotated[List[str], Field(
-        description="The keywords this rule adds. For one of Bird's own rules this is the full set Bird ships. For a rule you created it is only what you added on top: it never restates or removes Bird's keywords, so `effective_keywords` is what actually matches.",
+        description="The keywords this rule adds. For one of Bird's own rules this is the full set Bird ships. For a rule you created it is only what you added on top: it never restates Bird's keywords, so `effective_keywords` is what actually matches.",
+    )]
+    excluded_keywords: Annotated[List[str], Field(
+        description="Bird's keywords this rule removes from the set it inherits. A message that is exactly one of them opts no one in or out and gets no reply for the people the rule covers, and Bird's own rule does not act on it instead. Excluding every one of Bird's keywords switches them off, though a keyword Bird adds later still matches. It removes only from the Bird rule this rule inherits from: a keyword another rule of yours adds, or one Bird ships only in another country's rule, is unaffected. Always empty on one of Bird's own rules.",
     )]
     effective_keywords: Annotated[List[str], Field(
-        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\n\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so a sender in a country Bird ships a rule for is answered by that rule and your reply is not used. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
+        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, minus `excluded_keywords`, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\n\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so a sender in a country Bird ships a rule for is answered by that rule and your reply is not used. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
     )]
     reply: Annotated[Optional[str], Field(
         description="The message sent back when one of the keywords matches, or null when no reply is sent. The reply goes out on the conversation the inbound message opened.",
@@ -17811,7 +17871,11 @@ class WhatsAppKeywordRuleCreate(BaseModel):
     )] = None
     keywords: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Extra keywords to match, on top of the ones Bird already ships for this operation. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. You cannot remove one of Bird's keywords, and a keyword Bird has bound to the other operation cannot be reused here.",
+        description="Extra keywords to match, on top of the ones Bird already ships for this operation. Omit to keep Bird's keywords and change only the reply, including keywords Bird adds later. Use `excluded_keywords` to remove one of Bird's. A keyword Bird has bound to the other operation cannot be reused here.",
+    )] = None
+    excluded_keywords: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Bird's keywords to remove for the people this rule covers. A message that is exactly one of them then opts no one in or out and gets no reply, and you must honour opt-outs it carries yourself. Exclude every one of Bird's keywords to switch them off; a keyword Bird adds later still matches. It removes only from the Bird rule this one inherits from, not from your other rules. A keyword cannot be both added and excluded.",
     )] = None
     reply: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -17822,11 +17886,15 @@ class WhatsAppKeywordRuleCreate(BaseModel):
 
 
 class WhatsAppKeywordRuleUpdate(BaseModel):
-    "Changes the reply and the added keywords. What a rule applies to (its operation, country and WhatsApp Business Account) is fixed once created: those decide which inbound messages reach it, so changing one would make it a different rule. Delete it and create the one you want."
+    "Changes the reply, the added keywords and the excluded ones. What a rule applies to (its operation, country and WhatsApp Business Account) is fixed once created: those decide which inbound messages reach it, so changing one would make it a different rule. Delete it and create the one you want."
     model_config = ConfigDict(extra="allow")
     keywords: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Replaces the extra keywords this rule matches, on top of the ones Bird ships. Send an empty array to keep Bird's keywords only. Omit to leave the current ones unchanged.",
+    )] = None
+    excluded_keywords: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Replaces the Bird keywords this rule removes. Send an empty array to remove none. Omit to leave the current ones unchanged.",
     )] = None
     reply: Annotated[Optional[str], Field(
         description="Replaces the message sent back when a keyword matches. Set it to null to send nothing. Omit to leave it unchanged.",

@@ -62,6 +62,11 @@ def sms_stats_by_category() -> None:
     for row in stats.data or []:
         print(row.category, row.delivery)
 
+def sms_stats_by_content_type() -> None:
+    stats = client.sms.stats.by_content_type(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.content_type, row.delivery)
+
 
 def sms_stats_by_originator() -> None:
     stats = client.sms.stats.by_originator(from_="2026-05-01", to="2026-05-31")
@@ -121,6 +126,11 @@ def sms_stats_inbound_by_country() -> None:
     stats = client.sms.stats.inbound.by_country(from_="2026-05-01", to="2026-05-31")
     for row in stats.data or []:
         print(row.country, row.received)
+
+def sms_stats_inbound_by_content_type() -> None:
+    stats = client.sms.stats.inbound.by_content_type(from_="2026-05-01", to="2026-05-31")
+    for row in stats.data or []:
+        print(row.content_type, row.received)
 
 
 def sms_stats_inbound_by_operator() -> None:

@@ -36,6 +36,7 @@ class WhatsappKeywordRulesCreateParams(_WhatsappKeywordRulesCreateRequired, tota
     country: str
     waba: str
     keywords: Sequence[str]
+    excluded_keywords: Sequence[str]
     reply: str
 
 
@@ -43,6 +44,7 @@ class WhatsappKeywordRulesUpdateParams(TypedDict, total=False):
     """Params for ``client.whatsapp.keyword_rules.update``. Every key is optional."""
 
     keywords: Sequence[str]
+    excluded_keywords: Sequence[str]
     reply: str | None
 
 
@@ -104,10 +106,11 @@ class WhatsappKeywordRules(Resource):
         country: str | None = None,
         waba: str | None = None,
         keywords: Sequence[str] | None = None,
+        excluded_keywords: Sequence[str] | None = None,
         reply: str | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppKeywordRule:
-        """Replace the reply Bird sends for opt-out or opt-in, or add keywords of your own. Your rule takes precedence over Bird's at the same grain and keeps Bird's keywords unless you add more. A keyword Bird has bound to one operation cannot be reused for the other.
+        """Replace the reply Bird sends for opt-out or opt-in, add keywords of your own, or remove some of Bird's with `excluded_keywords`. Your rule takes precedence over Bird's at the same grain and keeps Bird's keywords unless you exclude them. A keyword Bird has bound to one operation cannot be reused for the other.
 
         ```python
         rule = client.whatsapp.keyword_rules.create(
@@ -126,6 +129,7 @@ class WhatsappKeywordRules(Resource):
                 "country": country,
                 "waba": waba,
                 "keywords": keywords,
+                "excluded_keywords": excluded_keywords,
                 "reply": reply,
             },
         )
@@ -142,10 +146,11 @@ class WhatsappKeywordRules(Resource):
         id: str,
         *,
         keywords: Sequence[str] | None = None,
+        excluded_keywords: Sequence[str] | None = None,
         reply: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> WhatsAppKeywordRule:
-        """Change one of your own keyword rules: its reply or its extra keywords. Bird's own rules cannot be changed; create your own instead with `whatsapp.keyword_rules.create`. Omitting `keywords` leaves the set alone, while sending an empty list clears your additions back to Bird's.
+        """Change one of your own keyword rules: its reply, its extra keywords or its excluded ones. Bird's own rules cannot be changed; create your own instead with `whatsapp.keyword_rules.create`. Omitting `keywords` leaves the set alone, while sending an empty list clears your additions back to Bird's.
 
         ```python
         # Omitting keywords leaves the set alone; an empty list clears your additions
@@ -159,6 +164,8 @@ class WhatsappKeywordRules(Resource):
         _body: dict[str, Any] = {}
         if keywords is not None:
             _body["keywords"] = keywords
+        if excluded_keywords is not None:
+            _body["excluded_keywords"] = excluded_keywords
         if not isinstance(reply, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["reply"] = reply
         body = to_wire(WhatsAppKeywordRuleUpdate, _body)
@@ -179,7 +186,7 @@ class WhatsappKeywordRules(Resource):
         """Delete one of your own keyword rules. The next rule in the ladder answers that scope instead, which is not always one of yours: Bird's rule for the sender's country outranks your worldwide rule. The keywords the deleted rule added go with it, so a word only it matched stops matching. List the rules to read the order. Bird's rules cannot be deleted.
 
         ```python
-        # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one; STOP never stops working.
+        # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one.
         client.whatsapp.keyword_rules.delete("wkr_01m2kj8x4te9p0rr7e5w2n1abc")
         ```
         """
@@ -244,10 +251,11 @@ class AsyncWhatsappKeywordRules(AsyncResource):
         country: str | None = None,
         waba: str | None = None,
         keywords: Sequence[str] | None = None,
+        excluded_keywords: Sequence[str] | None = None,
         reply: str | None = None,
         options: RequestOptions | None = None,
     ) -> WhatsAppKeywordRule:
-        """Replace the reply Bird sends for opt-out or opt-in, or add keywords of your own. Your rule takes precedence over Bird's at the same grain and keeps Bird's keywords unless you add more. A keyword Bird has bound to one operation cannot be reused for the other.
+        """Replace the reply Bird sends for opt-out or opt-in, add keywords of your own, or remove some of Bird's with `excluded_keywords`. Your rule takes precedence over Bird's at the same grain and keeps Bird's keywords unless you exclude them. A keyword Bird has bound to one operation cannot be reused for the other.
 
         ```python
         rule = await client.whatsapp.keyword_rules.create(
@@ -266,6 +274,7 @@ class AsyncWhatsappKeywordRules(AsyncResource):
                 "country": country,
                 "waba": waba,
                 "keywords": keywords,
+                "excluded_keywords": excluded_keywords,
                 "reply": reply,
             },
         )
@@ -282,10 +291,11 @@ class AsyncWhatsappKeywordRules(AsyncResource):
         id: str,
         *,
         keywords: Sequence[str] | None = None,
+        excluded_keywords: Sequence[str] | None = None,
         reply: str | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> WhatsAppKeywordRule:
-        """Change one of your own keyword rules: its reply or its extra keywords. Bird's own rules cannot be changed; create your own instead with `whatsapp.keyword_rules.create`. Omitting `keywords` leaves the set alone, while sending an empty list clears your additions back to Bird's.
+        """Change one of your own keyword rules: its reply, its extra keywords or its excluded ones. Bird's own rules cannot be changed; create your own instead with `whatsapp.keyword_rules.create`. Omitting `keywords` leaves the set alone, while sending an empty list clears your additions back to Bird's.
 
         ```python
         # Omitting keywords leaves the set alone; an empty list clears your additions
@@ -299,6 +309,8 @@ class AsyncWhatsappKeywordRules(AsyncResource):
         _body: dict[str, Any] = {}
         if keywords is not None:
             _body["keywords"] = keywords
+        if excluded_keywords is not None:
+            _body["excluded_keywords"] = excluded_keywords
         if not isinstance(reply, Omit):  # None clears (JSON null); omit leaves it unchanged
             _body["reply"] = reply
         body = to_wire(WhatsAppKeywordRuleUpdate, _body)
@@ -319,7 +331,7 @@ class AsyncWhatsappKeywordRules(AsyncResource):
         """Delete one of your own keyword rules. The next rule in the ladder answers that scope instead, which is not always one of yours: Bird's rule for the sender's country outranks your worldwide rule. The keywords the deleted rule added go with it, so a word only it matched stops matching. List the rules to read the order. Bird's rules cannot be deleted.
 
         ```python
-        # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one; STOP never stops working.
+        # The next rule in the ladder answers the scope, which is another rule of yours if you hold a less specific one.
         await client.whatsapp.keyword_rules.delete("wkr_01m2kj8x4te9p0rr7e5w2n1abc")
         ```
         """

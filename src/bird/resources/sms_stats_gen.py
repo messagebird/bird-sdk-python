@@ -7,6 +7,7 @@ from typing import TypedDict
 from bird._generated import (
     SMSStatsByCarrierResponse,
     SMSStatsByCategoryResponse,
+    SMSStatsByContentTypeResponse,
     SMSStatsByCostCenterResponse,
     SMSStatsByCountryResponse,
     SMSStatsByErrorCodeResponse,
@@ -32,6 +33,7 @@ class SmsStatsSummaryParams(TypedDict, total=False):
     carrier: str
     cost_center: str
     compare: str
+    content_type: str
 
 
 class SmsStatsDailyParams(TypedDict, total=False):
@@ -45,6 +47,7 @@ class SmsStatsDailyParams(TypedDict, total=False):
     category: str
     carrier: str
     cost_center: str
+    content_type: str
 
 
 class SmsStatsHourlyParams(TypedDict, total=False):
@@ -58,6 +61,7 @@ class SmsStatsHourlyParams(TypedDict, total=False):
     category: str
     carrier: str
     cost_center: str
+    content_type: str
 
 
 class SmsStatsByCountryParams(TypedDict, total=False):
@@ -70,6 +74,7 @@ class SmsStatsByCountryParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
 
 
 class SmsStatsByCarrierParams(TypedDict, total=False):
@@ -82,6 +87,7 @@ class SmsStatsByCarrierParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
 
 
 class SmsStatsByCategoryParams(TypedDict, total=False):
@@ -94,6 +100,20 @@ class SmsStatsByCategoryParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
+
+
+class SmsStatsByContentTypeParams(TypedDict, total=False):
+    """Query params for ``client.sms.stats.by_content_type``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    sort: str
+    limit: int
+    include_trend: bool
+    trend_grain: str
+    content_type: str
 
 
 class SmsStatsByOriginatorParams(TypedDict, total=False):
@@ -106,6 +126,7 @@ class SmsStatsByOriginatorParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
 
 
 class SmsStatsByStatusParams(TypedDict, total=False):
@@ -114,6 +135,7 @@ class SmsStatsByStatusParams(TypedDict, total=False):
     from_: str
     to: str
     timezone: str
+    content_type: str
 
 
 class SmsStatsByErrorCodeParams(TypedDict, total=False):
@@ -126,6 +148,7 @@ class SmsStatsByErrorCodeParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
 
 
 class SmsStatsByTagParams(TypedDict, total=False):
@@ -138,6 +161,7 @@ class SmsStatsByTagParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
 
 
 class SmsStatsByCostCenterParams(TypedDict, total=False):
@@ -150,6 +174,7 @@ class SmsStatsByCostCenterParams(TypedDict, total=False):
     limit: int
     include_trend: bool
     trend_grain: str
+    content_type: str
 
 
 class SmsStatsBase(Resource):
@@ -165,6 +190,7 @@ class SmsStatsBase(Resource):
         carrier: str | None = None,
         cost_center: str | None = None,
         compare: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsSummary:
         """Aggregate SMS KPIs for one period: accepted, sent, delivered, undelivered, failed, rejected and expired counts, the derived delivery and failure rates, and latency percentiles. The `from` and `to` values are both YYYY-MM-DD days or both RFC 3339 instants (hour grain). Add `compare=previous_period` for deltas against the preceding window. For a per-day or per-hour series use `sms.stats.daily` or `sms.stats.hourly`.
@@ -186,6 +212,7 @@ class SmsStatsBase(Resource):
                 "carrier": carrier,
                 "cost_center": cost_center,
                 "compare": compare,
+                "content_type": content_type,
             },
             SMSStatsSummary,
             options,
@@ -202,6 +229,7 @@ class SmsStatsBase(Resource):
         category: str | None = None,
         carrier: str | None = None,
         cost_center: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per calendar day, for charts and trend lines. The window is at most 365 days; set `timezone` to get local calendar days instead of UTC. Rates and latency percentiles are whole-window figures, so read those from `sms.stats.summary`.
@@ -223,6 +251,7 @@ class SmsStatsBase(Resource):
                 "category": category,
                 "carrier": carrier,
                 "cost_center": cost_center,
+                "content_type": content_type,
             },
             SMSStatsResponse,
             options,
@@ -239,6 +268,7 @@ class SmsStatsBase(Resource):
         category: str | None = None,
         carrier: str | None = None,
         cost_center: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per hour, for inspecting send rate and deliverability inside a single day. The window is at most 30 days (720 rows) and both bounds round down to the hour. For longer ranges use `sms.stats.daily`.
@@ -260,6 +290,7 @@ class SmsStatsBase(Resource):
                 "category": category,
                 "carrier": carrier,
                 "cost_center": cost_center,
+                "content_type": content_type,
             },
             SMSStatsResponse,
             options,
@@ -275,6 +306,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCountryResponse:
         """SMS delivery and latency stats grouped by destination country, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Use it to find where delivery is worst before drilling into `sms.stats.by_error_code`.
@@ -295,6 +327,7 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCountryResponse,
             options,
@@ -310,6 +343,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCarrierResponse:
         """SMS delivery and latency stats grouped by the carrier that handled the message, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Use it to compare delivery performance across carriers.
@@ -330,6 +364,7 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCarrierResponse,
             options,
@@ -345,6 +380,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCategoryResponse:
         """SMS delivery and latency stats grouped by the category you sent under, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200).
@@ -365,8 +401,46 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCategoryResponse,
+            options,
+        )
+
+    def by_content_type(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        content_type: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSStatsByContentTypeResponse:
+        """Compare SMS and MMS delivery counts, rates and latency. Omit content_type for both; previously recorded counts remain attributed to SMS.
+
+        ```python
+        stats = client.sms.stats.by_content_type(from_="2026-05-01", to="2026-05-31")
+        for row in stats.data or []:
+            print(row.content_type, row.delivery)
+        ```
+        """
+        return self._get(
+            "/v1/sms/stats/content-types",
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "sort": sort,
+                "limit": limit,
+                "include_trend": include_trend,
+                "trend_grain": trend_grain,
+                "content_type": content_type,
+            },
+            SMSStatsByContentTypeResponse,
             options,
         )
 
@@ -380,6 +454,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByOriginatorResponse:
         """SMS delivery and latency stats grouped by originator, the sender address messages went out from, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Use it to compare how your senders perform.
@@ -400,6 +475,7 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByOriginatorResponse,
             options,
@@ -411,6 +487,7 @@ class SmsStatsBase(Resource):
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByStatusResponse:
         """How many messages ended the period in each lifecycle status: accepted, sent, delivered, undelivered, failed, rejected, expired, ordered by count. The "where did my messages end up" view, suitable for a status-distribution chart.
@@ -427,6 +504,7 @@ class SmsStatsBase(Resource):
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
+                "content_type": content_type,
             },
             SMSStatsByStatusResponse,
             options,
@@ -442,6 +520,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByErrorCodeResponse:
         """SMS stats grouped by our normalized failure reason, which answers which reasons are driving your failures. The grouping key is the same value as the `error_code` filter on `sms.list`, so a row joins straight to the messages behind it. Ranked by the `sort` metric (default `failed`) and capped by `limit`.
@@ -463,6 +542,7 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByErrorCodeResponse,
             options,
@@ -478,6 +558,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByTagResponse:
         """SMS delivery and latency stats grouped by tag (`name:value`), ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Only tagged messages appear, and one carrying several tags counts once under each, so rows do not sum to the period total.
@@ -500,6 +581,7 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByTagResponse,
             options,
@@ -515,6 +597,7 @@ class SmsStatsBase(Resource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCostCenterResponse:
         """SMS delivery and latency stats grouped by the `cost_center` messages were sent with, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Messages sent without a cost center are not counted, so rows do not sum to the period total.
@@ -537,6 +620,7 @@ class SmsStatsBase(Resource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCostCenterResponse,
             options,
@@ -556,6 +640,7 @@ class AsyncSmsStatsBase(AsyncResource):
         carrier: str | None = None,
         cost_center: str | None = None,
         compare: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsSummary:
         """Aggregate SMS KPIs for one period: accepted, sent, delivered, undelivered, failed, rejected and expired counts, the derived delivery and failure rates, and latency percentiles. The `from` and `to` values are both YYYY-MM-DD days or both RFC 3339 instants (hour grain). Add `compare=previous_period` for deltas against the preceding window. For a per-day or per-hour series use `sms.stats.daily` or `sms.stats.hourly`.
@@ -577,6 +662,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "carrier": carrier,
                 "cost_center": cost_center,
                 "compare": compare,
+                "content_type": content_type,
             },
             SMSStatsSummary,
             options,
@@ -593,6 +679,7 @@ class AsyncSmsStatsBase(AsyncResource):
         category: str | None = None,
         carrier: str | None = None,
         cost_center: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per calendar day, for charts and trend lines. The window is at most 365 days; set `timezone` to get local calendar days instead of UTC. Rates and latency percentiles are whole-window figures, so read those from `sms.stats.summary`.
@@ -614,6 +701,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "category": category,
                 "carrier": carrier,
                 "cost_center": cost_center,
+                "content_type": content_type,
             },
             SMSStatsResponse,
             options,
@@ -630,6 +718,7 @@ class AsyncSmsStatsBase(AsyncResource):
         category: str | None = None,
         carrier: str | None = None,
         cost_center: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsResponse:
         """One row of SMS lifecycle counts per hour, for inspecting send rate and deliverability inside a single day. The window is at most 30 days (720 rows) and both bounds round down to the hour. For longer ranges use `sms.stats.daily`.
@@ -651,6 +740,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "category": category,
                 "carrier": carrier,
                 "cost_center": cost_center,
+                "content_type": content_type,
             },
             SMSStatsResponse,
             options,
@@ -666,6 +756,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCountryResponse:
         """SMS delivery and latency stats grouped by destination country, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Use it to find where delivery is worst before drilling into `sms.stats.by_error_code`.
@@ -686,6 +777,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCountryResponse,
             options,
@@ -701,6 +793,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCarrierResponse:
         """SMS delivery and latency stats grouped by the carrier that handled the message, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Use it to compare delivery performance across carriers.
@@ -721,6 +814,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCarrierResponse,
             options,
@@ -736,6 +830,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCategoryResponse:
         """SMS delivery and latency stats grouped by the category you sent under, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200).
@@ -756,8 +851,46 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCategoryResponse,
+            options,
+        )
+
+    async def by_content_type(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        include_trend: bool | None = None,
+        trend_grain: str | None = None,
+        content_type: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSStatsByContentTypeResponse:
+        """Compare SMS and MMS delivery counts, rates and latency. Omit content_type for both; previously recorded counts remain attributed to SMS.
+
+        ```python
+        stats = await client.sms.stats.by_content_type(from_="2026-05-01", to="2026-05-31")
+        for row in stats.data or []:
+            print(row.content_type, row.delivery)
+        ```
+        """
+        return await self._get(
+            "/v1/sms/stats/content-types",
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "sort": sort,
+                "limit": limit,
+                "include_trend": include_trend,
+                "trend_grain": trend_grain,
+                "content_type": content_type,
+            },
+            SMSStatsByContentTypeResponse,
             options,
         )
 
@@ -771,6 +904,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByOriginatorResponse:
         """SMS delivery and latency stats grouped by originator, the sender address messages went out from, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Use it to compare how your senders perform.
@@ -791,6 +925,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByOriginatorResponse,
             options,
@@ -802,6 +937,7 @@ class AsyncSmsStatsBase(AsyncResource):
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByStatusResponse:
         """How many messages ended the period in each lifecycle status: accepted, sent, delivered, undelivered, failed, rejected, expired, ordered by count. The "where did my messages end up" view, suitable for a status-distribution chart.
@@ -818,6 +954,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
+                "content_type": content_type,
             },
             SMSStatsByStatusResponse,
             options,
@@ -833,6 +970,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByErrorCodeResponse:
         """SMS stats grouped by our normalized failure reason, which answers which reasons are driving your failures. The grouping key is the same value as the `error_code` filter on `sms.list`, so a row joins straight to the messages behind it. Ranked by the `sort` metric (default `failed`) and capped by `limit`.
@@ -854,6 +992,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByErrorCodeResponse,
             options,
@@ -869,6 +1008,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByTagResponse:
         """SMS delivery and latency stats grouped by tag (`name:value`), ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Only tagged messages appear, and one carrying several tags counts once under each, so rows do not sum to the period total.
@@ -891,6 +1031,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByTagResponse,
             options,
@@ -906,6 +1047,7 @@ class AsyncSmsStatsBase(AsyncResource):
         limit: int | None = None,
         include_trend: bool | None = None,
         trend_grain: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSStatsByCostCenterResponse:
         """SMS delivery and latency stats grouped by the `cost_center` messages were sent with, ranked by the `sort` metric (default `accepted`) and capped by `limit` (default 50, maximum 200). Messages sent without a cost center are not counted, so rows do not sum to the period total.
@@ -928,6 +1070,7 @@ class AsyncSmsStatsBase(AsyncResource):
                 "limit": limit,
                 "include_trend": include_trend,
                 "trend_grain": trend_grain,
+                "content_type": content_type,
             },
             SMSStatsByCostCenterResponse,
             options,

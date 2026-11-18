@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TypedDict
 
 from bird._generated import (
+    SMSInboundStatsByContentTypeResponse,
     SMSInboundStatsByCountryResponse,
     SMSInboundStatsByNumberResponse,
     SMSInboundStatsByOperatorResponse,
@@ -22,6 +23,7 @@ class SmsStatsInboundSummaryParams(TypedDict, total=False):
     to: str
     timezone: str
     compare: str
+    content_type: str
 
 
 class SmsStatsInboundDailyParams(TypedDict, total=False):
@@ -30,6 +32,7 @@ class SmsStatsInboundDailyParams(TypedDict, total=False):
     from_: str
     to: str
     timezone: str
+    content_type: str
 
 
 class SmsStatsInboundHourlyParams(TypedDict, total=False):
@@ -38,6 +41,7 @@ class SmsStatsInboundHourlyParams(TypedDict, total=False):
     from_: str
     to: str
     timezone: str
+    content_type: str
 
 
 class SmsStatsInboundByCountryParams(TypedDict, total=False):
@@ -47,6 +51,17 @@ class SmsStatsInboundByCountryParams(TypedDict, total=False):
     to: str
     timezone: str
     limit: int
+    content_type: str
+
+
+class SmsStatsInboundByContentTypeParams(TypedDict, total=False):
+    """Query params for ``client.sms.stats.inbound.by_content_type``. Every key is optional."""
+
+    from_: str
+    to: str
+    timezone: str
+    limit: int
+    content_type: str
 
 
 class SmsStatsInboundByOperatorParams(TypedDict, total=False):
@@ -56,6 +71,7 @@ class SmsStatsInboundByOperatorParams(TypedDict, total=False):
     to: str
     timezone: str
     limit: int
+    content_type: str
 
 
 class SmsStatsInboundByNumberParams(TypedDict, total=False):
@@ -65,6 +81,7 @@ class SmsStatsInboundByNumberParams(TypedDict, total=False):
     to: str
     timezone: str
     limit: int
+    content_type: str
 
 
 class SmsStatsInbound(Resource):
@@ -75,6 +92,7 @@ class SmsStatsInbound(Resource):
         to: str | None = None,
         timezone: str | None = None,
         compare: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsSummaryResponse:
         """Total messages your numbers received over a period. For a breakdown use `sms.stats.inbound.by_country`, `sms.stats.inbound.by_operator`, or `sms.stats.inbound.by_number`.
@@ -91,6 +109,7 @@ class SmsStatsInbound(Resource):
                 "to": to,
                 "timezone": timezone,
                 "compare": compare,
+                "content_type": content_type,
             },
             SMSInboundStatsSummaryResponse,
             options,
@@ -102,6 +121,7 @@ class SmsStatsInbound(Resource):
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsResponse:
         """Messages your numbers received, one row per calendar day. Set `timezone` to get local calendar days instead of UTC.
@@ -118,6 +138,7 @@ class SmsStatsInbound(Resource):
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
+                "content_type": content_type,
             },
             SMSInboundStatsResponse,
             options,
@@ -129,6 +150,7 @@ class SmsStatsInbound(Resource):
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsResponse:
         """Messages your numbers received, one row per hour, for inspecting inbound volume inside a single day.
@@ -147,6 +169,7 @@ class SmsStatsInbound(Resource):
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
+                "content_type": content_type,
             },
             SMSInboundStatsResponse,
             options,
@@ -159,6 +182,7 @@ class SmsStatsInbound(Resource):
         to: str | None = None,
         timezone: str | None = None,
         limit: int | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsByCountryResponse:
         """Messages your numbers received, grouped by the country of the receiving number.
@@ -176,8 +200,40 @@ class SmsStatsInbound(Resource):
                 "to": to,
                 "timezone": timezone,
                 "limit": limit,
+                "content_type": content_type,
             },
             SMSInboundStatsByCountryResponse,
+            options,
+        )
+
+    def by_content_type(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        limit: int | None = None,
+        content_type: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSInboundStatsByContentTypeResponse:
+        """Compare SMS and MMS received-message counts. Omit content_type for both; previously recorded counts remain attributed to SMS.
+
+        ```python
+        stats = client.sms.stats.inbound.by_content_type(from_="2026-05-01", to="2026-05-31")
+        for row in stats.data or []:
+            print(row.content_type, row.received)
+        ```
+        """
+        return self._get(
+            "/v1/sms/stats/inbound/content-types",
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "limit": limit,
+                "content_type": content_type,
+            },
+            SMSInboundStatsByContentTypeResponse,
             options,
         )
 
@@ -188,6 +244,7 @@ class SmsStatsInbound(Resource):
         to: str | None = None,
         timezone: str | None = None,
         limit: int | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsByOperatorResponse:
         """Messages your numbers received, grouped by the sender's mobile operator. Messages whose operator the carrier did not report are excluded, so these rows can sum to less than `sms.stats.inbound.summary` for the same period.
@@ -207,6 +264,7 @@ class SmsStatsInbound(Resource):
                 "to": to,
                 "timezone": timezone,
                 "limit": limit,
+                "content_type": content_type,
             },
             SMSInboundStatsByOperatorResponse,
             options,
@@ -219,6 +277,7 @@ class SmsStatsInbound(Resource):
         to: str | None = None,
         timezone: str | None = None,
         limit: int | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsByNumberResponse:
         """How many messages each of your numbers received, which is the view that shows whether a campaign's reply traffic is landing on the number you expect.
@@ -236,6 +295,7 @@ class SmsStatsInbound(Resource):
                 "to": to,
                 "timezone": timezone,
                 "limit": limit,
+                "content_type": content_type,
             },
             SMSInboundStatsByNumberResponse,
             options,
@@ -250,6 +310,7 @@ class AsyncSmsStatsInbound(AsyncResource):
         to: str | None = None,
         timezone: str | None = None,
         compare: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsSummaryResponse:
         """Total messages your numbers received over a period. For a breakdown use `sms.stats.inbound.by_country`, `sms.stats.inbound.by_operator`, or `sms.stats.inbound.by_number`.
@@ -266,6 +327,7 @@ class AsyncSmsStatsInbound(AsyncResource):
                 "to": to,
                 "timezone": timezone,
                 "compare": compare,
+                "content_type": content_type,
             },
             SMSInboundStatsSummaryResponse,
             options,
@@ -277,6 +339,7 @@ class AsyncSmsStatsInbound(AsyncResource):
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsResponse:
         """Messages your numbers received, one row per calendar day. Set `timezone` to get local calendar days instead of UTC.
@@ -293,6 +356,7 @@ class AsyncSmsStatsInbound(AsyncResource):
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
+                "content_type": content_type,
             },
             SMSInboundStatsResponse,
             options,
@@ -304,6 +368,7 @@ class AsyncSmsStatsInbound(AsyncResource):
         from_: str | None = None,
         to: str | None = None,
         timezone: str | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsResponse:
         """Messages your numbers received, one row per hour, for inspecting inbound volume inside a single day.
@@ -322,6 +387,7 @@ class AsyncSmsStatsInbound(AsyncResource):
                 "from": from_,
                 "to": to,
                 "timezone": timezone,
+                "content_type": content_type,
             },
             SMSInboundStatsResponse,
             options,
@@ -334,6 +400,7 @@ class AsyncSmsStatsInbound(AsyncResource):
         to: str | None = None,
         timezone: str | None = None,
         limit: int | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsByCountryResponse:
         """Messages your numbers received, grouped by the country of the receiving number.
@@ -351,8 +418,40 @@ class AsyncSmsStatsInbound(AsyncResource):
                 "to": to,
                 "timezone": timezone,
                 "limit": limit,
+                "content_type": content_type,
             },
             SMSInboundStatsByCountryResponse,
+            options,
+        )
+
+    async def by_content_type(
+        self,
+        *,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        limit: int | None = None,
+        content_type: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SMSInboundStatsByContentTypeResponse:
+        """Compare SMS and MMS received-message counts. Omit content_type for both; previously recorded counts remain attributed to SMS.
+
+        ```python
+        stats = await client.sms.stats.inbound.by_content_type(from_="2026-05-01", to="2026-05-31")
+        for row in stats.data or []:
+            print(row.content_type, row.received)
+        ```
+        """
+        return await self._get(
+            "/v1/sms/stats/inbound/content-types",
+            {
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "limit": limit,
+                "content_type": content_type,
+            },
+            SMSInboundStatsByContentTypeResponse,
             options,
         )
 
@@ -363,6 +462,7 @@ class AsyncSmsStatsInbound(AsyncResource):
         to: str | None = None,
         timezone: str | None = None,
         limit: int | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsByOperatorResponse:
         """Messages your numbers received, grouped by the sender's mobile operator. Messages whose operator the carrier did not report are excluded, so these rows can sum to less than `sms.stats.inbound.summary` for the same period.
@@ -382,6 +482,7 @@ class AsyncSmsStatsInbound(AsyncResource):
                 "to": to,
                 "timezone": timezone,
                 "limit": limit,
+                "content_type": content_type,
             },
             SMSInboundStatsByOperatorResponse,
             options,
@@ -394,6 +495,7 @@ class AsyncSmsStatsInbound(AsyncResource):
         to: str | None = None,
         timezone: str | None = None,
         limit: int | None = None,
+        content_type: str | None = None,
         options: RequestOptions | None = None,
     ) -> SMSInboundStatsByNumberResponse:
         """How many messages each of your numbers received, which is the view that shows whether a campaign's reply traffic is landing on the number you expect.
@@ -411,6 +513,7 @@ class AsyncSmsStatsInbound(AsyncResource):
                 "to": to,
                 "timezone": timezone,
                 "limit": limit,
+                "content_type": content_type,
             },
             SMSInboundStatsByNumberResponse,
             options,

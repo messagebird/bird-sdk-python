@@ -23,6 +23,7 @@ class SmsListParams(TypedDict, total=False):
     ending_before: str
     created_after: str
     created_before: str
+    content_type: str
     direction: str
     status: Sequence[str]
     error_code: Sequence[str]
@@ -69,6 +70,7 @@ class SmsBase(Resource):
         ending_before: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
+        content_type: str | None = None,
         direction: str | None = None,
         status: Sequence[str] | None = None,
         error_code: Sequence[str] | None = None,
@@ -80,7 +82,7 @@ class SmsBase(Resource):
         reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[SMSMessage]:
-        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, country, or tag.
+        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by message type (SMS or MMS), direction, status, category, recipient, sender, country, or tag.
 
         ```python
         for message in client.sms.list(direction="outbound"):
@@ -93,6 +95,7 @@ class SmsBase(Resource):
             "ending_before": ending_before,
             "created_after": created_after,
             "created_before": created_before,
+            "content_type": content_type,
             "direction": direction,
             "status": status,
             "error_code": error_code,
@@ -159,6 +162,7 @@ class AsyncSmsBase(AsyncResource):
         ending_before: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
+        content_type: str | None = None,
         direction: str | None = None,
         status: Sequence[str] | None = None,
         error_code: Sequence[str] | None = None,
@@ -170,7 +174,7 @@ class AsyncSmsBase(AsyncResource):
         reference: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[SMSMessage]:
-        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by direction, status, category, recipient, sender, country, or tag.
+        """List SMS messages, newest first, as a cursor page (`data`, `next_cursor`). Pass `next_cursor` back as `starting_after` to fetch the next page. Filter by message type (SMS or MMS), direction, status, category, recipient, sender, country, or tag.
 
         ```python
         async for message in client.sms.list(direction="outbound"):
@@ -183,6 +187,7 @@ class AsyncSmsBase(AsyncResource):
             "ending_before": ending_before,
             "created_after": created_after,
             "created_before": created_before,
+            "content_type": content_type,
             "direction": direction,
             "status": status,
             "error_code": error_code,
