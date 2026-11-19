@@ -67,6 +67,10 @@ def amb_conversations_typing() -> None:
     result = client.amb.conversations.typing('acv_01krdgeqcxet5s7t44vh8rt9mg', event='typing_start')
     print(result)
 
+def amb_conversations_request_authentication() -> None:
+    auth = client.amb.conversations.request_authentication('acv_01krdgeqcxet5s7t44vh8rt9mg')
+    print(auth.id, auth.status)
+
 def amb_conversations_list() -> None:
     result = client.amb.conversations.list(business_account_id='abz_01krdgeqcxet5s7t44vh8rt9mg', limit=2)
     print(result)

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
     AMBAuthentication,
+    AMBAuthenticationCreate,
     AMBConversation,
     AMBConversationTypingRequest,
     AMBConversationUpdate,
@@ -26,6 +27,13 @@ class _AMBConversationRoutingChangeDecisionRequired(TypedDict):
 
 class AMBConversationRoutingChangeDecision(_AMBConversationRoutingChangeDecisionRequired, total=False):
     pass
+
+
+class AMBAuthenticationTemplate(TypedDict, total=False):
+    id: str
+    slug: str
+    language: str
+    parameters: Mapping[str, Any]
 
 
 class AmbConversationsUpdateParams(TypedDict, total=False):
@@ -54,6 +62,12 @@ class _AmbConversationsTypingRequired(TypedDict):
 
 class AmbConversationsTypingParams(_AmbConversationsTypingRequired, total=False):
     """Params for ``client.amb.conversations.typing``. ``event`` is required."""
+
+
+class AmbConversationsRequestAuthenticationParams(TypedDict, total=False):
+    """Params for ``client.amb.conversations.request_authentication``. Every key is optional."""
+
+    template: AMBAuthenticationTemplate
 
 
 class AmbConversationsListParams(TypedDict, total=False):
@@ -190,12 +204,26 @@ class AmbConversations(Resource):
         self,
         conversation_id: str,
         *,
+        template: AMBAuthenticationTemplate | None = None,
         options: RequestOptions | None = None,
     ) -> AMBAuthentication:
-        """Sends a native sign-in request to an open conversation whose device_capabilities include AUTH2. Returns the request as pending; keep its id. The outcome arrives as an amb.authentication.updated webhook event, or read the request. A new request supersedes an unfinished one in the same conversation, so retry with the same idempotency key."""
-        return self._action(
+        """Sends a native sign-in request to an open conversation whose device_capabilities include AUTH2. Sends the business's sign-in message unless the body names a sign-in message template. Returns the request as pending; keep its id. The outcome arrives as an amb.authentication.updated webhook event, or read the request. A new request supersedes an unfinished one in the same conversation, so retry with the same idempotency key.
+
+        ```python
+        auth = client.amb.conversations.request_authentication('acv_01krdgeqcxet5s7t44vh8rt9mg')
+        print(auth.id, auth.status)
+        ```
+        """
+        body = to_wire(
+            AMBAuthenticationCreate,
+            {
+                "template": template,
+            },
+        )
+        return self._write(
             "POST",
             f"/v1/amb/conversations/{quote(conversation_id, safe='')}/authentications",
+            body,
             AMBAuthentication,
             options,
         )
@@ -372,12 +400,26 @@ class AsyncAmbConversations(AsyncResource):
         self,
         conversation_id: str,
         *,
+        template: AMBAuthenticationTemplate | None = None,
         options: RequestOptions | None = None,
     ) -> AMBAuthentication:
-        """Sends a native sign-in request to an open conversation whose device_capabilities include AUTH2. Returns the request as pending; keep its id. The outcome arrives as an amb.authentication.updated webhook event, or read the request. A new request supersedes an unfinished one in the same conversation, so retry with the same idempotency key."""
-        return await self._action(
+        """Sends a native sign-in request to an open conversation whose device_capabilities include AUTH2. Sends the business's sign-in message unless the body names a sign-in message template. Returns the request as pending; keep its id. The outcome arrives as an amb.authentication.updated webhook event, or read the request. A new request supersedes an unfinished one in the same conversation, so retry with the same idempotency key.
+
+        ```python
+        auth = await client.amb.conversations.request_authentication('acv_01krdgeqcxet5s7t44vh8rt9mg')
+        print(auth.id, auth.status)
+        ```
+        """
+        body = to_wire(
+            AMBAuthenticationCreate,
+            {
+                "template": template,
+            },
+        )
+        return await self._write(
             "POST",
             f"/v1/amb/conversations/{quote(conversation_id, safe='')}/authentications",
+            body,
             AMBAuthentication,
             options,
         )

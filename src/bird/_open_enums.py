@@ -140,6 +140,44 @@ class AssetReferenceUsage:
     PUBLISHED: Final = "published"
 
 
+class AutomaticSeedingReason:
+    """Values of AutomaticSeedingReason known at this SDK version (open enum)."""
+
+    ADMISSION_REFUSED: Final = "admission_refused"
+    ADMISSION_UNCERTAIN: Final = "admission_uncertain"
+    ALLOWANCE_EXHAUSTED: Final = "allowance_exhausted"
+    BLOCKED: Final = "blocked"
+    BOUNCED: Final = "bounced"
+    CANCELED: Final = "canceled"
+    CANCELED_OR_EXPIRED: Final = "canceled_or_expired"
+    CAPTURE_EXPIRED: Final = "capture_expired"
+    CAPTURE_FAILED: Final = "capture_failed"
+    CONFLICTING_EXAMPLES: Final = "conflicting_examples"
+    CONTACT_TEMPLATE_UNSUPPORTED: Final = "contact_template_unsupported"
+    CONTENT_BLOCKED: Final = "content_blocked"
+    CONTROL_REJECTED: Final = "control_rejected"
+    DISPATCH_DEADLINE_EXCEEDED: Final = "dispatch_deadline_exceeded"
+    INVALID_REGISTRATION_RESPONSE: Final = "invalid_registration_response"
+    INVALID_TRIGGER: Final = "invalid_trigger"
+    MIXED_RECIPIENTS: Final = "mixed_recipients"
+    POLICY_REFUSED: Final = "policy_refused"
+    PREPARATION_UNAVAILABLE: Final = "preparation_unavailable"
+    PROVIDER_OUTCOME_UNKNOWN: Final = "provider_outcome_unknown"
+    REGISTRATION_REJECTED: Final = "registration_rejected"
+    REJECTED: Final = "rejected"
+    RUN_STOPPED: Final = "run_stopped"
+    SEEDING_UNAVAILABLE: Final = "seeding_unavailable"
+    SELECTION_UNAVAILABLE: Final = "selection_unavailable"
+    SENDING_DOMAIN_NOT_MEASURED: Final = "sending_domain_not_measured"
+    SETTINGS_DISABLED: Final = "settings_disabled"
+    SOURCE_NOT_AUTHORIZED: Final = "source_not_authorized"
+    SOURCE_STOPPED: Final = "source_stopped"
+    TRIGGER_ROTATED: Final = "trigger_rotated"
+    UNAVAILABLE: Final = "unavailable"
+    UNSUPPORTED_SOURCE: Final = "unsupported_source"
+    VENDOR_OUTCOME_UNKNOWN: Final = "vendor_outcome_unknown"
+
+
 class ComplianceDomainProofMethod:
     """Values of ComplianceDomainProofMethod known at this SDK version (open enum)."""
 
@@ -232,6 +270,7 @@ class EmailBroadcastParameterProblemCode:
     PARAMETER_DUPLICATE_KEY: Final = "parameter_duplicate_key"
     PARAMETER_JSON_INVALID: Final = "parameter_json_invalid"
     PARAMETER_LANGUAGE_INVALID: Final = "parameter_language_invalid"
+    PARAMETER_LIQUID_UNSUPPORTED: Final = "parameter_liquid_unsupported"
     PARAMETER_MAP_INVALID: Final = "parameter_map_invalid"
     PARAMETER_NAME_INVALID: Final = "parameter_name_invalid"
     PARAMETER_NAMES_EXCEEDED: Final = "parameter_names_exceeded"
@@ -1234,6 +1273,7 @@ __all__ = [
     "AMBSuppressionReason",
     "AssetKind",
     "AssetReferenceUsage",
+    "AutomaticSeedingReason",
     "ComplianceDomainProofMethod",
     "ComplianceItemState",
     "ComplianceObligationReason",

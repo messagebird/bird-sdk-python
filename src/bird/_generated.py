@@ -190,15 +190,19 @@ class Error(BaseModel):
     error: ErrorBody
 
 
+class TemplateSlug(RootModel[str]):
+    root: str
+
+
+class UserID(RootModel[str]):
+    root: str
+
+
 class APIKeyID(RootModel[str]):
     root: str
 
 
 class WorkspaceID(RootModel[str]):
-    root: str
-
-
-class UserID(RootModel[str]):
     root: str
 
 
@@ -2709,7 +2713,7 @@ class AMBMessageKindStatsPoint(BaseModel):
     "Outbound counts and latency percentiles for a single message content kind over the requested period."
     model_config = ConfigDict(extra="allow")
     message_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends do not accept them, and templates do not accept `apple_pay`. A sign-in message template has the kind `authenticate`.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: A sign-in request, the customer's response to one, or a sign-in message template.",
     )]
     counts: Annotated[AMBOutboundStatsCounts, Field(
         description="Outbound Apple Messages for Business counts for the requested scope, attributed to when each message was accepted. Apple Messages for Business has no delivery receipt, so there is no `delivered` count anywhere in this API: `sent` is the last outbound state Bird observes for a message. Very large counts are close estimates rather than exact tallies. Rates are computed once here, clamped to 1, and null when nothing was accepted.",
@@ -3808,7 +3812,7 @@ class EmailMessage(BaseModel):
         min_length=1,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
+        description="Public substitution values used for the subject and message bodies, whether supplied inline or through a template. Reserved internal keys and the exact top-level `bird_unsub_token` key are omitted, even if caller-supplied. Returns null when no public values remain.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachmentRef]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -3877,10 +3881,6 @@ class EmailAddressInput(RootModel[Annotated[str, Field(
     min_length=5,
     pattern="^[^\\r\\n]+$",
 )] | EmailAddress
-
-
-class TemplateSlug(RootModel[str]):
-    root: str
 
 
 class EmailTemplateSend(BaseModel):
@@ -4458,7 +4458,7 @@ class EmailBroadcastTemplate(BaseModel):
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
+        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. A value the template uses that opens Liquid (`{{`, or `{%` not followed by a digit) stops the broadcast from sending. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
     )] = None
     parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -4497,6 +4497,7 @@ class EmailBroadcastParameterProblemCode(str, Enum):
     parameter_map_invalid = "parameter_map_invalid"
     parameter_name_invalid = "parameter_name_invalid"
     parameter_value_unsupported = "parameter_value_unsupported"
+    parameter_liquid_unsupported = "parameter_liquid_unsupported"
     parameter_duplicate_key = "parameter_duplicate_key"
     parameter_bytes_exceeded = "parameter_bytes_exceeded"
     parameter_names_exceeded = "parameter_names_exceeded"
@@ -4540,7 +4541,7 @@ class EmailBroadcastParameterProblem(BaseModel):
     "One problem with a broadcast's template inputs. A diagnostic names the input or field it is about and never includes its value."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[EmailBroadcastParameterProblemCode, str], Field(union_mode="left_to_right")], Field(
-        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `brand_unavailable`: the saved Brand is archived or unavailable for selection. Preview with an available Brand override before sending a test.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
+        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_liquid_unsupported`: an input value the email uses contains Liquid, such as `{{` or `{%`. Values are sent as written, so the broadcast cannot send; put Liquid in the template instead.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `brand_unavailable`: the saved Brand is archived or unavailable for selection. Preview with an available Brand override before sending a test.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
     )]
     phase: Annotated[Annotated[Union[EmailBroadcastParameterProblemPhase, str], Field(union_mode="left_to_right")], Field(
         description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
@@ -4579,7 +4580,7 @@ class EmailBroadcastFailureParameters(BaseModel):
     "Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values."
     model_config = ConfigDict(extra="allow")
     code: Annotated[Annotated[Union[EmailBroadcastParameterProblemCode, str], Field(union_mode="left_to_right")], Field(
-        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `brand_unavailable`: the saved Brand is archived or unavailable for selection. Preview with an available Brand override before sending a test.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
+        description="What a broadcast input diagnostic found.\n\n- `parameter_json_invalid`: the request body or an input map is not valid JSON.\n- `parameter_map_invalid`: `template.parameters` or `template.parameter_overrides` is not a JSON object of input names.\n- `parameter_name_invalid`: an input name is not a bare name outside the `bird` namespace.\n- `parameter_value_unsupported`: an input value is an object or a list. Values must be a string, number, boolean or null.\n- `parameter_liquid_unsupported`: an input value the email uses contains Liquid, such as `{{` or `{%`. Values are sent as written, so the broadcast cannot send; put Liquid in the template instead.\n- `parameter_duplicate_key`: an input name, or two spellings of one language tag, appears twice.\n- `parameter_bytes_exceeded`: an input map is larger than 16384 UTF-8 bytes.\n- `parameter_names_exceeded`: `template.parameters` and every language together hold more than 128 distinct names.\n- `parameter_depth_exceeded`: an input value is nested too deeply.\n- `parameter_language_invalid`: a `template.parameter_overrides` key is not a valid BCP-47 language tag.\n- `parameter_required`: the template or envelope uses an input that has no value.\n- `sensitive_input_unsupported`: the template uses an input it marks sensitive, which a broadcast cannot supply.\n- `render_profile_unsupported`: the template uses a Liquid operation that rendering with broadcast inputs does not support.\n- `rendered_envelope_invalid`: the rendered subject, sender name, reply-to addresses or a header is not valid for an email, for example because it contains a line break.\n- `contact_property_unknown`: the template reads a contact property this workspace has not defined.\n- `template_unavailable`: the broadcast has no template, or its template no longer exists or has no published version.\n- `language_unavailable`: the published version has no content in the selected language.\n- `sender_unavailable`: the broadcast cannot send from its `from` address or IP pool.\n- `brand_unavailable`: the saved Brand is archived or unavailable for selection. Preview with an available Brand override before sending a test.\n- `audience_unavailable`: the broadcast's audience cannot be used for this send.\n- `recipient_render_failed`: content could not be rendered for a recipient while the broadcast was sending.\n- `render_budget_exceeded`: rendering went over a limit, named by `budget` with its `limit`.\n- `transport_missing`: the saved content of a prepared broadcast is unavailable. Contact Bird support.\n- `transport_invalid`: the saved content of a prepared broadcast no longer matches what was prepared. Contact Bird support.",
     )]
     phase: Annotated[Annotated[Union[EmailBroadcastParameterProblemPhase, str], Field(union_mode="left_to_right")], Field(
         description="Where a broadcast input diagnostic was found.\n\n- `request`: in the inputs this request supplied, before the template was checked.\n- `validation`: while checking the inputs against the current published template, as validate, preview and send do.\n- `execution`: while the broadcast was being prepared or sent. This phase appears on `failure_parameters`.",
@@ -4851,7 +4852,7 @@ class EmailBroadcastTemplateCreate(BaseModel):
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
+        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. A value the template uses that opens Liquid (`{{`, or `{%` not followed by a digit) stops the broadcast from sending. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
     )] = None
     parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -4956,7 +4957,7 @@ class EmailBroadcastTemplateUpdate(BaseModel):
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
+        description="Complete template input map. Each value is a string, number, boolean or null and is used exactly as given, so text containing braces or code-like syntax is never evaluated. A value the template uses that opens Liquid (`{{`, or `{%` not followed by a digit) stops the broadcast from sending. Objects and lists are not accepted. Use bird.contact.first_name in the template for contact data. Names must be bare input names outside the bird namespace. Omission retains the map unless the template ID changes, which clears it; an empty object clears it, and null is invalid. The compact map is limited to 16384 UTF-8 bytes and 128 names. Individual email parameters keep their own format.",
     )] = None
     parameter_overrides: Annotated[Optional[Dict[str, Dict[str, Any]]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -5534,7 +5535,7 @@ class EmailBroadcastTestResult(BaseModel):
         min_length=1,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
-        description="The substitution values this send supplied, whether inline or from a template, or null if none were supplied. They are the values applied to `subject` and to the bodies the content endpoint returns, kept so you can see what produced the delivered copy and not only the result.",
+        description="Public substitution values used for the subject and message bodies, whether supplied inline or through a template. Reserved internal keys and the exact top-level `bird_unsub_token` key are omitted, even if caller-supplied. Returns null when no public values remain.",
     )] = None
     attachments: Annotated[Optional[List[EmailAttachmentRef]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -5588,6 +5589,113 @@ class EmailBroadcastResume(BaseModel):
     confirm: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Acknowledgment that the message reaches the remaining recipients later than intended. It is required to resume a broadcast that started sending at least 24 hours ago. Before setting it, read the broadcast's `started_at` and have a reviewer with `email_management:read` read its template by `template.id` to check `scope`, then, for a workspace template or one the template read reports deleted (`404`), its pinned version using `template.id` and `template.version_id`. Workspace versions retain the original content. A built-in template (`scope: system`) shows current catalogue content, and only the template read returns `scope`. Broadcasts with frozen content keep it, but older broadcasts can read the catalogue again when resumed. Neither a current lookup nor an earlier message alone proves what remaining recipients will receive. Leave the broadcast paused unless you can verify that content. Ask an authorized teammate if you lack that permission. It does not skip the funds or concurrent-broadcast checks.",
+    )] = None
+
+
+class LabelID(RootModel[str]):
+    root: str
+
+
+class LabelName(RootModel[str]):
+    root: str
+
+
+class LabelColor(RootModel[str]):
+    root: str
+
+
+class LabelDescription(RootModel[str]):
+    root: str
+
+
+class Label(BaseModel):
+    "A label in the workspace catalogue. Its `id` is accepted by every operation that takes a `label_id` and stays the same when the label is renamed."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["lbl_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^lbl_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    name: Annotated[str, Field(
+        description="The label name, unique in the workspace regardless of case. No commas, control characters, or leading or trailing whitespace. System names such as `inbox`, `sent`, `unread`, `open` or `assigned` are reserved.",
+        examples=["Hot lead"],
+        max_length=64,
+        min_length=1,
+        pattern="^[^,\\s\\x00-\\x1F\\x7F-\\x9F](?:[^,\\x00-\\x1F\\x7F-\\x9F]*[^,\\s\\x00-\\x1F\\x7F-\\x9F])?$",
+    )]
+    color: Annotated[Optional[str], Field(
+        description="The label colour as a `#RRGGBB` hex value, or `null` when none is set.",
+        examples=["#E5484D"],
+        max_length=7,
+        min_length=7,
+        pattern="^#[0-9A-Fa-f]{6}$",
+    )]
+    description: Annotated[Optional[str], Field(
+        description="When to apply the label, or `null` when none is set.",
+        examples=["Inbound sales enquiry from a company. Not support requests or vendors."],
+        max_length=500,
+        min_length=1,
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class LabelList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[Label], Field(
+        description="Every label in the workspace, ordered by name.",
+    )]
+
+
+class LabelCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[str, Field(
+        description="The label name, unique in the workspace regardless of case. No commas, control characters, or leading or trailing whitespace. System names such as `inbox`, `sent`, `unread`, `open` or `assigned` are reserved.",
+        examples=["Hot lead"],
+        max_length=64,
+        min_length=1,
+        pattern="^[^,\\s\\x00-\\x1F\\x7F-\\x9F](?:[^,\\x00-\\x1F\\x7F-\\x9F]*[^,\\s\\x00-\\x1F\\x7F-\\x9F])?$",
+    )]
+    color: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The label colour as a `#RRGGBB` hex value.",
+        examples=["#E5484D"],
+        max_length=7,
+        min_length=7,
+        pattern="^#[0-9A-Fa-f]{6}$",
+    )] = None
+    description: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="When to apply the label. People and agents read it when they decide which label fits.",
+        examples=["Inbound sales enquiry from a company. Not support requests or vendors."],
+        max_length=500,
+        min_length=1,
+    )] = None
+
+
+class LabelUpdate(BaseModel):
+    "Fields to change. Omitted fields are left unchanged; `null` clears `color` or `description`. A body with none of `name`, `color` or `description` is refused; one that resends current values is accepted."
+    model_config = ConfigDict(extra="allow")
+    name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The label name, unique in the workspace regardless of case. No commas, control characters, or leading or trailing whitespace. System names such as `inbox`, `sent`, `unread`, `open` or `assigned` are reserved.",
+        examples=["Hot lead"],
+        max_length=64,
+        min_length=1,
+        pattern="^[^,\\s\\x00-\\x1F\\x7F-\\x9F](?:[^,\\x00-\\x1F\\x7F-\\x9F]*[^,\\s\\x00-\\x1F\\x7F-\\x9F])?$",
+    )] = None
+    color: Annotated[Optional[str], Field(
+        description="The new colour, or `null` to remove it.",
+        examples=["#E5484D"],
+        max_length=7,
+        min_length=7,
+        pattern="^#[0-9A-Fa-f]{6}$",
+    )] = None
+    description: Annotated[Optional[str], Field(
+        description="The new description, or `null` to remove it.",
+        examples=["Inbound sales enquiry from a company. Not support requests or vendors."],
+        max_length=500,
+        min_length=1,
     )] = None
 
 
@@ -13095,7 +13203,7 @@ class WhatsAppTemplateLanguageUpsert(BaseModel):
         description="Liquid that computes this language's send values from the send's `template.parameters`. Omit it to keep the current bindings, and send `null` to remove them. Changing only the bindings never needs a new review.",
     )] = None
     optimization_spec: Annotated[Optional[WhatsAppTemplateOptimizationSpecWrite], Field(
-        description="This language's maximum price. Omit it to keep the current one. A new language written without it uses Meta's standard rate. Send `null` to return to the standard rate. Changing only the price updates Meta without a new review. A send at a maximum price needs the business account's `marketing_messages_onboarding_status` to be `onboarded`. Otherwise it fails with WhatsApp error 131061.",
+        description="This language's maximum price. Omit it to keep the current one. A new language written without it uses Meta's standard rate. Send `null` to return to the standard rate. Changing only the price updates Meta without a new review.",
     )] = None
     message_send_ttl_seconds: Annotated[Optional[int], Field(
         description="How long WhatsApp keeps trying to deliver a message from this language, in seconds. WhatsApp drops a message it cannot deliver in that time. Omit it to keep the current value. Send `null` to use WhatsApp's default: 10 minutes for authentication, 30 days for utility and marketing. A new language written without it uses WhatsApp's default. The range depends on the language's `category`: 30 to 900 for authentication, 30 to 43200 for utility, and 43200 to 1209600 for marketing. A value outside 30 to 1209600 fails request validation; one inside it but outside the category's range fails with `WhatsAppTemplateTTLOutOfRange`. On a marketing template, the value applies while the business account's `marketing_messages_onboarding_status` is `onboarded`. Changing only this value updates WhatsApp without a new review.",
@@ -14495,6 +14603,10 @@ class AMBAuthenticationProviderID(RootModel[str]):
     root: str
 
 
+class AMBTemplateID(RootModel[str]):
+    root: str
+
+
 class AMBEntryPoint(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: Annotated[str, Field(
@@ -15016,7 +15128,7 @@ class AMBNativeRichLinkData(BaseModel):
 
 
 class AMBRichLinkConstruct(BaseModel):
-    "Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title."
+    "Asks Apple to build the rich link preview from `url` when the message is sent."
     model_config = ConfigDict(extra="allow")
     url: Annotated[str, Field(
         description="The App Clip, Apple Music, or Apple Maps URL to build a preview for. An `http://` URL is refused with a `422` `AMBEndpointNotHTTPS`. Apple builds the preview when the message is sent. If Apple refuses the URL, or fails to build it with a `500` at least 5 times over at least 10 minutes, the message ends `send_failed` with `bird:construct_rejected`; send `rich_link` content with your own `title` and `image` instead. If Apple stays unreachable for the whole retry budget, the message ends `send_failed` with `bird:attempts_exhausted`.",
@@ -15041,7 +15153,7 @@ class AMBRichLink(BaseModel):
     )] = None
     rich_link_construct: Annotated[Optional[AMBRichLinkConstruct], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Asks Apple to build the rich link preview when the message is sent. Use `POST /v1/amb/messages/construct-payload` beforehand only to check the URL and see the preview's title.",
+        description="Asks Apple to build the rich link preview from `url` when the message is sent.",
     )] = None
 
 
@@ -15951,7 +16063,7 @@ class AMBMessagePart(BaseModel):
     )] = None
     title: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The title a card showed. On a `link_preview` part it is the page's title, read when the part was sent. On a `rich_link` part Apple built from its URL it is the title Apple returned for the card, or the linked page's title when Apple returned none. A title longer than 512 bytes is cut to that length. Absent on other parts, on a part Apple did not accept, and on a `rich_link` Apple built when neither Apple nor a page Bird could read supplied a title. On a `link_preview` part it is also absent when Bird sent the part in an earlier attempt of a retried send, or had to save the send's result again.",
+        description="The title a card showed. On a `link_preview` part it is the page's title, read when the part was sent. On a `rich_link` part Apple built from its URL it is the title Apple returned for the card. When Apple returned none, or returned a web address in its place, it is the linked page's title. Apple builds that card on the device, so the title it shows can differ. A title longer than 512 bytes is cut to that length. Absent on other parts, on a part Apple did not accept, and on a `rich_link` Apple built when Apple supplied no title or only a web address and the linked page supplied none or Bird could not read it. On a `link_preview` part it is also absent when Bird sent the part in an earlier attempt of a retried send, or had to save the send's result again.",
         examples=["Your order"],
         min_length=1,
     )] = None
@@ -15989,10 +16101,6 @@ class AMBError(BaseModel):
         description="When the failure occurred.",
         min_length=1,
     )]
-
-
-class AMBTemplateID(RootModel[str]):
-    root: str
 
 
 class AMBTemplateVersionID(RootModel[str]):
@@ -16038,7 +16146,7 @@ class AMBMessage(BaseModel):
         description="Send status:\n\n- `accepted`: Accepted and queued for delivery to Apple.\n- `sent`: Handed to Apple. There is no delivery or read receipt on this\n  channel, so `sent` is the furthest an outbound message's status\n  advances.\n- `send_failed`: Sending stopped because of a business or conversation\n  restriction, a recipient opt-out, an Apple refusal, a workspace\n  suspension, or exhausted attempts. A message stopped after it was charged\n  keeps its charge. An earlier attempt may have reached Apple if its\n  response or the local record of success was lost. See `last_error` for\n  why sending stopped.\n- `rejected`: Refused by Bird before any send attempt and never charged:\n  the destination has no price, the wallet could not fund the send, the\n  workspace is suspended, or the content cannot be sent yet. See\n  `last_error`.\n- `received`: Received as an inbound message.",
     )]
     kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends do not accept them, and templates do not accept `apple_pay`. A sign-in message template has the kind `authenticate`.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: A sign-in request, the customer's response to one, or a sign-in message template.",
     )]
     source: Annotated[Optional[AMBMessageSource], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -16710,6 +16818,45 @@ class AMBConversationUpdate(BaseModel):
     )] = None
 
 
+class AMBAuthenticationTemplate(BaseModel):
+    "A sign-in message template reference. Identify the template by `id` or `slug`. Supply exactly one reference, optionally select a language, and pass variable values in `parameters`."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["amt_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^amt_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    slug: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The workspace or built-in sign-in message template to send, by its immutable slug. Read the template's live version to see its variables.",
+        examples=["account_sign_in"],
+        max_length=63,
+        min_length=1,
+        pattern="^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$",
+    )] = None
+    language: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which of the template's languages to send. When the template does not have the language you ask for, its `on_missing_language` setting decides whether the closest available language is sent instead or the request is rejected. Omit it to send the first of these the template has: the conversation's locale, the business's default locale, then the template's default language. A request that omits it is never rejected for its language, and `language_source_required` does not apply.",
+        examples=["fr"],
+        max_length=35,
+        min_length=2,
+    )] = None
+    parameters: Annotated[Optional[Dict[str, Any]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Values for the template's variables, keyed by variable name. Read the live version to see the accepted keys and formats. A missing required key, an undeclared key, an invalid value, or a serialized object over 16 KiB returns `422`.",
+    )] = None
+
+
+class AMBAuthenticationCreate(BaseModel):
+    "Options for a sign-in request. Omit the body to send the business's sign-in message."
+    model_config = ConfigDict(extra="allow")
+    template: Annotated[Optional[AMBAuthenticationTemplate], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The sign-in message template to send in place of the business's sign-in message. The template must be a published sign-in message.",
+    )] = None
+
+
 class AMBConversationTypingEvent(str, Enum):
     typing_start = "typing_start"
     typing_end = "typing_end"
@@ -17074,7 +17221,7 @@ class AMBTemplateSummary(BaseModel):
         description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
     )]
     content_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends do not accept them, and templates do not accept `apple_pay`. A sign-in message template has the kind `authenticate`.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: A sign-in request, the customer's response to one, or a sign-in message template.",
     )]
     customize_before_use: Annotated[bool, Field(
         description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
@@ -17138,6 +17285,22 @@ class AMBTemplateList(BaseModel):
     )]
 
 
+class AMBSignInMessage(BaseModel):
+    "The message an authentication request sends: the sign-in request bubble, the bubble that replaces it after sign-in, their images and an optional confirmation text. Only a template holds it. An authentication request renders the template and sends it. A message send does not accept it."
+    model_config = ConfigDict(extra="allow")
+    received_message: AMBMessageBubble
+    reply_message: AMBMessageBubble
+    images: Annotated[Optional[List[AMBNativeImage]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Images the bubbles reference by `image_identifier`.",
+    )] = None
+    confirmation_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Text Bird sends as a message after the customer's device confirms the sign-in. Omit it to send no confirmation. It may contain `{{ }}` placeholders.",
+        min_length=1,
+    )] = None
+
+
 class AMBTemplate(BaseModel):
     "One Apple Messages template identity and its authoring state. Content and variables live on versions, so this resource stays shallow."
     model_config = ConfigDict(extra="allow")
@@ -17178,7 +17341,7 @@ class AMBTemplate(BaseModel):
         description="Why messages use this template, fixed at creation. On Apple Messages the category describes intent and becomes the message's reporting `category`; it grants and restricts nothing. Use `marketing` for promotions and `transactional` for service messages.",
     )]
     content_kind: Annotated[AMBContentKind, Field(
-        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends and templates do not accept them.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: An identity verification request, or the customer's response to one.",
+        description="Derived message classification for filtering and statistics. Send requests use the `text`, `rich_link` and `interactive` keys. `apple_pay` and `authenticate` appear on existing messages. Sends do not accept them, and templates do not accept `apple_pay`. A sign-in message template has the kind `authenticate`.\n\n- text: Text, optionally with a subject.\n- attachment: One or more files, images, audio clips, or videos.\n- rich_link: A link with a preview card.\n- quick_reply: Two to five reply choices.\n- list_picker: A grouped menu of choices.\n- time_picker: Appointment time slots; a reply may contain only a selected label.\n- form: A multi-page form.\n- imessage_app: A custom iMessage app interaction on a compatible device.\n- interactive: An opaque interactive reference whose subtype is unknown.\n- apple_pay: An Apple Pay request, or the customer's response to one. Apple Pay requests are in preview.\n- authenticate: A sign-in request, the customer's response to one, or a sign-in message template.",
     )]
     customize_before_use: Annotated[bool, Field(
         description="Whether this built-in template holds sample business details, such as a store location or product images, that must be replaced before it can be sent. Sending it returns `422`; duplicate it into your workspace and customize the copy. Always false on workspace templates.",
@@ -17313,6 +17476,10 @@ class AMBTemplateVersionLanguage(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="Stored interaction. Includes its `{{ variable }}` placeholders.",
     )] = None
+    sign_in: Annotated[Optional[AMBSignInMessage], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Stored sign-in message. Includes its `{{ variable }}` placeholders.",
+    )] = None
     revision: Annotated[int, Field(
         description="This language's revision counter.",
         ge=0,
@@ -17421,6 +17588,10 @@ class AMBTemplateLanguage(BaseModel):
     interactive: Annotated[Optional[AMBInteractive], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Stored interaction. Includes its `{{ variable }}` placeholders.",
+    )] = None
+    sign_in: Annotated[Optional[AMBSignInMessage], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Stored sign-in message. Includes its `{{ variable }}` placeholders.",
     )] = None
     revision: Annotated[int, Field(
         description="This language's revision counter, used for concurrent-edit checks on draft writes.",
@@ -17817,10 +17988,10 @@ class WhatsAppKeywordRule(BaseModel):
         description="The keywords this rule adds. For one of Bird's own rules this is the full set Bird ships. For a rule you created it is only what you added on top: it never restates Bird's keywords, so `effective_keywords` is what actually matches.",
     )]
     excluded_keywords: Annotated[List[str], Field(
-        description="Bird's keywords this rule removes from the set it inherits. A message that is exactly one of them opts no one in or out and gets no reply for the people the rule covers, and Bird's own rule does not act on it instead. Excluding every one of Bird's keywords switches them off, though a keyword Bird adds later still matches. It removes only from the Bird rule this rule inherits from: a keyword another rule of yours adds, or one Bird ships only in another country's rule, is unaffected. Always empty on one of Bird's own rules.",
+        description="Bird's keywords this rule removes from the set it inherits. Rules are tried most specific first, and a rule of yours with neither `country` nor `waba` comes after Bird's rule for the sender's country, as `effective_keywords` explains. When this rule answers a message that is exactly an excluded keyword, no one is opted in or out, no reply is sent, and no later rule acts on it, whether Bird's or another of yours that matches the same keyword. A more specific rule that answers first is unaffected. A rule with no `country` inherits Bird's keywords for each sender's country, so its exclusions apply only to senders whose set has the keyword. Excluding every one of Bird's keywords switches them off where this rule answers, though a keyword Bird adds later still matches unless it is already excluded. It changes no other rule's keywords. Always empty on one of Bird's own rules.",
     )]
     effective_keywords: Annotated[List[str], Field(
-        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, minus `excluded_keywords`, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\n\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so a sender in a country Bird ships a rule for is answered by that rule and your reply is not used. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
+        description="Every keyword that matches this rule: Bird's keywords for the same operation and country, minus `excluded_keywords`, plus the ones you added. This is what an inbound message is compared against, and the whole message has to equal one of them. Keywords Bird adds later join it without you changing anything.\n\nFor a rule of **yours** with no `country`, this list is not the whole set it matches: such a rule compares against Bird's keywords for the sender's country, which the list cannot show because it does not know who is writing, so it shows Bird's worldwide keywords instead. Which rule answers decides whether that matters. Yours with no `country` and no `waba` sits below Bird's own country rule, so when a sender in a country Bird ships a rule for writes one of Bird's keywords, that rule answers and your reply is not used. A keyword you added reaches your rule only when no earlier rule matches it, and for a given sender the matched set can differ from this list in either direction. Yours with a `waba` and no `country` sits above it, so those senders match that country's keywords and get your reply, which is more keywords than this list names. Set a `country` on your own rule to see and extend exactly the set those senders match. A `system` rule is unaffected: each matches only its own keywords, and the ladder checks Bird's country rules separately from its worldwide one.",
     )]
     reply: Annotated[Optional[str], Field(
         description="The message sent back when one of the keywords matches, or null when no reply is sent. The reply goes out on the conversation the inbound message opened.",
@@ -17875,7 +18046,7 @@ class WhatsAppKeywordRuleCreate(BaseModel):
     )] = None
     excluded_keywords: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Bird's keywords to remove for the people this rule covers. A message that is exactly one of them then opts no one in or out and gets no reply, and you must honour opt-outs it carries yourself. Exclude every one of Bird's keywords to switch them off; a keyword Bird adds later still matches. It removes only from the Bird rule this one inherits from, not from your other rules. A keyword cannot be both added and excluded.",
+        description="Bird's keywords to remove for the people this rule covers. Rules are tried most specific first: a more specific rule of yours answers before this one, and with neither `country` nor `waba` so does Bird's rule for the sender's country. When this rule answers a message that is exactly an excluded keyword, no one is opted in or out, no reply is sent, and no less specific rule acts on it, so you must honour opt-outs it carries yourself. Without a `country`, the rule inherits Bird's keywords for each sender's country, so an exclusion covers only senders whose set has that keyword. Exclude every one of Bird's keywords to switch them off where this rule answers; a keyword Bird adds later still matches unless it is already excluded. It changes none of your other rules. A keyword cannot be both added and excluded.",
     )] = None
     reply: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -18929,6 +19100,379 @@ class EmailInboxInsightsSeedEngagementProfile(str, Enum):
     all = "all"
     engaging = "engaging"
     non_engaging = "non_engaging"
+
+
+class AutomaticSeedingSettings(BaseModel):
+    "Workspace automatic seeding settings. Before setup, revision is zero and the trigger address is absent. Unset list type, engagement profile and regions are omitted. Saved preferences are not checked against available seed-test options."
+    model_config = ConfigDict(extra="allow")
+    revision: Annotated[int, Field(
+        description="Current settings revision. Supply it when updating settings. Initialize settings before rotating the trigger address.",
+        ge=0,
+    )]
+    trigger_address: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Workspace trigger address for seeding examples. Absent before the first settings update. Using it requires authenticated sending access to this workspace; the address itself grants no access.",
+        max_length=254,
+    )] = None
+    enabled: Annotated[bool, Field(description="Saved automatic-seeding preference.")]
+    list_type: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which pool of seed addresses a test uses. Which pools an account can use depends on what has been provisioned for it, so read the usable set from the seed-test options rather than assuming these are the only values.",
+    )] = None
+    engagement_profile: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
+    )] = None
+    regions: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Saved regions to place seeds in, as `regions[].value` names from `GET /v1/email/inbox-insights/seed-tests/configuration`. They are not checked against that list when saved.",
+        max_length=100,
+    )] = None
+
+
+class AutomaticSeedingSettingsUpdate(BaseModel):
+    "Replace automatic seeding settings. Omitted selections clear the saved values. Enabling requires a list type, engagement profile and at least one region. Preferences are not checked against available seed-test options. A stale revision returns a conflict without changing settings."
+    model_config = ConfigDict(extra="allow")
+    expected_revision: Annotated[int, Field(
+        description="Revision from the latest settings read, or zero for initial setup.",
+        examples=[0],
+        ge=0,
+    )]
+    enabled: Annotated[bool, Field(
+        description="Saved automatic-seeding preference.",
+        examples=[False],
+    )]
+    list_type: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which pool of seed addresses a test uses. Which pools an account can use depends on what has been provisioned for it, so read the usable set from the seed-test options rather than assuming these are the only values.",
+    )] = None
+    engagement_profile: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
+    )] = None
+    regions: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Regions to place seeds in. Use `regions[].value` exactly as returned by `GET /v1/email/inbox-insights/seed-tests/configuration` for the sending domain your examples come from. Whitespace-only names are rejected, but names are not checked against that list when saved; a name it does not offer makes a later run end with `selection_unavailable`.",
+        max_length=100,
+    )] = None
+
+
+class AutomaticSeedingRotate(BaseModel):
+    "Rotate the trigger address once at the supplied settings revision. Settings must have been initialized by a successful settings update; rotation before setup returns 404. A stale revision returns 409 without rotating again."
+    model_config = ConfigDict(extra="allow")
+    expected_revision: Annotated[int, Field(
+        description="Revision from the latest settings read after initial setup. Revision zero from an unconfigured workspace cannot be used to rotate an address.",
+        examples=[1],
+        ge=0,
+    )]
+
+
+class AutomaticSeedingSourceKind(str, Enum):
+    api = "api"
+    smtp = "smtp"
+    scheduled = "scheduled"
+    broadcast = "broadcast"
+
+
+class AutomaticSeedingRunState(str, Enum):
+    pending = "pending"
+    registering = "registering"
+    registration_uncertain = "registration_uncertain"
+    ready = "ready"
+    dispatching = "dispatching"
+    dispatch_complete = "dispatch_complete"
+    stopped = "stopped"
+    failed = "failed"
+
+
+class AutomaticSeedingRunID(RootModel[str]):
+    root: str
+
+
+class AutomaticSeedingEmailSourceKind(str, Enum):
+    api = "api"
+    smtp = "smtp"
+    scheduled = "scheduled"
+
+
+class AutomaticSeedingEmailSource(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    kind: Annotated[AutomaticSeedingEmailSourceKind, Field(
+        description="Original source kind for this reference.",
+    )]
+    email_id: Annotated[str, Field(
+        examples=["em_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^em_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class AutomaticSeedingBroadcastSource(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    kind: Annotated[Literal["broadcast"], Field(
+        description="Original source kind for this reference.",
+    )]
+    broadcast_id: Annotated[str, Field(
+        examples=["eb_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+
+
+class AutomaticSeedingSource(RootModel[AutomaticSeedingEmailSource | AutomaticSeedingBroadcastSource]):
+    root: AutomaticSeedingEmailSource | AutomaticSeedingBroadcastSource
+
+
+class AutomaticSeedingTriggerLabel(RootModel[str]):
+    root: str
+
+
+class AutomaticSeedingProgress(BaseModel):
+    "Delivered, failed, not_sent, unknown and pending partition planned copies. Admitted and provider_accepted overlap those buckets and must not be added to them. Late outcomes can move a copy between buckets."
+    model_config = ConfigDict(extra="allow")
+    planned: Annotated[int, Field(
+        description="Number of retained planned copies.",
+        ge=0,
+    )]
+    admitted: Annotated[int, Field(
+        description="Copies admitted to Bird email processing. Independent milestone; not provider acceptance.",
+        ge=0,
+    )]
+    provider_accepted: Annotated[int, Field(
+        description="Copies explicitly accepted by the sending provider. Independent milestone; not delivery or placement.",
+        ge=0,
+    )]
+    delivered: Annotated[int, Field(
+        description="Copies with receiving-server delivery or complaint evidence. Does not establish inbox placement.",
+        ge=0,
+    )]
+    failed: Annotated[int, Field(
+        description="Copies with terminal bounce, rejection or block evidence.",
+        ge=0,
+    )]
+    not_sent: Annotated[int, Field(
+        description="Copies refused or canceled before sending, including ungranted copies after a run fence.",
+        ge=0,
+    )]
+    unknown: Annotated[int, Field(
+        description="Copies with unresolved admission or provider outcome uncertainty.",
+        ge=0,
+    )]
+    pending: Annotated[int, Field(
+        description="Remaining copies awaiting admission or a delivery outcome.",
+        ge=0,
+    )]
+
+
+class AutomaticSeedingReason(str, Enum):
+    registration_rejected = "registration_rejected"
+    allowance_exhausted = "allowance_exhausted"
+    selection_unavailable = "selection_unavailable"
+    sending_domain_not_measured = "sending_domain_not_measured"
+    vendor_outcome_unknown = "vendor_outcome_unknown"
+    invalid_registration_response = "invalid_registration_response"
+    canceled_or_expired = "canceled_or_expired"
+    run_stopped = "run_stopped"
+    settings_disabled = "settings_disabled"
+    trigger_rotated = "trigger_rotated"
+    dispatch_deadline_exceeded = "dispatch_deadline_exceeded"
+    control_rejected = "control_rejected"
+    source_stopped = "source_stopped"
+    conflicting_examples = "conflicting_examples"
+    unsupported_source = "unsupported_source"
+    mixed_recipients = "mixed_recipients"
+    invalid_trigger = "invalid_trigger"
+    seeding_unavailable = "seeding_unavailable"
+    contact_template_unsupported = "contact_template_unsupported"
+    source_not_authorized = "source_not_authorized"
+    content_blocked = "content_blocked"
+    capture_expired = "capture_expired"
+    capture_failed = "capture_failed"
+    preparation_unavailable = "preparation_unavailable"
+    policy_refused = "policy_refused"
+    unavailable = "unavailable"
+    bounced = "bounced"
+    rejected = "rejected"
+    blocked = "blocked"
+    canceled = "canceled"
+    provider_outcome_unknown = "provider_outcome_unknown"
+    admission_uncertain = "admission_uncertain"
+    admission_refused = "admission_refused"
+
+
+class AutomaticSeedingIssue(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    code: Annotated[Annotated[Union[AutomaticSeedingReason, str], Field(union_mode="left_to_right")], Field(
+        description="A reason for a run or source outcome, or a seed-copy delivery or admission outcome.\n\n- `registration_rejected` means the seed-list registration was refused; no seed plan was created.\n- `allowance_exhausted` means the organization's seed-test allowance for this billing period was used up before registration; no seed plan was created.\n- `selection_unavailable` means the saved seed-list type, engagement profile or region is no longer offered for the sending domain; no seed plan was created.\n- `sending_domain_not_measured` means Inbox Insights is not measuring the example's sending domain; no seed plan was created.\n- `vendor_outcome_unknown` means the seed-list registration result is unknown; automatic registration retries are stopped and investigation is required.\n- `invalid_registration_response` means the returned seed list could not be used; no copies will be sent from that response.\n- `canceled_or_expired` means new seed admissions stopped because the run was canceled or its eligibility expired.\n- `run_stopped` means a stop request ended future seed admissions; already granted copies may still send.\n- `settings_disabled` means automatic seeding was disabled before the copy was granted.\n- `trigger_rotated` means the run's cancellation generation changed before the copy was granted, either through trigger rotation or disabling seeding. Re-enabling does not advance the generation or undo that fence. This code alone does not establish that the trigger address changed.\n- `dispatch_deadline_exceeded` means the deadline for admitting this copy passed.\n- `control_rejected` means the trigger message was rejected.\n- `source_stopped` means the original source no longer authorizes seed sending.\n- `conflicting_examples` means the source contained conflicting examples, so none was selected.\n- `unsupported_source` means capture is unavailable for this source type.\n- `mixed_recipients` means the original message did not have exactly one recipient consisting of the trigger address.\n- `invalid_trigger` means the trigger address was invalid or no longer valid for this workspace.\n- `seeding_unavailable` means automatic-seeding capture was unavailable for this source.\n- `contact_template_unsupported` means the source template uses contact values that this capture path cannot freeze.\n- `source_not_authorized` means the source failed sending authorization during capture or registration.\n- `content_blocked` means the source content was rejected before capture.\n- `capture_expired` means the example capture deadline passed.\n- `capture_failed` means the example could not be captured.\n- `preparation_unavailable` means the frozen example could not be used for registration or preparation of a seed copy.\n- `policy_refused` means the seed copy failed sending-policy checks.\n- `unavailable` means a more specific reason cannot be shown.\n- `bounced` means the seed copy received a bounce outcome.\n- `rejected` means the seed copy received a rejection outcome.\n- `blocked` means the seed copy was blocked from sending.\n- `canceled` means the seed copy was canceled before sending.\n- `provider_outcome_unknown` means a provider submission may have occurred, but its result is unknown; the copy is not automatically resent.\n- `admission_uncertain` means the seed copy may have entered sending, but admission is unconfirmed; it is not automatically admitted again.\n- `admission_refused` means the seed copy was refused before entering sending.",
+    )]
+    count: Annotated[int, Field(ge=1)]
+
+
+class AutomaticSeedingRun(BaseModel):
+    "Retained run metadata. `created_at` records run intent creation; `updated_at` records run metadata changes, not every delivery outcome. `label` is omitted when the trigger address carried none."
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["esrun_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esrun_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    state: Annotated[AutomaticSeedingRunState, Field(
+        description="Execution state, separate from delivery and inbox placement:\n- `pending`: the run is recorded and registration has not started.\n- `registering`: registration is in progress. A stop request can coexist with an in-flight registration.\n- `registration_uncertain`: the registration result is unknown. Registration is not automatically repeated, and uncertainty remains visible after a stop.\n- `ready`: registration has produced a retained seed plan; dispatch scheduling has not started.\n- `dispatching`: the scheduler is admitting planned copies or recovering earlier handoffs.\n- `dispatch_complete`: scheduler work is acknowledged. Uncertain admission and pending delivery can remain.\n- `stopped`: new admissions are closed by a stop request, settings or trigger changes, or the dispatch deadline. Already granted copies may still send.\n- `failed`: registration failed or the source control was refused. New admissions cannot proceed; retained progress describes any copies already granted.\nInspect progress and stop_requested_at alongside this state. A terminal run state does not recall previously granted or queued copies.",
+    )]
+    source: Annotated[AutomaticSeedingSource, Field(
+        description="Original customer source. This never identifies a generated seed copy. Scheduled means an API-scheduled email.",
+    )]
+    label: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Label from a trigger address, such as `spring-launch` in `<token>+spring-launch@...`. It is a display name and selects nothing.",
+        max_length=32,
+        min_length=1,
+        pattern="^[a-z0-9_-]+$",
+    )] = None
+    source_created_at: Annotated[str, Field(
+        description="Original source execution time.",
+        min_length=1,
+    )]
+    retain_until: Annotated[str, Field(
+        description="Time after which this run is no longer available.",
+        min_length=1,
+    )]
+    progress: Annotated[AutomaticSeedingProgress, Field(
+        description="Delivered, failed, not_sent, unknown and pending partition planned copies. Admitted and provider_accepted overlap those buckets and must not be added to them. Late outcomes can move a copy between buckets.",
+    )]
+    sending_domain: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Present after registration establishes the sending domain.",
+    )] = None
+    list_type: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedListType, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which pool of seed addresses a test uses. Which pools an account can use depends on what has been provisioned for it, so read the usable set from the seed-test options rather than assuming these are the only values.",
+    )] = None
+    engagement_profile: Annotated[Optional[Annotated[Union[EmailInboxInsightsSeedEngagementProfile, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Which engagement behaviour the seed addresses simulate. `all` mixes engaged and dormant seeds, which is what makes an engagement split measurable; single-cohort profiles exist too, and the usable set comes from the seed-test options rather than from this list.",
+    )] = None
+    regions: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Regions frozen at run admission.",
+        max_length=100,
+    )] = None
+    registration_started_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Registration admission time.",
+    )] = None
+    registration_finished_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Time the registration response was persisted.",
+    )] = None
+    dispatch_deadline: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Fixed deadline for new seed admissions.",
+    )] = None
+    dispatch_finished_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Time scheduler work completed; uncertain admission or delivery may remain.",
+    )] = None
+    stop_requested_at: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="First durable stop, whether requested explicitly or imposed automatically. Already granted copies may still send.",
+    )] = None
+    reason: Annotated[Optional[Annotated[Union[AutomaticSeedingReason, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="A reason for a run or source outcome, or a seed-copy delivery or admission outcome.\n\n- `registration_rejected` means the seed-list registration was refused; no seed plan was created.\n- `allowance_exhausted` means the organization's seed-test allowance for this billing period was used up before registration; no seed plan was created.\n- `selection_unavailable` means the saved seed-list type, engagement profile or region is no longer offered for the sending domain; no seed plan was created.\n- `sending_domain_not_measured` means Inbox Insights is not measuring the example's sending domain; no seed plan was created.\n- `vendor_outcome_unknown` means the seed-list registration result is unknown; automatic registration retries are stopped and investigation is required.\n- `invalid_registration_response` means the returned seed list could not be used; no copies will be sent from that response.\n- `canceled_or_expired` means new seed admissions stopped because the run was canceled or its eligibility expired.\n- `run_stopped` means a stop request ended future seed admissions; already granted copies may still send.\n- `settings_disabled` means automatic seeding was disabled before the copy was granted.\n- `trigger_rotated` means the run's cancellation generation changed before the copy was granted, either through trigger rotation or disabling seeding. Re-enabling does not advance the generation or undo that fence. This code alone does not establish that the trigger address changed.\n- `dispatch_deadline_exceeded` means the deadline for admitting this copy passed.\n- `control_rejected` means the trigger message was rejected.\n- `source_stopped` means the original source no longer authorizes seed sending.\n- `conflicting_examples` means the source contained conflicting examples, so none was selected.\n- `unsupported_source` means capture is unavailable for this source type.\n- `mixed_recipients` means the original message did not have exactly one recipient consisting of the trigger address.\n- `invalid_trigger` means the trigger address was invalid or no longer valid for this workspace.\n- `seeding_unavailable` means automatic-seeding capture was unavailable for this source.\n- `contact_template_unsupported` means the source template uses contact values that this capture path cannot freeze.\n- `source_not_authorized` means the source failed sending authorization during capture or registration.\n- `content_blocked` means the source content was rejected before capture.\n- `capture_expired` means the example capture deadline passed.\n- `capture_failed` means the example could not be captured.\n- `preparation_unavailable` means the frozen example could not be used for registration or preparation of a seed copy.\n- `policy_refused` means the seed copy failed sending-policy checks.\n- `unavailable` means a more specific reason cannot be shown.\n- `bounced` means the seed copy received a bounce outcome.\n- `rejected` means the seed copy received a rejection outcome.\n- `blocked` means the seed copy was blocked from sending.\n- `canceled` means the seed copy was canceled before sending.\n- `provider_outcome_unknown` means a provider submission may have occurred, but its result is unknown; the copy is not automatically resent.\n- `admission_uncertain` means the seed copy may have entered sending, but admission is unconfirmed; it is not automatically admitted again.\n- `admission_refused` means the seed copy was refused before entering sending.",
+    )] = None
+    issues: Annotated[List[AutomaticSeedingIssue], Field(
+        description="Counts of sanitized terminal or uncertain copy outcomes. No seed addresses or provider error text. Counts overlap the progress buckets.",
+    )]
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class AutomaticSeedingRunList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[AutomaticSeedingRun]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
+        ge=0,
+    )] = None
+
+
+class AutomaticSeedingSourceState(str, Enum):
+    scheduled = "scheduled"
+    capturing = "capturing"
+    captured = "captured"
+    skipped = "skipped"
+    stopped = "stopped"
+    failed = "failed"
+
+
+class AutomaticSeedingSourceObservation(BaseModel):
+    "Retained capture observation. `created_at` records observation creation; `updated_at` records the last capture observation change. `label` is omitted when the trigger address carried none."
+    model_config = ConfigDict(extra="allow")
+    source: Annotated[AutomaticSeedingSource, Field(
+        description="Original customer source. This never identifies a generated seed copy. Scheduled means an API-scheduled email.",
+    )]
+    source_created_at: Annotated[str, Field(
+        description="Original source execution time.",
+        min_length=1,
+    )]
+    retain_until: Annotated[str, Field(
+        description="Time after which the observation is unavailable.",
+        min_length=1,
+    )]
+    state: Annotated[AutomaticSeedingSourceState, Field(
+        description="State of the source example, separate from the run's sending progress:\n- `scheduled`: the API-scheduled source is waiting for its due time; capture has not started.\n- `capturing`: capture is in progress and can already have an associated run.\n- `captured`: immutable example content was committed for a run; this does not mean seeds were sent.\n- `skipped`: the source did not complete eligible capture. The reason explains the refusal; a run can exist if refusal occurred after admission.\n- `stopped`: the scheduled source was canceled; capture will not continue.\n- `failed`: the scheduled source failed; capture will not continue.\nSource observations can exist without a run. run_id is present only while an associated run is retained.",
+    )]
+    reason: Annotated[Optional[Annotated[Union[AutomaticSeedingReason, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="A reason for a run or source outcome, or a seed-copy delivery or admission outcome.\n\n- `registration_rejected` means the seed-list registration was refused; no seed plan was created.\n- `allowance_exhausted` means the organization's seed-test allowance for this billing period was used up before registration; no seed plan was created.\n- `selection_unavailable` means the saved seed-list type, engagement profile or region is no longer offered for the sending domain; no seed plan was created.\n- `sending_domain_not_measured` means Inbox Insights is not measuring the example's sending domain; no seed plan was created.\n- `vendor_outcome_unknown` means the seed-list registration result is unknown; automatic registration retries are stopped and investigation is required.\n- `invalid_registration_response` means the returned seed list could not be used; no copies will be sent from that response.\n- `canceled_or_expired` means new seed admissions stopped because the run was canceled or its eligibility expired.\n- `run_stopped` means a stop request ended future seed admissions; already granted copies may still send.\n- `settings_disabled` means automatic seeding was disabled before the copy was granted.\n- `trigger_rotated` means the run's cancellation generation changed before the copy was granted, either through trigger rotation or disabling seeding. Re-enabling does not advance the generation or undo that fence. This code alone does not establish that the trigger address changed.\n- `dispatch_deadline_exceeded` means the deadline for admitting this copy passed.\n- `control_rejected` means the trigger message was rejected.\n- `source_stopped` means the original source no longer authorizes seed sending.\n- `conflicting_examples` means the source contained conflicting examples, so none was selected.\n- `unsupported_source` means capture is unavailable for this source type.\n- `mixed_recipients` means the original message did not have exactly one recipient consisting of the trigger address.\n- `invalid_trigger` means the trigger address was invalid or no longer valid for this workspace.\n- `seeding_unavailable` means automatic-seeding capture was unavailable for this source.\n- `contact_template_unsupported` means the source template uses contact values that this capture path cannot freeze.\n- `source_not_authorized` means the source failed sending authorization during capture or registration.\n- `content_blocked` means the source content was rejected before capture.\n- `capture_expired` means the example capture deadline passed.\n- `capture_failed` means the example could not be captured.\n- `preparation_unavailable` means the frozen example could not be used for registration or preparation of a seed copy.\n- `policy_refused` means the seed copy failed sending-policy checks.\n- `unavailable` means a more specific reason cannot be shown.\n- `bounced` means the seed copy received a bounce outcome.\n- `rejected` means the seed copy received a rejection outcome.\n- `blocked` means the seed copy was blocked from sending.\n- `canceled` means the seed copy was canceled before sending.\n- `provider_outcome_unknown` means a provider submission may have occurred, but its result is unknown; the copy is not automatically resent.\n- `admission_uncertain` means the seed copy may have entered sending, but admission is unconfirmed; it is not automatically admitted again.\n- `admission_refused` means the seed copy was refused before entering sending.",
+    )] = None
+    run_id: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        examples=["esrun_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^esrun_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
+    label: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Label from a trigger address, such as `spring-launch` in `<token>+spring-launch@...`. It is a display name and selects nothing.",
+        max_length=32,
+        min_length=1,
+        pattern="^[a-z0-9_-]+$",
+    )] = None
+    created_at: Annotated[str, Field(examples=["2026-05-20T09:14:52Z"], min_length=1)]
+    updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
+
+
+class AutomaticSeedingSourceList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: List[AutomaticSeedingSourceObservation]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+    total: Annotated[Optional[int], Field(
+        description="Total number of items matching the request's filters across all pages. Present only when `include_total=true` was passed, and omitted otherwise.",
+        ge=0,
+    )] = None
 
 
 class EmailInboxInsightsSeedTestRow(BaseModel):
@@ -23452,7 +23996,7 @@ class EmailThreadWritableFolder(str, Enum):
 
 
 class EmailThreadLabelsUpdate(BaseModel):
-    "Custom labels to add or remove, or the full set to replace them with. Send `set` on its own; combining it with `add` or `remove` returns 422. System names are refused; use read and folder for thread state. Reserved names are refused too, except a label the conversation already carries from before its name was reserved, which can still be removed, and kept in a `set` in any casing. The resulting custom-label set must contain at most 20 labels; larger sets return 422. A custom name added or set that the workspace does not have yet becomes a workspace label that stays after it is removed from every conversation; once the workspace has 100 labels, a write that would create one more is refused with `E17058`. Custom label names match the workspace's labels in any casing, so adding `Urgent` where the workspace has `urgent` applies `urgent`, and responses return the workspace's spelling."
+    "Custom labels to add or remove, or the full set to replace them with. Send `set` on its own; combining it with `add` or `remove` returns 422. System names are refused; use read and folder for thread state. Reserved names are refused too, except a label the conversation already carries from before its name was reserved, which can still be removed, and kept in a `set` in any casing. The resulting custom-label set must contain at most 20 labels; larger sets return 422. A custom name added or set that the workspace does not have yet becomes a workspace label that stays after it is removed from every conversation; once the workspace has 100 labels, a write that would create one more is refused with `E17057`. Custom label names match the workspace's labels in any casing, so adding `Urgent` where the workspace has `urgent` applies `urgent`, and responses return the workspace's spelling."
     model_config = ConfigDict(extra="allow")
     add: Annotated[Optional[List[str]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -23484,7 +24028,7 @@ class EmailThreadUpdateRequest(BaseModel):
     )] = None
     labels: Annotated[Optional[EmailThreadLabelsUpdate], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Custom labels to add or remove, or the full set to replace them with. Send `set` on its own; combining it with `add` or `remove` returns 422. System names are refused; use read and folder for thread state. Reserved names are refused too, except a label the conversation already carries from before its name was reserved, which can still be removed, and kept in a `set` in any casing. The resulting custom-label set must contain at most 20 labels; larger sets return 422. A custom name added or set that the workspace does not have yet becomes a workspace label that stays after it is removed from every conversation; once the workspace has 100 labels, a write that would create one more is refused with `E17058`. Custom label names match the workspace's labels in any casing, so adding `Urgent` where the workspace has `urgent` applies `urgent`, and responses return the workspace's spelling.",
+        description="Custom labels to add or remove, or the full set to replace them with. Send `set` on its own; combining it with `add` or `remove` returns 422. System names are refused; use read and folder for thread state. Reserved names are refused too, except a label the conversation already carries from before its name was reserved, which can still be removed, and kept in a `set` in any casing. The resulting custom-label set must contain at most 20 labels; larger sets return 422. A custom name added or set that the workspace does not have yet becomes a workspace label that stays after it is removed from every conversation; once the workspace has 100 labels, a write that would create one more is refused with `E17057`. Custom label names match the workspace's labels in any casing, so adding `Urgent` where the workspace has `urgent` applies `urgent`, and responses return the workspace's spelling.",
     )] = None
     contact_id: Annotated[Optional[str], Field(
         description="Contact to link this conversation to, or null to unlink the current contact.",
@@ -23911,32 +24455,6 @@ class EmailMailboxComposeRequest(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="When scheduled_at is set, cancel if an inbound message arrives in the conversation before dispatch is claimed. Defaults to false: the frozen parent, recipients and content are sent unchanged even if new mail arrives.",
     )] = None
-
-
-class EmailMailboxLabelType(str, Enum):
-    system = "system"
-    custom = "custom"
-
-
-class EmailMailboxLabel(BaseModel):
-    "One label available in a mailbox."
-    model_config = ConfigDict(extra="allow")
-    name: Annotated[str, Field(
-        description="The label name, as it appears on conversations and messages.",
-        examples=["inbox"],
-        max_length=64,
-        min_length=1,
-    )]
-    type: Annotated[EmailMailboxLabelType, Field(
-        description="`system` labels are the built-in placements a message can be in:\n\n- Inbox.\n- Archive.\n- Spam.\n- Blocked.\n- Sent.\n- Trash.\n- Unread.\n\n`custom` labels are the workspace's own tags.",
-        min_length=1,
-    )]
-
-
-class EmailMailboxLabelList(BaseModel):
-    "The labels available in a mailbox."
-    model_config = ConfigDict(extra="allow")
-    data: List[EmailMailboxLabel]
 
 
 class WebhookSortField(str, Enum):

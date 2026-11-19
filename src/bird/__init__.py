@@ -20,6 +20,7 @@ from bird._generated import (
     AssetUploadSessionState,
 )
 from bird.resources.assets_uploads_gen import AssetUploadFile, AssetsUploadsCreateParams
+from bird.resources.labels_gen import LabelsCreateParams, LabelsUpdateParams
 from bird.resources.organization_workspaces_gen import (
     OrganizationWorkspacesCreateParams,
     OrganizationWorkspacesListParams,
@@ -184,6 +185,8 @@ from bird._generated import (
     EmailStatsResponse,
     EmailStatsSummary,
     EmailStatsTagsResponse,
+    Label,
+    LabelList,
     Preference,
     PreferenceList,
     PreferenceWriteResult,
@@ -587,6 +590,7 @@ from bird._generated import (
 from bird._open_enums import (
     AssetKind,
     AssetReferenceUsage,
+    AutomaticSeedingReason,
     EsimActionName,
     EsimActionUnavailableReason,
     AMBBusinessAccountReviewStatus,
@@ -763,7 +767,24 @@ from bird.resources.email_inbox_insights_gen import (
     EmailInboxInsightsSpamTrapsParams,
     EmailInboxInsightsBlocklistsParams,
 )
+from bird.resources.email_seeding_address_gen import (
+    EmailSeedingAddressRotateParams,
+)
+from bird.resources.email_seeding_runs_gen import (
+    EmailSeedingRunsListParams,
+)
+from bird.resources.email_seeding_settings_gen import (
+    EmailSeedingSettingsUpdateParams,
+)
+from bird.resources.email_seeding_sources_gen import (
+    EmailSeedingSourcesListParams,
+)
 from bird._generated import (
+    AutomaticSeedingRotate,
+    AutomaticSeedingRun,
+    AutomaticSeedingSettings,
+    AutomaticSeedingSettingsUpdate,
+    AutomaticSeedingSourceObservation,
     EmailCompetitiveBrandProfile,
     EmailCompetitiveBrandSearchResults,
     EmailCompetitiveCampaign,
@@ -818,6 +839,7 @@ __all__ = [
     "AssetUploadSessionPrepared",
     "AssetKind",
     "AssetReferenceUsage",
+    "AutomaticSeedingReason",
     "AMBBusinessAccount",
     "AMBBusinessAccountCreate",
     "AMBBusinessAccountEvent",
@@ -1023,6 +1045,15 @@ __all__ = [
     "EmailInboxInsightsSeedTestsCreateParams",
     "EmailInboxInsightsSeedTestsListParams",
     "EmailInboxInsightsSeedTestsConfigurationGetParams",
+    "EmailSeedingAddressRotateParams",
+    "EmailSeedingRunsListParams",
+    "EmailSeedingSettingsUpdateParams",
+    "EmailSeedingSourcesListParams",
+    "AutomaticSeedingRotate",
+    "AutomaticSeedingRun",
+    "AutomaticSeedingSettings",
+    "AutomaticSeedingSettingsUpdate",
+    "AutomaticSeedingSourceObservation",
 
     "Bird",
     "AsyncBird",
@@ -1180,6 +1211,10 @@ __all__ = [
     "PhoneNumberLookup",
     "LookupEmailParams",
     "LookupPhoneNumberParams",
+    "Label",
+    "LabelList",
+    "LabelsCreateParams",
+    "LabelsUpdateParams",
     "Preference",
     "PreferenceList",
     "PreferenceCreateParams",

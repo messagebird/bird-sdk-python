@@ -7,7 +7,6 @@ from typing import Any, TypedDict
 from urllib.parse import quote
 
 from bird._generated import (
-    EmailMailboxLabelList,
     Mailbox,
     MailboxCreate,
     MailboxStatsResponse,
@@ -289,27 +288,6 @@ class EmailMailboxesBase(Resource):
             options,
         )
 
-    def labels(
-        self,
-        mailbox_id: str,
-        *,
-        options: RequestOptions | None = None,
-    ) -> EmailMailboxLabelList:
-        """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in the workspace, which all its mailboxes share.
-
-        ```python
-        labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-        for label in labels.data:
-            print(label.name)
-        ```
-        """
-        return self._get(
-            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/labels",
-            {},
-            EmailMailboxLabelList,
-            options,
-        )
-
 
 class AsyncEmailMailboxesBase(AsyncResource):
     def list(
@@ -532,26 +510,5 @@ class AsyncEmailMailboxesBase(AsyncResource):
                 "granularity": granularity,
             },
             MailboxStatsResponse,
-            options,
-        )
-
-    async def labels(
-        self,
-        mailbox_id: str,
-        *,
-        options: RequestOptions | None = None,
-    ) -> EmailMailboxLabelList:
-        """List the labels available in a mailbox: the built-in system labels (inbox, archive, spam, blocked, sent, trash, unread) plus every custom label in the workspace, which all its mailboxes share.
-
-        ```python
-        labels = await client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-        for label in labels.data:
-            print(label.name)
-        ```
-        """
-        return await self._get(
-            f"/v1/email/mailboxes/{quote(mailbox_id, safe='')}/labels",
-            {},
-            EmailMailboxLabelList,
             options,
         )

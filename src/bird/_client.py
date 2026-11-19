@@ -45,6 +45,7 @@ from bird.resources.compliance_submissions_gen import AsyncComplianceSubmissions
 from bird.resources.numbers import AsyncNumbers, Numbers
 from bird.resources.broadcasts import AsyncBroadcasts, Broadcasts
 from bird.resources.assets import Assets, AsyncAssets
+from bird.resources.labels_gen import AsyncLabels, Labels
 from bird.resources.preferences import AsyncPreferences, Preferences
 from bird.resources.organization import AsyncOrganizationResource, OrganizationResource
 from bird.resources.workspace import AsyncWorkspaceResource, WorkspaceResource
@@ -283,6 +284,7 @@ class Bird(SyncAPIClient):
         self.sms_senders = SmsSenders(self)
         self.compliance_document_templates = ComplianceDocumentTemplates(self)
         self.preferences = Preferences(self)
+        self.labels = Labels(self)
         self.broadcasts = Broadcasts(self, email_defaults)
         self.workspace = WorkspaceResource(self)
         self.organization = OrganizationResource(self)
@@ -441,6 +443,7 @@ class AsyncBird(AsyncAPIClient):
         self.sms_senders = AsyncSmsSenders(self)
         self.compliance_document_templates = AsyncComplianceDocumentTemplates(self)
         self.preferences = AsyncPreferences(self)
+        self.labels = AsyncLabels(self)
         self.broadcasts = AsyncBroadcasts(self, email_defaults)
         self.workspace = AsyncWorkspaceResource(self)
         self.organization = AsyncOrganizationResource(self)

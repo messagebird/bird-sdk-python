@@ -21,6 +21,7 @@ from bird.resources.email_threads import AsyncEmailThreads, EmailThreads
 from bird.resources.email_templates import AsyncEmailTemplates, EmailTemplates
 from bird.resources.email_competitive import AsyncEmailCompetitive, EmailCompetitive
 from bird.resources.email_inbox_insights import AsyncEmailInboxInsights, EmailInboxInsights
+from bird.resources.email_seeding import AsyncEmailSeeding, EmailSeeding
 from bird.resources.email_stats_gen import AsyncEmailStats, EmailStats
 from bird._types import (
     Attachment,
@@ -187,6 +188,7 @@ class Email(EmailBase):
         self.threads = EmailThreads(client)
         self.competitive = EmailCompetitive(client)
         self.inbox_insights = EmailInboxInsights(client)
+        self.seeding = EmailSeeding(client)
 
     @property
     def with_raw_response(self) -> "EmailWithRawResponse":
@@ -369,6 +371,7 @@ class AsyncEmail(AsyncEmailBase):
         self.threads = AsyncEmailThreads(client)
         self.competitive = AsyncEmailCompetitive(client)
         self.inbox_insights = AsyncEmailInboxInsights(client)
+        self.seeding = AsyncEmailSeeding(client)
 
     @property
     def with_raw_response(self) -> "AsyncEmailWithRawResponse":

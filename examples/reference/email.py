@@ -189,12 +189,6 @@ def mailbox_stats() -> None:
     print(stats.summary)
 
 
-def mailbox_labels() -> None:
-    labels = client.email.mailboxes.labels("mbx_01krdgeqcxet5s7t44vh8rt9mg")
-    for label in labels.data:
-        print(label.name)
-
-
 def mailbox_update() -> None:
     mailbox = client.email.mailboxes.update(
         "mbx_01krdgeqcxet5s7t44vh8rt9mg", name="Billing"
@@ -584,3 +578,53 @@ def seed_tests_create() -> None:
 
     report = client.email.inbox_insights.seed_tests.create(sending_domain=sending_domain, list_type=pool.value, engagement_profile=profile.value, regions=[configuration.regions[0].value], options={"idempotency_key": idempotency_key})
     print(report.model_dump_json())
+
+
+def seeding_settings_get() -> None:
+    # Requires inbox_insights:read permission in the target workspace.
+    settings = client.email.seeding.settings.get()
+    print(settings.model_dump_json())
+
+
+def seeding_settings_update() -> None:
+    # Requires inbox_insights:write permission in the target workspace.
+    current = client.email.seeding.settings.get()
+    settings = client.email.seeding.settings.update(
+        expected_revision=current.revision,
+        enabled=True,
+        list_type="private",
+        engagement_profile="all",
+        regions=["North America - US"],
+    )
+    print(settings.model_dump_json())
+
+
+def seeding_address_rotate() -> None:
+    # Requires inbox_insights:write permission in the target workspace.
+    current = client.email.seeding.settings.get()
+    settings = client.email.seeding.address.rotate(expected_revision=current.revision)
+    print(settings.model_dump_json())
+
+
+def seeding_runs_list() -> None:
+    # Requires inbox_insights:read permission in the target workspace.
+    for run in client.email.seeding.runs.list(source_email_id="em_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(run.model_dump_json())
+
+
+def seeding_runs_get() -> None:
+    # Requires inbox_insights:read permission in the target workspace.
+    run = client.email.seeding.runs.get("esrun_01krdgeqcxet5s7t44vh8rt9mg")
+    print(run.model_dump_json())
+
+
+def seeding_runs_cancel() -> None:
+    # Requires inbox_insights:write permission in the target workspace.
+    run = client.email.seeding.runs.cancel("esrun_01krdgeqcxet5s7t44vh8rt9mg")
+    print(run.model_dump_json())
+
+
+def seeding_sources_list() -> None:
+    # Requires inbox_insights:read permission in the target workspace.
+    for source in client.email.seeding.sources.list(source_email_id="em_01krdgeqcxet5s7t44vh8rt9mg"):
+        print(source.model_dump_json())
