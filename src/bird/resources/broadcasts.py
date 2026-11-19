@@ -277,8 +277,8 @@ class Broadcasts(BroadcastsBase):
         it has to be an exact match for a language on the published version, so
         ``fr-CA`` does not select ``fr``.
 
-        ``brand_id`` is preview business selection. Omitted or ``None`` uses
-        the default Brand at first scheduling or sending when available.
+        ``brand_id`` selects the Brand. Omitted or ``None`` uses
+        the workspace default Brand at first scheduling or sending.
 
         ```python
         broadcast = client.broadcasts.create(
@@ -383,9 +383,8 @@ class Broadcasts(BroadcastsBase):
         the template's current published version without saving anything or
         evaluating recipients. ``template`` takes the same ``language``,
         ``parameters`` and ``parameter_overrides`` an update would; omitted
-        arguments use what the broadcast already has. Preview ``brand_id`` selection
-        changes only this operation. Explicit IDs require selection to be enabled.
-        ``None`` selects the default when enabled or clears to unbranded otherwise.
+        arguments use what the broadcast already has. ``brand_id`` changes only
+        this operation. ``None`` selects the workspace default Brand.
         After ``brand_unavailable``, preview again with an available ID or ``None``
         and use the same override and fresh fingerprint for the test.
 

@@ -222,6 +222,18 @@ class Timezone(RootModel[str]):
     root: str
 
 
+class QuotaUnit(str, Enum):
+    count = "count"
+    bytes = "bytes"
+    days = "days"
+    microunits = "microunits"
+
+
+class QuotaType(str, Enum):
+    integer = "integer"
+    boolean = "boolean"
+
+
 class CurrencyCode(RootModel[str]):
     root: str
 
@@ -429,18 +441,6 @@ class WorkspaceRateLimit(BaseModel):
 class WorkspaceRateLimitList(BaseModel):
     model_config = ConfigDict(extra="allow")
     data: List[WorkspaceRateLimit]
-
-
-class QuotaUnit(str, Enum):
-    count = "count"
-    bytes = "bytes"
-    days = "days"
-    microunits = "microunits"
-
-
-class QuotaType(str, Enum):
-    integer = "integer"
-    boolean = "boolean"
 
 
 class WorkspaceQuotaKind(str, Enum):
@@ -3846,7 +3846,7 @@ class EmailMessage(BaseModel):
         description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4039,7 +4039,7 @@ class EmailMessageSendRequest(BaseModel):
         description="Send at this future time instead of immediately, at least 30 seconds and at most 30 days ahead; outside that range returns `422`. The message returns `accepted` and reads as `scheduled` until it sends, and the message cancel endpoint cancels it before then. Scheduled sends count against your plan's monthly scheduled-email allowance, and a send over it returns `422`. A stored template's published version, language and parameter values are pinned at acceptance, so a later publication does not change what sends; deleting the template before the message is due rejects it with `generation_failure`. Sender eligibility and send-volume allowance are checked again when it is due. Batch items take this field too, so one batch can mix scheduled and immediate messages.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Preview: selects the business whose email preferences and unsubscribe page apply; explicit input returns `422` when selection is unavailable. When selection is available, omission or null selects the workspace's default Brand. The selection stays fixed for scheduled sends and retries. An explicit ID must belong to this workspace and must not be archived. An unknown, foreign or archived Brand returns `422`. Omitted or null values preserve existing sending behavior while selection is unavailable.",
+        description="Selects the business whose email preferences and unsubscribe page apply; omission or null selects the workspace's default Brand. The selection stays fixed for scheduled sends and retries. An explicit ID must belong to this workspace and must not be archived. An unknown, foreign or archived Brand returns `422`.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4105,7 +4105,7 @@ class EmailMessageBatchItem(BaseModel):
         description="When this item is scheduled to send, for an item created with a future send time. Absent for an item that sends immediately.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4810,7 +4810,7 @@ class EmailBroadcast(BaseModel):
         description="Why a broadcast stopped because its template inputs could not be prepared or rendered. It names fields and contacts and never includes input or contact values.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -4932,7 +4932,7 @@ class EmailBroadcastCreateRequest(BaseModel):
         description="When to send the broadcast. It has to be at least 30 seconds and at most 365 days from now. It requires `send` to be true, so a `scheduled_at` on its own is refused rather than saved on the draft.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Preview: selects the business whose email preferences and unsubscribe page apply. Explicit selection returns `422` when unavailable. When available, omission or null selects the workspace's default Brand when the broadcast is first scheduled or sent. An explicit ID must belong to this workspace and be active; unknown, foreign or archived IDs return `422`. The selected Brand stays fixed through delivery and retries. Omitted or null input preserves existing sending behavior while selection is unavailable.",
+        description="Selects the business whose email preferences and unsubscribe page apply. Omission or null selects the workspace's default Brand when the broadcast is first scheduled or sent. An explicit ID must belong to this workspace and be active; unknown, foreign or archived IDs return `422`. The selected Brand stays fixed through delivery and retries.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5022,7 +5022,7 @@ class EmailBroadcastUpdateRequest(BaseModel):
         description="What kind of email this is. It decides two things: which suppressions apply, and whether we add an unsubscribe header.\n\n`marketing` is held back from every suppressed address and has the one-click unsubscribe headers. `transactional` still goes to addresses suppressed for a complaint or an unsubscribe, and has no unsubscribe header. Only use `transactional` for genuine operational mail such as a terms-of-service update or a service outage notice. Marketing content sent this way reaches people who have already unsubscribed from you.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Preview: changes the business whose email preferences and unsubscribe page apply while this broadcast is a draft. Omission keeps the selection; null clears it so the workspace's default Brand is selected at first scheduling or sending. Explicit selection returns `422` when unavailable or when the ID is unknown, belongs to another workspace or is archived. Changing the Brand on a scheduled broadcast returns `422`. Broadcasts that are no longer editable retain the existing `409` conflict response.",
+        description="Changes the business whose email preferences and unsubscribe page apply while this broadcast is a draft. Omission keeps the selection; null clears it so the workspace's default Brand is selected at first scheduling or sending. Explicit selection returns `422` when unavailable or when the ID is unknown, belongs to another workspace or is archived. Changing the Brand on a scheduled broadcast returns `422`. Broadcasts that are no longer editable retain the existing `409` conflict response.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5213,7 +5213,7 @@ class EmailBroadcastValidationRequest(BaseModel):
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Preview Brand selection. An explicit ID is unavailable until selection is enabled. Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null resolves the workspace default when selection is enabled; otherwise it clears the request's Brand to unbranded. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
+        description="Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null selects the workspace default Brand. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5306,7 +5306,7 @@ class EmailBroadcastPreviewRequest(BaseModel):
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Preview Brand selection. An explicit ID is unavailable until selection is enabled. Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null resolves the workspace default when selection is enabled; otherwise it clears the request's Brand to unbranded. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
+        description="Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null selects the workspace default Brand. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5384,7 +5384,7 @@ class EmailBroadcastTestRequest(BaseModel):
         description="Custom email headers as name and value pairs. Up to 25 of them, each value up to 998 characters.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Preview Brand selection. An explicit ID is unavailable until selection is enabled. Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null resolves the workspace default when selection is enabled; otherwise it clears the request's Brand to unbranded. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
+        description="Changes the Brand for this validation, preview or test only, without changing the saved broadcast. Null selects the workspace default Brand. Omission keeps a historical broadcast's saved identity. An unavailable saved Brand remains renderable with a brand_unavailable diagnostic. Before sending a test, preview again with an available ID or null, then send the same override and fresh preview_fingerprint. Explicit unavailable overrides return 422.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -5569,7 +5569,7 @@ class EmailBroadcastTestResult(BaseModel):
         description="When this message is scheduled to send, for a send created with a future send time. Absent for an immediate send. Stays set after the scheduled send fires.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -6107,7 +6107,7 @@ class Preference(BaseModel):
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business this email preference belongs to. Brand attribution is in preview.",
+        description="The business this email preference belongs to.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -6172,7 +6172,7 @@ class PreferenceIndividualCreate(BaseModel):
         description="When the person consented, on a `granted` statement. Required evidence when granting over a stored opt-out: the grant applies only if this is later than the opt-out it reverses. May not be in the future.",
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="Brand selection is in preview. Select the business for an email preference. Omitted or null selects the original business. Unsupported on other channels. An additional Brand supports non_transactional coverage only. Explicit selection returns 422 when unavailable. Existing opt-outs can be recorded for archived Brands; grants to archived Brands return 422. Consent grants for active additional Brands return 422 when unavailable. A Brand not found in this workspace returns 404.",
+        description="Select the business for an email preference. Omitted or null selects the original business. Unsupported on other channels. An additional Brand supports non_transactional coverage only. Existing opt-outs can be recorded for archived Brands; grants to archived Brands return 422. A Brand not found in this workspace returns 404.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25293,7 +25293,7 @@ class EventEmailAcceptedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25372,7 +25372,7 @@ class EventEmailBouncedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25445,7 +25445,7 @@ class EventEmailCanceledData(BaseModel):
         min_length=1,
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25516,7 +25516,7 @@ class EventEmailClickedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25600,7 +25600,7 @@ class EventEmailComplainedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25675,7 +25675,7 @@ class EventEmailDeferredData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25763,7 +25763,7 @@ class EventEmailDeliveredData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25834,7 +25834,7 @@ class EventEmailListUnsubscribedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25905,7 +25905,7 @@ class EventEmailOpenedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -25984,7 +25984,7 @@ class EventEmailOutOfBandBounceData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26076,7 +26076,7 @@ class EventEmailProcessedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26233,7 +26233,7 @@ class EventEmailRejectedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26288,7 +26288,7 @@ class EventEmailScheduledData(BaseModel):
         min_length=1,
     )] = None
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26364,7 +26364,7 @@ class EventEmailUnsubscribedData(BaseModel):
         pattern="^eb_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business whose email preferences and unsubscribe page apply. Brand attribution is in preview.",
+        description="The business whose email preferences and unsubscribe page apply.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26795,7 +26795,7 @@ class EventPreferenceDeletedData(BaseModel):
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business this email preference belongs to. Brand attribution is in preview.",
+        description="The business this email preference belongs to.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26853,7 +26853,7 @@ class EventPreferenceGrantedData(BaseModel):
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business this email preference belongs to. Brand attribution is in preview.",
+        description="The business this email preference belongs to.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
@@ -26911,7 +26911,7 @@ class EventPreferenceRevokedData(BaseModel):
         pattern="^con_[0-9a-hjkmnp-tv-z]{26}$",
     )]
     brand_id: Annotated[Optional[str], Field(
-        description="The business this email preference belongs to. Brand attribution is in preview.",
+        description="The business this email preference belongs to.",
         examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
         pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.144.1
+
+- Clarify Brand selection and default behavior in public API and SDK documentation.
+
 ## 0.144.0
 
 - The Apple Messages conversation authentication request gains an optional `template`, which names the sign-in message template to send in place of the business's sign-in message.
