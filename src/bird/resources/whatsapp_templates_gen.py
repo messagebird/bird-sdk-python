@@ -10,6 +10,7 @@ from bird._generated import (
     WhatsAppTemplate,
     WhatsAppTemplateCreate,
     WhatsAppTemplateDuplicate,
+    WhatsAppTemplateEvent,
     WhatsAppTemplateUpdate,
 )
 from bird._models import to_wire
@@ -60,6 +61,15 @@ class WhatsappTemplatesUpdateParams(TypedDict, total=False):
     default_language: str
     on_missing_language: str
     language_source_required: bool
+
+
+class WhatsappTemplatesListEventsParams(TypedDict, total=False):
+    """Query params for ``client.whatsapp.templates.list_events``. Every key is optional."""
+
+    language: str
+    limit: int
+    starting_after: str
+    ending_before: str
 
 
 class _WhatsappTemplatesDuplicateRequired(TypedDict):
@@ -244,6 +254,31 @@ class WhatsappTemplatesBase(Resource):
         ```
         """
         self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}", options)
+
+    def list_events(
+        self,
+        template_ref: str,
+        *,
+        language: str | None = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[WhatsAppTemplateEvent]:
+        """The history of a WhatsApp template's languages as a cursor page, newest first: each status WhatsApp gave a language, such as an approval, a rejection, a pause, or a reinstatement, and each change of its quality rating, since Bird began recording them. Pass `language` to read one language. Use it to see when Bird recorded a pause or a rating drop; `whatsapp.templates.get` gives only the current values. A repeated pause on a language that is still paused is listed only when WhatsApp reports it, so the count can be lower than the number of pauses WhatsApp applied. A Bird-managed template returns an empty page. An unknown template returns `404`.
+
+        ```python
+        for event in client.whatsapp.templates.list_events("order_update", language="en-US"):
+            print(event.created_at, event.type, event.summary)
+        ```
+        """
+        query = {
+            "language": language,
+            "limit": limit,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return SyncPage(self._client, f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/events", query, WhatsAppTemplateEvent, options)
 
     def duplicate(
         self,
@@ -451,6 +486,31 @@ class AsyncWhatsappTemplatesBase(AsyncResource):
         ```
         """
         await self._delete(f"/v1/whatsapp/templates/{quote(template_ref, safe='')}", options)
+
+    def list_events(
+        self,
+        template_ref: str,
+        *,
+        language: str | None = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[WhatsAppTemplateEvent]:
+        """The history of a WhatsApp template's languages as a cursor page, newest first: each status WhatsApp gave a language, such as an approval, a rejection, a pause, or a reinstatement, and each change of its quality rating, since Bird began recording them. Pass `language` to read one language. Use it to see when Bird recorded a pause or a rating drop; `whatsapp.templates.get` gives only the current values. A repeated pause on a language that is still paused is listed only when WhatsApp reports it, so the count can be lower than the number of pauses WhatsApp applied. A Bird-managed template returns an empty page. An unknown template returns `404`.
+
+        ```python
+        async for event in client.whatsapp.templates.list_events("order_update", language="en-US"):
+            print(event.created_at, event.type, event.summary)
+        ```
+        """
+        query = {
+            "language": language,
+            "limit": limit,
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+        }
+        return AsyncPage(self._client, f"/v1/whatsapp/templates/{quote(template_ref, safe='')}/events", query, WhatsAppTemplateEvent, options)
 
     async def duplicate(
         self,

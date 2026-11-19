@@ -132,6 +132,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/whatsapp/messages/{message_id}/media/{media_id}": {"get"},
     "/v1/whatsapp/templates": {"get", "post"},
     "/v1/whatsapp/templates/{template_ref}": {"delete", "get", "patch"},
+    "/v1/whatsapp/templates/{template_ref}/events": {"get"},
     "/v1/whatsapp/templates/{template_ref}/duplicate": {"post"},
     "/v1/whatsapp/templates/{template_ref}/versions": {"get", "post"},
     "/v1/whatsapp/templates/{template_ref}/versions/{version_id}": {"delete", "get"},

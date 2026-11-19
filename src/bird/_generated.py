@@ -13457,6 +13457,71 @@ class WhatsAppTemplateVersion(BaseModel):
     )]
 
 
+class WhatsAppTemplateEventID(RootModel[str]):
+    root: str
+
+
+class WhatsAppTemplateEventType(str, Enum):
+    whatsapp_template_status_changed = "whatsapp_template.status_changed"
+    whatsapp_template_quality_updated = "whatsapp_template.quality_updated"
+
+
+class WhatsAppTemplateEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    id: Annotated[str, Field(
+        examples=["wte_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wte_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    type: Annotated[Annotated[Union[WhatsAppTemplateEventType, str], Field(union_mode="left_to_right")], Field(
+        description="Type of template event. `whatsapp_template.status_changed` records a status WhatsApp gave the language. `whatsapp_template.quality_updated` records a change in its quality rating. Open enum: new event types may be added over time, so treat any unrecognized value as a future event rather than an error. The values below are the types known at this version.",
+        examples=["whatsapp_template.status_changed"],
+        min_length=1,
+    )]
+    language: Annotated[str, Field(
+        description="A language tag in BCP-47 form, for example `en` or `pt-BR`.",
+        examples=["pt-BR"],
+        max_length=35,
+        min_length=2,
+    )]
+    version_id: Annotated[str, Field(
+        examples=["wav_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^wav_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    summary: Annotated[str, Field(
+        description="Human-readable summary of what changed.",
+        examples=["Status changed to paused."],
+        min_length=1,
+    )]
+    metadata: Annotated[Dict[str, Any], Field(
+        description="Structured details for the event. `from` and `to` carry the values that changed: a language status for `whatsapp_template.status_changed`, or a quality score for `whatsapp_template.quality_updated`. `from` is the value Bird held before the change, and is absent when Bird held none. A change to `rejected` also carries the `rejection`, in the same shape as the language, when WhatsApp gave a reason. A new pause on a language that was already paused has the same `from` and `to`.",
+    )]
+    created_at: Annotated[str, Field(
+        description="When Bird recorded the event.",
+        examples=["2026-11-18T14:02:11Z"],
+        min_length=1,
+    )]
+
+
+class WhatsAppTemplateEventList(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    data: Annotated[List[WhatsAppTemplateEvent], Field(
+        description="Page of template events, newest first.",
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
 class WhatsAppTemplateDuplicate(BaseModel):
     "The account the copy is created on, plus optional overrides. Everything else is inherited from the source."
     model_config = ConfigDict(extra="allow")

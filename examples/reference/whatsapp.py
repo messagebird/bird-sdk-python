@@ -116,6 +116,11 @@ def whatsapp_templates_delete() -> None:
     client.whatsapp.templates.delete("order_update")
 
 
+def whatsapp_templates_list_events() -> None:
+    for event in client.whatsapp.templates.list_events("order_update", language="en-US"):
+        print(event.created_at, event.type, event.summary)
+
+
 def whatsapp_templates_duplicate() -> None:
     copy = client.whatsapp.templates.duplicate("bird_otp", waba="102290129340398", slug="acme_otp")
     print(copy.slug, copy.draft_version_id)

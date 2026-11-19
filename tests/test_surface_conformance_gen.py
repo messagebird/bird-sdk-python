@@ -164,6 +164,7 @@ def test_surface_conformance() -> None:
     assert callable(client.whatsapp.templates.get)
     assert callable(client.whatsapp.templates.update)
     assert callable(client.whatsapp.templates.delete)
+    assert callable(client.whatsapp.templates.list_events)
     assert callable(client.whatsapp.templates.duplicate)
     assert callable(client.whatsapp.templates.versions.create)
     assert callable(client.whatsapp.templates.versions.list)

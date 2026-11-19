@@ -2820,38 +2820,43 @@ async def _ex_420() -> None:
 
 
 async def _ex_421() -> None:
+    for event in client.whatsapp.templates.list_events("order_update", language="en-US"):
+        print(event.created_at, event.type, event.summary)
+
+
+async def _ex_422() -> None:
     template = client.whatsapp.templates.update("order_update", name="Order shipped")
     print(template.slug, template.name)
 
 
-async def _ex_422() -> None:
+async def _ex_423() -> None:
     draft = client.whatsapp.templates.versions.create("order_update")
     print(draft.id)
 
 
-async def _ex_423() -> None:
+async def _ex_424() -> None:
     client.whatsapp.templates.versions.delete("order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg")
 
 
-async def _ex_424() -> None:
+async def _ex_425() -> None:
     version = client.whatsapp.templates.versions.get("bird_otp", "wav_01ky4x8e4genzb7way45txfkm1")
     print(version.id, list(version.languages))
 
 
-async def _ex_425() -> None:
+async def _ex_426() -> None:
     client.whatsapp.templates.versions.languages.delete(
         "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "es"
     )
 
 
-async def _ex_426() -> None:
+async def _ex_427() -> None:
     restored = client.whatsapp.templates.versions.languages.discard(
         "order_update", "wav_01krdgeqcxet5s7t44vh8rt9mg", "en"
     )
     print(restored.language, restored.revision)
 
 
-async def _ex_427() -> None:
+async def _ex_428() -> None:
     language = client.whatsapp.templates.versions.languages.get(
         "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1", "nl-BE"
     )
@@ -2859,7 +2864,7 @@ async def _ex_427() -> None:
         print(component.type)
 
 
-async def _ex_428() -> None:
+async def _ex_429() -> None:
     languages = client.whatsapp.templates.versions.languages.list(
         "bird_otp", "wav_01ky4x8e4genzb7way45txfkm1"
     )
@@ -2867,7 +2872,7 @@ async def _ex_428() -> None:
         print(language.language, language.status)
 
 
-async def _ex_429() -> None:
+async def _ex_430() -> None:
     saved = client.whatsapp.templates.versions.languages.set(
         "order_update",
         "wav_01krdgeqcxet5s7t44vh8rt9mg",
@@ -2883,12 +2888,12 @@ async def _ex_429() -> None:
     print(saved.language, saved.revision)
 
 
-async def _ex_430() -> None:
+async def _ex_431() -> None:
     for version in client.whatsapp.templates.versions.list("bird_otp"):
         print(version.id, version.version_number)
 
 
-async def _ex_431() -> None:
+async def _ex_432() -> None:
     draft_id = "wav_01krdgeqcxet5s7t44vh8rt9mg"
     check = client.whatsapp.templates.versions.submit("order_update", draft_id, validate_only=True)
     for problem in check.errors:
@@ -2898,18 +2903,18 @@ async def _ex_431() -> None:
         print(submitted.version.id if submitted.version else None)
 
 
-async def _ex_432() -> None:
+async def _ex_433() -> None:
     workspace = client.workspace.get()
     print(workspace.id, workspace.name)
 
 
-async def _ex_433() -> None:
+async def _ex_434() -> None:
     quotas = client.workspace.quotas.list()
     for quota in quotas.data:
         print(quota.key, quota.limit, quota.organization_limit)
 
 
-async def _ex_434() -> None:
+async def _ex_435() -> None:
     # Workspace limits matter with several workspaces, or one that kept a limit after a deletion.
     limits = client.workspace.rate_limits.list()
     for policy in limits.data:
