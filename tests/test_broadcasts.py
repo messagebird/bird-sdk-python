@@ -155,6 +155,61 @@ def test_update_sends_parameter_overrides_without_releasing_the_version() -> Non
     assert body["template"] == {"parameter_overrides": {"it": {"count": 9007199254740995, "empty": ""}, "es": {}}}
 
 
+@pytest.mark.parametrize("seeding, body", [
+    (omit, None),
+    (None, None),
+    ({"enabled": True}, {"enabled": True}),
+])
+@respx.mock
+@pytest.mark.asyncio
+async def test_create_seeding_choice_sync_and_async(seeding: Any, body: Any) -> None:
+    route = respx.post(f"{BASE}/v1/email/broadcasts").mock(
+        return_value=httpx.Response(200, json=_broadcast())
+    )
+    params: BroadcastCreateParams = {"automatic_seeding": seeding}
+    with client() as synchronous:
+        synchronous.broadcasts.create(**params)
+    async with AsyncBird(api_key="bk_eu1_secret") as asynchronous:
+        await asynchronous.broadcasts.create(**params)
+    assert len(route.calls) == 2
+    for call in route.calls:
+        sent = json.loads(call.request.content)
+        if body is None:
+            assert "automatic_seeding" not in sent
+        else:
+            assert sent["automatic_seeding"] == body
+
+
+@pytest.mark.parametrize("seeding, body", [
+    (omit, {}),
+    (None, {"automatic_seeding": None}),
+    ({"enabled": False}, {"automatic_seeding": {"enabled": False}}),
+])
+@respx.mock
+@pytest.mark.asyncio
+async def test_update_seeding_choice_sync_and_async(seeding: Any, body: dict[str, Any]) -> None:
+    route = respx.patch(f"{BASE}/v1/email/broadcasts/{ID1}").mock(
+        return_value=httpx.Response(200, json=_broadcast())
+    )
+    with client() as synchronous:
+        synchronous.broadcasts.update(ID1, automatic_seeding=seeding)
+    async with AsyncBird(api_key="bk_eu1_secret") as asynchronous:
+        await asynchronous.broadcasts.update(ID1, automatic_seeding=seeding)
+    assert len(route.calls) == 2
+    for call in route.calls:
+        assert json.loads(call.request.content) == body
+
+
+def test_seeding_choice_must_be_an_object() -> None:
+    with respx.mock:
+        route = respx.route(url__regex=rf"{BASE}/v1/email/broadcasts.*")
+        with pytest.raises(BirdError, match="automatic_seeding"):
+            client().broadcasts.create(automatic_seeding=True)  # type: ignore[arg-type]
+        with pytest.raises(BirdError, match="automatic_seeding"):
+            client().broadcasts.update(ID1, automatic_seeding=True)  # type: ignore[arg-type]
+        assert not route.called
+
+
 @pytest.mark.parametrize("overrides", [{"it": None}, {"it": []}, None])
 def test_create_refuses_a_null_or_non_object_override_map(overrides: Any) -> None:
     with respx.mock:

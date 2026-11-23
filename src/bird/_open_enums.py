@@ -258,6 +258,19 @@ class DestinationSuperRegion:
     MIDDLE_EAST_AFRICA: Final = "middle_east_africa"
 
 
+class EmailAuthoringMode:
+    """Values of EmailAuthoringMode known at this SDK version (open enum)."""
+
+    HTML: Final = "html"
+    VISUAL: Final = "visual"
+
+
+class EmailBlockSubmissionStatus:
+    """Values of EmailBlockSubmissionStatus known at this SDK version (open enum)."""
+
+    PUBLISHED: Final = "published"
+
+
 class EmailBroadcastParameterProblemCode:
     """Values of EmailBroadcastParameterProblemCode known at this SDK version (open enum)."""
 
@@ -280,6 +293,9 @@ class EmailBroadcastParameterProblemCode:
     RENDER_BUDGET_EXCEEDED: Final = "render_budget_exceeded"
     RENDER_PROFILE_UNSUPPORTED: Final = "render_profile_unsupported"
     RENDERED_ENVELOPE_INVALID: Final = "rendered_envelope_invalid"
+    SEED_EXAMPLE_VALUE_MISSING: Final = "seed_example_value_missing"
+    SEED_TESTS_EXHAUSTED: Final = "seed_tests_exhausted"
+    SEEDING_NOT_CONFIGURED: Final = "seeding_not_configured"
     SENDER_UNAVAILABLE: Final = "sender_unavailable"
     SENSITIVE_INPUT_UNSUPPORTED: Final = "sensitive_input_unsupported"
     TEMPLATE_UNAVAILABLE: Final = "template_unavailable"
@@ -299,6 +315,7 @@ class EmailBroadcastParameterProblemSeverity:
     """Values of EmailBroadcastParameterProblemSeverity known at this SDK version (open enum)."""
 
     ERROR: Final = "error"
+    WARNING: Final = "warning"
 
 
 class EmailBroadcastParameterProblemSite:
@@ -1281,6 +1298,8 @@ __all__ = [
     "ComplianceProgram",
     "DestinationRegion",
     "DestinationSuperRegion",
+    "EmailAuthoringMode",
+    "EmailBlockSubmissionStatus",
     "EmailBroadcastParameterProblemCode",
     "EmailBroadcastParameterProblemPhase",
     "EmailBroadcastParameterProblemSeverity",

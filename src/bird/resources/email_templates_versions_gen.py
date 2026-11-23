@@ -54,7 +54,7 @@ class EmailTemplatesVersionsBase(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailTemplateVersionSummary]:
-        """List every version of a template (the draft plus all published versions), newest first."""
+        """List every version of a template (the draft plus all published versions), newest first. A published version's `variables` leave out inputs of sections linked from reusable blocks; the single-version read includes them. Inputs a send's headers or envelope use are not template variables; validate a saved broadcast for those."""
         query = {
             "limit": limit,
             "starting_after": starting_after,
@@ -69,7 +69,7 @@ class EmailTemplatesVersionsBase(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateVersion:
-        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`. A deleted workspace template's published versions remain readable by template ID; its slug and draft do not."""
+        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`. A deleted workspace template's published versions remain readable by template ID; its slug and draft do not. Sections linked from reusable blocks show as currently published, so a read cannot verify what a paused broadcast froze."""
         return self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},
@@ -161,7 +161,7 @@ class AsyncEmailTemplatesVersionsBase(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailTemplateVersionSummary]:
-        """List every version of a template (the draft plus all published versions), newest first."""
+        """List every version of a template (the draft plus all published versions), newest first. A published version's `variables` leave out inputs of sections linked from reusable blocks; the single-version read includes them. Inputs a send's headers or envelope use are not template variables; validate a saved broadcast for those."""
         query = {
             "limit": limit,
             "starting_after": starting_after,
@@ -176,7 +176,7 @@ class AsyncEmailTemplatesVersionsBase(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> EmailTemplateVersion:
-        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`. A deleted workspace template's published versions remain readable by template ID; its slug and draft do not."""
+        """Read one version of a template: its lifecycle metadata (`status`, `version_number`, `published_at`), the content it froze in every language, and its `variables`: the parameters a send supplies and the values Bird fills in, told apart by `system`. A deleted workspace template's published versions remain readable by template ID; its slug and draft do not. Sections linked from reusable blocks show as currently published, so a read cannot verify what a paused broadcast froze."""
         return await self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}",
             {},

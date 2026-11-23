@@ -305,6 +305,7 @@ class BroadcastCreateParams(TypedDict, total=False):
     category: str
     send: bool
     scheduled_at: Union[str, datetime]
+    automatic_seeding: Mapping[str, Any] | None | Omit
 
 
 class BroadcastSendParams(TypedDict, total=False):

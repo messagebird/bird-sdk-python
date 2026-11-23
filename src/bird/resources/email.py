@@ -19,6 +19,7 @@ from bird._response import APIResponse
 from bird.resources.email_mailboxes import AsyncEmailMailboxes, EmailMailboxes
 from bird.resources.email_threads import AsyncEmailThreads, EmailThreads
 from bird.resources.email_templates import AsyncEmailTemplates, EmailTemplates
+from bird.resources.email_blocks import AsyncEmailBlocks, EmailBlocks
 from bird.resources.email_competitive import AsyncEmailCompetitive, EmailCompetitive
 from bird.resources.email_inbox_insights import AsyncEmailInboxInsights, EmailInboxInsights
 from bird.resources.email_seeding import AsyncEmailSeeding, EmailSeeding
@@ -184,6 +185,7 @@ class Email(EmailBase):
         self._defaults = defaults
         self.stats = EmailStats(client)
         self.templates = EmailTemplates(client)
+        self.blocks = EmailBlocks(client)
         self.mailboxes = EmailMailboxes(client, defaults)
         self.threads = EmailThreads(client)
         self.competitive = EmailCompetitive(client)
@@ -367,6 +369,7 @@ class AsyncEmail(AsyncEmailBase):
         self._defaults = defaults
         self.stats = AsyncEmailStats(client)
         self.templates = AsyncEmailTemplates(client)
+        self.blocks = AsyncEmailBlocks(client)
         self.mailboxes = AsyncEmailMailboxes(client, defaults)
         self.threads = AsyncEmailThreads(client)
         self.competitive = AsyncEmailCompetitive(client)

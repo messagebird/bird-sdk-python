@@ -19,14 +19,12 @@ from bird.pagination import AsyncPage, SyncPage
 
 class VoiceTrunkMediaCreate(TypedDict, total=False):
     encryption: str
+    sites: Sequence[str]
 
 
-class _VoiceTrunkMediaUpdateRequired(TypedDict):
+class VoiceTrunkMediaUpdate(TypedDict, total=False):
     encryption: str
-
-
-class VoiceTrunkMediaUpdate(_VoiceTrunkMediaUpdateRequired, total=False):
-    pass
+    sites: Sequence[str]
 
 
 class _VoiceTrunkIPACLCreateRequired(TypedDict):

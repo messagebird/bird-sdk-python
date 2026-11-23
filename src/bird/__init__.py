@@ -370,8 +370,37 @@ from bird.resources.email_templates_versions_gen import (
     EmailTemplatesVersionsSubmitParams,
 )
 from bird.resources.email_templates_versions_languages_gen import (
+    EmailTemplatesVersionsLanguagesGetParams,
     EmailTemplatesVersionsLanguagesSetParams,
     EmailTemplatesVersionsLanguagesUpdateParams,
+)
+from bird.resources.email_blocks_gen import (
+    EmailBlocksCreateParams,
+    EmailBlocksDuplicateParams,
+    EmailBlocksListParams,
+    EmailBlocksPublishParams,
+    EmailBlocksUpdateParams,
+    EmailBlocksValidateParams,
+)
+from bird.resources.email_blocks_languages_gen import (
+    EmailBlocksLanguagesSetParams,
+)
+from bird.resources.email_blocks_languages_revisions_gen import (
+    EmailBlocksLanguagesRevisionsListParams,
+)
+from bird._generated import (
+    EmailBlock,
+    EmailBlockFragment,
+    EmailBlockFragmentValidation,
+    EmailBlockLanguage,
+    EmailBlockLanguageList,
+    EmailBlockLanguageSummary,
+    EmailBlockList,
+    EmailBlockPublishLanguage,
+    EmailBlockRevision,
+    EmailBlockRevisionList,
+    EmailBlockRevisionSummary,
+    EmailBlockSubmission,
 )
 from bird.resources.sms_templates_gen import SmsTemplateListParams
 from bird.resources.sms_templates_versions_gen import SmsTemplatesVersionsListParams
@@ -591,6 +620,8 @@ from bird._open_enums import (
     AssetKind,
     AssetReferenceUsage,
     AutomaticSeedingReason,
+    EmailAuthoringMode,
+    EmailBlockSubmissionStatus,
     EsimActionName,
     EsimActionUnavailableReason,
     AMBBusinessAccountReviewStatus,
@@ -840,6 +871,8 @@ __all__ = [
     "AssetKind",
     "AssetReferenceUsage",
     "AutomaticSeedingReason",
+    "EmailAuthoringMode",
+    "EmailBlockSubmissionStatus",
     "AMBBusinessAccount",
     "AMBBusinessAccountCreate",
     "AMBBusinessAccountEvent",
@@ -1251,8 +1284,29 @@ __all__ = [
     "EmailTemplatesListParams",
     "EmailTemplatesPreviewParams",
     "EmailTemplatesUpdateParams",
+    "EmailTemplatesVersionsLanguagesGetParams",
     "EmailTemplatesVersionsLanguagesSetParams",
     "EmailTemplatesVersionsLanguagesUpdateParams",
+    "EmailBlocksCreateParams",
+    "EmailBlocksDuplicateParams",
+    "EmailBlocksListParams",
+    "EmailBlocksPublishParams",
+    "EmailBlocksUpdateParams",
+    "EmailBlocksValidateParams",
+    "EmailBlocksLanguagesSetParams",
+    "EmailBlocksLanguagesRevisionsListParams",
+    "EmailBlock",
+    "EmailBlockFragment",
+    "EmailBlockFragmentValidation",
+    "EmailBlockLanguage",
+    "EmailBlockLanguageList",
+    "EmailBlockLanguageSummary",
+    "EmailBlockList",
+    "EmailBlockPublishLanguage",
+    "EmailBlockRevision",
+    "EmailBlockRevisionList",
+    "EmailBlockRevisionSummary",
+    "EmailBlockSubmission",
     "EmailTemplatesVersionsListParams",
     "EmailTemplatesVersionsRollbackParams",
     "EmailTemplatesVersionsSubmitParams",

@@ -49,6 +49,7 @@ class NumbersOrdersCreateParams(_NumbersOrdersCreateRequired, total=False):
 class NumbersOrdersListParams(TypedDict, total=False):
     """Query params for ``client.numbers.orders.list``. Every key is optional."""
 
+    number_id: str
     status: str
     limit: int
     starting_after: str
@@ -95,6 +96,7 @@ class NumbersOrders(Resource):
     def list(
         self,
         *,
+        number_id: str | None = None,
         status: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
@@ -110,6 +112,7 @@ class NumbersOrders(Resource):
         ```
         """
         query = {
+            "number_id": number_id,
             "status": status,
             "limit": limit,
             "starting_after": starting_after,
@@ -123,7 +126,7 @@ class NumbersOrders(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
-        """Reads one order's current state, and the number it produced once completed. This is the poll for an order that came back pending.
+        """Reads one order's state and its associated allocation once completed. Poll an order that came back pending here; read the number for its current holding state.
 
         ```python
         order = client.numbers.orders.get("nor_01krdgeqcxet5s7t44vh8rt9mg")
@@ -179,6 +182,7 @@ class AsyncNumbersOrders(AsyncResource):
     def list(
         self,
         *,
+        number_id: str | None = None,
         status: str | None = None,
         limit: int | None = None,
         starting_after: str | None = None,
@@ -194,6 +198,7 @@ class AsyncNumbersOrders(AsyncResource):
         ```
         """
         query = {
+            "number_id": number_id,
             "status": status,
             "limit": limit,
             "starting_after": starting_after,
@@ -207,7 +212,7 @@ class AsyncNumbersOrders(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> NumbersOrder:
-        """Reads one order's current state, and the number it produced once completed. This is the poll for an order that came back pending.
+        """Reads one order's state and its associated allocation once completed. Poll an order that came back pending here; read the number for its current holding state.
 
         ```python
         order = await client.numbers.orders.get("nor_01krdgeqcxet5s7t44vh8rt9mg")

@@ -52,6 +52,7 @@ class BroadcastUpdateParams(TypedDict, total=False):
     track_clicks: bool
     ip_pool_id: str | None
     category: str
+    automatic_seeding: Mapping[str, Any] | None | Omit
 
 
 _NAIVE_SCHEDULED_AT = (
@@ -131,6 +132,7 @@ def _create_body(
     parameters: Mapping[str, Any] | None | Omit = omit,
     parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
     brand_id: str | None | Omit = omit,
+    automatic_seeding: Mapping[str, Any] | None | Omit = omit,
 ) -> dict[str, Any]:
     fields: dict[str, Any] = {
         "from": from_,
@@ -158,6 +160,7 @@ def _create_body(
                 fields[wire] = value
     if not isinstance(brand_id, Omit):
         fields["brand_id"] = brand_id
+    fields["automatic_seeding"] = automatic_seeding
     body = to_wire(EmailBroadcastCreateRequest, fields)
     if parameters is not None and not isinstance(parameters, Omit):
         body["template"]["parameters"] = dict(parameters)
@@ -179,6 +182,7 @@ def _update_body(
     ip_pool_id: str | None | Omit,
     category: str | None,
     brand_id: str | None | Omit = omit,
+    automatic_seeding: Mapping[str, Any] | None | Omit = omit,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {}
     if from_ is not None:
@@ -207,6 +211,7 @@ def _update_body(
         body["category"] = category
     if not isinstance(brand_id, Omit):
         body["brand_id"] = brand_id
+    body["automatic_seeding"] = automatic_seeding
     return to_wire(EmailBroadcastUpdateRequest, body)
 
 
@@ -266,6 +271,7 @@ class Broadcasts(BroadcastsBase):
         parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         send: bool | None = None,
         scheduled_at: str | datetime | None = None,
+        automatic_seeding: Mapping[str, Any] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Create a broadcast. It is a draft unless ``send`` is set, in which
@@ -280,6 +286,11 @@ class Broadcasts(BroadcastsBase):
         ``brand_id`` selects the Brand. Omitted or ``None`` uses
         the workspace default Brand at first scheduling or sending.
 
+        ``automatic_seeding`` sends seed copies with the broadcast for an
+        automatic seed test: ``{"enabled": True}`` fills personal fields with
+        their fallback values, and an ``example_contact_id`` fills them from a
+        test contact instead. ``{"enabled": False}`` sends no seed copies.
+
         ```python
         broadcast = client.broadcasts.create(
             from_="newsletter@example.com",
@@ -293,6 +304,7 @@ class Broadcasts(BroadcastsBase):
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
             self._defaults, language, parameters, parameter_overrides, brand_id,
+            automatic_seeding,
         )
         return self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -312,6 +324,7 @@ class Broadcasts(BroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
+        automatic_seeding: Mapping[str, Any] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a broadcast that is still a draft or is scheduled, and return
@@ -320,6 +333,8 @@ class Broadcasts(BroadcastsBase):
         ``None`` to clear. A broadcast that has started sending can no longer be edited
         and raises a ``409``. ``brand_id`` can change only while draft;
         ``None`` clears the selection and omission retains it.
+        ``automatic_seeding`` replaces the saved seeding choice; ``None`` seeds
+        only when the audience contains a contact at the trigger address.
 
         ```python
         from bird import EmailBroadcastTemplateUpdate
@@ -334,6 +349,7 @@ class Broadcasts(BroadcastsBase):
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, brand_id,
+            automatic_seeding,
         )
         return self._write(
             "PATCH",
@@ -503,6 +519,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         parameter_overrides: Mapping[str, Mapping[str, Any]] | None | Omit = omit,
         send: bool | None = None,
         scheduled_at: str | datetime | None = None,
+        automatic_seeding: Mapping[str, Any] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Create a broadcast. See `Broadcasts.create`."""
@@ -510,6 +527,7 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, send, scheduled_at,
             self._defaults, language, parameters, parameter_overrides, brand_id,
+            automatic_seeding,
         )
         return await self._write("POST", "/v1/email/broadcasts", body, EmailBroadcast, options)
 
@@ -529,12 +547,14 @@ class AsyncBroadcasts(AsyncBroadcastsBase):
         track_clicks: bool | None = None,
         ip_pool_id: str | None | Omit = omit,
         category: str | None = None,
+        automatic_seeding: Mapping[str, Any] | None | Omit = omit,
         options: RequestOptions | None = None,
     ) -> EmailBroadcast:
         """Change a draft or scheduled broadcast. See `Broadcasts.update`."""
         body = _update_body(
             from_, audience_id, template, reply_to, headers, tags, metadata,
             track_opens, track_clicks, ip_pool_id, category, brand_id,
+            automatic_seeding,
         )
         return await self._write(
             "PATCH",

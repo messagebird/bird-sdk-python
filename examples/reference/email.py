@@ -628,3 +628,122 @@ def seeding_sources_list() -> None:
     # Requires inbox_insights:read permission in the target workspace.
     for source in client.email.seeding.sources.list(source_email_id="em_01krdgeqcxet5s7t44vh8rt9mg"):
         print(source.model_dump_json())
+
+
+def email_blocks_list() -> None:
+    # Requires email_management:read permission in the target workspace.
+    for block in client.email.blocks.list(q="footer", archived=False):
+        print(block.id, block.name, block.source_language)
+
+
+def email_blocks_get() -> None:
+    # Requires email_management:read permission in the target workspace.
+    block = client.email.blocks.get("ebl_01krdgeqcxet5s7t44vh8rt9mg")
+    print(block.name, block.revision, block.archived_at)
+
+
+def email_blocks_create() -> None:
+    # Requires email_management:write permission in the target workspace.
+    section = (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tbody><tr>'
+        '<td lang="en" style="font-family: Arial, sans-serif; font-size: 14px; font-style: normal; font-weight: normal; '
+        'line-height: 20px; letter-spacing: normal; text-align: left; text-transform: none; color: #333333; margin: 0; padding: 16px;">'
+        '<p style="margin: 0;">Offer valid until {{ expiry_date }}.</p></td></tr></tbody></table>'
+    )
+    block = client.email.blocks.create(
+        name="Legal footer",
+        source_language="en",
+        fragment={"serializer_version": 2, "fragment_html": section},
+    )
+    print(block.id, block.revision)
+
+
+def email_blocks_update() -> None:
+    # Requires email_management:write permission in the target workspace.
+    current = client.email.blocks.get("ebl_01krdgeqcxet5s7t44vh8rt9mg")
+    block = client.email.blocks.update(current.id, revision=current.revision, archived=True)
+    print(block.archived_at)
+
+
+def email_blocks_duplicate() -> None:
+    # Requires email_management:write permission in the target workspace.
+    source = client.email.blocks.get("ebl_01krdgeqcxet5s7t44vh8rt9mg")
+    copy = client.email.blocks.duplicate(source.id, revision=source.revision, name="Legal footer (EU)")
+    print(copy.id)
+
+
+def email_blocks_validate() -> None:
+    # Requires email_management:read permission in the target workspace.
+    section = (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tbody><tr>'
+        '<td lang="en" style="font-family: Arial, sans-serif; font-size: 14px; font-style: normal; font-weight: normal; '
+        'line-height: 20px; letter-spacing: normal; text-align: left; text-transform: none; color: #333333; margin: 0; padding: 16px;">'
+        '<p style="margin: 0;">Offer valid until {{ expiry_date }}.</p></td></tr></tbody></table>'
+    )
+    result = client.email.blocks.validate(
+        language="en",
+        fragment={"serializer_version": 2, "fragment_html": section},
+    )
+    print(result.text)
+
+
+def email_blocks_publish() -> None:
+    # Requires email_management:write permission in the target workspace.
+    block_id = "ebl_01krdgeqcxet5s7t44vh8rt9mg"
+    draft = client.email.blocks.languages.get(block_id, "en")
+    submission = client.email.blocks.publish(
+        block_id,
+        languages=[{"language": "en", "revision": draft.revision}],
+    )
+    print(submission.status, submission.published_revisions)
+
+
+def email_blocks_languages_list() -> None:
+    # Requires email_management:read permission in the target workspace.
+    languages = client.email.blocks.languages.list("ebl_01krdgeqcxet5s7t44vh8rt9mg")
+    for language in languages.data:
+        print(language.language, language.revision, language.published_revision_id)
+
+
+def email_blocks_languages_get() -> None:
+    # Requires email_management:read permission in the target workspace.
+    draft = client.email.blocks.languages.get("ebl_01krdgeqcxet5s7t44vh8rt9mg", "en")
+    print(draft.authoring_mode, draft.revision, draft.fragment.fragment_html)
+
+
+def email_blocks_languages_set() -> None:
+    # Requires email_management:write permission in the target workspace.
+    section = (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tbody><tr>'
+        '<td lang="fr" style="font-family: Arial, sans-serif; font-size: 14px; font-style: normal; font-weight: normal; '
+        'line-height: 20px; letter-spacing: normal; text-align: left; text-transform: none; color: #333333; margin: 0; padding: 16px;">'
+        "<p style=\"margin: 0;\">Offre valable jusqu'au {{ expiry_date }}.</p></td></tr></tbody></table>"
+    )
+    draft = client.email.blocks.languages.set(
+        "ebl_01krdgeqcxet5s7t44vh8rt9mg",
+        "fr",
+        revision=0,
+        fragment={"serializer_version": 2, "fragment_html": section},
+    )
+    print(draft.revision)
+
+
+def email_blocks_languages_delete() -> None:
+    # Requires email_management:write permission in the target workspace.
+    client.email.blocks.languages.delete("ebl_01krdgeqcxet5s7t44vh8rt9mg", "fr")
+
+
+def email_blocks_languages_revisions_list() -> None:
+    # Requires email_management:read permission in the target workspace.
+    for revision in client.email.blocks.languages.revisions.list("ebl_01krdgeqcxet5s7t44vh8rt9mg", "en"):
+        print(revision.id, revision.version_number, revision.published_at)
+
+
+def email_blocks_languages_revisions_get() -> None:
+    # Requires email_management:read permission in the target workspace.
+    revision = client.email.blocks.languages.revisions.get(
+        "ebl_01krdgeqcxet5s7t44vh8rt9mg",
+        "en",
+        "ebr_01krdgeqcxet5s7t44vh8rt9mg",
+    )
+    print(revision.version_number, revision.fragment.fragment_html)

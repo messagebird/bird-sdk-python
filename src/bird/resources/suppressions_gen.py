@@ -46,7 +46,7 @@ class Suppressions(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[Suppression]:
-        """List the workspace's email suppressions as a cursor page. A suppression blocks delivery to an address. The `email` parameter filters by prefix, so compare the complete addresses you get back before treating one as a match.
+        """List the workspace's email suppressions as a cursor page. A suppression blocks delivery to an address. The `email` parameter filters by prefix, so compare the complete addresses you get back before treating one as a match. No match does not establish sendability: check preferences for the exact channel and handle, including their Brand and sender scope. Bird evaluates delivery policy after accepting a send.
 
         ```python
         for suppression in client.suppressions.list():
@@ -140,7 +140,7 @@ class AsyncSuppressions(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[Suppression]:
-        """List the workspace's email suppressions as a cursor page. A suppression blocks delivery to an address. The `email` parameter filters by prefix, so compare the complete addresses you get back before treating one as a match.
+        """List the workspace's email suppressions as a cursor page. A suppression blocks delivery to an address. The `email` parameter filters by prefix, so compare the complete addresses you get back before treating one as a match. No match does not establish sendability: check preferences for the exact channel and handle, including their Brand and sender scope. Bird evaluates delivery policy after accepting a send.
 
         ```python
         async for suppression in client.suppressions.list():

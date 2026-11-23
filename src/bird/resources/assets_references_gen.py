@@ -18,7 +18,7 @@ class AssetsReferences(Resource):
         *,
         options: RequestOptions | None = None,
     ) -> AssetReferenceList:
-        """Returns saved draft and published usage visible to the caller. Email-template references also require email_management:read. Hidden resources do not affect truncated; unsaved edits and older published versions are excluded.
+        """Returns saved draft and published usage visible to the caller. Email-template and reusable-block references also require email_management:read. Hidden resources do not affect truncated; unsaved edits and older published versions are excluded.
 
         ```python
         references = client.assets.references.list("ast_01krdgeqcxet5s7t44vh8rt9mg")
@@ -40,7 +40,7 @@ class AsyncAssetsReferences(AsyncResource):
         *,
         options: RequestOptions | None = None,
     ) -> AssetReferenceList:
-        """Returns saved draft and published usage visible to the caller. Email-template references also require email_management:read. Hidden resources do not affect truncated; unsaved edits and older published versions are excluded.
+        """Returns saved draft and published usage visible to the caller. Email-template and reusable-block references also require email_management:read. Hidden resources do not affect truncated; unsaved edits and older published versions are excluded.
 
         ```python
         references = await client.assets.references.list("ast_01krdgeqcxet5s7t44vh8rt9mg")

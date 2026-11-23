@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, TypedDict
 from urllib.parse import quote
 
@@ -17,6 +18,29 @@ from bird._resource import AsyncResource, Resource
 from bird._types import Omit, RequestOptions, omit
 
 
+class _EmailTemplateSharedBlockBindingRequired(TypedDict):
+    block_id: str
+
+
+class EmailTemplateSharedBlockBinding(_EmailTemplateSharedBlockBindingRequired, total=False):
+    pass
+
+
+class _EmailTemplateSharedBlocksRequired(TypedDict):
+    version: int
+    bindings: Mapping[str, EmailTemplateSharedBlockBinding]
+
+
+class EmailTemplateSharedBlocks(_EmailTemplateSharedBlocksRequired, total=False):
+    pass
+
+
+class EmailTemplatesVersionsLanguagesGetParams(TypedDict, total=False):
+    """Query params for ``client.email.templates.versions.languages.get``. Every key is optional."""
+
+    authoring: bool
+
+
 class _EmailTemplatesVersionsLanguagesSetRequired(TypedDict):
     subject: str
 
@@ -24,6 +48,8 @@ class _EmailTemplatesVersionsLanguagesSetRequired(TypedDict):
 class EmailTemplatesVersionsLanguagesSetParams(_EmailTemplatesVersionsLanguagesSetRequired, total=False):
     """Params for ``client.email.templates.versions.languages.set``. ``subject`` is required."""
 
+    shared_blocks: EmailTemplateSharedBlocks
+    replace_custom_text: bool
     preview_text: str
     html: str
     text: str
@@ -62,9 +88,10 @@ class EmailTemplatesVersionsLanguages(Resource):
         version_id: str,
         language: str,
         *,
+        authoring: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailTemplateLanguage:
-        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`.
+        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`. For a language that links reusable blocks, the HTML shows the blocks' current published content; with `authoring` true it carries an HTML comment marker `bird:shared-block:UUID` per link and `shared_blocks` instead, the form `email.templates.versions.languages.set` saves back.
 
         ```python
         language = client.email.templates.versions.languages.get(
@@ -78,7 +105,9 @@ class EmailTemplatesVersionsLanguages(Resource):
         """
         return self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
-            {},
+            {
+                "authoring": authoring,
+            },
             EmailTemplateLanguage,
             options,
         )
@@ -89,6 +118,8 @@ class EmailTemplatesVersionsLanguages(Resource):
         version_id: str,
         language: str,
         *,
+        shared_blocks: EmailTemplateSharedBlocks | None = None,
+        replace_custom_text: bool | None = None,
         subject: str,
         preview_text: str | None = None,
         html: str | None = None,
@@ -96,10 +127,12 @@ class EmailTemplatesVersionsLanguages(Resource):
         revision: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailTemplateLanguageSaved:
-        """Save one language's full content on a template's draft, creating the language if the draft does not have it yet. The response carries `compatibility`: what the saved HTML uses that mail clients remove, ignore, or render inconsistently, each finding naming the pattern, its line and column, and what to use instead. Advisory: the language is saved either way, and `compatibility_severity` of `problem` means part of the content does nothing at all in the clients the finding names."""
+        """Save one language's full content on a template's draft, creating the language if the draft does not have it yet. The response carries `compatibility`: what the saved HTML uses that mail clients remove, ignore, or render inconsistently, each finding naming the pattern, its line and column, and what to use instead. Advisory: the language is saved either way, and `compatibility_severity` of `problem` means part of the content does nothing at all in the clients the finding names. To link reusable blocks, send `shared_blocks` with one HTML comment marker `bird:shared-block:UUID` per binding in `html` and the `revision` read with `authoring` true (0 for a new language). A language edited in the Bird dashboard's visual editor refuses this save."""
         body = to_wire(
             EmailTemplateLanguageUpsert,
             {
+                "shared_blocks": shared_blocks,
+                "replace_custom_text": replace_custom_text,
                 "subject": subject,
                 "preview_text": preview_text,
                 "html": html,
@@ -183,9 +216,10 @@ class AsyncEmailTemplatesVersionsLanguages(AsyncResource):
         version_id: str,
         language: str,
         *,
+        authoring: bool | None = None,
         options: RequestOptions | None = None,
     ) -> EmailTemplateLanguage:
-        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`.
+        """Read one language's subject and bodies from a template version. The response carries `compatibility`: what the stored HTML uses that mail clients remove, ignore, or render inconsistently, and `compatibility_severity` reducing it to `problem`, `warning`, or `none`. For a language that links reusable blocks, the HTML shows the blocks' current published content; with `authoring` true it carries an HTML comment marker `bird:shared-block:UUID` per link and `shared_blocks` instead, the form `email.templates.versions.languages.set` saves back.
 
         ```python
         language = await client.email.templates.versions.languages.get(
@@ -199,7 +233,9 @@ class AsyncEmailTemplatesVersionsLanguages(AsyncResource):
         """
         return await self._get(
             f"/v1/email/templates/{quote(template_ref, safe='')}/versions/{quote(version_id, safe='')}/languages/{quote(language, safe='')}",
-            {},
+            {
+                "authoring": authoring,
+            },
             EmailTemplateLanguage,
             options,
         )
@@ -210,6 +246,8 @@ class AsyncEmailTemplatesVersionsLanguages(AsyncResource):
         version_id: str,
         language: str,
         *,
+        shared_blocks: EmailTemplateSharedBlocks | None = None,
+        replace_custom_text: bool | None = None,
         subject: str,
         preview_text: str | None = None,
         html: str | None = None,
@@ -217,10 +255,12 @@ class AsyncEmailTemplatesVersionsLanguages(AsyncResource):
         revision: int | None = None,
         options: RequestOptions | None = None,
     ) -> EmailTemplateLanguageSaved:
-        """Save one language's full content on a template's draft, creating the language if the draft does not have it yet. The response carries `compatibility`: what the saved HTML uses that mail clients remove, ignore, or render inconsistently, each finding naming the pattern, its line and column, and what to use instead. Advisory: the language is saved either way, and `compatibility_severity` of `problem` means part of the content does nothing at all in the clients the finding names."""
+        """Save one language's full content on a template's draft, creating the language if the draft does not have it yet. The response carries `compatibility`: what the saved HTML uses that mail clients remove, ignore, or render inconsistently, each finding naming the pattern, its line and column, and what to use instead. Advisory: the language is saved either way, and `compatibility_severity` of `problem` means part of the content does nothing at all in the clients the finding names. To link reusable blocks, send `shared_blocks` with one HTML comment marker `bird:shared-block:UUID` per binding in `html` and the `revision` read with `authoring` true (0 for a new language). A language edited in the Bird dashboard's visual editor refuses this save."""
         body = to_wire(
             EmailTemplateLanguageUpsert,
             {
+                "shared_blocks": shared_blocks,
+                "replace_custom_text": replace_custom_text,
                 "subject": subject,
                 "preview_text": preview_text,
                 "html": html,
