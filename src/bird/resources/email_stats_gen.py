@@ -7,6 +7,7 @@ from typing import TypedDict
 
 from bird._generated import (
     EmailBounceCodeStatsPoint,
+    EmailBrandStatsPoint,
     EmailBroadcastStatsPoint,
     EmailCategoryStatsPoint,
     EmailClientStatsPoint,
@@ -18,6 +19,7 @@ from bird._generated import (
     EmailSendingDomainStatsPoint,
     EmailSendingIpStatsPoint,
     EmailStatsByBounceCodeResponse,
+    EmailStatsByBrandResponse,
     EmailStatsByBroadcastResponse,
     EmailStatsByCategoryResponse,
     EmailStatsByClientResponse,
@@ -41,6 +43,11 @@ from bird._models import to_wire
 from bird._resource import AsyncResource, Resource
 from bird._types import RequestOptions
 from bird.pagination import AsyncPage, SyncPage
+
+
+class EmailStatsQueryBrandFilter(TypedDict, total=False):
+    include: Sequence[str]
+    exclude: Sequence[str]
 
 
 class EmailStatsQueryStringFilter(TypedDict, total=False):
@@ -78,6 +85,7 @@ class EmailStatsQueryBroadcastFilter(TypedDict, total=False):
 
 
 class EmailStatsQueryFilters(TypedDict, total=False):
+    brand_id: EmailStatsQueryBrandFilter
     sending_domain: EmailStatsQueryStringFilter
     category: EmailStatsQueryCategoryFilter
     template_id: EmailStatsQueryTemplateFilter
@@ -281,6 +289,19 @@ class EmailStatsByTemplateParams(TypedDict, total=False):
     trend_grain: str
 
 
+class EmailStatsByBrandParams(TypedDict, total=False):
+    """Query params for ``client.email.stats.by_brand``. Every key is optional."""
+
+    starting_after: str
+    ending_before: str
+    from_: str
+    to: str
+    timezone: str
+    category: str
+    sort: str
+    limit: int
+
+
 class EmailStatsByLocationParams(TypedDict, total=False):
     """Query params for ``client.email.stats.by_location``. Every key is optional."""
 
@@ -366,7 +387,7 @@ class EmailStats(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[EmailStatsQueryGroup]:
-        """Query email analytics for marketing and transactional delivery, bounces, opens, clicks, engagement rates, and latency percentiles: comparisons, combined filters, groups ranked by template, campaign tag, recipient domain, or mailbox provider, and complete time series. With a known tag name, filter on filters.tag directly; use `email.stats.by_tag` only to discover unknown tags. Select grain=quarter_hour for 15-minute activity; omit group_by for a summary. Use `email.stats.summary` for a single-filter aggregate with built-in comparison. Every selected metric must support every grouping and filter dimension: country, region, city, and device/client support engagement counts only, not delivered or open_rate. Unsupported combinations and unavailable history return 422; explain the limitation before changing the population or period. Events are selected by when they occurred, so a window includes engagement on earlier sends and cannot select a send-date cohort. Compare periods independently with the same filters and metrics. Distinct counts need not add up across buckets or groups, and engagement cannot establish a human count. Delivery describes mail-server acceptance, not inbox placement. Follow cursors by replaying the original body with new cursor fields and a new idempotency key per page; the response period has an exclusive end and must not replace the request end.
+        """Query email analytics for marketing and transactional delivery, bounces, opens, clicks, engagement rates, and latency percentiles: comparisons, combined filters, groups ranked by Brand, template, campaign tag, recipient domain, or mailbox provider, and complete time series. With a known tag name, filter on filters.tag directly; use `email.stats.by_tag` only to discover unknown tags. Select grain=quarter_hour for 15-minute activity; omit group_by for a summary. Use `email.stats.summary` only for a single-filter aggregate with built-in comparison on filters it supports (category, sending_domain, recipient_domain, tag, template, or sending_ip). `email.stats.summary` does not accept `brand_id`; for Brand-filtered aggregates or comparisons, call `email.stats.query` without `group_by` and compare periods independently with the same `filters.brand_id`. Brand listing is dashboard-only, so ask the user for the Brand ID (from Brands > More actions > Copy brand ID) when only a Brand name is known. Every selected metric must support every grouping and filter dimension: country, region, city, and device/client support engagement counts only, not delivered or open_rate. Unsupported combinations and unavailable history return 422; explain the limitation before changing the population or period. Events are selected by when they occurred, so a window includes engagement on earlier sends and cannot select a send-date cohort. Compare periods independently with the same filters and metrics. Distinct counts need not add up across buckets or groups, and engagement cannot establish a human count. Delivery describes mail-server acceptance, not inbox placement. Follow cursors by replaying the original body with new cursor fields and a new idempotency key per page; the response period has an exclusive end and must not replace the request end.
 
         ```python
         stats = client.email.stats.query(
@@ -1094,6 +1115,69 @@ class EmailStats(Resource):
         }
         return SyncPage(self._client, "/v1/email/stats/templates", query, EmailTemplateStatsPoint, options)
 
+    def by_brand(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailStatsByBrandResponse:
+        """Email delivery, engagement, and latency stats grouped by the send-time Brand ID (`bnd_…`). Archived Brands remain keyed by their ID, and historical unbranded messages appear in a separate `brand_id: null` row distinct from the default Brand. Reads retained reporting events directly (last 180 days, on or after `2026-09-23T00:00:00Z`; `data_as_of` is `null`). Brand listing is dashboard-only, so this breakdown discovers Brand IDs with activity in the requested period; to map a Brand name to its ID or inspect a Brand with no activity, ask the caller for the Brand ID (copyable from Brands > More actions > Copy brand ID). For a single Brand's time series, period comparisons, or combined filters (such as Brand + template or category), use `email.stats.query` with `filters.brand_id`.
+
+        ```python
+        stats = client.email.stats.by_brand(sort="open_rate", limit=25)
+        for row in stats.data:
+            print(row)
+        ```
+        """
+        return self._get(
+            "/v1/email/stats/brands",
+            {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "category": category,
+                "sort": sort,
+                "limit": limit,
+            },
+            EmailStatsByBrandResponse,
+            options,
+        )
+
+    def by_brand_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> SyncPage[EmailBrandStatsPoint]:
+        """Email delivery, engagement, and latency stats grouped by the send-time Brand ID (`bnd_…`). Archived Brands remain keyed by their ID, and historical unbranded messages appear in a separate `brand_id: null` row distinct from the default Brand. Reads retained reporting events directly (last 180 days, on or after `2026-09-23T00:00:00Z`; `data_as_of` is `null`). Brand listing is dashboard-only, so this breakdown discovers Brand IDs with activity in the requested period; to map a Brand name to its ID or inspect a Brand with no activity, ask the caller for the Brand ID (copyable from Brands > More actions > Copy brand ID). For a single Brand's time series, period comparisons, or combined filters (such as Brand + template or category), use `email.stats.query` with `filters.brand_id`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return SyncPage(self._client, "/v1/email/stats/brands", query, EmailBrandStatsPoint, options)
+
     def by_location(
         self,
         *,
@@ -1440,7 +1524,7 @@ class AsyncEmailStats(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[EmailStatsQueryGroup]:
-        """Query email analytics for marketing and transactional delivery, bounces, opens, clicks, engagement rates, and latency percentiles: comparisons, combined filters, groups ranked by template, campaign tag, recipient domain, or mailbox provider, and complete time series. With a known tag name, filter on filters.tag directly; use `email.stats.by_tag` only to discover unknown tags. Select grain=quarter_hour for 15-minute activity; omit group_by for a summary. Use `email.stats.summary` for a single-filter aggregate with built-in comparison. Every selected metric must support every grouping and filter dimension: country, region, city, and device/client support engagement counts only, not delivered or open_rate. Unsupported combinations and unavailable history return 422; explain the limitation before changing the population or period. Events are selected by when they occurred, so a window includes engagement on earlier sends and cannot select a send-date cohort. Compare periods independently with the same filters and metrics. Distinct counts need not add up across buckets or groups, and engagement cannot establish a human count. Delivery describes mail-server acceptance, not inbox placement. Follow cursors by replaying the original body with new cursor fields and a new idempotency key per page; the response period has an exclusive end and must not replace the request end.
+        """Query email analytics for marketing and transactional delivery, bounces, opens, clicks, engagement rates, and latency percentiles: comparisons, combined filters, groups ranked by Brand, template, campaign tag, recipient domain, or mailbox provider, and complete time series. With a known tag name, filter on filters.tag directly; use `email.stats.by_tag` only to discover unknown tags. Select grain=quarter_hour for 15-minute activity; omit group_by for a summary. Use `email.stats.summary` only for a single-filter aggregate with built-in comparison on filters it supports (category, sending_domain, recipient_domain, tag, template, or sending_ip). `email.stats.summary` does not accept `brand_id`; for Brand-filtered aggregates or comparisons, call `email.stats.query` without `group_by` and compare periods independently with the same `filters.brand_id`. Brand listing is dashboard-only, so ask the user for the Brand ID (from Brands > More actions > Copy brand ID) when only a Brand name is known. Every selected metric must support every grouping and filter dimension: country, region, city, and device/client support engagement counts only, not delivered or open_rate. Unsupported combinations and unavailable history return 422; explain the limitation before changing the population or period. Events are selected by when they occurred, so a window includes engagement on earlier sends and cannot select a send-date cohort. Compare periods independently with the same filters and metrics. Distinct counts need not add up across buckets or groups, and engagement cannot establish a human count. Delivery describes mail-server acceptance, not inbox placement. Follow cursors by replaying the original body with new cursor fields and a new idempotency key per page; the response period has an exclusive end and must not replace the request end.
 
         ```python
         stats = await client.email.stats.query(
@@ -2167,6 +2251,69 @@ class AsyncEmailStats(AsyncResource):
             "trend_grain": trend_grain,
         }
         return AsyncPage(self._client, "/v1/email/stats/templates", query, EmailTemplateStatsPoint, options)
+
+    async def by_brand(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> EmailStatsByBrandResponse:
+        """Email delivery, engagement, and latency stats grouped by the send-time Brand ID (`bnd_…`). Archived Brands remain keyed by their ID, and historical unbranded messages appear in a separate `brand_id: null` row distinct from the default Brand. Reads retained reporting events directly (last 180 days, on or after `2026-09-23T00:00:00Z`; `data_as_of` is `null`). Brand listing is dashboard-only, so this breakdown discovers Brand IDs with activity in the requested period; to map a Brand name to its ID or inspect a Brand with no activity, ask the caller for the Brand ID (copyable from Brands > More actions > Copy brand ID). For a single Brand's time series, period comparisons, or combined filters (such as Brand + template or category), use `email.stats.query` with `filters.brand_id`.
+
+        ```python
+        stats = await client.email.stats.by_brand(sort="open_rate", limit=25)
+        for row in stats.data:
+            print(row)
+        ```
+        """
+        return await self._get(
+            "/v1/email/stats/brands",
+            {
+                "starting_after": starting_after,
+                "ending_before": ending_before,
+                "from": from_,
+                "to": to,
+                "timezone": timezone,
+                "category": category,
+                "sort": sort,
+                "limit": limit,
+            },
+            EmailStatsByBrandResponse,
+            options,
+        )
+
+    def by_brand_all(
+        self,
+        *,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        timezone: str | None = None,
+        category: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncPage[EmailBrandStatsPoint]:
+        """Email delivery, engagement, and latency stats grouped by the send-time Brand ID (`bnd_…`). Archived Brands remain keyed by their ID, and historical unbranded messages appear in a separate `brand_id: null` row distinct from the default Brand. Reads retained reporting events directly (last 180 days, on or after `2026-09-23T00:00:00Z`; `data_as_of` is `null`). Brand listing is dashboard-only, so this breakdown discovers Brand IDs with activity in the requested period; to map a Brand name to its ID or inspect a Brand with no activity, ask the caller for the Brand ID (copyable from Brands > More actions > Copy brand ID). For a single Brand's time series, period comparisons, or combined filters (such as Brand + template or category), use `email.stats.query` with `filters.brand_id`."""
+        query = {
+            "starting_after": starting_after,
+            "ending_before": ending_before,
+            "from": from_,
+            "to": to,
+            "timezone": timezone,
+            "category": category,
+            "sort": sort,
+            "limit": limit,
+        }
+        return AsyncPage(self._client, "/v1/email/stats/brands", query, EmailBrandStatsPoint, options)
 
     async def by_location(
         self,

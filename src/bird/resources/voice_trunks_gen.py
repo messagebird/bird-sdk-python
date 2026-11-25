@@ -52,6 +52,9 @@ class _VoiceTrunksCreateRequired(TypedDict):
 class VoiceTrunksCreateParams(_VoiceTrunksCreateRequired, total=False):
     """Params for ``client.voice.trunks.create``. ``name`` is required."""
 
+    sip_trunking_enabled: bool
+    did_delivery_enabled: bool
+    workspace_users_enabled: bool
     outbound_enabled: bool
     inbound_enabled: bool
     media_bypass: bool
@@ -64,6 +67,9 @@ class VoiceTrunksUpdateParams(TypedDict, total=False):
     """Params for ``client.voice.trunks.update``. Every key is optional."""
 
     name: str
+    sip_trunking_enabled: bool
+    did_delivery_enabled: bool
+    workspace_users_enabled: bool
     outbound_enabled: bool
     inbound_enabled: bool
     media_bypass: bool
@@ -85,12 +91,12 @@ class VoiceTrunksBase(Resource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> SyncPage[VoiceTrunk]:
-        """List the workspace's SIP trunks as a cursor page. Each carries the Bird-assigned `domain` the customer's equipment sends calls to. The `ip_acls` and `allowed_api_key_ids` fields control which calls are admitted; a trunk with both empty admits nothing when `session_credentials_enabled` is false. Keys listed in `ineligible_api_key_ids` cannot authenticate even though they remain bound to the trunk.
+        """List the workspace's SIP trunks as a cursor page. Each carries the Bird-assigned `domain` the customer's equipment sends calls to. The `ip_acls` and `allowed_api_key_ids` fields admit the customer's PBX calls while `sip_trunking_enabled` is on; with both empty they admit none. Keys listed in `ineligible_api_key_ids` cannot authenticate even though they remain bound to the trunk.
 
         ```python
         for trunk in client.voice.trunks.list():
             # A trunk with no allow list and no session credentials admits nothing.
-            print(trunk.id, trunk.domain, trunk.inbound_enabled)
+            print(trunk.id, trunk.domain, trunk.did_delivery_enabled)
         ```
         """
         query = {
@@ -112,7 +118,7 @@ class VoiceTrunksBase(Resource):
 
         ```python
         trunk = client.voice.trunks.get("trunk-id")
-        print(trunk.name, trunk.inbound_enabled, trunk.outbound_enabled)
+        print(trunk.name, trunk.did_delivery_enabled, trunk.sip_trunking_enabled)
         ```
         """
         return self._get(
@@ -126,6 +132,9 @@ class VoiceTrunksBase(Resource):
         self,
         *,
         name: str,
+        sip_trunking_enabled: bool | None = None,
+        did_delivery_enabled: bool | None = None,
+        workspace_users_enabled: bool | None = None,
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
@@ -138,7 +147,7 @@ class VoiceTrunksBase(Resource):
 
         ```python
         trunk = client.voice.trunks.create(
-            name="Lisbon office", outbound_enabled=True, inbound_enabled=True
+            name="Lisbon office", sip_trunking_enabled=True, did_delivery_enabled=True
         )
         print(trunk.id, trunk.domain)
         ```
@@ -147,6 +156,9 @@ class VoiceTrunksBase(Resource):
             VoiceTrunkCreate,
             {
                 "name": name,
+                "sip_trunking_enabled": sip_trunking_enabled,
+                "did_delivery_enabled": did_delivery_enabled,
+                "workspace_users_enabled": workspace_users_enabled,
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
@@ -168,6 +180,9 @@ class VoiceTrunksBase(Resource):
         trunk_id: str,
         *,
         name: str | None = None,
+        sip_trunking_enabled: bool | None = None,
+        did_delivery_enabled: bool | None = None,
+        workspace_users_enabled: bool | None = None,
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
@@ -178,7 +193,7 @@ class VoiceTrunksBase(Resource):
         session_credentials_enabled: bool | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceTrunk:
-        """Change a SIP trunk's directions, name, access control and Digest offer. A direction has to be enabled before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `inbound_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. If an emergency number is attached, clear it in the dashboard before turning inbound off. Turning it back on does not restore those routes, so confirm that change with the user first.
+        """Change a SIP trunk's caller switches, name, access control and Digest offer. A switch has to be on before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `did_delivery_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. If an emergency number is attached, clear it in the dashboard before turning `did_delivery_enabled` off. Turning it back on does not restore those routes, so confirm that change with the user first.
 
         ```python
         trunk = client.voice.trunks.update(
@@ -193,6 +208,9 @@ class VoiceTrunksBase(Resource):
             VoiceTrunkUpdate,
             {
                 "name": name,
+                "sip_trunking_enabled": sip_trunking_enabled,
+                "did_delivery_enabled": did_delivery_enabled,
+                "workspace_users_enabled": workspace_users_enabled,
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
@@ -237,12 +255,12 @@ class AsyncVoiceTrunksBase(AsyncResource):
         ending_before: str | None = None,
         options: RequestOptions | None = None,
     ) -> AsyncPage[VoiceTrunk]:
-        """List the workspace's SIP trunks as a cursor page. Each carries the Bird-assigned `domain` the customer's equipment sends calls to. The `ip_acls` and `allowed_api_key_ids` fields control which calls are admitted; a trunk with both empty admits nothing when `session_credentials_enabled` is false. Keys listed in `ineligible_api_key_ids` cannot authenticate even though they remain bound to the trunk.
+        """List the workspace's SIP trunks as a cursor page. Each carries the Bird-assigned `domain` the customer's equipment sends calls to. The `ip_acls` and `allowed_api_key_ids` fields admit the customer's PBX calls while `sip_trunking_enabled` is on; with both empty they admit none. Keys listed in `ineligible_api_key_ids` cannot authenticate even though they remain bound to the trunk.
 
         ```python
         async for trunk in client.voice.trunks.list():
             # A trunk with no allow list and no session credentials admits nothing.
-            print(trunk.id, trunk.domain, trunk.inbound_enabled)
+            print(trunk.id, trunk.domain, trunk.did_delivery_enabled)
         ```
         """
         query = {
@@ -264,7 +282,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
 
         ```python
         trunk = await client.voice.trunks.get("trunk-id")
-        print(trunk.name, trunk.inbound_enabled, trunk.outbound_enabled)
+        print(trunk.name, trunk.did_delivery_enabled, trunk.sip_trunking_enabled)
         ```
         """
         return await self._get(
@@ -278,6 +296,9 @@ class AsyncVoiceTrunksBase(AsyncResource):
         self,
         *,
         name: str,
+        sip_trunking_enabled: bool | None = None,
+        did_delivery_enabled: bool | None = None,
+        workspace_users_enabled: bool | None = None,
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
@@ -290,7 +311,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
 
         ```python
         trunk = await client.voice.trunks.create(
-            name="Lisbon office", outbound_enabled=True, inbound_enabled=True
+            name="Lisbon office", sip_trunking_enabled=True, did_delivery_enabled=True
         )
         print(trunk.id, trunk.domain)
         ```
@@ -299,6 +320,9 @@ class AsyncVoiceTrunksBase(AsyncResource):
             VoiceTrunkCreate,
             {
                 "name": name,
+                "sip_trunking_enabled": sip_trunking_enabled,
+                "did_delivery_enabled": did_delivery_enabled,
+                "workspace_users_enabled": workspace_users_enabled,
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,
@@ -320,6 +344,9 @@ class AsyncVoiceTrunksBase(AsyncResource):
         trunk_id: str,
         *,
         name: str | None = None,
+        sip_trunking_enabled: bool | None = None,
+        did_delivery_enabled: bool | None = None,
+        workspace_users_enabled: bool | None = None,
         outbound_enabled: bool | None = None,
         inbound_enabled: bool | None = None,
         media_bypass: bool | None = None,
@@ -330,7 +357,7 @@ class AsyncVoiceTrunksBase(AsyncResource):
         session_credentials_enabled: bool | None = None,
         options: RequestOptions | None = None,
     ) -> VoiceTrunk:
-        """Change a SIP trunk's directions, name, access control and Digest offer. A direction has to be enabled before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `inbound_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. If an emergency number is attached, clear it in the dashboard before turning inbound off. Turning it back on does not restore those routes, so confirm that change with the user first.
+        """Change a SIP trunk's caller switches, name, access control and Digest offer. A switch has to be on before its settings can be set, and one update can do both, so this is the operation that clears `VoiceTrunkOutboundNotEnabled` and `VoiceTrunkInboundNotEnabled`. The `ip_acls`, `allowed_api_key_ids` and `digest_algorithms` fields each REPLACE their whole list, so read `voice.trunks.get` first and send the list you want to end up with. An empty array clears an allow list; an empty `digest_algorithms` array restores the default offer. Turning `did_delivery_enabled` off returns numbers routed to this trunk to the workspace default inbound route, and resets a default that names it to reject. If an emergency number is attached, clear it in the dashboard before turning `did_delivery_enabled` off. Turning it back on does not restore those routes, so confirm that change with the user first.
 
         ```python
         trunk = await client.voice.trunks.update(
@@ -345,6 +372,9 @@ class AsyncVoiceTrunksBase(AsyncResource):
             VoiceTrunkUpdate,
             {
                 "name": name,
+                "sip_trunking_enabled": sip_trunking_enabled,
+                "did_delivery_enabled": did_delivery_enabled,
+                "workspace_users_enabled": workspace_users_enabled,
                 "outbound_enabled": outbound_enabled,
                 "inbound_enabled": inbound_enabled,
                 "media_bypass": media_bypass,

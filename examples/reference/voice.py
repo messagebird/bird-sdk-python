@@ -19,7 +19,7 @@ def voice_list() -> None:
 def voice_trunks_list() -> None:
     for trunk in client.voice.trunks.list():
         # A trunk with no allow list and no session credentials admits nothing.
-        print(trunk.id, trunk.domain, trunk.inbound_enabled)
+        print(trunk.id, trunk.domain, trunk.did_delivery_enabled)
 
 def voice_trunks_update() -> None:
     trunk = client.voice.trunks.update(
@@ -41,13 +41,13 @@ def voice_session_credentials_create() -> None:
 
 def voice_trunks_create() -> None:
     trunk = client.voice.trunks.create(
-        name="Lisbon office", outbound_enabled=True, inbound_enabled=True
+        name="Lisbon office", sip_trunking_enabled=True, did_delivery_enabled=True
     )
     print(trunk.id, trunk.domain)
 
 def voice_trunks_get() -> None:
     trunk = client.voice.trunks.get("trunk-id")
-    print(trunk.name, trunk.inbound_enabled, trunk.outbound_enabled)
+    print(trunk.name, trunk.did_delivery_enabled, trunk.sip_trunking_enabled)
 
 def voice_trunks_delete() -> None:
     client.voice.trunks.delete("trunk-id")

@@ -24,6 +24,7 @@ def test_surface_conformance() -> None:
     assert callable(client.email.stats.by_mailbox_provider)
     assert callable(client.email.stats.by_mailbox_provider_region)
     assert callable(client.email.stats.by_template)
+    assert callable(client.email.stats.by_brand)
     assert callable(client.email.stats.by_location)
     assert callable(client.email.stats.by_client)
     assert callable(client.email.stats.by_bounce_code)

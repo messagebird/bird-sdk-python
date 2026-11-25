@@ -117,6 +117,12 @@ def email_stats_byTemplate() -> None:
         print(row)
 
 
+def email_stats_byBrand() -> None:
+    stats = client.email.stats.by_brand(sort="open_rate", limit=25)
+    for row in stats.data:
+        print(row)
+
+
 def email_stats_byLocation() -> None:
     stats = client.email.stats.by_location(
         from_="2026-05-01", to="2026-05-25", group_by="country",

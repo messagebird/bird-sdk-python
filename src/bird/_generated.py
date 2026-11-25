@@ -688,7 +688,7 @@ class EmailBounceStatsWithRates(BaseModel):
 
 
 class EmailDeliveryStats(BaseModel):
-    "Delivery counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). Lifecycle counts identify distinct recipients that reached the named stage in scope; `oob_bounces` counts distinct failure events. Period summaries count each identity once per metric across the whole window, so adding time-bucket distinct counts can overstate the summary. Event time determines attribution; send time does not. A recipient delivered on Monday counts in Monday's row. A recipient who bounced and then succeeded on a retry can appear in both `bounced` and `delivered`. Very large counts are close estimates rather than exact tallies.\n\nThese counts are successive lifecycle stages, so a recipient can appear in more than one:\n\n- `rejected`: Happens before any send attempt, from suppression, policy, or a generation failure.\n- `deferred`: A temporary in-flight delay that is still being retried.\n- `bounced`: A delivery failure, with its own hard, soft, admin, block, and undetermined sub-types.\n- `complained`: Post-delivery spam feedback.\n\nEach rate is a fraction in the range 0 to 1 and is null when its denominator is zero. `accepted` is reported only where it can be attributed (time buckets and the period summary). Breakdown rows omit it."
+    "Delivery counts and rates for the scope of the containing row (a time bucket, a breakdown dimension, or the whole period). Lifecycle counts identify distinct recipients that reached the named stage in scope; `oob_bounces` counts distinct failure events. Period summaries count each identity once per metric across the whole window, so adding time-bucket distinct counts can overstate the summary. Event time determines attribution; send time does not. A recipient delivered on Monday counts in Monday's row. A recipient who bounced and then succeeded on a retry can appear in both `bounced` and `delivered`. Very large counts are close estimates rather than exact tallies.\n\nThese counts are successive lifecycle stages, so a recipient can appear in more than one:\n\n- `rejected`: Happens before any send attempt, from suppression, policy, or a generation failure.\n- `deferred`: A temporary in-flight delay that is still being retried.\n- `bounced`: A delivery failure, with its own hard, soft, admin, block, and undetermined sub-types.\n- `complained`: Post-delivery spam feedback.\n\nEach rate is a fraction and is null when its denominator is zero. `delivery_rate` and `bounce_rate` fall in the range 0 to 1, while event-time `complaint_rate` and `oob_rate` can exceed 1 when late signals outnumber attempts in a narrow window. `accepted` is reported only where it can be attributed (time buckets and the period summary). Breakdown rows omit it."
     model_config = ConfigDict(extra="allow")
     accepted: Annotated[Optional[int], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -743,10 +743,9 @@ class EmailDeliveryStats(BaseModel):
         ge=0,
     )]
     oob_rate: Annotated[Optional[float], Field(
-        description="Share of this scope's delivery attempts that resulted in an out-of-band bounce, computed as `oob_bounces / (delivered + bounced)`. Null when there were no attempts.",
+        description="Out-of-band bounce events in this scope relative to delivery attempts, computed as `oob_bounces / (delivered + bounced)`. Because out-of-band bounces are attributed by event time as distinct events, a scope can record more of them than it attempted, pushing the rate above 1. Null when there were no attempts.",
         examples=[0.00014],
         ge=0,
-        le=1,
     )]
     delivery_rate: Annotated[Optional[float], Field(
         description="Share of this scope's delivery attempts that remained delivered after all bounce signals, computed as `effective_delivered / (delivered + bounced)`. Null when there were no attempts.",
@@ -4484,13 +4483,14 @@ class EmailBroadcastFundingHoldReason(str, Enum):
     automatic_top_up = "automatic_top_up"
     funds_required = "funds_required"
     wait_expired = "wait_expired"
+    send_limit_reached = "send_limit_reached"
 
 
 class EmailBroadcastFundingHold(BaseModel):
-    "Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nThe send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nEach interruption can wait up to 20 minutes for funds. Checks, refused batches and partial top-ups during the same interruption do not extend its deadline. Automatic continuation or an explicit resume clears the hold; if sending later stops for funds again, a new 20-minute wait begins."
+    "Why sending stopped for funds or a sending limit, and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nFor a funds hold, add funds during the wait to let sending continue automatically. After the broadcast pauses, check the balance and add funds if it is still short, then resume it explicitly. For `send_limit_reached`, adding funds does not help: sending continues when the limit allows more email, and after a pause you resume it once it does. Resume is refused while the next batch still cannot be paid for or would go over a sending limit. A failed broadcast cannot resume.\n\nEach interruption can wait up to 20 minutes for funds. An interruption for a sending limit (`send_limit_reached`) waits until 10 minutes after the next midnight UTC, when the daily limit resets. Checks, refused batches and partial top-ups during the same interruption do not extend its deadline. Automatic continuation or an explicit resume clears the hold; if sending later stops again, a new wait begins."
     model_config = ConfigDict(extra="allow")
     reason: Annotated[EmailBroadcastFundingHoldReason, Field(
-        description="Why sending stopped for funds.\n\n- `automatic_top_up`: Sending stopped while automatic top-up was active. Sending can continue automatically when a funding check succeeds before `wait_until`.\n- `funds_required`: Sending stopped because your balance cannot pay for more email. While `waiting_for_funds`, a manual or automatic top-up can restart sending before `wait_until`. If the broadcast is `paused`, add funds if needed, then resume it.\n- `wait_expired`: Status is `paused`. The automatic wait ended before sending continued. Add funds if needed, then resume the broadcast.",
+        description="Why sending stopped for funds or a sending limit.\n\n- `automatic_top_up`: Sending stopped while automatic top-up was active. Sending can continue automatically when a funding check succeeds before `wait_until`.\n- `funds_required`: Sending stopped because your balance cannot pay for more email. While `waiting_for_funds`, a manual or automatic top-up can restart sending before `wait_until`. If the broadcast is `paused`, add funds if needed, then resume it.\n- `wait_expired`: Status is `paused`. The automatic wait ended before sending continued. Add funds if needed, then resume the broadcast.\n- `send_limit_reached`: Sending stopped because the next batch would go over one of your organization's email sending limits, such as its daily limit. While `waiting_for_funds`, Bird checks once a minute and continues sending if the limit allows the next batch before `wait_until`, such as after the daily limit resets at midnight UTC. If the broadcast is `paused`, the limit did not allow sending before `wait_until`. Resume it once the limit allows more email, or cancel it.",
     )]
     wait_until: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -4706,14 +4706,14 @@ class EmailBroadcast(BaseModel):
     )]
     funding_hold: Annotated[Optional[EmailBroadcastFundingHold], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Why sending stopped for funds and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nThe send-allowance response includes `can_start` when waiting and resuming are available. If `can_start` is absent, do not assume a top-up can recover a broadcast or that a failed broadcast can resume.\n\nEach interruption can wait up to 20 minutes for funds. Checks, refused batches and partial top-ups during the same interruption do not extend its deadline. Automatic continuation or an explicit resume clears the hold; if sending later stops for funds again, a new 20-minute wait begins.",
+        description="Why sending stopped for funds or a sending limit, and what happens next. Present only while `status` is `waiting_for_funds` or `paused`.\n\nFor a funds hold, add funds during the wait to let sending continue automatically. After the broadcast pauses, check the balance and add funds if it is still short, then resume it explicitly. For `send_limit_reached`, adding funds does not help: sending continues when the limit allows more email, and after a pause you resume it once it does. Resume is refused while the next batch still cannot be paid for or would go over a sending limit. A failed broadcast cannot resume.\n\nEach interruption can wait up to 20 minutes for funds. An interruption for a sending limit (`send_limit_reached`) waits until 10 minutes after the next midnight UTC, when the daily limit resets. Checks, refused batches and partial top-ups during the same interruption do not extend its deadline. Automatic continuation or an explicit resume clears the hold; if sending later stops again, a new wait begins.",
     )] = None
     next: Annotated[Optional[List[NextAction]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="What to do next about this broadcast, given the state it is in. Each entry names one action and\nsays why it is worth taking. Responses that compute next actions include this field: an empty list means there is\nnothing to do. Other responses omit it.",
     )] = None
     failure_reason: Annotated[Optional[EmailBroadcastFailureReason], Field(
-        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` explains what went wrong. It is one of these:\n  - The broadcast has no template, or the template it uses no longer exists. Choose an existing template and send the broadcast again.\n  - The template has no published version, or its published version has no subject and no body. Publish the template, or add content and publish it.\n  - The template uses a loop or reads a value that a broadcast cannot provide. Remove it, or use a contact property instead, then publish the template again.\n  - The template requires a language, but the broadcast has not selected one. Set `template.language` to one of the template's languages and send the broadcast again.\n  - The selected language is not available on the published template version. Choose one of that version's languages, or publish a version that includes the selected language.\n  - The sending domain is no longer verified. Verify the domain again.\n  - The configured IP pool has no usable IP address.\n  - We could not hand the prepared message to the delivery system. This is a problem on our side.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Retry, and open a support ticket if it keeps happening.\n- `workspace_suspended`: The workspace is suspended, so the broadcast stopped sending. Recipients not yet sent to are not sent to, even after reactivation. Contact Bird support to reactivate the workspace.",
+        description="Why the broadcast failed. Set when `status` is `failed`, and `null` the rest of the time. A failed broadcast cannot be sent again; once the cause is fixed, create a new broadcast.\n\n- `empty_audience`: There was nobody to send to. Either the audience has no members, or every address in it is suppressed.\n- `audience_unavailable`: The audience no longer exists, so there was nothing to resolve.\n- `content_invalid`: The broadcast could not be set up to send. `failure_detail` explains what went wrong. It is one of these:\n  - The broadcast has no template, or the template it uses no longer exists. Choose an existing template for the new broadcast.\n  - The template has no published version, or its published version has no subject and no body. Publish the template, or add content and publish it.\n  - The template uses a loop or reads a value that a broadcast cannot provide. Remove it, or use a contact property instead, then publish the template again.\n  - The template requires a language, but the broadcast has not selected one. Set `template.language` on the new broadcast to one of the template's languages.\n  - The selected language is not available on the published template version. Choose one of that version's languages, or publish a version that includes the selected language.\n  - The sending domain is no longer verified. Verify the domain again.\n  - The configured IP pool has no usable IP address.\n  - We could not hand the prepared message to the delivery system. This is a problem on our side.\n- `insufficient_funds`: There was not enough in the workspace balance to pay for the send.\n- `quota_exceeded`: The send would have gone past your organization's daily or monthly email allowance, whichever runs out first. This can happen when the broadcast is being prepared, or partway through sending if the remaining recipients no longer fit. `failure_detail` gives you the count and the limit.\n- `internal_error`: Something went wrong on our side. Open a support ticket if it keeps happening.\n- `workspace_suspended`: The workspace is suspended, so the broadcast stopped sending. Recipients not yet sent to are not sent to, even after reactivation. Contact Bird support to reactivate the workspace.",
     )] = None
     failure_detail: Annotated[Optional[str], Field(
         description="A sentence explaining the failure in more detail than `failure_reason` does, and `null` when the broadcast has not failed. Show it to the person using your app. Do not write code that reads it, because the wording can change. Branch on `failure_reason` instead.",
@@ -5141,13 +5141,8 @@ class EmailBroadcastCountAllowance(BaseModel):
     )]
 
 
-class EmailBroadcastInsufficientFundsBehavior(str, Enum):
-    wait_for_top_up = "wait_for_top_up"
-    pause = "pause"
-
-
 class EmailBroadcastSendQuota(BaseModel):
-    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\nServers that support funding recovery return `can_start`; callers with billing read access also receive `on_insufficient_funds`. If `can_start` is absent, use `allowed` to check the current allowance and do not assume automatic waiting or resumability. An absent field is different from `can_start: false`, which explicitly says the broadcast cannot start.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit. `on_insufficient_funds` says what happens if the balance runs out mid-send. Like `limit_reason`, it is present only when you have `org:billing` read access."
+    "The recipients covered by the organization's email send allowance. If you pass `send_at`, the estimate is for that time. Otherwise, it is for a send now.\n\nThe organization shares this allowance across its email sends. `allowed` can change as other sends use the allowance. `recipients` can change with audience membership and suppressions. These counts are live estimates. Other sends can use the allowance before a broadcast sends, even if its audience fits now.\n\nUse `can_start` to check whether the email limits let this broadcast start. If the balance runs out during sending, the broadcast waits up to 20 minutes and can continue automatically if enough funds become available during that wait. Otherwise it pauses until you resume it. It checks for funds once a minute. This does not enable automatic top-up or initiate a payment.\n\n`limit_reason` is present only when `limited_by` is `monthly` and you have `org:billing` read access. The reason can reveal the organization's payment state. `broadcasts` is present only for a draft when the organization has a broadcast count limit."
     model_config = ConfigDict(extra="allow")
     recipients: Annotated[int, Field(
         description="Number of contacts the broadcast could reach now. Excludes contacts without an email address and contacts suppressed for the broadcast's category. Matches the sendable count from the broadcast's audience counts.",
@@ -5155,7 +5150,7 @@ class EmailBroadcastSendQuota(BaseModel):
         ge=0,
     )]
     allowed: Annotated[int, Field(
-        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients are currently covered. This happens if the audience exceeds a full daily or funded monthly limit, if a temporary funding restriction blocks sending, or if the remaining allowance cannot cover a batch. When `can_start` is present, use it to decide whether a balance-limited broadcast can start and wait for funds. If it is absent, a zero allowance does not provide a way to send.",
+        description="Number of recipients covered by the organization's email send allowance at `send_at`, or now if you omit it. Equals `recipients` when no email limit restricts the send. It is lower when the remaining allowance cannot cover the audience.\n\nPartially covered broadcasts send in whole batches. This count is rounded down to a batch boundary and can be lower than `remaining`. Read this value directly instead of calculating it from `limit` and `remaining`.\n\nA value of 0 means no recipients are currently covered. This happens if the audience exceeds a full daily or funded monthly limit, if a temporary funding restriction blocks sending, or if the remaining allowance cannot cover a batch. Use `can_start` to decide whether a broadcast with insufficient funds can start and wait for funds.",
         examples=[5000],
         ge=0,
     )]
@@ -5176,7 +5171,7 @@ class EmailBroadcastSendQuota(BaseModel):
     )] = None
     resets_at: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="When usage resets to 0 for the email limit identified by `limited_by`, evaluated at `send_at`, or now if you omit it.\n\nA broadcast sent before this time uses the same window and the allowance left after other sends. A broadcast sent at or after this time uses a new window. If `recipients` exceeds a full daily or funded monthly limit, the send is rejected in any window with that limit. When `limit_reason` is `unfunded`, the reported `limit` can instead be a temporary funding restriction; use `can_start`, when present, to determine whether the broadcast can start and wait for funds. Pass the later time as `send_at` to check whether the other email limit still restricts the send.\n\nOmitted when no email limit restricts the send, when the reset is at or before `send_at`, or when the billing period has ended and the next one has not started.",
+        description="When usage resets to 0 for the email limit identified by `limited_by`, evaluated at `send_at`, or now if you omit it.\n\nA broadcast sent before this time uses the same window and the allowance left after other sends. A broadcast sent at or after this time uses a new window. If `recipients` exceeds a full daily or funded monthly limit, the send is rejected in any window with that limit. When `limit_reason` is `unfunded`, the reported `limit` can instead be a temporary funding restriction; use `can_start` to determine whether the broadcast can start and wait for funds. Pass the later time as `send_at` to check whether the other email limit still restricts the send.\n\nOmitted when no email limit restricts the send, when the reset is at or before `send_at`, or when the billing period has ended and the next one has not started.",
         examples=["2026-09-01T00:00:00Z"],
         min_length=1,
     )] = None
@@ -5188,15 +5183,10 @@ class EmailBroadcastSendQuota(BaseModel):
         json_schema_extra={"x-bird-nullable": False},
         description="The organization's broadcast count allowance for the current window. This counts broadcasts rather than emails. The window is the billing period, or the UTC day when no current billing period is available.\n\nSending or scheduling a draft uses one broadcast from the window current when you submit the request. The scheduled send time does not determine the window. Sending an already scheduled broadcast again uses no additional broadcast allowance. `send_at` on the send-quota request does not change this allowance.",
     )] = None
-    on_insufficient_funds: Annotated[Optional[EmailBroadcastInsufficientFundsBehavior], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="When returned in the send-allowance response, this describes what a broadcast does if your balance runs out while it is sending. Recipients already sent to are not affected either way.\n\n- `wait_for_top_up`: The broadcast waits up to 20 minutes for a manual or automatic top-up. It checks once a minute and continues by itself when the insufficient-funds restriction clears, then pauses if the wait ends. Waiting does not change your automatic top-up settings or initiate a payment.\n- `pause`: The broadcast pauses until you add funds and resume it.",
-    )] = None
-    can_start: Annotated[Optional[bool], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="When present, whether the organization's email limits let this broadcast start at `send_at`, or now if you omit it. This ignores a temporary funding restriction, including exhausted included volume when paid overage is available. It still checks daily limits and the monthly limit that applies after funding is restored.\n\nIt is `false` when no recipient fits the daily or funded monthly limits, including when the audience exceeds a full daily or funded monthly limit, or when usage has exhausted either limit. The response field `remaining` can instead reflect the temporary funding restriction: with `limit_reason: unfunded`, `remaining: 0` can accompany `can_start: true` if those daily and funded monthly limits allow sending. The broadcast can then start and wait for funds. A `true` value does not reserve allowance or promise that every recipient is sent. Other checks still apply when you send.",
+    can_start: Annotated[bool, Field(
+        description="Whether the organization's email limits let this broadcast start at `send_at`, or now if you omit it. This ignores a temporary funding restriction, including exhausted included volume when paid overage is available. It still checks daily limits and the monthly limit that applies after funding is restored.\n\nIt is `false` when no recipient fits the daily or funded monthly limits, including when the audience exceeds a full daily or funded monthly limit, or when usage has exhausted either limit. The response field `remaining` can instead reflect the temporary funding restriction: with `limit_reason: unfunded`, `remaining: 0` can accompany `can_start: true` if those daily and funded monthly limits allow sending. The broadcast can then start and wait for funds. A `true` value does not reserve allowance or promise that every recipient is sent. Other checks still apply when you send.",
         examples=[True],
-    )] = None
+    )]
 
 
 class EmailBroadcastClickedLink(BaseModel):
@@ -9977,6 +9967,29 @@ class Verification(BaseModel):
     updated_at: Annotated[str, Field(examples=["2026-05-25T16:42:01Z"], min_length=1)]
 
 
+class VerificationCheckResultReason(str, Enum):
+    incorrect_code = "incorrect_code"
+    expired = "expired"
+    attempts_exhausted = "attempts_exhausted"
+
+
+class VerificationCheckResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    success: Annotated[bool, Field(
+        description="Whether the submitted passcode verified this verification. `true` means the passcode was correct and the verification is now complete; `false` means it did not verify, and `reason` says why. A verification that has already reached a final state is no longer checkable and returns `404`.",
+        examples=[False],
+    )]
+    reason: Annotated[Optional[Annotated[Union[VerificationCheckResultReason, str], Field(union_mode="left_to_right")]], Field(
+        description="Why the check did not succeed:\n\n- `incorrect_code`: The passcode was wrong and attempts remain.\n- `expired`: The validity window elapsed.\n- `attempts_exhausted`: Too many incorrect attempts were submitted.\n\n`null` when `success` is `true`. Treat unrecognized values as reasons added\nlater.",
+    )] = None
+    verification: Verification
+    attempts_remaining: Annotated[Optional[int], Field(
+        description="The number of check attempts left while the verification is still pending, or `null` once it has reached a final state.",
+        examples=[2],
+        ge=0,
+    )] = None
+
+
 class VerificationOptions(BaseModel):
     "Per-request overrides applied to this verification only. `language` picks one of Bird's built-in translations; a custom sender that carries its own template renders the language that template stocks instead. An email template pinned to a custom email sender falls back to its own default language rather than to English (Verify only accepts templates whose language settings fall back). A WhatsApp authentication template follows its own missing-language policy: it falls back to its default or, when set to fail, refuses the send for a language it does not stock. The requested tag stays fixed for the verification."
     model_config = ConfigDict(extra="allow")
@@ -10022,7 +10035,7 @@ class VerificationCreateRequest(BaseModel):
     )] = None
     metadata: Annotated[Optional[Dict[str, Any]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification.",
+        description="Optional key/value pairs to attach to the verification, for example a correlation id. Returned on the verification and copied onto the SMS, WhatsApp or email message that carries the code, so reads of that message and its webhooks return it too. The copy is skipped when the object is larger than 2 KB serialized.",
     )] = None
 
 
@@ -10037,29 +10050,6 @@ class VerificationCheckRequest(BaseModel):
         max_length=12,
         min_length=4,
     )]
-
-
-class VerificationCheckResultReason(str, Enum):
-    incorrect_code = "incorrect_code"
-    expired = "expired"
-    attempts_exhausted = "attempts_exhausted"
-
-
-class VerificationCheckResult(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    success: Annotated[bool, Field(
-        description="Whether the submitted passcode verified this verification. `true` means the passcode was correct and the verification is now complete; `false` means it did not verify, and `reason` says why. A verification that has already reached a final state is no longer checkable and returns `404`.",
-        examples=[False],
-    )]
-    reason: Annotated[Optional[Annotated[Union[VerificationCheckResultReason, str], Field(union_mode="left_to_right")]], Field(
-        description="Why the check did not succeed:\n\n- `incorrect_code`: The passcode was wrong and attempts remain.\n- `expired`: The validity window elapsed.\n- `attempts_exhausted`: Too many incorrect attempts were submitted.\n\n`null` when `success` is `true`. Treat unrecognized values as reasons added\nlater.",
-    )] = None
-    verification: Verification
-    attempts_remaining: Annotated[Optional[int], Field(
-        description="The number of check attempts left while the verification is still pending, or `null` once it has reached a final state.",
-        examples=[2],
-        ge=0,
-    )] = None
 
 
 class VerificationNextChannelRequest(BaseModel):
@@ -11297,10 +11287,10 @@ class WhatsAppTemplateSend(BaseModel):
     )] = None
     bid_multiplier: Annotated[Optional[float], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Multiplies `optimization_spec.bid_amount` × country multiplier for this message. Range 0.01–100; default 1. Requires `optimization_spec` on a marketing template language.",
+        description="Multiplies `optimization_spec.bid_amount` × country multiplier for this message. Range 0.1–2; default 1. Requires `optimization_spec` on a marketing template language. The result must stay at most 50000 (0.50 per delivery) for the recipient's country; a recipient without a known country is checked against the language's highest.",
         examples=[0.8],
-        ge=0.01,
-        le=100,
+        ge=0.1,
+        le=2,
     )] = None
     parameters: Annotated[Optional[Dict[str, Any]], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -13050,16 +13040,17 @@ class WhatsAppTemplateOptimizationSpecWrite(BaseModel):
     "A maximum price for this language's marketing deliveries. Meta charges each delivery a variable amount up to the bid. Only marketing templates accept it."
     model_config = ConfigDict(extra="allow")
     bid_amount: Annotated[int, Field(
-        description="The maximum price per 1,000 deliveries, in the smallest unit of the account's currency. The reach estimate returns that currency as `currency_code`. 5000 is USD 0.05 per delivery.",
+        description="The maximum price per 1,000 deliveries, in the smallest unit of the account's currency. The reach estimate returns that currency as `currency_code`. 5000 is USD 0.05 per delivery. At most 50000, which is 0.50 per delivery.",
         examples=[5000],
         ge=1,
+        le=50000,
     )]
     bid_strategy: Annotated[Literal["lowest_cost_with_bid_cap"], Field(
         description="How Meta bids for each delivery.\n\n- `lowest_cost_with_bid_cap`: Meta delivers at the lowest cost it can find, never above the bid.",
     )]
     bid_country_multiplier_overrides: Annotated[Optional[Dict[str, float]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Scales the bid for recipients in a country, keyed by ISO 3166-1 alpha-2 code. A country you leave out uses 1. Each write replaces the whole map.",
+        description="Scales the bid for recipients in a country, keyed by ISO 3166-1 alpha-2 code. A country you leave out uses 1. Each write replaces the whole map. `bid_amount` times a country's multiplier must also be at most 50000.",
     )] = None
 
 
@@ -20161,6 +20152,7 @@ class EmailStatsQueryMetric(str, Enum):
 
 
 class EmailStatsQueryDimension(str, Enum):
+    brand_id = "brand_id"
     sending_domain = "sending_domain"
     category = "category"
     template_id = "template_id"
@@ -20188,6 +20180,17 @@ class EmailStatsQueryGrain(str, Enum):
     day = "day"
     week = "week"
     month = "month"
+
+
+class EmailStatsQueryBrandFilter(BaseModel):
+    "Match recorded Brand IDs using include or exclude. Include values combine with OR; exclusions remove matches. Missing values (`brand_id` null) survive exclude-only predicates. Brand listing is dashboard-only; copy a Brand ID from Brands > More actions > Copy brand ID in the dashboard, or ask the caller for the ID when only a Brand name is known. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap."
+    model_config = ConfigDict(extra="allow")
+    include: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
+    exclude: Annotated[Optional[List[str]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+    )] = None
 
 
 class EmailStatsQueryStringFilter(BaseModel):
@@ -20260,6 +20263,10 @@ class EmailStatsQueryBroadcastFilter(BaseModel):
 class EmailStatsQueryFilters(BaseModel):
     "Predicates on the context recorded for each event. Dimensions combine with AND. Unsupported metric and dimension combinations return 422, including for an empty workspace."
     model_config = ConfigDict(extra="allow")
+    brand_id: Annotated[Optional[EmailStatsQueryBrandFilter], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Match recorded Brand IDs using include or exclude. Include values combine with OR; exclusions remove matches. Missing values (`brand_id` null) survive exclude-only predicates. Brand listing is dashboard-only; copy a Brand ID from Brands > More actions > Copy brand ID in the dashboard, or ask the caller for the ID when only a Brand name is known. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
+    )] = None
     sending_domain: Annotated[Optional[EmailStatsQueryStringFilter], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="Match recorded values using include or exclude. Include values combine with OR; exclusions remove matches. Missing values survive exclude-only predicates. Supply a nonempty array; at most 20 distinct values across both arrays are accepted after normalization, with no overlap.",
@@ -20363,7 +20370,7 @@ class EmailStatsQueryRequest(BaseModel):
     )]
     group_by: Annotated[Optional[EmailStatsQueryDimension], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Group by one recorded event dimension. Omit for a single ungrouped summary with optional series.\nGrouping by `tag` requires `filters.tag.name`.\nMissing values form a null group when the metric supports that dimension. A null value\nmeans the event lacks that attribution; it does not explain how the message was created\nor establish membership in another dimension such as a campaign.\n\nEvery selected metric must support the grouping dimension and every filter dimension.\nUnsupported combinations return validation error `E04074`, even when the workspace has no events.\n\n- `sending_domain`, `category`, `template_id`, `tag`: all metrics.\n- `recipient_domain`, `ip_pool_id`, `broadcast_id`: all metrics except `sends_accepted`.\n- `mailbox_provider`, `mailbox_provider_region`: all metrics except `sends_accepted`, `accepted`, and `rejected`.\n- `sending_ip`: `delivered`, `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`,\n  `undetermined_bounced`, `deferred`, `oob_bounces`, `effective_delivered`, `all_bounces`, `delivery_rate`,\n  `bounce_rate`, `deferral_rate`, `oob_rate`, `total_p50_ms`, `total_p95_ms`, and `total_p99_ms`.\n- `country`, `region`, `city`, `agent_family`, `os_family`, `device_family`: `opens`, `opens_non_prefetched`,\n  `clicks`, `unique_opens`, `unique_opens_non_prefetched`, `unique_clicks`, `confirmed_unique_opens`,\n  and `confirmed_unique_opens_non_prefetched`.\n- `smtp_error_code`: `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`, and `undetermined_bounced`.\n- `feedback_type`: `complained`.",
+        description="Group by one recorded event dimension. Omit for a single ungrouped summary with optional series.\nGrouping by `tag` requires `filters.tag.name`.\nMissing values form a null group when the metric supports that dimension. A null value\nmeans the event lacks that attribution; it does not explain how the message was created\nor establish membership in another dimension such as a campaign.\n\nEvery selected metric must support the grouping dimension and every filter dimension.\nUnsupported combinations return validation error `E04074`, even when the workspace has no events.\n\n- `brand_id`, `sending_domain`, `category`, `template_id`, `tag`: all metrics. A null `brand_id` represents historical or unattributed traffic recorded without a Brand and is distinct from the workspace's default Brand.\n- `recipient_domain`, `ip_pool_id`, `broadcast_id`: all metrics except `sends_accepted`.\n- `mailbox_provider`, `mailbox_provider_region`: all metrics except `sends_accepted`, `accepted`, and `rejected`.\n- `sending_ip`: `delivered`, `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`,\n  `undetermined_bounced`, `deferred`, `oob_bounces`, `effective_delivered`, `all_bounces`, `delivery_rate`,\n  `bounce_rate`, `deferral_rate`, `oob_rate`, `total_p50_ms`, `total_p95_ms`, and `total_p99_ms`.\n- `country`, `region`, `city`, `agent_family`, `os_family`, `device_family`: `opens`, `opens_non_prefetched`,\n  `clicks`, `unique_opens`, `unique_opens_non_prefetched`, `unique_clicks`, `confirmed_unique_opens`,\n  and `confirmed_unique_opens_non_prefetched`.\n- `smtp_error_code`: `bounced`, `hard_bounced`, `soft_bounced`, `admin_bounced`, `block_bounced`, and `undetermined_bounced`.\n- `feedback_type`: `complained`.",
     )] = None
     grain: Annotated[Optional[EmailStatsQueryGrain], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -20402,6 +20409,12 @@ class EmailStatsQueryRequest(BaseModel):
 class EmailStatsQueryDimensions(BaseModel):
     "Contains the requested group_by property, including a null value when context is missing. Ungrouped results use an empty object."
     model_config = ConfigDict(extra="allow")
+    brand_id: Annotated[Optional[str], Field(
+        description="Recorded Brand id value. Null represents historical or unattributed traffic recorded without a Brand and is distinct from the default Brand.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )] = None
     sending_domain: Annotated[Optional[str], Field(
         description="Recorded sending domain value. Null represents missing context and differs from an empty string.",
     )] = None
@@ -21117,6 +21130,70 @@ class EmailStatsByBroadcastResponse(BaseModel):
     total: Annotated[int, Field(
         description="Total number of distinct broadcasts with activity in the period, regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
         examples=[57],
+        ge=0,
+    )]
+    next_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the next page. Pass back as `starting_after` to advance forward. `null` when no next page exists.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE0OjAzOjEwWlwiIiwiaSI6IjAxOTJmM2IxLTRjN2UtN2EyYi05ZDYxLThmM2E1YzJlN2I0MCJ9"],
+    )]
+    prev_cursor: Annotated[Optional[str], Field(
+        description="Cursor for the previous page. Pass back as `ending_before` to step backward. `null` when no previous page exists.",
+    )]
+    refresh_cursor: Annotated[Optional[str], Field(
+        description="Refresh anchor, the first row of this response. Pass back as `ending_before` to fetch what precedes it in the current sort order. On a newest-first sort those are the items that have appeared since; on any other sort they are the items that sort earlier, so refreshing such a list means re-fetching it instead. Non-`null` whenever `data` is non-empty; `null` only on an empty page. Distinct from `prev_cursor`.",
+        examples=["eyJ2IjoxLCJzIjoiXCIyMDI2LTA1LTI1VDE2OjQyOjAxWlwiIiwiaSI6IjAxOTJmM2IxLTllMDQtN2NkMy1iODE3LTJhNmY0ZDFjOGUwOSJ9"],
+    )]
+
+
+class EmailStatsBrandPeriod(BaseModel):
+    "The window this Brand breakdown was actually computed against. Bounds are either inclusive calendar days (YYYY-MM-DD in the requested `timezone`, UTC when omitted) or RFC 3339 UTC instants marking the starts of the first and last included 15-minute quarters (aligned to local quarter-hour boundaries when `timezone` is set)."
+    model_config = ConfigDict(extra="allow")
+    from_: Annotated[str, Field(
+        alias="from",
+        description="Inclusive start of the window the response covers. A calendar day (`YYYY-MM-DD`, in the requested `timezone`) for day windows, or an RFC 3339 UTC instant marking the start of the first included 15-minute quarter (aligned to a local quarter-hour boundary when `timezone` is set).",
+        examples=["2026-10-15T09:00:00Z"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    to: Annotated[str, Field(
+        description="Inclusive end of the window the response covers. A calendar day (`YYYY-MM-DD`, in the requested `timezone`) for day windows, or an RFC 3339 UTC instant marking the start of the last included 15-minute quarter (covering the 15 minutes from this timestamp; aligned to a local quarter-hour boundary when `timezone` is set).",
+        examples=["2026-10-15T09:30:00Z"],
+        min_length=1,
+        pattern="^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2}))?$",
+    )]
+    data_as_of: Annotated[Optional[str], Field(
+        description="Always `null` for Brand breakdowns because they read retained reporting events directly rather than asynchronous rollups.",
+    )] = None
+
+
+class EmailBrandStatsPoint(BaseModel):
+    "Delivery, engagement, and latency figures for one Brand's email traffic over the requested period, or for historical unbranded traffic when brand_id is null."
+    model_config = ConfigDict(extra="allow")
+    brand_id: Annotated[Optional[str], Field(
+        description="The Brand recorded at send time (`bnd_…`, copyable from Brands > More actions > Copy brand ID in the dashboard). Archived Brands continue to appear keyed by their ID. `null` represents historical or unattributed messages sent without a Brand and is distinct from the workspace's default Brand.",
+        examples=["bnd_01krdgeqcxet5s7t44vh8rt9mg"],
+        min_length=1,
+        pattern="^bnd_[0-9a-hjkmnp-tv-z]{26}$",
+    )]
+    delivery: EmailDeliveryStats
+    engagement: EmailEngagementStats
+    latency: Annotated[EmailLatencyStats, Field(
+        description="Latency quantiles for this Brand. Retained reporting events populate `processing` and `total` quantiles; `delivery` quantiles are `null`.",
+    )]
+
+
+class EmailStatsByBrandResponse(BaseModel):
+    "Per-Brand breakdown for the requested period, ranked by the `sort` metric (default `processed`) descending and paginated with the requested `limit` (default 50, max 200)."
+    model_config = ConfigDict(extra="allow")
+    period: Annotated[EmailStatsBrandPeriod, Field(
+        description="The window this Brand breakdown was actually computed against. Bounds are either inclusive calendar days (YYYY-MM-DD in the requested `timezone`, UTC when omitted) or RFC 3339 UTC instants marking the starts of the first and last included 15-minute quarters (aligned to local quarter-hour boundaries when `timezone` is set).",
+    )]
+    data: Annotated[List[EmailBrandStatsPoint], Field(
+        description="Brand breakdown rows, ranked by the `sort` metric (default `processed`) descending. Includes a row with `brand_id` set to `null` when historical unbranded traffic occurred in the period.",
+    )]
+    total: Annotated[int, Field(
+        description="Total number of distinct Brand groups with activity in the period (including the `null` unbranded group when present), regardless of `limit`. Pass `next_cursor` as `starting_after` to request the next page.",
+        examples=[4],
         ge=0,
     )]
     next_cursor: Annotated[Optional[str], Field(
@@ -31079,30 +31156,39 @@ class VoiceTrunk(BaseModel):
         examples=["01kxp5bb9qf878642atrf0xy5r.trunk.eu1.sip.bird.com"],
         min_length=1,
     )]
+    sip_trunking_enabled: Annotated[bool, Field(
+        description="Whether your PBX may place calls through this trunk, admitted by `ip_acls` or `allowed_api_key_ids`. Off on a new trunk. While it is off, the allow lists admit no call. Set `sip_trunking_enabled` when you create the trunk or through the trunk update operation.",
+    )]
+    did_delivery_enabled: Annotated[bool, Field(
+        description="Whether this trunk may receive calls: we dial the addresses you declared, for the numbers this trunk answers. Off on a new trunk. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. Set `did_delivery_enabled` when you create the trunk or through the trunk update operation.",
+    )]
+    workspace_users_enabled: Annotated[bool, Field(
+        description="Whether people in this workspace may place calls through this trunk with a session credential, from the dashboard phone, the CLI or MCP. Off on a new trunk. It grants nothing on its own: a call still has to present a credential issued to this workspace, and each one expires within minutes. Set `workspace_users_enabled` when you create the trunk or through the trunk update operation.",
+    )]
     outbound_enabled: Annotated[bool, Field(
-        description="Whether this trunk may place calls: your PBX connects to us to dial out. Off on a new trunk. While it is off the trunk refuses every call attempt no matter what its allow lists say, and the connection and authentication settings below have no effect. Set `outbound_enabled` through the trunk update operation.",
+        description="Deprecated: read `sip_trunking_enabled` and `workspace_users_enabled` instead. `true` while any caller may place calls through this trunk.",
     )]
     inbound_enabled: Annotated[bool, Field(
-        description="Whether this trunk may receive calls: we dial the addresses you declared, for the numbers this trunk answers. Off on a new trunk. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. Set `inbound_enabled` through the trunk update operation.",
+        description="Deprecated: read `did_delivery_enabled`, which has the same value.",
     )]
     media_bypass: Annotated[bool, Field(
         description="Whether we take ourselves out of the audio path for calls we forward to this trunk: your equipment and the originating carrier exchange audio directly, and only the call signalling passes through us. Off by default. It applies to inbound calls alone (calls this trunk places are always carried through us, whatever this says). While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped. Your equipment must be reachable for audio from the public internet. Set `media_bypass` through the trunk update operation.",
     )]
     ip_acls: Annotated[List[VoiceTrunkIPACL], Field(
-        description="The trunk's IP allow list. IP filtering is active whenever this has at least one entry: calls admitted through the allow lists must come from those CIDR ranges. This restriction does not apply to session credentials when `session_credentials_enabled` is true. An empty list means no IP restriction. Replace the whole `ip_acls` list through the trunk update operation.",
+        description="The trunk's IP allow list. IP filtering is active whenever this has at least one entry: calls admitted through the allow lists must come from those CIDR ranges. This restriction does not apply to session credentials when `workspace_users_enabled` is true. An empty list means no IP restriction. Replace the whole `ip_acls` list through the trunk update operation.",
     )]
     allowed_api_key_ids: Annotated[List[str], Field(
-        description="The API keys allowed to authenticate this trunk over SIP Digest. A key must hold `voice` at write level and be neither revoked nor expired to authenticate. `ineligible_api_key_ids` names the entries that currently cannot. A nonempty list enables API-key authentication, limited to its eligible keys. An empty list means no API-key authentication. A trunk with empty `ip_acls` and `allowed_api_key_ids` lists accepts nothing when `session_credentials_enabled` is false. Replace the whole `allowed_api_key_ids` list through the trunk update operation.",
+        description="The API keys allowed to authenticate this trunk over SIP Digest. A key must hold `voice` at write level and be neither revoked nor expired to authenticate. `ineligible_api_key_ids` names the entries that currently cannot. A nonempty list enables API-key authentication, limited to its eligible keys. An empty list means no API-key authentication. A trunk with empty `ip_acls` and `allowed_api_key_ids` lists accepts no call from your PBX. Replace the whole `allowed_api_key_ids` list through the trunk update operation.",
     )]
     ineligible_api_key_ids: Annotated[List[str], Field(
         description="The entries in `allowed_api_key_ids` that cannot authenticate this trunk right now because the key lacks `voice` at write level, has expired, or was revoked. The bindings remain until you remove them from the trunk. Restoring `voice` at write level makes a key eligible again if it is still unexpired and unrevoked, without changing its secret or trunk binding. Empty when every allowed key can authenticate.",
     )]
     digest_algorithms: Annotated[List[VoiceSIPDigestAlgorithm], Field(
-        description="The Digest hash algorithms this trunk offers, in the order they are offered. We send one challenge line per algorithm and your PBX answers with the first it supports, so the order decides what most equipment picks. Always populated: a trunk with no explicit setting reports the default, `[\"SHA-256\", \"MD5\"]`. The list governs clients that authenticate with an API key: their answer with an algorithm that is not on it is rejected, so narrowing the list also narrows what the trunk accepts from them. Session credentials, which the dashboard phone uses and `POST /v1/voice/session-credentials` creates, are the exception: with `session_credentials_enabled`, the challenge always ends with an MD5 line, after the list in its own order, and a valid session credential is accepted with MD5 or SHA-256. An API-key answer with that extra MD5 is still rejected. Replace `digest_algorithms` through the trunk update operation.",
+        description="The Digest hash algorithms this trunk offers, in the order they are offered. We send one challenge line per algorithm and your PBX answers with the first it supports, so the order decides what most equipment picks. Always populated: a trunk with no explicit setting reports the default, `[\"SHA-256\", \"MD5\"]`. The list governs clients that authenticate with an API key: their answer with an algorithm that is not on it is rejected, so narrowing the list also narrows what the trunk accepts from them. Session credentials, which the dashboard phone uses and `POST /v1/voice/session-credentials` creates, are the exception: with `workspace_users_enabled`, the challenge always ends with an MD5 line, after the list in its own order, and a valid session credential is accepted with MD5 or SHA-256. An API-key answer with that extra MD5 is still rejected. Replace `digest_algorithms` through the trunk update operation.",
         min_length=1,
     )]
     session_credentials_enabled: Annotated[bool, Field(
-        description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP, alongside whatever the allow lists admit. Off by default. It grants nothing on its own: a call still has to present a credential issued to this workspace, and each one expires within minutes. Set `session_credentials_enabled` through the trunk update operation.",
+        description="Deprecated: read `workspace_users_enabled`, which has the same value.",
     )]
     media: Annotated[VoiceTrunkMedia, Field(
         description="How the trunk carries call audio. Set it through the trunk update operation.",
@@ -31148,19 +31234,32 @@ class VoiceTrunkCreate(BaseModel):
         examples=["Production PBX trunk"],
         min_length=1,
     )]
+    sip_trunking_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether your PBX may place calls through the new trunk. Omit it to create a trunk that carries no calls yet, and turn on what you need once you know what the trunk is for.",
+        examples=[True],
+    )] = None
+    did_delivery_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether the new trunk may receive calls. A trunk receives no calls until it also has at least one gateway and at least one number, both added after create.",
+        examples=[True],
+    )] = None
+    workspace_users_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether people in this workspace may place calls through the new trunk with a session credential, from the dashboard phone, the CLI or MCP. Omit it for a trunk reached only by a PBX.",
+        examples=[True],
+    )] = None
     outbound_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether the new trunk may place calls. Omit it to create a trunk that does neither direction yet, and enable the ones you want once you know what the trunk is for. The settings below configure outbound, so send this as `true` alongside them.",
-        examples=[True],
+        description="Deprecated: use `sip_trunking_enabled`. `true` turns on `sip_trunking_enabled`; a request that also sends `sip_trunking_enabled: false` is rejected.",
     )] = None
     inbound_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether the new trunk may receive calls. Omit it to create a trunk that does neither direction yet. A trunk receives no calls until it also has at least one gateway and at least one number, both added after create.",
-        examples=[True],
+        description="Deprecated: use `did_delivery_enabled`. A request that sends both with different values is rejected.",
     )] = None
     media_bypass: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Omit it to create the trunk with this off, which is what suits equipment behind NAT and any account that wants call recording. It is an inbound setting, so `true` is accepted only alongside `inbound_enabled: true`; `false` is always accepted. It can be changed later.",
+        description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Omit it to create the trunk with this off, which is what suits equipment behind NAT and any account that wants call recording. It is an inbound setting, so `true` is accepted only alongside `did_delivery_enabled: true`; `false` is always accepted. It can be changed later.",
         examples=[True],
     )] = None
     media: Annotated[Optional[VoiceTrunkMediaCreate], Field(
@@ -31169,13 +31268,12 @@ class VoiceTrunkCreate(BaseModel):
     )] = None
     digest_algorithms: Annotated[Optional[List[VoiceSIPDigestAlgorithm]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The Digest hash algorithms to offer, in the order they should be offered. Omit this to use the default of `[\"SHA-256\", \"MD5\"]`, which suits most equipment. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. This governs clients that authenticate with an API key. Session credentials, including the dashboard phone's, are always offered MD5 as well and accepted with MD5 or SHA-256. This can be changed later without re-issuing credentials.",
+        description="The Digest hash algorithms to offer, in the order they should be offered. Omit this to use the default of `[\"SHA-256\", \"MD5\"]`, which suits most equipment. Send `[\"MD5\"]` for a PBX that only implements MD5 and rejects or ignores a challenge offering SHA-256 first. This governs clients that authenticate with an API key. Session credentials, including the dashboard phone's, are always offered MD5 as well and accepted with MD5 or SHA-256. It applies to calls the trunk places, so send it alongside `sip_trunking_enabled` or `workspace_users_enabled` set to `true`. This can be changed later without re-issuing credentials.",
         min_length=1,
     )] = None
     session_credentials_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Omit it to create the trunk with this off, which is what a trunk reached only by a PBX wants. It can be changed later.",
-        examples=[True],
+        description="Deprecated: use `workspace_users_enabled`. A request that sends both with different values is rejected.",
     )] = None
 
 
@@ -31209,7 +31307,7 @@ class VoiceTrunkIPACLCreate(BaseModel):
 
 
 class VoiceTrunkUpdate(BaseModel):
-    "A change to the trunk's directions, name, access control, and Digest algorithm\noffer. Every field is optional. An omitted field is left unchanged. The\n`ip_acls`, `allowed_api_key_ids`, and `digest_algorithms` fields each replace\ntheir whole list when present. Send an empty array to clear one. This lets you\ncommit the trunk's entire access configuration in one update.\n\nA direction has to be enabled before its settings can be set, but one update\ncan do both: enable a direction and send its configuration together."
+    "A change to the trunk's caller switches, name, access control, and Digest\nalgorithm offer. Every field is optional. An omitted field is left unchanged. The\n`ip_acls`, `allowed_api_key_ids`, and `digest_algorithms` fields each replace\ntheir whole list when present. Send an empty array to clear one. This lets you\ncommit the trunk's entire access configuration in one update.\n\nThe access control and Digest settings need a switch that places calls, and\n`media_bypass` needs `did_delivery_enabled`. One update can do both: turn the\nswitch on and send its configuration together."
     model_config = ConfigDict(extra="allow")
     name: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -31217,19 +31315,32 @@ class VoiceTrunkUpdate(BaseModel):
         examples=["Production PBX trunk"],
         min_length=1,
     )] = None
+    sip_trunking_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether your PBX may place calls through this trunk. Turning it off stops the allow lists admitting calls at the next call setup and leaves them stored, so turning it back on restores a working trunk. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
+    did_delivery_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether this trunk may receive calls. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. Clear an attached emergency number in the dashboard before turning it off. The gateways remain configured. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
+    workspace_users_enabled: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether people in this workspace may place calls through this trunk with a session credential, from the dashboard phone, the CLI or MCP. Turning it off stops those calls at the next call setup without re-issuing anything. Omit the field to leave it unchanged.",
+        examples=[True],
+    )] = None
     outbound_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether this trunk may place calls. Turning it off stops the trunk admitting call attempts at the next call setup and leaves its connection and authentication settings stored, so turning it back on restores a working trunk. Omit the field to leave it unchanged.",
-        examples=[True],
+        description="Deprecated: use `sip_trunking_enabled` and `workspace_users_enabled`. `true` turns on `sip_trunking_enabled`. `false` stops every caller placing calls through this trunk. A request that also turns one of those switches the other way is rejected.",
     )] = None
     inbound_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether this trunk may receive calls. Turning it off resets number routes that use this trunk to reject incoming calls. Turning it back on does not restore those routes. Clear an attached emergency number in the dashboard before turning inbound off. The gateways remain configured. Omit the field to leave it unchanged.",
-        examples=[True],
+        description="Deprecated: use `did_delivery_enabled`. A request that sends both with different values is rejected.",
     )] = None
     media_bypass: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Turning it on takes effect at the next call setup and leaves calls already up untouched. It is an inbound setting, so the trunk must have `inbound_enabled` on; one update can do both. While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped, and your equipment must be reachable for audio from the public internet. Turning it off puts us back in the path at the next call setup. Omit the field to leave it unchanged.",
+        description="Whether we take ourselves out of the audio path for calls we forward to this trunk. Turning it on takes effect at the next call setup and leaves calls already up untouched. It is an inbound setting, so the trunk must have `did_delivery_enabled` on; one update can do both. While it is on we cannot record those calls, report their audio quality, or end one because its audio stopped, and your equipment must be reachable for audio from the public internet. Turning it off puts us back in the path at the next call setup. Omit the field to leave it unchanged.",
         examples=[True],
     )] = None
     media: Annotated[Optional[VoiceTrunkMediaUpdate], Field(
@@ -31250,8 +31361,7 @@ class VoiceTrunkUpdate(BaseModel):
     )] = None
     session_credentials_enabled: Annotated[Optional[bool], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Whether a session credential may be used to connect to this trunk from a web browser, the CLI or MCP. Off by default; turning it on does not change what the allow lists admit, and turning it off stops those connections at the next call setup without re-issuing anything. Omit the field to leave it unchanged.",
-        examples=[True],
+        description="Deprecated: use `workspace_users_enabled`. A request that sends both with different values is rejected.",
     )] = None
 
 

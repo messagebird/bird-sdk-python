@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.147.0
+
+- **Breaking:** listing or exporting a broadcast's recipients, for email and WhatsApp, now fails with a gone error once the broadcast finished more than 30 days ago; save any recipient rows you need before then, and treat the error as permanent.
+- **Breaking:** email broadcast send-quota responses no longer include the insufficient-funds behavior field. Remove reads of that field and use the now-required `can_start` boolean to check whether email limits permit starting. Broadcasts that run out of funds wait up to 20 minutes and can continue automatically if enough funds become available during that wait; otherwise they pause until resumed.
+- **Breaking:** the email broadcast `funding_hold.reason` parses `send_limit_reached`; a client built before this release raises on a broadcast that carries it, which fails the whole page when that broadcast is listed, so upgrade before getting or listing the broadcasts of a workspace whose organization has an email sending limit.
+- An email broadcast whose next batch would go over an email sending limit, such as the daily limit, now waits as `waiting_for_funds` with `funding_hold.reason` set to `send_limit_reached` instead of failing with `quota_exceeded`; it continues if the limit allows the next batch before `funding_hold.wait_until`, and otherwise becomes `paused` and needs a resume.
+- Add per-Brand email statistics breakdown and `brand_id` support in `group_by` and `filters.brand_id` (`include` and `exclude`) on email statistics queries.
+- Add `sip_trunking_enabled`, `did_delivery_enabled` and `workspace_users_enabled` to voice trunks: each trunk reports them, and you can set them when you create or update one.
+- Voice trunk `outbound_enabled`, `inbound_enabled` and `session_credentials_enabled` are now deprecated in favor of those fields, and a request that sets one to a value its replacement contradicts is rejected.
+- Setting voice trunk `outbound_enabled` to `false` turns off every caller that places calls, and setting it back to `true` turns on `sip_trunking_enabled` alone. To pause and resume a trunk that has `workspace_users_enabled` on, set the switches themselves.
+- Turning on `workspace_users_enabled` or `session_credentials_enabled` no longer requires outbound calling on the trunk.
+- **Breaking:** WhatsApp maximum-price inputs are narrower. A template language's `optimization_spec.bid_amount` accepts at most 50000 per 1,000 deliveries (0.50 per delivery), country overrides and a send's `bid_multiplier` accept 0.1 to 2, and a send is refused when its multiplier takes the recipient country's maximum price above 0.50 per delivery. Requests outside these ranges that were accepted before now return 422; lower the value to stay within them.
+- Clarify recovery guidance for calls blocked by number ownership or activation checks.
+- The email broadcast `failure_reason` description now says a failed broadcast cannot be sent again and should be replaced by a new broadcast.
+
 ## 0.146.0
 
 - Add a `number_id` filter to number order lists to find attempts associated with an allocation. Clarify that completed orders retain that historical association after the number is released.
