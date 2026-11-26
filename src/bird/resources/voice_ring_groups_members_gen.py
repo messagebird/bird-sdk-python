@@ -35,7 +35,7 @@ class VoiceRingGroupsMembers(Resource):
         ```python
         members = client.voice.ring_groups.members.list("RING_GROUP_ID")
         for member in members.data:
-            print(member.user_id)
+            print(member.root.user_id)
         ```
         """
         return self._get(
@@ -56,7 +56,7 @@ class VoiceRingGroupsMembers(Resource):
 
         ```python
         member = client.voice.ring_groups.members.create("RING_GROUP_ID", user_id="USER_ID")
-        print(member.user_id)
+        print(member.root.user_id)
         ```
         """
         body = to_wire(
@@ -76,7 +76,7 @@ class VoiceRingGroupsMembers(Resource):
     def delete(
         self,
         ring_group_id: str,
-        user_id: str,
+        member_id: str,
         *,
         options: RequestOptions | None = None,
     ) -> None:
@@ -86,7 +86,7 @@ class VoiceRingGroupsMembers(Resource):
         client.voice.ring_groups.members.delete("RING_GROUP_ID", "USER_ID")
         ```
         """
-        self._delete(f"/v1/voice/ring-groups/{quote(ring_group_id, safe='')}/members/{quote(user_id, safe='')}", options)
+        self._delete(f"/v1/voice/ring-groups/{quote(ring_group_id, safe='')}/members/{quote(member_id, safe='')}", options)
 
 
 class AsyncVoiceRingGroupsMembers(AsyncResource):
@@ -101,7 +101,7 @@ class AsyncVoiceRingGroupsMembers(AsyncResource):
         ```python
         members = await client.voice.ring_groups.members.list("RING_GROUP_ID")
         for member in members.data:
-            print(member.user_id)
+            print(member.root.user_id)
         ```
         """
         return await self._get(
@@ -122,7 +122,7 @@ class AsyncVoiceRingGroupsMembers(AsyncResource):
 
         ```python
         member = await client.voice.ring_groups.members.create("RING_GROUP_ID", user_id="USER_ID")
-        print(member.user_id)
+        print(member.root.user_id)
         ```
         """
         body = to_wire(
@@ -142,7 +142,7 @@ class AsyncVoiceRingGroupsMembers(AsyncResource):
     async def delete(
         self,
         ring_group_id: str,
-        user_id: str,
+        member_id: str,
         *,
         options: RequestOptions | None = None,
     ) -> None:
@@ -152,4 +152,4 @@ class AsyncVoiceRingGroupsMembers(AsyncResource):
         await client.voice.ring_groups.members.delete("RING_GROUP_ID", "USER_ID")
         ```
         """
-        await self._delete(f"/v1/voice/ring-groups/{quote(ring_group_id, safe='')}/members/{quote(user_id, safe='')}", options)
+        await self._delete(f"/v1/voice/ring-groups/{quote(ring_group_id, safe='')}/members/{quote(member_id, safe='')}", options)

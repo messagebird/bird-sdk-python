@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.148.0
+
+- **Breaking:** removing a ring group member takes `member_id` in place of `user_id`, so rename the argument where you pass it by keyword.
+- **Breaking:** a ring group member is now a union discriminated by `type`, so read a workspace user member's `user_id` through the model's root.
+
 ## 0.147.0
 
 - **Breaking:** listing or exporting a broadcast's recipients, for email and WhatsApp, now fails with a gone error once the broadcast finished more than 30 days ago; save any recipient rows you need before then, and treat the error as permanent.

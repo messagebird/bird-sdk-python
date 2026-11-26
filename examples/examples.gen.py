@@ -2327,7 +2327,7 @@ async def _ex_338() -> None:
 
 async def _ex_339() -> None:
     member = client.voice.ring_groups.members.create("RING_GROUP_ID", user_id="USER_ID")
-    print(member.user_id)
+    print(member.root.user_id)
 
 
 async def _ex_340() -> None:
@@ -2337,7 +2337,7 @@ async def _ex_340() -> None:
 async def _ex_341() -> None:
     members = client.voice.ring_groups.members.list("RING_GROUP_ID")
     for member in members.data:
-        print(member.user_id)
+        print(member.root.user_id)
 
 
 async def _ex_342() -> None:

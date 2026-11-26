@@ -111,12 +111,12 @@ def voice_ring_groups_delete() -> None:
 def voice_ring_groups_members_list() -> None:
     members = client.voice.ring_groups.members.list("RING_GROUP_ID")
     for member in members.data:
-        print(member.user_id)
+        print(member.root.user_id)
 
 
 def voice_ring_groups_members_create() -> None:
     member = client.voice.ring_groups.members.create("RING_GROUP_ID", user_id="USER_ID")
-    print(member.user_id)
+    print(member.root.user_id)
 
 
 def voice_ring_groups_members_delete() -> None:

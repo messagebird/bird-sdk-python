@@ -206,7 +206,7 @@ KEEP: dict[str, set[str]] = {
     "/v1/voice/ring-groups": {"get", "post"},
     "/v1/voice/ring-groups/{ring_group_id}": {"delete", "get", "patch"},
     "/v1/voice/ring-groups/{ring_group_id}/members": {"get", "post"},
-    "/v1/voice/ring-groups/{ring_group_id}/members/{user_id}": {"delete"},
+    "/v1/voice/ring-groups/{ring_group_id}/members/{member_id}": {"delete"},
     "/v1/voice/verified-numbers": {"get", "post"},
     "/v1/voice/verified-numbers/{verified_number_id}": {"delete", "get", "patch"},
     "/v1/voice/verified-numbers/{verified_number_id}/verify": {"post"},

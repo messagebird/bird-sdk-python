@@ -25590,7 +25590,7 @@ class WebhookEndpointUpdate(BaseModel):
     )] = None
     events: Annotated[Optional[List[Annotated[Union[WebhookEventType, str], Field(union_mode="left_to_right")]]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`.",
+        description="Replaces all event subscriptions with this list. Omit to keep the current set. Types outside the event catalog return a `422`, except a type the endpoint already subscribes to that has since left the catalog: it can stay in the list.",
         min_length=1,
     )] = None
     destination: Annotated[Optional[WebhookDestinationUpdate], Field(
@@ -25616,7 +25616,7 @@ class WebhookTestRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
     event_type: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Event type to simulate. Any type from the event catalog is accepted, whether or not the endpoint subscribes to it; an unknown type returns a `422`. When omitted, the endpoint's first subscribed event type is used.",
+        description="Event type to simulate. Any type from the event catalog is accepted, whether or not the endpoint subscribes to it; an unknown type returns a `422`. When omitted, the endpoint's first subscribed event type that is still in the catalog is used. An endpoint with no subscribed event types returns a `412`; one whose subscribed types have all left the catalog returns a `422`.",
         examples=["email.delivered"],
     )] = None
 
@@ -31930,9 +31930,10 @@ class VoiceRingGroupUpdate(BaseModel):
     )]
 
 
-class VoiceRingGroupMember(BaseModel):
+class VoiceRingGroupUserMember(BaseModel):
     "A user added to a ring group. A member who later leaves the workspace stays listed until removed, but the group never rings them."
     model_config = ConfigDict(extra="allow")
+    type: Annotated[Literal["user"], Field(min_length=1)]
     user_id: Annotated[str, Field(
         examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
         min_length=1,
@@ -31944,6 +31945,10 @@ class VoiceRingGroupMember(BaseModel):
     )]
 
 
+class VoiceRingGroupMember(RootModel[VoiceRingGroupUserMember]):
+    root: VoiceRingGroupUserMember
+
+
 class VoiceRingGroupMemberList(BaseModel):
     "The ring group's members. Not paginated: a ring group holds at most 200 members, and the default group's members are the workspace's online users."
     model_config = ConfigDict(extra="allow")
@@ -31953,6 +31958,7 @@ class VoiceRingGroupMemberList(BaseModel):
 
 
 class VoiceRingGroupMemberCreate(BaseModel):
+    "The member to add."
     model_config = ConfigDict(extra="allow")
     user_id: Annotated[str, Field(
         examples=["usr_01krdgeqcxet5s7t44vh8rt9mg"],
