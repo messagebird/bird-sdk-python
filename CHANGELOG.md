@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.149.0
+
+- Voice sequence dial traces can include the selected SIP user ID on the command span.
+
 ## 0.148.0
 
 - **Breaking:** removing a ring group member takes `member_id` in place of `user_id`, so rename the argument where you pass it by keyword.
