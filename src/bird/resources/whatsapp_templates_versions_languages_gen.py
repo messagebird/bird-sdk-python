@@ -37,6 +37,11 @@ class WhatsAppTemplateExampleParameterWrite(_WhatsAppTemplateExampleParameterWri
     name: str
 
 
+class WhatsAppTemplateSupportedAppWrite(TypedDict, total=False):
+    package_name: str
+    signature_hash: str
+
+
 class _WhatsAppTemplateButtonWriteRequired(TypedDict):
     type: str
 
@@ -46,6 +51,8 @@ class WhatsAppTemplateButtonWrite(_WhatsAppTemplateButtonWriteRequired, total=Fa
     text: str
     url: str
     phone_number: str
+    supported_apps: Sequence[WhatsAppTemplateSupportedAppWrite]
+    zero_tap_terms_accepted: bool
     example_parameters: Sequence[WhatsAppTemplateExampleParameterWrite]
 
 

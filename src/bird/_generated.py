@@ -10100,6 +10100,21 @@ class WhatsAppTemplateExampleParameter(BaseModel):
     )] = None
 
 
+class WhatsAppTemplateSupportedApp(BaseModel):
+    "An Android app that receives the passcode from a `one_tap` or `zero_tap` button."
+    model_config = ConfigDict(extra="allow")
+    package_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The app's Android application ID.",
+        examples=["com.example.otpapp"],
+    )] = None
+    signature_hash: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The 11-character hash of the app's signing key.",
+        examples=["K8a/AINcGX7"],
+    )] = None
+
+
 class WhatsAppTemplateButtonType(str, Enum):
     url = "url"
     quick_reply = "quick_reply"
@@ -10111,20 +10126,37 @@ class WhatsAppTemplateButtonType(str, Enum):
 
 class WhatsAppTemplateButtonOtpType(str, Enum):
     copy_code = "copy_code"
+    one_tap = "one_tap"
+    zero_tap = "zero_tap"
 
 
 class WhatsAppTemplateButton(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: Annotated[Annotated[Union[WhatsAppTemplateButtonType, str], Field(union_mode="left_to_right")], Field(
-        description="The button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It\n  belongs only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number\n  their WhatsApp account carries. It belongs only on a utility or\n  marketing template, as that template's only button.\n\nThis is an open enum. Accept unrecognized values.",
+        description="The button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: delivers a one-time passcode, in the way its `otp_type` names.\n  It belongs only on an authentication template, and that template\n  takes no other button type. Once the language is submitted, WhatsApp\n  returns this button as a `url` button whose address names the\n  delivery type, so a submitted language reads back with `url`. It\n  also adds a `quick_reply` button labeled `I didn't request a code`,\n  which the preview shows too.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It\n  belongs only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number\n  their WhatsApp account carries. It belongs only on a utility or\n  marketing template, as that template's only button.\n\nThis is an open enum. Accept unrecognized values.",
         examples=["url"],
         min_length=1,
     )]
     otp_type: Annotated[Optional[Annotated[Union[WhatsAppTemplateButtonOtpType, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="How the recipient receives the one-time passcode. Present on authentication-template OTP buttons.",
+        description="How the recipient receives the one-time passcode: `copy_code`, `one_tap` or `zero_tap`. Present on an `otp` button.\nThis is an open enum. Accept unrecognized values.",
         examples=["copy_code"],
         min_length=1,
+    )] = None
+    autofill_text: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The label WhatsApp writes on the autofill button. Present on a `one_tap` or `zero_tap` preview.",
+        examples=["Autofill"],
+        min_length=1,
+    )] = None
+    supported_apps: Annotated[Optional[List[WhatsAppTemplateSupportedApp]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The Android apps that receive the passcode. Present on a `one_tap` or `zero_tap` button in a draft. Once the language is submitted, the apps appear only in the button's `url`.",
+    )] = None
+    zero_tap_terms_accepted: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Whether you accepted WhatsApp's zero-tap terms. Present on a `zero_tap` button in a draft. WhatsApp does not return it, so a submitted language reads back without it.",
+        examples=[True],
     )] = None
     text: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -13112,19 +13144,42 @@ class WhatsAppTemplateButtonTypeWrite(str, Enum):
     request_contact_info = "request_contact_info"
 
 
+class WhatsAppTemplateButtonOtpTypeWrite(str, Enum):
+    copy_code = "copy_code"
+    one_tap = "one_tap"
+    zero_tap = "zero_tap"
+
+
+class WhatsAppTemplateSupportedAppWrite(BaseModel):
+    "An Android app that receives the passcode from a `one_tap` or `zero_tap` button. Both fields may be empty on a draft and are required before submission."
+    model_config = ConfigDict(extra="allow")
+    package_name: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The app's Android application ID. It needs at least two segments separated by dots, each starting with a letter, and uses only letters, digits and underscores.",
+        examples=["com.example.otpapp"],
+        max_length=224,
+    )] = None
+    signature_hash: Annotated[Optional[str], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The 11-character hash of the app's signing key, from letters, digits, `+`, `/` and `=`.",
+        examples=["K8a/AINcGX7"],
+        max_length=11,
+    )] = None
+
+
 class WhatsAppTemplateButtonWrite(BaseModel):
     "One button, as written to a draft."
     model_config = ConfigDict(extra="allow")
     type: Annotated[WhatsAppTemplateButtonTypeWrite, Field(
         description="A button's behavior.\n\n- `url`: opens a link.\n- `quick_reply`: sends its own label back to you as an inbound message.\n- `phone_number`: dials the number it carries.\n- `otp`: copies a one-time passcode. It belongs only on an authentication\n  template, and that template takes no other button type.\n- `copy_code`: copies a coupon code to the recipient's clipboard. It belongs\n  only on a marketing template, which takes at most one.\n- `request_contact_info`: asks the recipient to share the phone number their\n  WhatsApp account carries. It belongs only on a utility or marketing\n  template, as that template's only button.\n\nAny other value is rejected.",
     )]
-    otp_type: Annotated[Optional[Literal["copy_code"]], Field(
+    otp_type: Annotated[Optional[WhatsAppTemplateButtonOtpTypeWrite], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="How the recipient receives the passcode. Send it only on an `otp` button.",
+        description="How the recipient receives the passcode. Send it only on an `otp` button. `one_tap` and `zero_tap` work only on Android, with an app that has completed WhatsApp's handshake before you send. Otherwise WhatsApp shows the copy-code button instead and reports no error.",
     )] = None
     text: Annotated[Optional[str], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="The button's label, which each button type treats differently.\n\n- `url`, `quick_reply`, `phone_number`: your own label. Required.\n- `otp`: omit it. WhatsApp writes this label itself and reveals it only\n  once the language has been submitted.\n- `copy_code`: omit it. WhatsApp fixes this label and does not let you\n  change it.\n- `request_contact_info`: omit it. WhatsApp fixes this label too and\n  writes `Share Contact Info`, which is also what a submitted button\n  reads back as, so a read button can be written back unchanged.\n\nA draft takes any label, so this may be empty on a draft and is required\nonly before submission. A label a fixed-label button may not carry is\nrefused rather than silently replaced: the submit comes back as\n`valid: false` with an `errors` entry naming this field, in every\nlanguage.",
+        description="The button's label, which each button type treats differently.\n\n- `url`, `quick_reply`, `phone_number`: your own label. Required.\n- `otp`: omit it, whatever the `otp_type`. WhatsApp writes and\n  translates this label itself. The template preview shows it before\n  you submit.\n- `copy_code`: omit it. WhatsApp fixes this label and does not let you\n  change it.\n- `request_contact_info`: omit it. WhatsApp fixes this label too and\n  writes `Share Contact Info`, which is also what a submitted button\n  reads back as, so a read button can be written back unchanged.\n\nA draft takes any label, so this may be empty on a draft and is required\nonly before submission. A label a fixed-label button may not carry is\nrefused rather than silently replaced: the submit comes back as\n`valid: false` with an `errors` entry naming this field, in every\nlanguage.",
         examples=["Track order"],
         max_length=25,
     )] = None
@@ -13139,6 +13194,16 @@ class WhatsAppTemplateButtonWrite(BaseModel):
         description="The number a `phone_number` button dials, in international format. Some countries publish numbers with a leading zero after the country calling code; WhatsApp strips that zero, so give a number that dials without it. May be empty on a draft; required before submission.",
         examples=["+14155550100"],
         max_length=20,
+    )] = None
+    supported_apps: Annotated[Optional[List[WhatsAppTemplateSupportedAppWrite]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="The Android apps that receive the passcode, up to five. Send it only on an `otp` button whose `otp_type` is `one_tap` or `zero_tap`, where at least one app is required before submission.",
+        max_length=5,
+    )] = None
+    zero_tap_terms_accepted: Annotated[Optional[bool], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Your acceptance of WhatsApp's terms for zero-tap, under which you make sure your users expect the code to be filled in automatically. Send it only on an `otp` button whose `otp_type` is `zero_tap`, where it must be `true` before submission.",
+        examples=[True],
     )] = None
     example_parameters: Annotated[Optional[List[WhatsAppTemplateExampleParameterWrite]], Field(
         json_schema_extra={"x-bird-nullable": False},
