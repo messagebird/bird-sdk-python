@@ -12847,6 +12847,30 @@ class WhatsAppTemplateLanguageStatus(str, Enum):
     submit_failed = "submit_failed"
 
 
+class WhatsAppTemplateQualityScore(str, Enum):
+    green = "green"
+    yellow = "yellow"
+    red = "red"
+    unknown = "unknown"
+
+
+class WhatsAppTemplateQuality(BaseModel):
+    "Meta's quality rating for one language, with the rating it moved from and when it moved. Once Meta rates a language, list or get the template, or get the individual language on its live version, to read the rating. Version summaries always omit quality, including the live version's summary. Superseded versions carry no rating."
+    model_config = ConfigDict(extra="allow")
+    current_score: Annotated[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")], Field(
+        description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
+    )]
+    previous_score: Annotated[Optional[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")]], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
+    )] = None
+    updated_at: Annotated[str, Field(
+        description="When the rating last changed. A re-evaluation that lands on the same rating does not move it, so this answers how long the language has held its current rating.",
+        examples=["2026-07-26T16:41:00Z"],
+        min_length=1,
+    )]
+
+
 class WhatsAppTemplateRejectionCategory(str, Enum):
     abusive_content = "abusive_content"
     incorrect_category = "incorrect_category"
@@ -12892,6 +12916,10 @@ class WhatsAppTemplateLanguageState(BaseModel):
     status: Annotated[Optional[Annotated[Union[WhatsAppTemplateLanguageStatus, str], Field(union_mode="left_to_right")]], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="On a template, where this language stands on the version currently in service. On a version, what that version's submission did with this language. Absent on a draft, which has not been submitted.",
+    )] = None
+    quality: Annotated[Optional[WhatsAppTemplateQuality], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Meta's quality rating for one language, with the rating it moved from and when it moved. Once Meta rates a language, list or get the template, or get the individual language on its live version, to read the rating. Version summaries always omit quality, including the live version's summary. Superseded versions carry no rating.",
     )] = None
     submitted_at: Annotated[Optional[str], Field(
         description="When this language's content was last submitted to Meta. Null on a draft, which has not been submitted, and null for a built-in template's language, shipped already approved rather than submitted on your behalf.",
@@ -13749,30 +13777,6 @@ class WhatsAppTemplateContentHash(RootModel[str]):
     root: str
 
 
-class WhatsAppTemplateQualityScore(str, Enum):
-    green = "green"
-    yellow = "yellow"
-    red = "red"
-    unknown = "unknown"
-
-
-class WhatsAppTemplateQuality(BaseModel):
-    "Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating."
-    model_config = ConfigDict(extra="allow")
-    current_score: Annotated[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")], Field(
-        description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
-    )]
-    previous_score: Annotated[Optional[Annotated[Union[WhatsAppTemplateQualityScore, str], Field(union_mode="left_to_right")]], Field(
-        json_schema_extra={"x-bird-nullable": False},
-        description="Meta's quality rating for one language of a template, derived from how recipients respond to messages sent from it. The `red` score is the leading indicator of a pause. Reaching Meta's lowest rating pauses sending from that language for three hours; a second time pauses it for six, and a third disables it. The `unknown` score is a value Meta reports. When Meta has not rated the language, the rating object is absent. This is an open enum. Accept unrecognized values.",
-    )] = None
-    updated_at: Annotated[str, Field(
-        description="When the rating last changed. A re-evaluation that lands on the same rating does not move it, so this answers how long the language has held its current rating.",
-        examples=["2026-07-26T16:41:00Z"],
-        min_length=1,
-    )]
-
-
 class WhatsAppTemplatePauseReason(str, Enum):
     first_pause = "first_pause"
     second_pause = "second_pause"
@@ -13846,7 +13850,7 @@ class WhatsAppTemplateLanguage(BaseModel):
     )] = None
     quality: Annotated[Optional[WhatsAppTemplateQuality], Field(
         json_schema_extra={"x-bird-nullable": False},
-        description="Meta's quality rating for one language, with the rating it moved from and when it moved. Present only once Meta has rated the language, and only on the version currently in service. A superseded version's content carries no rating.",
+        description="Meta's quality rating for one language, with the rating it moved from and when it moved. Once Meta rates a language, list or get the template, or get the individual language on its live version, to read the rating. Version summaries always omit quality, including the live version's summary. Superseded versions carry no rating.",
     )] = None
     pause: Annotated[Optional[WhatsAppTemplatePause], Field(
         json_schema_extra={"x-bird-nullable": False},
@@ -30853,6 +30857,10 @@ class AvailableNumber(BaseModel):
         description="Name of the area this local number belongs to, for example `Amsterdam`: the area a `number_area` `ownership_address_scope` refers to. Text for display; the address is not checked against it before purchase. Omitted when the number has no `number_area` rule or the area is not known.",
         min_length=1,
     )] = None
+    ownership_requirements: Annotated[Optional[NextAction], Field(
+        json_schema_extra={"x-bird-nullable": False},
+        description="Where to read what this number's ownership paperwork asks for, before you buy it. Call the named operation with `params` to get the form for the number's country and number type: every field, the documents it takes and its guidance, unanswered. That read needs compliance read access, which this search does not. Present when a form is published for the number's country and number type, including when `ownership_registration_required` is false because your organization is exempt from the paperwork. Omitted when no form is published, when the form could not be looked up for this response, and on admin supplier searches.",
+    )] = None
     pricing: Annotated[Optional[AvailableNumberPricing], Field(
         json_schema_extra={"x-bird-nullable": False},
         description="What your organization pays for this number. Omitted on admin supplier searches, which have no organization to price for.",
@@ -30923,6 +30931,9 @@ class NumbersOrder(BaseModel):
     )] = None
     created_at: Annotated[str, Field(min_length=1)]
     updated_at: Annotated[str, Field(min_length=1)]
+    ownership: Annotated[Optional[NumberOwnership], Field(
+        description="Ownership paperwork and activation progress for the number this order bought: the same object `GET /v1/numbers/{number_id}` reports. Reported once the order is `completed`, when you create an order or read one. `null` when no ownership requirements, block or decision apply to the number, when requirements could not be read and no block or decision is recorded, and after the number is released. Absent from order lists and while the order is in progress or failed. Also absent when the number could not be read; read the order again then. Follow its `next` to see what the country requires and to send your answers.",
+    )] = None
 
 
 class NumbersOrderList(BaseModel):
